@@ -28,8 +28,8 @@ export function SidebarHeader() {
             <Image
               src={logoSrc}
               alt="LifeXP"
-              width={30}
-              height={30}
+              width={100}
+              height={100}
               priority
               className="w-16 h-16"
             />
