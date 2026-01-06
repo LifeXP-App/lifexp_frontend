@@ -39,3 +39,18 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Claude agent outputs
+docs/requirements.md
+docs/qa-report.md
+docs/security-audit.md
+docs/api-review.md
+docs/database-optimization.md
+docs/ui-ux-design.md
+docs/accessibility-audit.md
+docs/performance-audit.md
+docs/flutter-review.md
+docs/mobile-optimization.md
+docs/changelog.md
+.claude
+context
