@@ -13,7 +13,7 @@ export function SidebarHeader() {
 
   // Use logolight for dark mode, logodark for light mode
   const isDark = mounted && (resolvedTheme === "dark" || theme === "dark");
-  const logoSrc = isDark ? "/logolight.png" : "/logodark.png";
+  const logoSrc = isDark ? "/logodark.png" : "/logolight.png";
   console.log("SidebarHeader render:", {
     theme,
     resolvedTheme,
@@ -21,17 +21,17 @@ export function SidebarHeader() {
     logoSrc,
   });
   return (
-    <div className="px-6 py-6">
-      <Link href="/" className="flex items-center gap-3">
+    <div className="py-4 px-2">
+      <Link href="/" className="flex items-center">
         {mounted ? (
           <>
             <Image
               src={logoSrc}
               alt="LifeXP"
-              width={40}
-              height={40}
+              width={30}
+              height={30}
               priority
-              className="w-10 h-10"
+              className="w-16 h-16"
             />
             <span className="text-xl font-semibold text-gray-900 dark:text-white">
               LifeXP
