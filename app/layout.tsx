@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "LifeXP",
-  description: "LifeXP App",
+  description: "Redefine your Life",
 };
 
 export default function RootLayout({
