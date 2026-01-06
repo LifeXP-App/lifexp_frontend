@@ -175,7 +175,7 @@ export function Post({ post }: { post: PostType }) {
 
       {/* CONTENT */}
       <div className="px-2 md:px-0">
-        <h3 className="text-base md:text-lg font-semibold dark:text-[#dfdfe0]">
+        <h3 className="text-base md:text-lg font-bold dark:text-[#dfdfe0]">
           {post.title || ""}
         </h3>
 

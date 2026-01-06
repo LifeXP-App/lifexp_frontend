@@ -3,12 +3,12 @@
 import { NavigationItem } from "./NavigationItem";
 
 const NAV_ITEMS = [
-  { label: "Feed", href: "/", icon: "Home" },
-  { label: "Search", href: "/search", icon: "Search" },
-  { label: "New Post", href: "/posts/new", icon: "Plus" },
-  { label: "Leaderboard", href: "/leaderboard", icon: "Trophy" },
-  { label: "Profile", href: "/profile", icon: "User" },
-  { label: "Settings", href: "/settings", icon: "Settings" },
+  { label: "Feed", href: "/", icon: "home" },
+  { label: "Search", href: "/search", icon: "search" },
+  { label: "New Post", href: "/posts/new", icon: "plus" },
+  { label: "Leaderboard", href: "/leaderboard", icon: "trophy" },
+  { label: "Profile", href: "/profile", icon: "user" },
+  { label: "Settings", href: "/settings", icon: "settings" },
 ];
 
 export function Navigation() {
