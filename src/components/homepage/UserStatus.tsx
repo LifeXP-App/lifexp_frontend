@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import {FireIcon} from "@heroicons/react/24/solid";
 
 /* ---------------- TYPES ---------------- */
 
@@ -12,12 +13,20 @@ export type UserStatusProps = {
     lifelevel: number;
     streak_count: number;
     profile_picture: string;
+    activity?: string; // optional
+    streak_active?: boolean; // optional
   };
 };
 
 /* ---------------- COMPONENT ---------------- */
 
 export function UserStatus({ player }: UserStatusProps) {
+  // ✅ deterministic default (hydration-safe)
+  const activityText =
+  player.activity && player.activity.trim().length > 0
+    ? player.activity
+    : "🌙 Idling";
+
   return (
     <div className="mb-8 pl-2 md:pl-0 flex gap-4 overflow-x-auto whitespace-nowrap scrollbar-hide">
       <Link href={`/user/${player.username}`}>
@@ -42,8 +51,15 @@ export function UserStatus({ player }: UserStatusProps) {
 
             <div className="flex items-center">
               <p className="font-semibold text-xs ml-1">
-                {player.streak_count}
+                {activityText} · {player.streak_count}
               </p>
+              {player.streak_active ?(
+                <FireIcon className="w-4 h-4 text-yellow-500 ml-1" />
+                
+              )
+              :
+              <FireIcon className="w-4 h-4 text-gray-400 ml-1" />
+            }
             </div>
           </div>
         </div>

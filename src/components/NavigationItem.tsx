@@ -40,6 +40,8 @@ export function NavigationItem({ label, href, icon }: NavigationItemProps) {
 
   const IconComponent = ICON_MAP[icon] || XCircleIcon;
 
+  const masteryTitle = "Rookie"
+
   return (
     <Link
       href={href}
