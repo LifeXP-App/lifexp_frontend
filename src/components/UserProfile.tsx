@@ -1,8 +1,8 @@
 "use client";
 
-import { User } from "lucide-react";
 import { MASTERY_COLORS } from "../lib/constants/aspects";
 import { UserProfile as UserProfileType } from "../lib/types";
+import getAccentColors from "./UserAccent";
 
 interface UserProfileProps {
   user: UserProfileType;
@@ -10,6 +10,7 @@ interface UserProfileProps {
 
 export function UserProfile({ user }: UserProfileProps) {
   const masteryColor = MASTERY_COLORS[user.masteryTitle].primary;
+  const accent = getAccentColors(user.masteryTitle);
 
   return (
     <div
@@ -25,8 +26,15 @@ export function UserProfile({ user }: UserProfileProps) {
               className="w-12 h-12 rounded-full object-cover"
             />
           ) : (
-            <div className="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-800 flex items-center justify-center">
-              <User className="w-6 h-6 text-gray-500" />
+            <div
+              className="w-12 h-12 rounded-full flex items-center justify-center"
+              style={{
+                backgroundImage: `linear-gradient(135deg, ${accent.gradStart}, ${accent.gradEnd})`,
+              }}
+            >
+              <span className="text-white text-sm font-bold">
+                {user.username[0].toUpperCase()}
+              </span>
             </div>
           )}
         </div>
