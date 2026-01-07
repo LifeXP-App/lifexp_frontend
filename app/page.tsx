@@ -36,7 +36,8 @@ const sidebarUser = {
   nextLevelXp: 1250,
   progressPercent: 77.76,
   rank: 4,
-  streak: 0,
+  streak: 1,
+  streakActive: true,
 };
 
 const notifications = [
