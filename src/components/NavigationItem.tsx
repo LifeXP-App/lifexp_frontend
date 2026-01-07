@@ -1,17 +1,18 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import {
+  Cog6ToothIcon,
   MagnifyingGlassIcon,
   PlusIcon,
   TrophyIcon,
   UserCircleIcon,
-  Cog6ToothIcon,
   XCircleIcon,
 } from "@heroicons/react/24/outline";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
-import {HomeIcon} from "@heroicons/react/24/solid";
+import { HomeIcon } from "@heroicons/react/24/solid";
+import { hexToRgba } from "./UserAccent";
 
 /* ---------------- ICON MAP ---------------- */
 
@@ -30,11 +31,17 @@ interface NavigationItemProps {
   label: string;
   href: string;
   icon: string;
+  accentColor?: string;
 }
 
 /* ---------------- COMPONENT ---------------- */
 
-export function NavigationItem({ label, href, icon }: NavigationItemProps) {
+export function NavigationItem({
+  label,
+  href,
+  icon,
+  accentColor = "#4168e2",
+}: NavigationItemProps) {
   const pathname = usePathname();
   const isActive = pathname === href;
 
@@ -45,17 +52,28 @@ export function NavigationItem({ label, href, icon }: NavigationItemProps) {
   return (
     <Link
       href={href}
-      className={`
-        flex items-center gap-4 px-4 py-2 rounded-lg transition-all duration-200
-        ${
-          isActive
-            ? "bg-blue-100 dark:bg-blue-950  text-blue-600 dark:text-blue-400"
-            : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-900"
-        }
-      `}
+      className="flex items-center gap-4 px-4 py-2 rounded-lg transition-all duration-200"
+      style={
+        isActive
+          ? {
+              backgroundColor: hexToRgba(accentColor, 0.25),
+              color: accentColor,
+            }
+          : undefined
+      }
     >
-      <IconComponent className="w-6 h-6 shrink-0" />
-      <span className="text-md font-medium">{label}</span>
+      <span
+        className={isActive ? "" : "text-gray-600 dark:text-[var(--muted)]"}
+      >
+        <IconComponent className="w-6 h-6 shrink-0" />
+      </span>
+      <span
+        className={`text-md font-medium ${
+          isActive ? "" : "text-gray-600 dark:text-[var(--muted)]"
+        }`}
+      >
+        {label}
+      </span>
     </Link>
   );
 }

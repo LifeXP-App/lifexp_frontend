@@ -1,6 +1,17 @@
-export type MasteryTitle = 'Rookie' | 'Warrior' | 'Protagonist' | 'Prodigy' | 'Alchemist' | 'Diplomat';
+export type MasteryTitle =
+  | "Rookie"
+  | "Warrior"
+  | "Protagonist"
+  | "Prodigy"
+  | "Alchemist"
+  | "Diplomat";
 
-export type AspectType = 'physique' | 'energy' | 'logic' | 'creativity' | 'social';
+export type AspectType =
+  | "physique"
+  | "energy"
+  | "logic"
+  | "creativity"
+  | "social";
 
 export interface LifeAspect {
   id: AspectType;
@@ -13,6 +24,7 @@ export interface LifeAspect {
 
 export interface UserProfile {
   id: string;
+  fullname: string;
   username: string;
   avatar?: string;
   totalXP: number;
@@ -28,4 +40,34 @@ export interface NavigationItem {
   href: string;
   icon: string;
   badge?: number;
+}
+
+export interface Activity {
+  id: string;
+  name: string;
+  icon: string;
+  duration: string;
+  category: AspectType;
+}
+
+export interface Session {
+  id: string;
+  activity: string;
+  icon: string;
+  duration: string;
+  timestamp: string;
+  category: AspectType;
+}
+
+export interface Goal {
+  id: string;
+  name: string;
+  category: AspectType;
+}
+
+export interface Experience {
+  id: string;
+  title: string;
+  image: string;
+  description?: string;
 }
