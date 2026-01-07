@@ -2,6 +2,7 @@ import { UserProfile } from "../types";
 
 export const mockUser: UserProfile = {
   id: "1",
+  fullname: "Jacy",
   username: "jason",
   avatar: undefined,
   totalXP: 15500,

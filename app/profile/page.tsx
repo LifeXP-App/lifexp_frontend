@@ -82,7 +82,7 @@ export default function ProfilePage() {
 
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <h1 className="text-2xl font-bold">Jason</h1>
+                    <h1 className="text-2xl font-bold">{user.fullname}</h1>
                     {/* mastery badge uses mastery color instead of hardcoded blue */}
                     <span className="text-sm opacity-50 px-2 py-0.5 rounded">
                       @{user.username}
