@@ -3,13 +3,26 @@
 import { NavigationItem } from "./NavigationItem";
 
 const NAV_ITEMS = [
-  { label: "Feed", href: "/", icon: "home" },
-  { label: "Search", href: "/search", icon: "search" },
-  { label: "New Post", href: "/posts/new", icon: "plus" },
-  { label: "Leaderboard", href: "/leaderboard", icon: "trophy" },
-  { label: "Profile", href: "/profile", icon: "user" },
-  { label: "Settings", href: "/settings", icon: "settings" },
+  { label: "Feed", href: "/", active: ["/"], icon: "home" },
+  { label: "Search", href: "/search", active: ["/search"], icon: "search" },
+  { label: "New Post", href: "/posts/new", active: ["/posts/new"], icon: "plus" },
+  {
+    label: "Leaderboard",
+    href: "/leaderboard/rookie",
+    active: [
+      "/leaderboard/rookie",
+      "/leaderboard/warrior",
+      "/leaderboard/protagonist",
+      "/leaderboard/diplomat",
+      "/leaderboard/alchemist",
+      "/leaderboard/prodigy",
+    ],
+    icon: "trophy",
+  },
+  { label: "Profile", href: "/profile", active: ["/profile"], icon: "user" },
+  { label: "Settings", href: "/settings", active: ["/settings"], icon: "settings" },
 ];
+
 
 interface NavigationProps {
   accentColor?: string;

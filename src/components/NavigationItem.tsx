@@ -39,11 +39,12 @@ interface NavigationItemProps {
 export function NavigationItem({
   label,
   href,
+  active,
   icon,
   accentColor = "#4168e2",
 }: NavigationItemProps) {
   const pathname = usePathname();
-  const isActive = pathname === href;
+  const isActive = active.includes(pathname);
 
   const IconComponent = ICON_MAP[icon] || XCircleIcon;
 
