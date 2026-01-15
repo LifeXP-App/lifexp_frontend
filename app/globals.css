@@ -24,6 +24,12 @@
   --alchemist-secondary: #afd9ea;
   --diplomat-primary: #31784e;
   --diplomat-secondary: #afeac7;
+  --rookie-text: #9aa0ae;
+  --warrior-text: #8d2e2e;
+  --protagonist-text: #c49352;
+  --prodigy-text: #713599;
+  --alchemist-text: #4187a2;
+  --diplomat-text: #31784e;
 
   /* Life Aspect Colors */
   --aspect-physique: #8d2e2e;
@@ -122,4 +128,16 @@ body {
 /* Hide scrollbar for Firefox */
 .noscrollbar {
   scrollbar-width: none;
+}
+
+
+.recharts-wrapper:focus,
+.recharts-wrapper:focus-visible,
+.recharts-surface:focus,
+.recharts-surface:focus-visible,
+.recharts-responsive-container:focus,
+.recharts-responsive-container:focus-visible,
+svg:focus,
+svg:focus-visible {
+  outline: none !important;
 }

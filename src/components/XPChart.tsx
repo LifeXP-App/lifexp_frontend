@@ -8,7 +8,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  ReferenceLine,
+  Legend,
 } from "recharts";
 
 interface XPChartProps {
@@ -23,72 +23,68 @@ interface XPChartProps {
   gradientEnd: string;
 }
 
-export default function XPChart({ data, username, totalXP, accentColor, gradientStart, gradientEnd }: XPChartProps) {
+export default function XPChart({
+  data,
+  username,
+  totalXP,
+  accentColor,
+}: XPChartProps) {
   return (
-    <div className="bg-white dark:bg-dark-2 rounded-xl p-6 border-2 border-gray-200 dark:border-gray-900">
-      <div className="flex items-center gap-3 mb-4">
-        <div
-          className="w-10 h-10 rounded-full flex items-center justify-center"
-          style={{
-            backgroundImage: `linear-gradient(135deg, ${gradientStart}, ${gradientEnd})`,
-          }}
+    <div className="w-full h-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart
+          data={data}
+          margin={{ top: 30, right: 10, bottom: 20, left: 0 }} // ✅ tighter sides
         >
-          <span className="text-white text-xl font-bold">
-            {username[0].toUpperCase()}
-          </span>
-        </div>
-        <div>
-          <h2 className="text-lg font-bold">{totalXP} XP this week</h2>
-        </div>
-      </div>
+          <CartesianGrid vertical={false} stroke="#dcdcdc" strokeWidth={1} />
 
-      <div className="w-full h-[200px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data}>
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke="currentColor"
-              className="text-gray-200 dark:text-gray-800"
-            />
-            <XAxis
-              dataKey="date"
-              tick={{
-                fill: "currentColor",
-                fontSize: 12,
-              }}
-              className="text-gray-600 dark:text-gray-400"
-            />
-            <YAxis
-              tick={{
-                fill: "currentColor",
-                fontSize: 12,
-              }}
-              className="text-gray-600 dark:text-gray-400"
-            />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "var(--card)",
-                border: "1px solid var(--border)",
-                borderRadius: "8px",
-                color: "var(--foreground)",
-              }}
-            />
-            <ReferenceLine
-              y={0}
-              stroke="currentColor"
-              className="text-gray-300 dark:text-gray-700"
-            />
-            <Line
-              type="monotone"
-              dataKey="xp"
-              stroke={accentColor}
-              strokeWidth={2}
-              dot={{ fill: accentColor, r: 4 }}
-              activeDot={{ r: 6 }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+          <XAxis
+            dataKey="date"
+            tick={{ fill: "#666", fontSize: 12 }}
+            axisLine={false}
+            tickLine={false}
+            padding={{ left: 0, right: 0 }} // ✅ remove extra spacing
+          />
+
+          <YAxis
+            tick={{ fill: "#666", fontSize: 12 }}
+            axisLine={false}
+            tickLine={false}
+            domain={[0, "auto"]}
+          />
+
+         
+
+          <Line
+            type="monotone"
+            dataKey="xp"
+            name={username}
+            stroke={accentColor}
+            strokeOpacity={0.5}
+            strokeWidth={2.5}
+            dot={{
+              r: 4,
+              fill: accentColor,
+              stroke: accentColor,
+              strokeWidth: 2,
+            }}
+            activeDot={{
+              r: 4,
+              fill: accentColor,
+              stroke: accentColor,
+              strokeWidth: 2,
+            }}
+          />
+
+          <Tooltip
+            contentStyle={{
+              borderRadius: "10px",
+              border: "2px solid #ddd",
+              fontSize: "12px",
+            }}
+          />
+        </LineChart>
+      </ResponsiveContainer>
     </div>
   );
 }

@@ -1,7 +1,6 @@
 "use client";
 
-import { MASTERY_COLORS } from "@/src/lib/constants/aspects";
-import { MasteryTitle } from "@/src/lib/types";
+import { useMemo } from "react";
 import {
   PolarAngleAxis,
   PolarGrid,
@@ -17,51 +16,70 @@ interface RadarChartProps {
     value: number;
     fullMark: number;
   }[];
-  masteryTitle: MasteryTitle;
+  masteryTitle: string;
   username: string;
 }
 
-export default function RadarChart({
-  data,
-  masteryTitle,
-  username,
-}: RadarChartProps) {
-  const masteryColor = MASTERY_COLORS[masteryTitle].primary;
+export default function RadarChart({ data }: RadarChartProps) {
+  // Match screenshot blue
+  const strokeColor = "#4f7df3";
+  const fillColor = "rgba(79, 125, 243, 0.25)";
+
+  // Radius domain based on fullMark (image shows 0-400)
+  const maxMark = useMemo(() => {
+    return Math.max(...data.map((d) => d.fullMark ?? 0), 10);
+  }, [data]);
 
   return (
-    <div className="w-full h-full">
+    <div className="w-full h-full bg-gray-100">
       <ResponsiveContainer width="100%" height="100%">
-        <RechartsRadarChart data={data}>
-          <PolarGrid
-            stroke="currentColor"
-            className="text-gray-300 dark:text-gray-700"
-          />
-          <PolarAngleAxis
-            dataKey="aspect"
-            tick={{
-              fill: "currentColor",
-              fontSize: 12,
-            }}
-            className="text-gray-700 dark:text-gray-400"
-          />
-          <PolarRadiusAxis
-            angle={90}
-            domain={[0, 12]}
-            tick={{
-              fill: "currentColor",
-              fontSize: 10,
-            }}
-            className="text-gray-500 dark:text-gray-600"
-          />
-          <Radar
-            name={username}
-            dataKey="value"
-            stroke={masteryColor}
-            fill={masteryColor}
-            fillOpacity={0.4}
-            strokeWidth={2}
-          />
-        </RechartsRadarChart>
+       <RechartsRadarChart
+    data={data}
+    outerRadius="70%"
+    margin={{ top: 0, right: 10, bottom: 0, left: 20 }}
+  >
+    <PolarGrid stroke="#cfcfcf" strokeWidth={1} gridType="polygon" />
+
+    <PolarAngleAxis
+      dataKey="aspect"
+      tickLine={false}
+      axisLine={false}
+      tickSize={18}
+      tick={{
+        fill: "#333",
+        fontSize: 12,
+        fontWeight: 500,
+      }}
+    />
+
+    <PolarRadiusAxis
+      angle={90}
+      domain={[0, maxMark]}
+      tickCount={5}
+      axisLine={false}
+      tickLine={false}
+      tick={{
+        fill: "#555",
+        fontSize: 12,
+        fontWeight: 500,
+      }}
+    />
+
+    <Radar
+      dataKey="value"
+      stroke="#4f7df3"
+      strokeWidth={2}
+      fill="rgba(79, 125, 243, 0.25)"
+      dot={{
+        r: 3,
+        fill: "#4f7df3",
+        stroke: "#ffffff",
+        strokeWidth: 1.5,
+      }}
+
+    />
+  </RechartsRadarChart>
+
       </ResponsiveContainer>
     </div>
   );

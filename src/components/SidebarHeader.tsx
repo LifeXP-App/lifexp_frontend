@@ -39,8 +39,8 @@ export function SidebarHeader() {
           </>
         ) : (
           <>
-            <div className="w-10 h-10 bg-gray-200 dark:bg-gray-800 rounded-full animate-pulse" />
-            <div className="h-6 w-20 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
+            <div className="w-10 h-10 bg-gray-200 dark:bg-gray-800 rounded-full animate-pulse mx-3" />
+            <div className="h-6 w-20 bg-gray-200 dark:bg-gray-800 rounded animate-pulse mx-2" />
           </>
         )}
       </Link>

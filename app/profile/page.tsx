@@ -16,7 +16,7 @@ import {
 } from "@/src/lib/mock/profileData";
 import { mockUser } from "@/src/lib/mock/userData";
 import { AspectType } from "@/src/lib/types";
-import { Flame } from "lucide-react";
+import {FireIcon} from "@heroicons/react/24/solid";
 import Image from "next/image";
 
 export default function ProfilePage() {
@@ -48,98 +48,98 @@ export default function ProfilePage() {
   };
 
   return (
-    <main className="w-full md:w-[90%] lg:w-[80%] xl:w-[80%] mx-auto md:px-5 overflow-hidden">
-      <div className="flex-1 min-h-screen pb-16 md:pb-6 py-2 md:py-6 md:px-4 overflow-y-auto">
+    <main className="w-full flex flex-col md:flex-row overflow-y-auto" style={{ minHeight: "calc(100vh - 60px)" }}>
+      <div className="w-full px-4 py-4 sm:px-6 md:px-8 lg:px-12 xl:px-24">
         {/* PROFILE HEADER */}
-        <div className="mb-6 p-6">
-          <div className="flex flex-col lg:flex-row gap-6">
-            {/* Left: Profile Info */}
-            <div className="flex-1">
-              <div className="flex items-center gap-6 mb-4">
-                <div className="relative">
-                  {user.avatar ? (
-                    <Image
-                      src={user.avatar}
-                      width={80}
-                      height={80}
-                      alt={user.username}
-                      className="rounded-full object-cover aspect-square"
-                    />
-                  ) : (
-                    // avatar gradient now uses user's mastery colors
-                    <div
-                      className="w-20 h-20 rounded-full flex items-center justify-center"
-                      style={{
-                        backgroundImage: `linear-gradient(135deg, ${accent.gradStart}, ${accent.gradEnd})`,
-                      }}
-                    >
-                      <span className="text-white text-2xl font-bold">
-                        {user.username[0].toUpperCase()}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h1 className="text-2xl font-bold">{user.fullname}</h1>
-                    {/* mastery badge uses mastery color instead of hardcoded blue */}
-                    <span className="text-sm opacity-50 px-2 py-0.5 rounded">
-                      @{user.username}
+        <div className="relative rounded-xl flex flex-col md:flex-row justify-between w-full mb-4">
+          <div className="pt-2 sm:p-2 mb-4 flex flex-col gap-2 w-full">
+            <div className="flex flex-row items-center gap-4 sm:gap-8 w-full mb-4">
+              <div className="shrink-0">
+                {user.avatar ? (
+                  <Image
+                    src={user.avatar}
+                    width={96}
+                    height={96}
+                    alt={user.username}
+                    className="h-20 w-20 sm:h-24 sm:w-24 rounded-full object-cover"
+                  />
+                ) : (
+                  <div
+                    className="h-20 w-20 sm:h-24 sm:w-24 rounded-full flex items-center justify-center"
+                    style={{
+                      backgroundImage: `linear-gradient(135deg, ${accent.gradStart}, ${accent.gradEnd})`,
+                    }}
+                  >
+                    <span className="text-white text-2xl font-bold">
+                      {user.username[0].toUpperCase()}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
-                    <span
-                      className="font-semibold text-rookie"
-                      style={{
-                        color: accent.primary,
-                      }}
+                )}
+              </div>
+              <div className="flex flex-col w-full">
+                <span className="flex items-center gap-2 mb-1">
+                  <p className="text-base font-bold">{user.fullname}</p>
+                  <p className="text-base font-medium text-gray-500">
+                    @{user.username}
+                  </p>
+                </span>
+                <span className="flex items-center cursor-pointer">
+                  <p
+                    className="text-sm font-bold"
+                    style={{ color: accent.text }}
+                  >
+                    {user.masteryTitle}
+                  </p>
+                  <button
+                    type="button"
+                    className="mastery-info flex float-right cursor-pointer"
+                  >
+                    <svg
+                      className="w-4 h-4 ms-2 text-gray-400 group-hover:text-gray-500 transition-colors"
+                      aria-hidden="true"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
                     >
-                      {user.masteryTitle}
-                    </span>
-                    <span>•</span>
-                    <span>Life Level {user.lifeLevel}</span>
+                      <path
+                        fillRule="evenodd"
+                        d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm8.706-1.442c1.146-.573 2.437.463 2.126 1.706l-.709 2.836.042-.02a.75.75 0 0 1 .67 1.34l-.04.022c-1.147.573-2.438-.463-2.127-1.706l.71-2.836-.042.02a.75.75 0 1 1-.671-1.34l.041-.022ZM12 9a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <span className="sr-only">Show Info</span>
+                  </button>
+                </span>
+                <div className="mt-4 flex gap-6 sm:gap-8 text-sm">
+                  <div className="text-center sm:text-left">
+                    <p className="font-semibold">{stats.posts}</p>
+                    <p className="text-gray-500">Posts</p>
                   </div>
-
-                  {/* Stats */}
-                  <div className="flex gap-6 mb-3">
-                    <div className="text-center">
-                      <div className="font-bold text-lg">{stats.posts}</div>
-                      <div className="text-xs text-gray-600 dark:text-gray-400">
-                        Posts
-                      </div>
-                    </div>
-                    <div className="text-center">
-                      <div className="font-bold text-lg">{stats.followers}</div>
-                      <div className="text-xs text-gray-600 dark:text-gray-400">
-                        Followers
-                      </div>
-                    </div>
-                    <div className="text-center">
-                      <div className="font-bold text-lg">{stats.following}</div>
-                      <div className="text-xs text-gray-600 dark:text-gray-400">
-                        Following
-                      </div>
-                    </div>
+                  <div className="text-center sm:text-left cursor-pointer">
+                    <p className="font-semibold">{stats.followers}</p>
+                    <p className="text-gray-500">Followers</p>
+                  </div>
+                  <div className="text-center sm:text-left cursor-pointer">
+                    <p className="font-semibold">{stats.following}</p>
+                    <p className="text-gray-500">Following</p>
                   </div>
                 </div>
               </div>
+            </div>
 
-              <p className="font-semibold">{stats.bio}</p>
+            <p className="text-gray-800 dark:text-gray-300 font-semibold">
+              {stats.bio}
+            </p>
 
-              <div className="space-y-1 text-sm">
-                <p className="text-gray-600 dark:text-gray-400">
-                  {stats.tagline}
-                </p>
-              </div>
+            <p className="text-gray-500 dark:text-gray-400">{stats.tagline}</p>
               {/* Ongoing Goals */}
-              <div className="mt-6">
+              <div className="mt-2">
                 <h3 className="font-bold text-sm mb-3">Ongoing Goals</h3>
                 <div className="flex gap-2 flex-wrap">
                   {mockGoals.map((goal) => (
                     <span
                       key={goal.id}
-                      className="px-3 py-1.5 rounded-full text-xs font-medium"
+                      className="px-3 py-1.5 rounded-full text-xs font-medium flex gap-2 items-center"
                       style={{
                         backgroundColor: hexToRgba(
                           getAspectColor(goal.category),
@@ -149,76 +149,140 @@ export default function ProfilePage() {
                         color: getAspectColor(goal.category),
                       }}
                     >
+                      <p className="text-md">{goal.emoji}</p>
+
                       {goal.name}
                     </span>
                   ))}
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex gap-3 mt-6">
-                <button
-                  className="flex-1 text-white font-semibold py-2 px-4 rounded-lg transition hover:brightness-90"
-                  style={{ backgroundColor: accent.primary }}
-                >
-                  Edit Profile
-                </button>
-                <button className="flex-1 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 font-semibold py-2 px-4 rounded-lg transition">
-                  Share Profile
-                </button>
-              </div>
-            </div>
+            <span className="flex flex-col sm:flex-row md:gap-2 gap-4 items-center w-full mt-2 sm:mt-4">
+              <button
+                className="w-full sm:w-auto p-2 rounded-lg cursor-pointer px-12 text-white"
+                style={{ backgroundColor: accent.primary }}
+              >
+                Edit Profile
+              </button>
+              <button className="bg-black/70 hover:bg-black text-white px-8 py-2 rounded-md w-full sm:w-48 dark:hover:bg-gray-100 dark:bg-white dark:text-black">
+                Share Profile
+              </button>
+            </span>
+          </div>
 
-            {/* Right: Radar Chart */}
-            <div className="lg:w-96 flex items-center justify-center">
-              <div className="relative w-full h-[300px]">
-                <RadarChart
-                  data={radarData}
-                  masteryTitle={user.masteryTitle}
-                  username="Jason"
-                />
-              </div>
+        <div className="hidden xl:flex w-full focus:outline-none justify-end p-4 sm:p-6 overflow-visible">
+        <div className="w-full max-w-[340px] h-[320px] overflow-visible p-6">
+          <RadarChart
+            data={radarData}
+            masteryTitle={user.masteryTitle}
+            username={user.username}
+          />
+        </div>
+      </div>
+
+        </div>
+
+        {/* Mobile Chart */}
+        <div className="xl:hidden my-4 flex justify-center w-full">
+          <div className="w-full bg-white dark:bg-dark-2 rounded-xl border-2 border-gray-200 dark:border-gray-900 p-6">
+            <div className="mx-auto w-full max-w-[280px] h-72">
+              <RadarChart
+                data={radarData}
+                masteryTitle={user.masteryTitle}
+                username={user.username}
+              />
             </div>
           </div>
         </div>
 
         {/* STREAK, LIFE LEVEL, XP CARDS */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-white dark:bg-dark-2 rounded-xl p-4 border-2 border-gray-200 dark:border-gray-900 flex flex-col items-center justify-center text-center">
-            <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 mb-1">
-              <span className="text-xl items-center flex">
-                {/* fire icon */}
-                <Flame
-                  className="text-yellow-400 dark:text-yellow-700"
-                  fill="currentColor"
+        <div className="my-4 flex flex-col sm:flex-row justify-between text-sm gap-4">
+          {/* Streak count */}
+          <div className="bg-white dark:bg-dark-2 border-2 rounded-xl border-gray-200 dark:border-gray-900 w-full flex flex-col rounded-md items-center justify-between p-4">
+            <p className="text-sm">Streak Count</p>
+            <div className="flex gap-2 items-center">
+              <FireIcon className="size-6 text-gray-400" fill="#BBBBBB" />
+              <p className="text-lg font-bold text-gray-400 dark:text-gray-600">
+                {stats.streakCount}
+              </p>
+            </div>
+          </div>
+
+          {/* life level */}
+          <div className="bg-white dark:bg-dark-2 border-2 rounded-xl border-gray-200 dark:border-gray-900 w-full flex flex-col rounded-md items-center justify-between p-4">
+            <span className="flex items-center justify-center gap-1">
+              <p className="text-gray-600 dark:text-white text-base sm:text-lg font-bold">
+                Life Level {user.lifeLevel}
+              </p>
+            </span>
+            <span className="flex items-center justify-center gap-1">
+              <p style={{ fontSize: "11px" }} className="text-gray-500">
+                Member since {stats.memberSince}
+              </p>
+            </span>
+          </div>
+
+          {/* XP */}
+          <div className="bg-gray-200 dark:bg-dark-2 border-2 rounded-xl border-gray-200 dark:border-gray-900 w-full flex flex-col rounded-md items-center justify-between p-4">
+            <span className="flex items-center justify-center gap-1">
+              <p
+                style={{ color: accent.text }}
+                className="text-lg font-bold"
+              >
+                {stats.currentXP.toLocaleString()} XP
+              </p>
+            </span>
+            <span className="flex items-center justify-center gap-1">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="#AAA"
+                className="h-4 w-4"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M12 1.5a5.25 5.25 0 0 0-5.25 5.25v3a3 3 0 0 0-3 3v6.75a3 3 0 0 0 3 3h10.5a3 3 0 0 0 3-3v-6.75a3 3 0 0 0-3-3v-3c0-2.9-2.35-5.25-5.25-5.25Zm3.75 8.25v-3a3.75 3.75 0 1 0-7.5 0v3h7.5Z"
+                  clipRule="evenodd"
                 />
-              </span>
-              <span className="text-sm font-medium">Streak Count</span>
-            </div>
-            <div className="text-3xl font-bold">{stats.streakCount}</div>
-          </div>
-
-          <div className="bg-white dark:bg-dark-2 rounded-xl p-4 border-2 border-gray-200 dark:border-gray-900 flex flex-col items-center justify-center text-center">
-            <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
-              Life Level {user.lifeLevel}
-            </div>
-            <div className="text-[11px] text-gray-600 dark:text-gray-400">
-              Member since {stats.memberSince}
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-dark-2 rounded-xl p-4 border-2 border-gray-200 dark:border-gray-900 flex flex-col items-center justify-center text-center">
-            <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
-              {stats.currentXP} XP
-            </div>
-            <div className="text-[11px] text-gray-600 dark:text-gray-400">
-              Mastery unlocks at {stats.xpToMastery.toLocaleString()}
-            </div>
+              </svg>
+              <p style={{ fontSize: "11px" }} className="text-gray-400">
+                Mastery unlocks at {stats.xpToMastery.toLocaleString()}
+              </p>
+            </span>
           </div>
         </div>
 
         {/* WEEKLY XP CHART */}
-        <div className="mb-6">
+        <div className="p-4 sm:p-6 my-4 bg-white dark:bg-dark-2 dark:border-gray-900 border-2 border-gray-200 rounded-2xl w-full">
+          <div className="flex justify-between items-center mb-4">
+            <span className="flex gap-3 items-center">
+              {user.avatar ? (
+                <Image
+                  src={user.avatar}
+                  width={32}
+                  height={32}
+                  alt={user.username}
+                  className="h-8 w-8 aspect-square rounded-full object-cover"
+                />
+              ) : (
+                <div
+                  className="h-8 w-8 rounded-full flex items-center justify-center"
+                  style={{
+                    backgroundImage: `linear-gradient(135deg, ${accent.gradStart}, ${accent.gradEnd})`,
+                  }}
+                >
+                  <span className="text-white text-sm font-bold">
+                    {user.username[0].toUpperCase()}
+                  </span>
+                </div>
+              )}
+              <h2 className="opacity-50 text-lg sm:text-xl font-regular">
+                {totalWeeklyXP.toLocaleString()} XP this week
+              </h2>
+            </span>
+          </div>
+
+        <div className="relative h-48 sm:h-64">
           <XPChart
             data={mockWeeklyXP}
             username={user.username}
@@ -229,86 +293,94 @@ export default function ProfilePage() {
           />
         </div>
 
-        {/* TOP ACTIVITIES & RECENT SESSIONS */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {/* Top Activities */}
-          <div className="bg-white dark:bg-dark-2 rounded-xl p-6 border-2 border-gray-200 dark:border-gray-900">
-            <h2 className="text-xl font-bold mb-4">Top Activities</h2>
-            <div className="space-y-3">
-              {mockActivities.map((activity, index) => (
-                <div
-                  key={activity.id}
-                  className="flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-gray-400 dark:text-gray-600 font-semibold w-6">
+        </div>
+
+        {/* TOP ACTIVITIES & ONGOING GOALS */}
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="p-4 sm:p-6 my-2 bg-white border-2 border-gray-200 dark:bg-dark-2 dark:border-gray-900 rounded-2xl w-full ">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-lg font-bold">Top Activities</h2>
+              <span className="text-gray-500 text-sm"></span>
+            </div>
+
+            {mockActivities.map((activity, index) => (
+              <div key={activity.id} className="space-y-4 mb-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2 sm:space-x-4">
+                    <span className="text-gray-400 font-semibold w-5">
                       {index + 1}
                     </span>
-                    <span className="text-2xl">{activity.icon}</span>
-                    <span className="font-medium">{activity.name}</span>
+                    <div className="flex items-center space-x-2 sm:space-x-4">
+                      <p className="text-2xl">{activity.icon}</p>
+                      <span className="font-medium text-sm sm:text-base truncate">
+                        {activity.name}
+                      </span>
+                    </div>
                   </div>
-                  <span className="text-gray-600 dark:text-gray-400 font-semibold">
+                  <span className="font-semibold text-sm sm:text-md">
                     {activity.duration}
                   </span>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
 
+{/* Recent Sessions */}
           {/* Recent Sessions */}
-          <div className="bg-white dark:bg-dark-2 rounded-xl p-6 border-2 border-gray-200 dark:border-gray-900">
-            <h2 className="text-xl font-bold mb-4">Recent Sessions</h2>
-            <ul className="space-y-3">
-              {mockSessions.map((session) => (
-                <li
-                  key={session.id}
-                  className="flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">{session.icon}</span>
-                    <div>
-                      <div className="font-medium">{session.activity}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {session.timestamp}
-                      </div>
-                    </div>
-                  </div>
-                  <span className="text-gray-600 dark:text-gray-400 font-semibold text-sm">
-                    {session.duration}
-                  </span>
-                </li>
-              ))}
-            </ul>
+<div className="p-4 sm:p-6 my-2 bg-white border-2 border-gray-200 dark:bg-dark-2 dark:border-gray-900 rounded-2xl w-full">
+  <div className="flex justify-between items-center mb-6">
+    <h2 className="text-lg font-bold">Recent Sessions</h2>
+    <span className="text-gray-500 text-sm"></span>
+  </div>
+
+  {mockSessions.map((session) => (
+    <div key={session.id} className=" p-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors cursor-pointer">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2 sm:space-x-4">
+          <div className="flex items-center space-x-2 sm:space-x-4">
+            <p className="text-2xl">{session.icon}</p>
+            <div className="flex flex-col">
+              <span className="font-medium text-sm sm:text-base truncate">
+                {session.activity}
+              </span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                {session.timestamp}
+              </span>
+            </div>
           </div>
         </div>
 
+        {/* ✅ Duration stays as is */}
+        <span className="text-gray-600 dark:text-gray-400 font-semibold text-sm">
+          {session.duration}
+        </span>
+      </div>
+    </div>
+  ))}
+</div>
+
+          
+
+        </div>
+
         {/* EXPERIENCES */}
-        <div className="bg-white dark:bg-dark-2 rounded-xl p-6 border-2 border-gray-200 dark:border-gray-900">
-          <h2 className="text-xl font-bold mb-4">Experiences</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="max-w-6xl mx-auto px-2 p-2 pb-12 my-4 rounded-sm w-full">
+          <div className="grid grid-cols-3 gap-2 lg:gap-4">
+            <h2 className="text-lg sm:text-xl font-semibold col-span-3">
+              Experiences
+            </h2>
             {mockExperiences.map((exp) => (
-              <div
+              <a
                 key={exp.id}
-                className="relative aspect-video rounded-lg overflow-hidden group cursor-pointer"
+                href="#"
+                className="aspect-square overflow-hidden"
               >
                 <img
+                  className="object-cover w-full h-full border-2 border-gray-200 dark:border-[rgb(0,0,0,0)] hover:opacity-90 transition"
                   src={exp.image}
                   alt={exp.title}
-                  className="w-full h-full object-cover transition group-hover:scale-105"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-4">
-                  <div>
-                    <h3 className="text-white font-semibold text-sm">
-                      {exp.title}
-                    </h3>
-                    {exp.description && (
-                      <p className="text-white/80 text-xs mt-1">
-                        {exp.description}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
+              </a>
             ))}
           </div>
         </div>

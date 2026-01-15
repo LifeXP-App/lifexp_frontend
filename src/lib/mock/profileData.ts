@@ -84,29 +84,23 @@ export const mockSessions: Session[] = [
 export const mockGoals: Goal[] = [
   {
     id: "1",
+    emoji: "📘",
     name: "Master React",
     category: "logic",
   },
   {
     id: "2",
+    emoji: "🏃",
     name: "Run Marathon",
     category: "physique",
   },
   {
     id: "3",
-    name: "Learn Piano",
+    emoji: "🎨",
+    name: "Drawing",
     category: "creativity",
   },
-  {
-    id: "4",
-    name: "Public Speaking",
-    category: "social",
-  },
-  {
-    id: "5",
-    name: "Meditation Daily",
-    category: "energy",
-  },
+
 ];
 
 export const mockExperiences: Experience[] = [
@@ -114,42 +108,42 @@ export const mockExperiences: Experience[] = [
     id: "1",
     title: "Joined LifeXP",
     image:
-      "https://res.cloudinary.com/dfohn9dcz/image/upload/f_auto,q_auto/v1/experiences/joined",
+      "https://res.cloudinary.com/dfohn9dcz/image/upload/v1/posts/user_4/Dra_20250718123716",
     description: "on the path to become an Alchemist",
   },
   {
     id: "2",
     title: "First Code Accepted",
     image:
-      "https://res.cloudinary.com/dfohn9dcz/image/upload/f_auto,q_auto/v1/experiences/code",
+ "https://res.cloudinary.com/dfohn9dcz/image/upload/v1/posts/user_4/Dra_20250718123716",
     description: "LeetCode submission accepted",
   },
   {
     id: "3",
     title: "Brain Training",
     image:
-      "https://res.cloudinary.com/dfohn9dcz/image/upload/f_auto,q_auto/v1/experiences/brain",
+ "https://res.cloudinary.com/dfohn9dcz/image/upload/v1/posts/user_4/Dra_20250718123716",
     description: "Logic aspect milestone",
   },
   {
     id: "4",
     title: "Research Paper",
     image:
-      "https://res.cloudinary.com/dfohn9dcz/image/upload/f_auto,q_auto/v1/experiences/paper",
+ "https://res.cloudinary.com/dfohn9dcz/image/upload/v1/posts/user_4/Dra_20250718123716",
     description: "Published academic research",
   },
   {
     id: "5",
     title: "Unsupervised Learning",
     image:
-      "https://res.cloudinary.com/dfohn9dcz/image/upload/f_auto,q_auto/v1/experiences/ml",
+ "https://res.cloudinary.com/dfohn9dcz/image/upload/v1/posts/user_4/Dra_20250718123716",
     description: "Completed ML course",
   },
   {
     id: "6",
     title: "Code Challenge",
     image:
-      "https://res.cloudinary.com/dfohn9dcz/image/upload/f_auto,q_auto/v1/experiences/challenge",
+       "https://res.cloudinary.com/dfohn9dcz/image/upload/v1/posts/user_4/Dra_20250718123716",
     description: "Won coding competition",
   },
 ];

@@ -2,12 +2,12 @@ import { UserProfile } from "../types";
 
 export const mockUser: UserProfile = {
   id: "1",
-  fullname: "Jacy",
+  fullname: "Jason",
   username: "jason",
-  avatar: undefined,
+  avatar:  "https://res.cloudinary.com/dfohn9dcz/image/upload/v1752398740/d87vib7aizhnbj1ywctu.jpg",
   totalXP: 15500,
   lifeLevel: 12,
-  masteryTitle: "Prodigy",
+  masteryTitle: "Rookie",
   masteryLevel: 3,
   aspects: {
     physique: {

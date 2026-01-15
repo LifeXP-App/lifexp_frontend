@@ -61,6 +61,7 @@ export interface Session {
 
 export interface Goal {
   id: string;
+  emoji: string;
   name: string;
   category: AspectType;
 }
