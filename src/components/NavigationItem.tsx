@@ -7,6 +7,7 @@ import {
   TrophyIcon,
   UserCircleIcon,
   XCircleIcon,
+  SquaresPlusIcon
 } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -18,8 +19,9 @@ import { hexToRgba } from "./UserAccent";
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   home: HomeIcon,
+  squares: SquaresPlusIcon,
   search: MagnifyingGlassIcon,
-  plus: PlusIcon,
+
   trophy: TrophyIcon,
   user: UserCircleIcon,
   settings: Cog6ToothIcon,

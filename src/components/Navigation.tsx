@@ -5,7 +5,7 @@ import { NavigationItem } from "./NavigationItem";
 const NAV_ITEMS = [
   { label: "Feed", href: "/", active: ["/"], icon: "home" },
   { label: "Search", href: "/search", active: ["/search"], icon: "search" },
-  { label: "New Post", href: "/posts/new", active: ["/posts/new"], icon: "plus" },
+  { label: "Goals", href: "/goals", active: ["/goals"], icon: "squares" },
   {
     label: "Leaderboard",
     href: "/leaderboard/rookie",
