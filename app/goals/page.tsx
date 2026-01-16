@@ -38,7 +38,7 @@ const mockGoals: Goal[] = [
     emoji: "💪",
     title: "Gain 3lbs in 2 weeks through stre..",
     description:
-      "Haven’t been working out for sometime so I wanted to focus for the next 2 weeks, and try to gain atleast...",
+      "Haven't been working out for sometime so I wanted to focus for the next 2 weeks, and try to gain atleast...",
     status: "planned",
     metaRight: "Planned",
   },
@@ -62,7 +62,7 @@ const mockGoals: Goal[] = [
 ];
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <h2 className="text-xl font-bold text-black mb-3">{children}</h2>;
+  return <h2 className="text-xl font-bold text-black dark:text-white mb-3">{children}</h2>;
 }
 
 function GoalCard({
@@ -79,7 +79,7 @@ function GoalCard({
   const isCompleted = goal.status === "completed";
 
   return (
-    <div className="w-full rounded-2xl border border-gray-200 bg-white shadow-sm p-4">
+    <div className="w-full rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-dark-2 shadow-sm p-4">
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">
@@ -87,18 +87,18 @@ function GoalCard({
 
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <p className="font-semibold text-lg text-black truncate">
+              <p className="font-semibold text-lg text-black dark:text-white truncate">
                 {goal.title}
               </p>
 
               {isCompleted && typeof goal.xpReward === "number" && (
-                <span className="ml-2 shrink-0 rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white">
+                <span className="ml-2 shrink-0 rounded-full bg-blue-600 dark:bg-blue-500 px-3 py-1 text-xs font-semibold text-white">
                   {goal.xpReward}XP
                 </span>
               )}
             </div>
 
-            <p className="text-sm text-gray-500 mt-3 line-clamp-2">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-3 line-clamp-2">
               {goal.description}
             </p>
           </div>
@@ -106,7 +106,7 @@ function GoalCard({
 
         {/* Right meta */}
         {!isCompleted && goal.metaRight && (
-          <p className="text-xs text-gray-400 italic whitespace-nowrap mt-1">
+          <p className="text-xs text-gray-400 dark:text-gray-500 italic whitespace-nowrap mt-1">
             {goal.metaRight}
           </p>
         )}
@@ -114,14 +114,14 @@ function GoalCard({
 
       {/* Completed extra row */}
       {isCompleted && goal.timeSummary && (
-        <div className="mt-3 flex items-center gap-2 text-sm text-gray-500">
+        <div className="mt-3 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
           <span className="inline-flex items-center justify-center">
             {/* clock icon */}
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 24 24"
               fill="currentColor"
-              className="h-4 w-4 text-gray-400"
+              className="h-4 w-4 text-gray-400 dark:text-gray-500"
             >
               <path
                 fillRule="evenodd"
@@ -150,7 +150,7 @@ function GoalCard({
         {primaryCta && (
           <button
             onClick={primaryCta.onClick}
-            className="flex-1 rounded-xl cursor-pointer bg-blue-600 text-white font-semibold py-3 hover:bg-blue-700 transition"
+            className="flex-1 rounded-xl cursor-pointer bg-blue-600 dark:bg-blue-500 text-white font-semibold py-3 hover:bg-blue-700 dark:hover:bg-blue-600 transition"
           >
             {primaryCta.label}
           </button>
@@ -159,7 +159,7 @@ function GoalCard({
         {secondaryCta && (
           <button
             onClick={secondaryCta.onClick}
-            className="flex-1 rounded-xl cursor-pointer bg-gray-700 text-white font-semibold py-3 hover:bg-gray-800 transition"
+            className="flex-1 rounded-xl cursor-pointer bg-gray-700 dark:bg-gray-600 text-white font-semibold py-3 hover:bg-gray-800 dark:hover:bg-gray-700 transition"
           >
             {secondaryCta.label}
           </button>
@@ -168,7 +168,7 @@ function GoalCard({
         {showAchievementCta && (
           <button
             onClick={showAchievementCta.onClick}
-            className="w-full rounded-xl bg-gray-700 text-white font-semibold py-3 hover:bg-gray-800 transition"
+            className="w-full rounded-xl bg-gray-700 dark:bg-gray-600 text-white font-semibold py-3 hover:bg-gray-800 dark:hover:bg-gray-700 transition"
           >
             {showAchievementCta.label}
           </button>
@@ -188,11 +188,11 @@ function AspectChip({
   tint: "red" | "yellow" | "green" | "blue" | "purple";
 }) {
   const tintMap: Record<typeof tint, string> = {
-    red: "bg-red-100 text-red-700",
-    yellow: "bg-yellow-100 text-yellow-700",
-    green: "bg-green-100 text-green-700",
-    blue: "bg-blue-100 text-blue-700",
-    purple: "bg-purple-100 text-purple-700",
+    red: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400",
+    yellow: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400",
+    green: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400",
+    blue: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400",
+    purple: "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400",
   };
 
   return (
@@ -211,18 +211,18 @@ export default function GoalsPage() {
   const completed = mockGoals.filter((g) => g.status === "completed");
 
   return (
-    <main className="h-screen w-full bg-gray-100 overflow-hidden">
+    <main className="h-screen w-full bg-gray-100 dark:bg-dark-1 overflow-hidden">
       <div className="mx-auto w-full  px-4 py-6">
         <div className="flex w-full gap-6">
           {/* LEFT MAIN CONTENT */}
           <div className="w-full h-screen overflow-scroll noscrollbar py-4 px-6 md:px-12">
             {/* Title */}
-            <h1 className="text-xl font-bold text-black mb-4">Goals</h1>
+            <h1 className="text-xl font-bold text-black dark:text-white mb-4">Goals</h1>
 
             {/* Create new goal */}
             <button
               onClick={() => alert("Create New Goal")}
-              className="w-full rounded-2xl cursor-pointer bg-gray-200 text-black font-semibold py-4 flex items-center justify-start gap-3 px-5 hover:bg-gray-300 transition"
+              className="w-full rounded-2xl cursor-pointer bg-gray-200 dark:bg-dark-2 text-black dark:text-white font-semibold py-4 flex items-center justify-start gap-3 px-5 hover:bg-gray-300 dark:hover:bg-dark-3 transition"
             >
               <span className="text-lg cursor-pointer leading-none">＋</span>
               <span>Create New Goal</span>
@@ -332,7 +332,7 @@ function RightSidebar() {
   return (
     <aside className="w-2xl hidden md:block">
       {/* PROFILE CARD */}
-      <div className="bg-white p-6 mb-4 rounded-xl border-2 border-gray-200">
+      <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-gray-800">
         <div className="text-center flex flex-col items-center">
           <div className="flex flex-col items-center">
             <img
@@ -341,7 +341,7 @@ function RightSidebar() {
               loading="lazy"
               alt="Profile"
             />
-            <h3 className="font-semibold mt-2">{user.fullname}</h3>
+            <h3 className="font-semibold mt-2 dark:text-white">{user.fullname}</h3>
           </div>
 
           <span className="flex gap-1 justify-center items-center cursor-pointer mt-1">
@@ -350,7 +350,7 @@ function RightSidebar() {
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
                 fill="currentColor"
-                className="w-4 h-4 text-gray-400"
+                className="w-4 h-4 text-gray-400 dark:text-gray-500"
               >
                 <path
                   fillRule="evenodd"
@@ -379,22 +379,22 @@ function RightSidebar() {
 
         {/* XP + STREAK */}
         <div className="mt-4 flex justify-between text-sm gap-4">
-          <div className="bg-gray-100 w-full flex flex-col rounded-md items-center justify-between p-4">
+          <div className="bg-gray-100 dark:bg-dark-3 w-full flex flex-col rounded-md items-center justify-between p-4">
             <p className="text-lg font-bold" style={{ color: user.masteryTextColor }}>
               {user.totalXp} XP
             </p>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               Overall ranked <b>#{user.rank}</b>
             </p>
           </div>
 
-          <div className="bg-gray-100 w-full flex flex-col rounded-md items-center justify-between p-4">
-            <p className="text-sm">Streak Count</p>
+          <div className="bg-gray-100 dark:bg-dark-3 w-full flex flex-col rounded-md items-center justify-between p-4">
+            <p className="text-sm dark:text-gray-300">Streak Count</p>
 
-            <p className="text-lg font-extrabold text-gray-400 flex gap-1 items-center">
+            <p className="text-lg font-extrabold text-gray-400 dark:text-gray-500 flex gap-1 items-center">
               <FireIcon
                 className={`w-6 h-6 inline-block ml-1 ${
-                  user.streak_active ? "text-yellow-500 animate-pulse" : "text-gray-400"
+                  user.streak_active ? "text-yellow-500 animate-pulse" : "text-gray-400 dark:text-gray-600"
                 }`}
               />
               {user.streak}
@@ -414,8 +414,8 @@ function RightSidebar() {
 function Stat({ label, value }: { label: string; value: number }) {
   return (
     <div className="text-center">
-      <p className="font-semibold">{value}</p>
-      <p className="text-gray-500">{label}</p>
+      <p className="font-semibold dark:text-white">{value}</p>
+      <p className="text-gray-500 dark:text-gray-400">{label}</p>
     </div>
   );
 }

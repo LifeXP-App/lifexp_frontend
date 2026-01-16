@@ -55,7 +55,7 @@ export function NavigationItem({
   return (
     <Link
       href={href}
-      className="flex items-center gap-4 px-4 py-2 rounded-lg transition-all duration-200"
+      className="flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-200"
       style={
         isActive
           ? {
@@ -66,13 +66,13 @@ export function NavigationItem({
       }
     >
       <span
-        className={isActive ? "" : "text-gray-600 dark:text-[var(--muted)]"}
+        className={isActive ? "" : "text-gray-600 dark:text-gray-400"}
       >
         <IconComponent className="w-6 h-6 shrink-0" />
       </span>
       <span
         className={`text-md font-medium ${
-          isActive ? "" : "text-gray-600 dark:text-[var(--muted)]"
+          isActive ? "" : "text-gray-600  dark:text-gray-400"
         }`}
       >
         {label}

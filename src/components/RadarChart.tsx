@@ -31,14 +31,14 @@ export default function RadarChart({ data }: RadarChartProps) {
   }, [data]);
 
   return (
-    <div className="w-full h-full bg-gray-100">
+    <div className="w-full h-full ">
       <ResponsiveContainer width="100%" height="100%">
        <RechartsRadarChart
     data={data}
     outerRadius="70%"
     margin={{ top: 0, right: 10, bottom: 0, left: 20 }}
   >
-    <PolarGrid stroke="#cfcfcf" strokeWidth={1} gridType="polygon" />
+    <PolarGrid stroke="#cfcfcf" strokeWidth={1} gridType="polygon" className="dark:stroke-gray-700" />
 
     <PolarAngleAxis
       dataKey="aspect"
@@ -47,9 +47,10 @@ export default function RadarChart({ data }: RadarChartProps) {
       tickSize={18}
       tick={{
         fill: "#333",
-        fontSize: 12,
+        fontSize: 14,
         fontWeight: 500,
       }}
+      className="dark:[&_text]:fill-gray-400"
     />
 
     <PolarRadiusAxis
@@ -63,6 +64,7 @@ export default function RadarChart({ data }: RadarChartProps) {
         fontSize: 12,
         fontWeight: 500,
       }}
+      className="dark:[&_text]:fill-gray-200"
     />
 
     <Radar
@@ -76,7 +78,7 @@ export default function RadarChart({ data }: RadarChartProps) {
         stroke: "#ffffff",
         strokeWidth: 1.5,
       }}
-
+      className="dark:[&_circle]:stroke-gray-900"
     />
   </RechartsRadarChart>
 

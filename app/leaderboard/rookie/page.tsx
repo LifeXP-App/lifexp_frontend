@@ -36,6 +36,7 @@ export default function RookieLeaderboard() {
       following: 45,
       xp: 972,
       streak: 0,
+      streak_active: false,
       masteryTitle: "Rookie",
     }),
     []
@@ -97,7 +98,7 @@ export default function RookieLeaderboard() {
       );
 
     return (
-      <p className="w-[17px] text-md font-bold text-left text-gray-700">
+      <p className="w-[17px] text-md font-bold text-left text-gray-700 dark:text-gray-300">
         {rank}
       </p>
     );
@@ -108,8 +109,8 @@ export default function RookieLeaderboard() {
       {/* Main leaderboard list */}
       <div className="w-full md:w-[calc(100%-450px)] relative flex-1 overflow-y-auto py-2 px-4 md:py-8 md:px-12">
         <div className="flex justify-between items-center w-full mb-2">
-          <p className="text-xs font-bold">Rookies</p>
-          <p className="text-xs font-bold">0-9999 XP</p>
+          <p className="text-xs font-bold dark:text-white">Rookies</p>
+          <p className="text-xs font-bold dark:text-white">0-9999 XP</p>
         </div>
 
         <div
@@ -120,7 +121,7 @@ export default function RookieLeaderboard() {
         >
           {players.map((u) => (
             <Link key={u.username} href={`/user/${u.username}`}>
-              <div className="flex hover:bg-gray-50 cursor-pointer justify-between items-center w-full overflow-hidden px-4 py-1.5 rounded-md">
+              <div className="flex hover:bg-gray-50 dark:hover:bg-dark-3 cursor-pointer justify-between items-center w-full overflow-hidden px-4 py-1.5 rounded-md">
                 <div className="flex justify-start items-center flex-grow gap-3 py-2.5">
                   <RankBadge rank={u.rank} />
 
@@ -129,18 +130,18 @@ export default function RookieLeaderboard() {
                     src={u.profile_picture}
                     alt={u.fullname}
                   />
-                  <p className="text-md font-medium">{u.fullname}</p>
+                  <p className="text-md font-medium dark:text-white">{u.fullname}</p>
                 </div>
 
                 <div className="flex flex-col justify-center items-end gap-2.5 p-2.5">
-                  <p className="text-md font-medium">{u.xp} XP</p>
+                  <p className="text-md font-medium dark:text-gray-300">{u.xp} XP</p>
                 </div>
               </div>
             </Link>
           ))}
 
           {!loading && players.length === 0 && (
-            <div className="text-center py-8 text-red-500">
+            <div className="text-center py-8 text-red-500 dark:text-red-400">
               Failed to load leaderboard data.
             </div>
           )}
@@ -151,12 +152,12 @@ export default function RookieLeaderboard() {
           <button
             onClick={() => loadPage(currentPage - 1)}
             disabled={currentPage <= 1 || loading}
-            className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 bg-gray-200 dark:bg-dark-2 hover:bg-gray-300 dark:hover:bg-dark-3 rounded-md disabled:opacity-50 disabled:cursor-not-allowed dark:text-white"
           >
             Previous
           </button>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 dark:text-white">
             <span className="font-medium">{currentPage}</span>
             <span>of</span>
             <span className="font-medium">{totalPages}</span>
@@ -165,7 +166,7 @@ export default function RookieLeaderboard() {
           <button
             onClick={() => loadPage(currentPage + 1)}
             disabled={currentPage >= totalPages || loading}
-            className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 bg-gray-200 dark:bg-dark-2 hover:bg-gray-300 dark:hover:bg-dark-3 rounded-md disabled:opacity-50 disabled:cursor-not-allowed dark:text-white"
           >
             Next
           </button>
@@ -174,14 +175,14 @@ export default function RookieLeaderboard() {
         {/* Loading indicator */}
         {loading && (
           <div className="flex justify-center items-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100" />
           </div>
         )}
       </div>
 
       {/* Profile Widget (Desktop) */}
       <aside className="w-[450px] p-6 overflow-auto hidden md:block h-screen">
-        <div className="bg-white p-6 mb-4 rounded-xl border-2 border-gray-200">
+        <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-gray-800">
           <div className="text-center flex flex-col items-center">
             <Link href={`/user/${currentUser.username}`}>
               <img
@@ -189,45 +190,45 @@ export default function RookieLeaderboard() {
                 className="h-24 w-24 object-cover aspect-square p-[1.5px] rounded-full"
                 alt={currentUser.fullname}
               />
-              <h3 className="font-semibold mt-2">{currentUser.fullname}</h3>
+              <h3 className="font-semibold mt-2 dark:text-white">{currentUser.fullname}</h3>
             </Link>
 
-            <p className="text-sm font-bold mt-1 text-gray-400">
+            <p className="text-sm font-bold mt-1 text-gray-400 dark:text-gray-500">
               {currentUser.masteryTitle}
             </p>
           </div>
 
           <div className="mt-4 flex justify-between text-sm">
             <div className="text-center">
-              <p className="font-semibold">{currentUser.lifeLevel}</p>
-              <p className="text-gray-500">Life Level</p>
+              <p className="font-semibold dark:text-white">{currentUser.lifeLevel}</p>
+              <p className="text-gray-500 dark:text-gray-400">Life Level</p>
             </div>
             <div className="text-center">
-              <p className="font-semibold">{currentUser.posts}</p>
-              <p className="text-gray-500">Posts</p>
+              <p className="font-semibold dark:text-white">{currentUser.posts}</p>
+              <p className="text-gray-500 dark:text-gray-400">Posts</p>
             </div>
             <div className="text-center">
-              <p className="font-semibold">{currentUser.followers}</p>
-              <p className="text-gray-500">Followers</p>
+              <p className="font-semibold dark:text-white">{currentUser.followers}</p>
+              <p className="text-gray-500 dark:text-gray-400">Followers</p>
             </div>
             <div className="text-center">
-              <p className="font-semibold">{currentUser.following}</p>
-              <p className="text-gray-500">Following</p>
+              <p className="font-semibold dark:text-white">{currentUser.following}</p>
+              <p className="text-gray-500 dark:text-gray-400">Following</p>
             </div>
           </div>
 
           <div className="mt-4 flex justify-between text-sm gap-4">
-            <div className="bg-gray-100 w-full flex flex-col rounded-md items-center justify-between p-4">
-              <p className="text-lg font-bold text-gray-400">
+            <div className="bg-gray-100 dark:bg-dark-3 w-full flex flex-col rounded-md items-center justify-between p-4">
+              <p className="text-lg font-bold text-gray-400 dark:text-gray-500">
                 {currentUser.xp} XP
               </p>
-              <p className="text-[10px] cursor-pointer text-gray-500">
+              <p className="text-[10px] cursor-pointer text-gray-500 dark:text-gray-400">
                 Mastery unlocks at 10K
               </p>
             </div>
 
-             <div className="bg-gray-100 w-full hidden md:flex flex-col rounded-md items-center justify-between p-4 dark:bg-gray-900 dark:bg-opacity-50">
-            <p className="text-sm">Streak Count</p>
+             <div className="bg-gray-100 w-full hidden md:flex flex-col rounded-md items-center justify-between p-4 dark:bg-dark-3">
+            <p className="text-sm dark:text-gray-300">Streak Count</p>
             <p className="text-lg font-extrabold text-gray-400 dark:text-gray-600 flex gap-1 items-center">
              
               {currentUser.streak_active ? (

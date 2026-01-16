@@ -78,8 +78,8 @@ export default function ProfilePage() {
               </div>
               <div className="flex flex-col w-full">
                 <span className="flex items-center gap-2 mb-1">
-                  <p className="text-base font-bold">{user.fullname}</p>
-                  <p className="text-base font-medium text-gray-500">
+                  <p className="text-base font-bold dark:text-white">{user.fullname}</p>
+                  <p className="text-base font-medium text-gray-500 dark:text-gray-400">
                     @{user.username}
                   </p>
                 </span>
@@ -95,7 +95,7 @@ export default function ProfilePage() {
                     className="mastery-info flex float-right cursor-pointer"
                   >
                     <svg
-                      className="w-4 h-4 ms-2 text-gray-400 group-hover:text-gray-500 transition-colors"
+                      className="w-4 h-4 ms-2 text-gray-400 dark:text-gray-500 group-hover:text-gray-500 dark:group-hover:text-gray-400 transition-colors"
                       aria-hidden="true"
                       fill="currentColor"
                       viewBox="0 0 24 24"
@@ -112,16 +112,16 @@ export default function ProfilePage() {
                 </span>
                 <div className="mt-4 flex gap-6 sm:gap-8 text-sm">
                   <div className="text-center sm:text-left">
-                    <p className="font-semibold">{stats.posts}</p>
-                    <p className="text-gray-500">Posts</p>
+                    <p className="font-semibold dark:text-white">{stats.posts}</p>
+                    <p className="text-gray-500 dark:text-gray-400">Posts</p>
                   </div>
                   <div className="text-center sm:text-left cursor-pointer">
-                    <p className="font-semibold">{stats.followers}</p>
-                    <p className="text-gray-500">Followers</p>
+                    <p className="font-semibold dark:text-white">{stats.followers}</p>
+                    <p className="text-gray-500 dark:text-gray-400">Followers</p>
                   </div>
                   <div className="text-center sm:text-left cursor-pointer">
-                    <p className="font-semibold">{stats.following}</p>
-                    <p className="text-gray-500">Following</p>
+                    <p className="font-semibold dark:text-white">{stats.following}</p>
+                    <p className="text-gray-500 dark:text-gray-400">Following</p>
                   </div>
                 </div>
               </div>
@@ -134,7 +134,7 @@ export default function ProfilePage() {
             <p className="text-gray-500 dark:text-gray-400">{stats.tagline}</p>
               {/* Ongoing Goals */}
               <div className="mt-2">
-                <h3 className="font-bold text-sm mb-3">Ongoing Goals</h3>
+                <h3 className="font-bold text-sm mb-3 dark:text-white">Ongoing Goals</h3>
                 <div className="flex gap-2 flex-wrap">
                   {mockGoals.map((goal) => (
                     <span
@@ -171,7 +171,7 @@ export default function ProfilePage() {
           </div>
 
         <div className="hidden xl:flex w-full focus:outline-none justify-end p-4 sm:p-6 overflow-visible">
-        <div className="w-full max-w-[340px] h-[320px] overflow-visible p-6">
+        <div className="w-full max-w-[360px] h-[320px] overflow-visible py-6 ">
           <RadarChart
             data={radarData}
             masteryTitle={user.masteryTitle}
@@ -199,9 +199,9 @@ export default function ProfilePage() {
         <div className="my-4 flex flex-col sm:flex-row justify-between text-sm gap-4">
           {/* Streak count */}
           <div className="bg-white dark:bg-dark-2 border-2 rounded-xl border-gray-200 dark:border-gray-900 w-full flex flex-col rounded-md items-center justify-between p-4">
-            <p className="text-sm">Streak Count</p>
+            <p className="text-sm dark:text-gray-300">Streak Count</p>
             <div className="flex gap-2 items-center">
-              <FireIcon className="size-6 text-gray-400" fill="#BBBBBB" />
+              <FireIcon className="size-6 text-gray-400 dark:text-gray-500" fill="#BBBBBB" />
               <p className="text-lg font-bold text-gray-400 dark:text-gray-600">
                 {stats.streakCount}
               </p>
@@ -216,7 +216,7 @@ export default function ProfilePage() {
               </p>
             </span>
             <span className="flex items-center justify-center gap-1">
-              <p style={{ fontSize: "11px" }} className="text-gray-500">
+              <p style={{ fontSize: "11px" }} className="text-gray-500 dark:text-gray-400">
                 Member since {stats.memberSince}
               </p>
             </span>
@@ -237,7 +237,7 @@ export default function ProfilePage() {
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
                 fill="#AAA"
-                className="h-4 w-4"
+                className="h-4 w-4 dark:fill-gray-500"
               >
                 <path
                   fillRule="evenodd"
@@ -245,7 +245,7 @@ export default function ProfilePage() {
                   clipRule="evenodd"
                 />
               </svg>
-              <p style={{ fontSize: "11px" }} className="text-gray-400">
+              <p style={{ fontSize: "11px" }} className="text-gray-400 dark:text-gray-500">
                 Mastery unlocks at {stats.xpToMastery.toLocaleString()}
               </p>
             </span>
@@ -276,7 +276,7 @@ export default function ProfilePage() {
                   </span>
                 </div>
               )}
-              <h2 className="opacity-50 text-lg sm:text-xl font-regular">
+              <h2 className="opacity-50 dark:opacity-70 text-lg sm:text-xl font-regular dark:text-gray-300">
                 {totalWeeklyXP.toLocaleString()} XP this week
               </h2>
             </span>
@@ -299,25 +299,25 @@ export default function ProfilePage() {
         <div className="flex flex-col md:flex-row gap-4">
           <div className="p-4 sm:p-6 my-2 bg-white border-2 border-gray-200 dark:bg-dark-2 dark:border-gray-900 rounded-2xl w-full ">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-lg font-bold">Top Activities</h2>
-              <span className="text-gray-500 text-sm"></span>
+              <h2 className="text-lg font-bold dark:text-white">Top Activities</h2>
+              <span className="text-gray-500 dark:text-gray-400 text-sm"></span>
             </div>
 
             {mockActivities.map((activity, index) => (
               <div key={activity.id} className="space-y-4 mb-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2 sm:space-x-4">
-                    <span className="text-gray-400 font-semibold w-5">
+                    <span className="text-gray-400 dark:text-gray-500 font-semibold w-5">
                       {index + 1}
                     </span>
                     <div className="flex items-center space-x-2 sm:space-x-4">
                       <p className="text-2xl">{activity.icon}</p>
-                      <span className="font-medium text-sm sm:text-base truncate">
+                      <span className="font-medium text-sm sm:text-base truncate dark:text-gray-200">
                         {activity.name}
                       </span>
                     </div>
                   </div>
-                  <span className="font-semibold text-sm sm:text-md">
+                  <span className="font-semibold text-sm sm:text-md dark:text-gray-300">
                     {activity.duration}
                   </span>
                 </div>
@@ -329,18 +329,18 @@ export default function ProfilePage() {
           {/* Recent Sessions */}
 <div className="p-4 sm:p-6 my-2 bg-white border-2 border-gray-200 dark:bg-dark-2 dark:border-gray-900 rounded-2xl w-full">
   <div className="flex justify-between items-center mb-6">
-    <h2 className="text-lg font-bold">Recent Sessions</h2>
-    <span className="text-gray-500 text-sm"></span>
+    <h2 className="text-lg font-bold dark:text-white">Recent Sessions</h2>
+    <span className="text-gray-500 dark:text-gray-400 text-sm"></span>
   </div>
 
   {mockSessions.map((session) => (
-    <div key={session.id} className=" p-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors cursor-pointer">
+    <div key={session.id} className=" p-3 hover:bg-gray-100 dark:hover:bg-dark-3 rounded-lg transition-colors cursor-pointer">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2 sm:space-x-4">
           <div className="flex items-center space-x-2 sm:space-x-4">
             <p className="text-2xl">{session.icon}</p>
             <div className="flex flex-col">
-              <span className="font-medium text-sm sm:text-base truncate">
+              <span className="font-medium text-sm sm:text-base truncate dark:text-gray-200">
                 {session.activity}
               </span>
               <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -366,7 +366,7 @@ export default function ProfilePage() {
         {/* EXPERIENCES */}
         <div className="max-w-6xl mx-auto px-2 p-2 pb-12 my-4 rounded-sm w-full">
           <div className="grid grid-cols-3 gap-2 lg:gap-4">
-            <h2 className="text-lg sm:text-xl font-semibold col-span-3">
+            <h2 className="text-lg sm:text-xl font-semibold col-span-3 dark:text-white">
               Experiences
             </h2>
             {mockExperiences.map((exp) => (
@@ -376,7 +376,7 @@ export default function ProfilePage() {
                 className="aspect-square overflow-hidden"
               >
                 <img
-                  className="object-cover w-full h-full border-2 border-gray-200 dark:border-[rgb(0,0,0,0)] hover:opacity-90 transition"
+                  className="object-cover w-full h-full border-2 border-gray-200 dark:border-gray-800 hover:opacity-90 transition"
                   src={exp.image}
                   alt={exp.title}
                 />
