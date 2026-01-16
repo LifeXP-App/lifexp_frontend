@@ -16,6 +16,7 @@ const NAV_ITEMS = [
       "/leaderboard/diplomat",
       "/leaderboard/alchemist",
       "/leaderboard/prodigy",
+      "/leaderboard/goals",
     ],
     icon: "trophy",
   },

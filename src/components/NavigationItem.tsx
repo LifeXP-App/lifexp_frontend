@@ -32,6 +32,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
 interface NavigationItemProps {
   label: string;
   href: string;
+  active: string[];
   icon: string;
   accentColor?: string;
 }
@@ -46,7 +47,9 @@ export function NavigationItem({
   accentColor = "#4168e2",
 }: NavigationItemProps) {
   const pathname = usePathname();
-  const isActive = active.includes(pathname);
+  const isActive = active.some(
+    (path) => pathname === path || pathname.startsWith(path + "/")
+  );
 
   const IconComponent = ICON_MAP[icon] || XCircleIcon;
 
