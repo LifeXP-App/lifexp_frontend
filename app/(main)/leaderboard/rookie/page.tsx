@@ -182,7 +182,7 @@ export default function RookieLeaderboard() {
 
       {/* Profile Widget (Desktop) */}
       <aside className="w-[450px] p-6 overflow-auto hidden md:block h-screen">
-        <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-gray-800">
+        <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border border-gray-200 dark:border-gray-800">
           <div className="text-center flex flex-col items-center">
             <Link href={`/user/${currentUser.username}`}>
               <img

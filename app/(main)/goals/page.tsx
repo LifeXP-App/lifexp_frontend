@@ -2,6 +2,12 @@
 
 import React from "react";
 import FireIcon from "@heroicons/react/24/solid/FireIcon";
+import { 
+  BoltIcon,
+  UsersIcon,
+} from "@heroicons/react/24/solid";
+import { FaBrain, FaHammer } from "react-icons/fa";
+
 type AspectKey = "physique" | "energy" | "social" | "creativity" | "logic";
 
 type GoalStatus = "ongoing" | "planned" | "completed";
@@ -137,11 +143,11 @@ function GoalCard({
       {/* Aspect chips */}
       {isCompleted && goal.aspectXP && (
         <div className="mt-4 grid grid-cols-5 gap-2">
-          <AspectChip label="💪" value={goal.aspectXP.physique} tint="red" />
-          <AspectChip label="⚡" value={goal.aspectXP.energy} tint="yellow" />
-          <AspectChip label="👥" value={goal.aspectXP.social} tint="green" />
-          <AspectChip label="🧠" value={goal.aspectXP.creativity} tint="blue" />
-          <AspectChip label="🧩" value={goal.aspectXP.logic} tint="purple" />
+          <AspectChip icon={<FireIcon className="w-4 h-4" />} value={goal.aspectXP.physique} tint="physique" />
+          <AspectChip icon={<BoltIcon className="w-4 h-4" />} value={goal.aspectXP.energy} tint="energy" />
+          <AspectChip icon={<UsersIcon className="w-4 h-4" />} value={goal.aspectXP.social} tint="social" />
+          <AspectChip icon={<FaBrain className="w-4 h-4" />} value={goal.aspectXP.creativity} tint="creativity" />
+          <AspectChip icon={<FaHammer className="w-4 h-4" />} value={goal.aspectXP.logic} tint="logic" />
         </div>
       )}
 
@@ -177,29 +183,28 @@ function GoalCard({
     </div>
   );
 }
-
 function AspectChip({
-  label,
+  icon,
   value,
   tint,
 }: {
-  label: string;
+  icon: React.ReactNode;
   value: number;
-  tint: "red" | "yellow" | "green" | "blue" | "purple";
+  tint: "physique" | "energy" | "social" | "creativity" | "logic";
 }) {
   const tintMap: Record<typeof tint, string> = {
-    red: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400",
-    yellow: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400",
-    green: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400",
-    blue: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400",
-    purple: "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400",
+    physique: "bg-[#8d2e2e]/30 text-[#8d2e2e]",
+    energy: "bg-[#c49352]/30 text-[#c49352]",
+    social: "bg-[#31784e]/30 text-[#31784e]",
+    creativity: "bg-[#4187a2]/30 text-[#4187a2]",
+    logic: "bg-[#713599]/30 text-[#713599]",
   };
 
   return (
     <div
       className={`flex items-center justify-center gap-1 rounded-lg px-2 py-2 text-sm font-semibold ${tintMap[tint]}`}
     >
-      <span className="opacity-80">{label}</span>
+      <span >{icon}</span>
       <span>{value}</span>
     </div>
   );
@@ -332,7 +337,7 @@ function RightSidebar() {
   return (
     <aside className="w-2xl hidden md:block">
       {/* PROFILE CARD */}
-      <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-gray-800">
+      <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border border-gray-200 dark:border-gray-800">
         <div className="text-center flex flex-col items-center">
           <div className="flex flex-col items-center">
             <img
