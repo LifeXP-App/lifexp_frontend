@@ -75,6 +75,7 @@ export default function SessionTimer({ params }: SessionTimerProps) {
     ],
   };
 
+  // Timer logic
   useEffect(() => {
     if (!mounted) return;
     let interval: NodeJS.Timeout;
@@ -85,6 +86,38 @@ export default function SessionTimer({ params }: SessionTimerProps) {
     }
     return () => clearInterval(interval);
   }, [isRunning, mounted]);
+
+  // Update browser tab title with timer
+  useEffect(() => {
+    if (!mounted) return;
+    const timeStr = formatTime(time);
+    const status = isRunning ? "▶" : "⏸";
+    document.title = `${status} ${timeStr} - ${goalData.title}`;
+    return () => {
+      document.title = "LifeXP";
+    };
+  }, [time, isRunning, mounted, goalData.title]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      switch (e.code) {
+        case "Space":
+          e.preventDefault();
+          setIsRunning((prev) => !prev);
+          break;
+        case "Escape":
+          handleFinish();
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const formatTime = (seconds: number) => {
     const hrs = Math.floor(seconds / 3600);
@@ -221,9 +254,20 @@ export default function SessionTimer({ params }: SessionTimerProps) {
         </div>
       </div>
 
-      {/* Session duration label */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-gray-600 text-sm">
-        Session in progress
+      {/* Keyboard hints */}
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 text-gray-600 text-xs">
+        <span>
+          <kbd className="px-1.5 py-0.5 bg-gray-800 rounded text-gray-500 mr-1">
+            Space
+          </kbd>
+          {isRunning ? "Pause" : "Resume"}
+        </span>
+        <span>
+          <kbd className="px-1.5 py-0.5 bg-gray-800 rounded text-gray-500 mr-1">
+            Esc
+          </kbd>
+          Finish
+        </span>
       </div>
     </div>
   );
