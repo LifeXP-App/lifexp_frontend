@@ -16,12 +16,16 @@ type Player = {
   rank: number;
   profile_picture: string;
 };
+import { useParams } from "next/navigation";
+import LeaderboardSwitcher from "@/src/components/LeaderboardSwitcher";
 
 export default function RookieLeaderboard() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages] = useState(ROOKIE_TOTAL_PAGES);
   const [loading, setLoading] = useState(false);
+  const params = useParams();
+  const masteryId = params.goalId as string;
 
   // TODO: Replace with real current user data (session)
   const currentUser = useMemo(
@@ -98,90 +102,98 @@ export default function RookieLeaderboard() {
       );
 
     return (
-      <p className="w-[17px] text-md font-bold text-left text-gray-700 dark:text-gray-300">
+      <p className="w-[17px] text-sm font-semibold text-left text-gray-600 dark:text-gray-400">
         {rank}
       </p>
     );
   };
 
   return (
-    <main className="flex w-full">
+    <main className="flex w-full overflow-hidden h-screen bg-gray-50 dark:bg-dark-1">
       {/* Main leaderboard list */}
-      <div className="w-full md:w-[calc(100%-450px)] relative flex-1 overflow-y-auto py-2 px-4 md:py-8 md:px-12">
-        <div className="flex justify-between items-center w-full mb-2">
-          <p className="text-xs font-bold dark:text-white">Rookies</p>
-          <p className="text-xs font-bold dark:text-white">0-9999 XP</p>
+      <div className="w-full md:w-[calc(100%-450px)] relative noscrollbar flex-1 overflow-auto py-4 px-4 md:py-8 md:px-12">
+        {/* Header with improved spacing and hierarchy */}
+        <div className="flex justify-between items-center w-full mb-8">
+          <h1 className="text-2xl font-bold dark:text-white">Rookies</h1>
+          <span style={{backgroundColor: "rgba(var(--rookie-primary-rgb), 0.2)", color:"var(--rookie-primary)"}} className="text-sm font-semibold px-4 py-2 rounded-full bg-gray-200 dark:bg-dark-2 text-gray-700 dark:text-gray-300">
+            0-9999 XP
+          </span>
         </div>
 
+        {/* Players list with improved card design */}
         <div
           id="users-container"
-          className={`my-4 transition-opacity ${
-            loading ? "opacity-50" : "opacity-100"
+          className={`space-y-2 transition-opacity duration-200 ${
+            loading ? "opacity-50 pointer-events-none" : "opacity-100"
           }`}
         >
           {players.map((u) => (
             <Link key={u.username} href={`/user/${u.username}`}>
-              <div className="flex hover:bg-gray-50 dark:hover:bg-dark-3 cursor-pointer justify-between items-center w-full overflow-hidden px-4 py-1.5 rounded-md">
-                <div className="flex justify-start items-center flex-grow gap-3 py-2.5">
-                  <RankBadge rank={u.rank} />
+              <div className="flex hover:bg-white dark:hover:bg-dark-2 cursor-pointer justify-between items-center w-full overflow-hidden px-5 py-4 rounded-xl transition-all duration-200 bg-white/50 dark:bg-dark-1 border border-transparent hover:border-gray-200 dark:hover:border-gray-700 ">
+                <div className="flex justify-start items-center flex-grow gap-4">
+                  <div className="w-5 flex items-center justify-center">
+                    <RankBadge rank={u.rank} />
+                  </div>
 
                   <img
-                    className="h-8 w-8 rounded-full object-cover aspect-square"
+                    className="h-10 w-10 rounded-full object-cover aspect-square ring-2 ring-gray-100 dark:ring-gray-800"
                     src={u.profile_picture}
                     alt={u.fullname}
                   />
-                  <p className="text-md font-medium dark:text-white">{u.fullname}</p>
+                  <p className="text-base font-semibold dark:text-white">{u.fullname}</p>
                 </div>
 
-                <div className="flex flex-col justify-center items-end gap-2.5 p-2.5">
-                  <p className="text-md font-medium dark:text-gray-300">{u.xp} XP</p>
+                <div className="flex flex-col justify-center items-end">
+                  <p className="text-base font-semibold dark:text-gray-200">{u.xp.toLocaleString()} XP</p>
                 </div>
               </div>
             </Link>
           ))}
 
           {!loading && players.length === 0 && (
-            <div className="text-center py-8 text-red-500 dark:text-red-400">
-              Failed to load leaderboard data.
+            <div className="text-center py-12 text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/10 rounded-xl">
+              <p className="text-lg font-semibold">Failed to load leaderboard data.</p>
             </div>
           )}
         </div>
 
-        {/* Pagination */}
-        <div className="flex justify-center items-center w-full gap-4 pb-10">
+        {/* Pagination with improved design */}
+        <div className="flex justify-center items-center w-full gap-4 pt-8 pb-12">
           <button
             onClick={() => loadPage(currentPage - 1)}
             disabled={currentPage <= 1 || loading}
-            className="px-4 py-2 bg-gray-200 dark:bg-dark-2 hover:bg-gray-300 dark:hover:bg-dark-3 rounded-md disabled:opacity-50 disabled:cursor-not-allowed dark:text-white"
+            className="px-5 py-2.5 bg-white dark:bg-dark-2 hover:bg-gray-50 dark:hover:bg-dark-3 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed dark:text-white font-medium transition-all border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow"
           >
             Previous
           </button>
 
-          <div className="flex items-center gap-2 dark:text-white">
-            <span className="font-medium">{currentPage}</span>
-            <span>of</span>
-            <span className="font-medium">{totalPages}</span>
+          <div className="flex items-center gap-2 dark:text-white px-4 py-2 bg-white dark:bg-dark-2 rounded-xl border border-gray-200 dark:border-gray-800 min-w-[120px] justify-center">
+            <span className="font-bold text-lg">{currentPage}</span>
+            <span className="text-gray-500 dark:text-gray-400">of</span>
+            <span className="font-semibold">{totalPages}</span>
           </div>
 
           <button
             onClick={() => loadPage(currentPage + 1)}
             disabled={currentPage >= totalPages || loading}
-            className="px-4 py-2 bg-gray-200 dark:bg-dark-2 hover:bg-gray-300 dark:hover:bg-dark-3 rounded-md disabled:opacity-50 disabled:cursor-not-allowed dark:text-white"
+            className="px-5 py-2.5 bg-white dark:bg-dark-2 hover:bg-gray-50 dark:hover:bg-dark-3 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed dark:text-white font-medium transition-all border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow"
           >
             Next
           </button>
         </div>
 
-        {/* Loading indicator */}
+        {/* Loading indicator with better positioning */}
         {loading && (
-          <div className="flex justify-center items-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100" />
+          <div className="absolute inset-0 flex justify-center items-center pointer-events-none">
+            <div className="bg-white dark:bg-dark-2 p-4 rounded-xl shadow-lg">
+              <div className="animate-spin rounded-full h-8 w-8 border-3 border-gray-200 dark:border-gray-700 border-t-blue-600 dark:border-t-blue-400" />
+            </div>
           </div>
         )}
       </div>
 
       {/* Profile Widget (Desktop) */}
-      <aside className="w-[450px] p-6 overflow-auto hidden md:block h-screen">
+        <aside className="w-[450px] p-6 overflow-auto hidden md:block h-screen">
         <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border border-gray-200 dark:border-gray-800">
           <div className="text-center flex flex-col items-center">
             <Link href={`/user/${currentUser.username}`}>
@@ -242,13 +254,7 @@ export default function RookieLeaderboard() {
         </div>
 
         {/* Banner Placeholder */}
-        <div className="w-full overflow-hidden rounded-2xl shadow-xl">
-          <img
-            src="/images/leaderboard/banners/1.png"
-            className="w-full"
-            alt="Banner"
-          />
-        </div>
+        <LeaderboardSwitcher currentLeaderboard={masteryId} />
       </aside>
     </main>
   );

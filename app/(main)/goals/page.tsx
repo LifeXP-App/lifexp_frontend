@@ -1,12 +1,14 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import FireIcon from "@heroicons/react/24/solid/FireIcon";
 import { 
   BoltIcon,
   UsersIcon,
 } from "@heroicons/react/24/solid";
 import { FaBrain, FaHammer } from "react-icons/fa";
+
+import { CalendarDaysIcon } from "@heroicons/react/24/outline";
 
 type AspectKey = "physique" | "energy" | "social" | "creativity" | "logic";
 
@@ -88,11 +90,11 @@ function GoalCard({
     <div className="w-full rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-dark-2 shadow-sm p-4">
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-3">
+        <div className=" w-full flex items-start gap-3">
           <div className="text-xl leading-none mt-1">{goal.emoji}</div>
 
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
+          <div className="w-full">
+            <div className="flex w-full items-center justify-between ">
               <p className="font-semibold text-lg text-black dark:text-white truncate">
                 {goal.title}
               </p>
@@ -104,12 +106,10 @@ function GoalCard({
               )}
             </div>
 
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-3 line-clamp-2">
-              {goal.description}
-            </p>
+           
           </div>
         </div>
-
+              
         {/* Right meta */}
         {!isCompleted && goal.metaRight && (
           <p className="text-xs text-gray-400 dark:text-gray-500 italic whitespace-nowrap mt-1">
@@ -117,7 +117,9 @@ function GoalCard({
           </p>
         )}
       </div>
-
+         <p className="text-sm text-gray-500 dark:text-gray-400 mt-3 line-clamp-2">
+              {goal.description}
+            </p>
       {/* Completed extra row */}
       {isCompleted && goal.timeSummary && (
         <div className="mt-3 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
@@ -183,6 +185,7 @@ function GoalCard({
     </div>
   );
 }
+
 function AspectChip({
   icon,
   value,
@@ -210,10 +213,209 @@ function AspectChip({
   );
 }
 
+/* ===========================
+   NEW GOAL MODAL
+   =========================== */
+
+interface NewGoalModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (goal: {
+    title: string;
+    description: string;
+    finishBy: string;
+  }) => void;
+}
+
+function NewGoalModal({ isOpen, onClose, onSubmit }: NewGoalModalProps) {
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [selectedPeriod, setSelectedPeriod] = useState<'1w' | '2w' | '1m' | '6m' | 'custom' | null>(null);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [customDate, setCustomDate] = useState('');
+
+  if (!isOpen) return null;
+
+  const handlePeriodSelect = (period: '1w' | '2w' | '1m' | '6m' | 'custom') => {
+    setSelectedPeriod(period);
+    if (period === 'custom') {
+      setShowCalendar(true);
+    } else {
+      setShowCalendar(false);
+      setCustomDate('');
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    let finishByDate = '';
+    if (selectedPeriod === 'custom') {
+      finishByDate = customDate;
+    } else if (selectedPeriod) {
+      finishByDate = selectedPeriod;
+    }
+
+    onSubmit({
+      title,
+      description,
+      finishBy: finishByDate,
+    });
+
+    // Reset form
+    setTitle('');
+    setDescription('');
+    setSelectedPeriod(null);
+    setShowCalendar(false);
+    setCustomDate('');
+  };
+
+  const isFormValid = title.trim() !== '' && selectedPeriod !== null && 
+    (selectedPeriod !== 'custom' || customDate !== '');
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div 
+        className="fixed inset-0 bg-black/30  bg-opacity-50 z-40 flex items-center justify-center p-4"
+        onClick={onClose}
+      >
+        {/* Modal */}
+        <div 
+          className="bg-white dark:bg-dark-2 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden dark:border dark:border-gray-800"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200 dark:border-gray-800">
+            <h2 className="text-xl font-bold text-black dark:text-white">Create New Goal</h2>
+            <button 
+              onClick={onClose}
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-3 transition-colors cursor-pointer"
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="px-6 py-6">
+            {/* Title Input */}
+            <div className="mb-6">
+              <label className="block text-sm font-semibold mb-2 text-black dark:text-white">
+                What do you want to achieve?
+              </label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="e.g., Learn to play guitar"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-dark-3 text-black dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+              />
+            </div>
+
+            {/* Description Input */}
+            <div className="mb-6">
+              <label className="block text-sm font-semibold mb-2 text-black dark:text-white">
+                Describe your goal <span className="text-gray-400 font-normal">(optional)</span>
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Add more details about your goal..."
+                rows={3}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-dark-3 text-black dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"
+              />
+            </div>
+
+            {/* Finish By Section */}
+            <div className="mb-6">
+              <label className="block text-sm font-semibold mb-3 text-black dark:text-white">
+                Finish by
+              </label>
+              <div className="grid grid-cols-6 gap-3">
+                {[
+                  { value: "1w", label: "1w" },
+                  { value: "2w", label: "2w" },
+                  { value: "1m", label: "1m" },
+                  { value: "6m", label: "6m" },
+                  { value: "custom", label: "Custom" },
+                ].map((period) => (
+                  <button
+                    key={period.value}
+                    type="button"
+                    onClick={() =>
+                      handlePeriodSelect(period.value as "1w" | "2w" | "1m" | "6m" | "custom")
+                    }
+                    className={`
+                      aspect-square rounded-full text-sm font-semibold transition-all cursor-pointer
+                      flex items-center justify-center
+                      ${
+                        selectedPeriod === period.value
+                          ? "bg-black dark:bg-gray-700 text-white"
+                          : "bg-gray-100 dark:bg-dark-3 text-black dark:text-white hover:bg-gray-200 dark:hover:bg-gray-800"
+                      }
+                    `}
+                  >
+                    {period.value === "custom" ? (
+                      <CalendarDaysIcon className="w-5 h-5" />
+                    ) : (
+                      period.label
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Calendar Picker */}
+            {showCalendar && (
+              <div className="mb-6">
+                <label className="block text-sm font-semibold mb-2 text-black dark:text-white">
+                  Select date
+                </label>
+                <input
+                  type="date"
+                  value={customDate}
+                  onChange={(e) => setCustomDate(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-dark-3 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                />
+              </div>
+            )}
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={!isFormValid}
+              className={`
+                w-full py-3 rounded-2xl font-semibold text-white text-base transition-all
+                ${isFormValid 
+                  ? 'bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 cursor-pointer active:scale-95' 
+                  : 'bg-gray-300 dark:bg-gray-700 opacity-50 cursor-not-allowed'
+                }
+              `}
+            >
+              Create Goal
+            </button>
+          </form>
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default function GoalsPage() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  
   const ongoing = mockGoals.filter((g) => g.status === "ongoing");
   const planned = mockGoals.filter((g) => g.status === "planned");
   const completed = mockGoals.filter((g) => g.status === "completed");
+
+  const handleCreateGoal = (goal: { title: string; description: string; finishBy: string }) => {
+    console.log('New goal created:', goal);
+    // Add your logic here to save the goal
+    setIsModalOpen(false);
+  };
 
   return (
     <main className="h-screen w-full bg-gray-100 dark:bg-dark-1 overflow-hidden">
@@ -226,7 +428,7 @@ export default function GoalsPage() {
 
             {/* Create new goal */}
             <button
-              onClick={() => alert("Create New Goal")}
+              onClick={() => setIsModalOpen(true)}
               className="w-full rounded-2xl cursor-pointer bg-gray-200 dark:bg-dark-2 text-black dark:text-white font-semibold py-4 flex items-center justify-start gap-3 px-5 hover:bg-gray-300 dark:hover:bg-dark-3 transition"
             >
               <span className="text-lg cursor-pointer leading-none">＋</span>
@@ -244,11 +446,12 @@ export default function GoalsPage() {
                     goal={goal}
                     primaryCta={{
                       label: "New Session",
-                      onClick: () => alert(`New Session: ${goal.title}`),
+                      // navigate to /goals/2/session/3 on click
+                      onClick: () => window.location.href = `/goals/${goal.id}/session/new`,
                     }}
                     secondaryCta={{
                       label: "View Goal",
-                      onClick: () => alert(`View Goal: ${goal.title}`),
+                      onClick: () => window.location.href = `/goals/${goal.id}`,
                     }}
                   />
                 ))}
@@ -302,6 +505,13 @@ export default function GoalsPage() {
           <RightSidebar />
         </div>
       </div>
+
+      {/* New Goal Modal */}
+      <NewGoalModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleCreateGoal}
+      />
     </main>
   );
 }

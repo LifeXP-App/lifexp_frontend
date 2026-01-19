@@ -8,7 +8,7 @@ import {
   UsersIcon,
 } from "@heroicons/react/24/solid";
 import { FaBrain, FaHammer } from "react-icons/fa";
-
+import Link from "next/link";
 interface SessionTimerProps {
   params: {
     goalId: string;
@@ -135,12 +135,14 @@ export default function SessionTimer({ params }: SessionTimerProps) {
           >
             Nudge 👋
           </button>
+          <Link href={`/goals/1/session/2/reflection`}>
           <button
-            onClick={handleClose}
+
             className="px-8 py-4 bg-cyan-600 dark:bg-cyan-700 hover:bg-cyan-500 dark:hover:bg-cyan-600 text-white rounded-2xl font-semibold transition-colors"
           >
             Close
           </button>
+          </Link>
         </div>
       </div>
 

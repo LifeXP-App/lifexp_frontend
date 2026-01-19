@@ -31,34 +31,36 @@ function RankBadge({ rank, color }: { rank: number; color: string }) {
   if (rank === 1) {
     return (
       <div
-        className="w-8 h-8 rounded-full flex items-center justify-center shadow-lg"
+        className="w-8 h-8 rounded-full flex items-center justify-center "
         style={{ background: `linear-gradient(135deg, #FFD700, #FFA500)` }}
       >
-        <CrownIcon color="#fff" />
+        <CrownIcon color="#00000030" />
       </div>
     );
   }
 
   if (rank === 2) {
-    return (
+      return (
       <div
-        className="w-8 h-8 rounded-full flex items-center justify-center shadow-md"
+        className="w-8 h-8 rounded-full flex items-center justify-center"
         style={{ background: `linear-gradient(135deg, #E8E8E8, #B8B8B8)` }}
       >
-        <span className="text-white font-bold text-sm">2</span>
+        <CrownIcon color="#00000030" />
       </div>
     );
+    
   }
 
   if (rank === 3) {
     return (
       <div
-        className="w-8 h-8 rounded-full flex items-center justify-center shadow-md"
+        className="w-8 h-8 rounded-full flex items-center justify-center"
         style={{ background: `linear-gradient(135deg, #CD7F32, #8B4513)` }}
       >
-        <span className="text-white font-bold text-sm">3</span>
+        <CrownIcon color="#00000030" />
       </div>
     );
+  
   }
 
   return (
@@ -82,44 +84,38 @@ function MasteryIcon({
 }) {
   const icons: Record<string, React.ReactNode> = {
     warrior: (
-      <svg
-        viewBox="0 0 24 24"
-        fill="currentColor"
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"
+      fill="currentColor"
         className={className}
         style={style}
       >
-        <path d="M7.05 3.5L4 6.5v4.5l-2.5 2.5 2 2 2.5-2.5h4.5l3-3.05L12 8.45l-1.5 1.5-1.95-1.95 1.5-1.5-1.5-1.5-1.5 1.5-1.95-1.95 1.5-1.5L5.1 3.5h1.95M19 3l-6.5 6.5 2 2L21 5v-.5L19.5 3H19M3 19l2 2 7-7-2-2-7 7z" />
+        <path d="M96 112c0-26.5 21.5-48 48-48s48 21.5 48 48l0 112 256 0 0-112c0-26.5 21.5-48 48-48s48 21.5 48 48l0 16 16 0c26.5 0 48 21.5 48 48l0 48c17.7 0 32 14.3 32 32s-14.3 32-32 32l0 48c0 26.5-21.5 48-48 48l-16 0 0 16c0 26.5-21.5 48-48 48s-48-21.5-48-48l0-112-256 0 0 112c0 26.5-21.5 48-48 48s-48-21.5-48-48l0-16-16 0c-26.5 0-48-21.5-48-48l0-48c-17.7 0-32-14.3-32-32s14.3-32 32-32l0-48c0-26.5 21.5-48 48-48l16 0 0-16z"/>
       </svg>
+
     ),
     protagonist: (
-      <svg
-        viewBox="0 0 24 24"
+      <svg 
+        xmlns="http://www.w3.org/2000/svg" 
+        viewBox="0 0 448 512"
         fill="currentColor"
         className={className}
         style={style}
       >
-        <path d="M12 7a5 5 0 1 1-4.995 5.217L7 12l.005-.217A5 5 0 0 1 12 7zm0 2a3 3 0 1 0 .001 6.001A3 3 0 0 0 12 9zm0-7l2.5 3h-5L12 2zm0 18l-2.5-3h5L12 22zM2 12l3-2.5v5L2 12zm20 0l-3 2.5v-5L22 12z" />
+        <path d="M338.8-9.9c11.9 8.6 16.3 24.2 10.9 37.8L271.3 224 416 224c13.5 0 25.5 8.4 30.1 21.1s.7 26.9-9.6 35.5l-288 240c-11.3 9.4-27.4 9.9-39.3 1.3s-16.3-24.2-10.9-37.8L176.7 288 32 288c-13.5 0-25.5-8.4-30.1-21.1s-.7-26.9 9.6-35.5l288-240c11.3-9.4 27.4-9.9 39.3-1.3z"/>
       </svg>
+   
     ),
     prodigy: (
-      <svg
-        viewBox="0 0 24 24"
-        fill="currentColor"
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512" fill="currentColor"
         className={className}
-        style={style}
-      >
-        <path d="M12 3c.5 0 1 .19 1.41.59l2 2c.4.4.59.9.59 1.41v1h3c1.1 0 2 .9 2 2v9c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2v-9c0-1.1.9-2 2-2h3V7c0-.5.19-1 .59-1.41l2-2c.4-.4.9-.59 1.41-.59zm0 2l-2 2v1h4V7l-2-2zm-4 6v2h3v-2H8zm5 0v2h3v-2h-3zm-5 4v2h3v-2H8zm5 0v2h3v-2h-3z" />
-      </svg>
+        style={style}><path d="M246.9 18.3L271 3.8c21.6-13 46.3-19.8 71.5-19.8 36.8 0 72.2 14.6 98.2 40.7l63.9 63.9c15 15 23.4 35.4 23.4 56.6l0 30.9 19.7 19.7 0 0c15.6-15.6 40.9-15.6 56.6 0s15.6 40.9 0 56.6l-64 64c-15.6 15.6-40.9 15.6-56.6 0s-15.6-40.9 0-56.6L464 240 433.1 240c-21.2 0-41.6-8.4-56.6-23.4l-49.1-49.1c-15-15-23.4-35.4-23.4-56.6l0-12.7c0-11.2-5.9-21.7-15.5-27.4l-41.6-25c-10.4-6.2-10.4-21.2 0-27.4zM50.7 402.7l222.1-222.1 90.5 90.5-222.1 222.1c-25 25-65.5 25-90.5 0s-25-65.5 0-90.5z"/></svg>
+
     ),
     alchemist: (
-      <svg
-        viewBox="0 0 24 24"
-        fill="currentColor"
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor"
         className={className}
-        style={style}
-      >
-        <path d="M5 19a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1c0-.21-.07-.41-.18-.57L13 8.35V4h-2v4.35L5.18 18.43c-.11.16-.18.36-.18.57zm1-16h12v2H6V3zm2.1 14h7.8L12 10.85 8.1 17z" />
-      </svg>
+        style={style}><path d="M120 56c0-30.9 25.1-56 56-56l24 0c17.7 0 32 14.3 32 32l0 448c0 17.7-14.3 32-32 32l-32 0c-29.8 0-54.9-20.4-62-48-.7 0-1.3 0-2 0-44.2 0-80-35.8-80-80 0-18 6-34.6 16-48-19.4-14.6-32-37.8-32-64 0-30.9 17.6-57.8 43.2-71.1-7.1-12-11.2-26-11.2-40.9 0-44.2 35.8-80 80-80l0-24zm272 0l0 24c44.2 0 80 35.8 80 80 0 15-4.1 29-11.2 40.9 25.7 13.3 43.2 40.1 43.2 71.1 0 26.2-12.6 49.4-32 64 10 13.4 16 30 16 48 0 44.2-35.8 80-80 80-.7 0-1.3 0-2 0-7.1 27.6-32.2 48-62 48l-32 0c-17.7 0-32-14.3-32-32l0-448c0-17.7 14.3-32 32-32l24 0c30.9 0 56 25.1 56 56z"/></svg>
+    
     ),
     diplomat: (
       <svg
@@ -212,14 +208,16 @@ export default function MasteryLeaderboard() {
   return (
     <main className="flex w-full min-h-screen">
       {/* Main leaderboard list */}
-      <div className="w-full md:w-[calc(100%-450px)] relative flex-1 overflow-y-auto">
-        {/* Hero Header Banner */}
+       {/* Hero Header Banner */}
         {currentMastery && (
+      <div className="w-full md:w-[calc(100%-450px)] relative flex-1 overflow-y-auto"
+       style={{
+              background: `linear-gradient(135deg, ${currentMastery.color}20 0%, ${currentMastery.color}05 100%)`,
+            }}>
+       
           <div
             className="relative overflow-visible"
-            style={{
-              background: `linear-gradient(135deg, ${currentMastery.color}20 0%, ${currentMastery.color}05 100%)`,
-            }}
+           
           >
             {/* Decorative background pattern */}
             <div
@@ -239,7 +237,7 @@ export default function MasteryLeaderboard() {
                 >
                   {/* Mastery Icon */}
                   <div
-                    className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg"
+                    className="w-16 h-16 rounded-2xl flex items-center justify-center "
                     style={{
                       background: `linear-gradient(135deg, ${currentMastery.color}, ${currentMastery.color}CC)`,
                     }}
@@ -278,7 +276,7 @@ export default function MasteryLeaderboard() {
                       className="fixed inset-0 z-40"
                       onClick={() => setIsDropdownOpen(false)}
                     />
-                    <div className="absolute top-[calc(100%+8px)] left-0 w-80 bg-white dark:bg-dark-2 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl z-50 overflow-hidden">
+                    <div className="absolute top-[calc(100%+8px)] left-0 w-80 bg-white dark:bg-dark-2 border border-gray-200 dark:border-gray-700 rounded-2xl z-50 overflow-hidden">
                       <div className="p-2">
                         {MASTERY_TYPES.map((mastery) => {
                           const isActive = mastery.id === masteryId;
@@ -290,9 +288,9 @@ export default function MasteryLeaderboard() {
                               onClick={() => setIsDropdownOpen(false)}
                             >
                               <div
-                                className={`flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all ${
+                                className={`flex items-center gap-3 px-4 py-3 rounded-r-xl cursor-pointer transition-all ${
                                   isActive
-                                    ? "shadow-md"
+                                    ? ""
                                     : "hover:bg-gray-50 dark:hover:bg-gray-800"
                                 }`}
                                 style={
@@ -378,9 +376,9 @@ export default function MasteryLeaderboard() {
               </div>
 
               {/* Stats row */}
-              <div className="flex gap-6 mt-6">
+              <div className="flex gap-6 mt-6 ">
                 <div
-                  className="px-4 py-2 rounded-xl"
+                  className="px-4 py-2 rounded-xl flex flex-col w-36 items-center justify-center"
                   style={{ backgroundColor: `${currentMastery.color}15` }}
                 >
                   <p
@@ -394,7 +392,7 @@ export default function MasteryLeaderboard() {
                   </p>
                 </div>
                 <div
-                  className="px-4 py-2 rounded-xl"
+                  className="px-4 py-2 rounded-xl flex flex-col w-36 items-center justify-center"
                   style={{ backgroundColor: `${currentMastery.color}15` }}
                 >
                   <p
@@ -410,10 +408,10 @@ export default function MasteryLeaderboard() {
               </div>
             </div>
           </div>
-        )}
+        
 
         {/* Content area */}
-        <div className="px-4 md:px-12 py-6">
+        <div className="px-4 md:px-12 py-2">
           {/* Search bar */}
           <div className="mb-6">
             <div className="relative">
@@ -423,7 +421,7 @@ export default function MasteryLeaderboard() {
                 placeholder="Search players..."
                 value={searchTerm}
                 onChange={handleSearch}
-                className="w-full pl-12 pr-4 py-3.5 border border-gray-200 dark:border-gray-700 rounded-2xl bg-white dark:bg-dark-2 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 transition-all shadow-sm"
+                className="w-full pl-12 pr-4 py-3.5 border border-gray-200 dark:border-gray-700 rounded-2xl bg-white dark:bg-dark-2 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none  transition-all "
                 style={
                   {
                     focusRing: currentMastery?.color,
@@ -451,21 +449,14 @@ export default function MasteryLeaderboard() {
                 >
                   <div
                     className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all bg-white dark:bg-dark-2 ${
-                      isFirst
-                        ? "shadow-lg border-2"
-                        : isTopThree
-                        ? "shadow-md border"
-                        : "hover:shadow-md border border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700"
+                     isTopThree
+                        ? "border"
+                        : "border border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700"
                     }`}
                     style={
-                      isFirst && currentMastery
+                      isTopThree
                         ? {
-                            background: `linear-gradient(135deg, ${currentMastery.color}08, white)`,
-                            borderColor: `${currentMastery.color}40`,
-                          }
-                        : isTopThree
-                        ? {
-                            borderColor: "#e5e7eb",
+                            borderColor: "#66666680",
                           }
                         : undefined
                     }
@@ -501,7 +492,7 @@ export default function MasteryLeaderboard() {
                     </div>
 
                     {/* Name */}
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 ">
                       <p
                         className={`font-semibold truncate dark:text-white ${
                           isFirst ? "text-lg" : ""
@@ -511,7 +502,7 @@ export default function MasteryLeaderboard() {
                       </p>
                       {isTopThree && currentMastery && (
                         <p
-                          className="text-xs"
+                          className="text-xs font-bold mt-1"
                           style={{ color: currentMastery.color }}
                         >
                           Top {u.rank} {currentMastery.name}
@@ -520,7 +511,7 @@ export default function MasteryLeaderboard() {
                     </div>
 
                     {/* XP */}
-                    <div className="text-right">
+                    <div className="text-right flex items-center gap-2">
                       <p
                         className={`font-bold ${
                           isFirst ? "text-xl" : "text-lg"
@@ -630,13 +621,14 @@ export default function MasteryLeaderboard() {
           )}
         </div>
       </div>
+        )}
 
       {/* Sidebar (Desktop) */}
       <aside className="w-[450px] p-6 overflow-auto hidden md:block h-screen bg-gray-50 dark:bg-dark-1">
         {/* Mastery card */}
         {currentMastery && (
           <div
-            className="p-6 mb-4 rounded-2xl shadow-lg overflow-hidden relative"
+            className="p-6 mb-4 rounded-2xl overflow-hidden relative"
             style={{
               background: `linear-gradient(135deg, ${currentMastery.color}, ${currentMastery.color}DD)`,
             }}
@@ -681,72 +673,65 @@ export default function MasteryLeaderboard() {
         )}
 
         {/* User profile card */}
-        <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-2xl shadow-sm">
+        <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border border-gray-200 dark:border-gray-800">
           <div className="text-center flex flex-col items-center">
             <Link href={`/user/${currentUser.username}`}>
               <img
                 src={currentUser.profile_picture}
-                className="h-20 w-20 object-cover aspect-square rounded-full ring-4 ring-gray-100 dark:ring-gray-800"
+                className="h-24 w-24 object-cover aspect-square p-[1.5px] rounded-full"
                 alt={currentUser.fullname}
               />
-              <h3 className="font-semibold mt-3 text-lg dark:text-white">
-                {currentUser.fullname}
-              </h3>
+              <h3 className="font-semibold mt-2 dark:text-white">{currentUser.fullname}</h3>
             </Link>
-            <p className="text-sm font-medium mt-1 text-gray-400">
+
+            <p className="text-sm font-bold mt-1 text-gray-400 dark:text-gray-500">
               {currentUser.masteryTitle}
             </p>
           </div>
 
-          <div className="mt-5 grid grid-cols-4 gap-2 text-center">
-            <div className="p-2 rounded-xl bg-gray-50 dark:bg-dark-3">
-              <p className="font-bold dark:text-white">
-                {currentUser.lifeLevel}
-              </p>
-              <p className="text-xs text-gray-500">Level</p>
+          <div className="mt-4 flex justify-between text-sm">
+            <div className="text-center">
+              <p className="font-semibold dark:text-white">{currentUser.lifeLevel}</p>
+              <p className="text-gray-500 dark:text-gray-400">Life Level</p>
             </div>
-            <div className="p-2 rounded-xl bg-gray-50 dark:bg-dark-3">
-              <p className="font-bold dark:text-white">{currentUser.posts}</p>
-              <p className="text-xs text-gray-500">Posts</p>
+            <div className="text-center">
+              <p className="font-semibold dark:text-white">{currentUser.posts}</p>
+              <p className="text-gray-500 dark:text-gray-400">Posts</p>
             </div>
-            <div className="p-2 rounded-xl bg-gray-50 dark:bg-dark-3">
-              <p className="font-bold dark:text-white">
-                {currentUser.followers}
-              </p>
-              <p className="text-xs text-gray-500">Followers</p>
+            <div className="text-center">
+              <p className="font-semibold dark:text-white">{currentUser.followers}</p>
+              <p className="text-gray-500 dark:text-gray-400">Followers</p>
             </div>
-            <div className="p-2 rounded-xl bg-gray-50 dark:bg-dark-3">
-              <p className="font-bold dark:text-white">
-                {currentUser.following}
-              </p>
-              <p className="text-xs text-gray-500">Following</p>
+            <div className="text-center">
+              <p className="font-semibold dark:text-white">{currentUser.following}</p>
+              <p className="text-gray-500 dark:text-gray-400">Following</p>
             </div>
           </div>
 
-          <div className="mt-4 flex gap-3">
-            <div className="flex-1 p-4 rounded-xl bg-gray-50 dark:bg-dark-3 text-center">
-              <p className="text-xl font-bold text-gray-400">
+          <div className="mt-4 flex justify-between text-sm gap-4">
+            <div className="bg-gray-100 dark:bg-dark-3 w-full flex flex-col rounded-md items-center justify-between p-4">
+              <p className="text-lg font-bold text-gray-400 dark:text-gray-500">
                 {currentUser.xp} XP
               </p>
-              <p className="text-xs text-gray-500 mt-1">Mastery at 10K</p>
+              <p className="text-[10px] cursor-pointer text-gray-500 dark:text-gray-400">
+                Mastery unlocks at 10K
+              </p>
             </div>
-            <div className="flex-1 p-4 rounded-xl bg-gray-50 dark:bg-dark-3 text-center">
-              <div className="flex items-center justify-center gap-1">
-                <FireIcon
-                  className={`w-6 h-6 ${
-                    currentUser.streak_active
-                      ? "text-orange-500"
-                      : "text-gray-300 dark:text-gray-600"
-                  }`}
-                />
-                <span className="text-xl font-bold text-gray-400">
-                  {currentUser.streak}
-                </span>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">Streak</p>
-            </div>
+
+             <div className="bg-gray-100 w-full hidden md:flex flex-col rounded-md items-center justify-between p-4 dark:bg-dark-3">
+            <p className="text-sm dark:text-gray-300">Streak Count</p>
+            <p className="text-lg font-extrabold text-gray-400 dark:text-gray-600 flex gap-1 items-center">
+             
+              {currentUser.streak_active ? (
+                <FireIcon className="w-6 h-6 inline-block ml-1 text-yellow-500 animate-pulse" />
+              ) : 
+              <FireIcon className="w-6 h-6 inline-block ml-1 text-gray-400 dark:text-gray-600" />}
+               {currentUser.streak}
+            </p>
+          </div>
           </div>
         </div>
+
 
         {/* Other leaderboards */}
         <LeaderboardSwitcher currentLeaderboard={masteryId} />
