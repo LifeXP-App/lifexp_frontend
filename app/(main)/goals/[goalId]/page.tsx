@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import RadarChart from "@/src/components/RadarChart";
 import AspectChip from '@/src/components/goals/AspectChip';
 import { mockUser } from "@/src/lib/mock/userData";
@@ -15,6 +16,7 @@ import {
 } from "@heroicons/react/24/solid";
 import { FaBrain, FaHammer } from "react-icons/fa";
 import NewActivityModal from '@/src/components/goals/NewActivityModel';
+import NewSessionPopup from '@/src/components/goals/NewSessionPopup';
 interface Session {
   id: string;
   sessionNumber: number;
@@ -54,7 +56,6 @@ interface ActivityDetailProps {
   olderSessions?: Session[];
   onBack?: () => void;
   onMore?: () => void;
-  onStartActivity?: () => void;
   onNewActivity?: () => void;
   onCompleteGoal?: () => void;
 }
@@ -264,13 +265,23 @@ export default function GoalDetailPage({
   ],
   onBack = () => window.history.back(),
   onMore = () => console.log('More'),
-  onStartActivity = () => console.log('Start Activity'),
 }: ActivityDetailProps) {
+  const params = useParams();
+  const router = useRouter();
+  const goalId = params.goalId as string;
+
+  const handleStartActivity = () => {
+    router.push(`/goals/${goalId}/session/new`);
+  };
+
   const [isNewActivityModalOpen, setIsNewActivityModalOpen] = useState(false);
+  const [isNewSessionPopupOpen, setIsNewSessionPopupOpen] = useState(false);
 
   const handleSelectActivity = (activity: Activity) => {
-    console.log('Selected activity:', activity);
     setIsNewActivityModalOpen(false);
+    setIsNewSessionPopupOpen(false);
+    // Navigate to session page with new session
+    router.push(`/goals/${goalId}/session/new?activity=${activity.id}`);
   };
 
   const handleGenerateNew = () => {
@@ -279,8 +290,13 @@ export default function GoalDetailPage({
   };
 
   const handleStartDrawing = () => {
-    console.log('Start drawing');
     setIsNewActivityModalOpen(false);
+    router.push(`/goals/${goalId}/session/new?activity=drawing`);
+  };
+
+  const handleOpenNewActivity = () => {
+    setIsNewSessionPopupOpen(false);
+    setIsNewActivityModalOpen(true);
   };
 
 
@@ -492,19 +508,19 @@ export default function GoalDetailPage({
               style={{ 
                 backgroundColor: 'var(--rookie-primary)',
               }}
-              onClick={onStartActivity}
+              onClick={handleStartActivity}
             >
               Start Drawing
             </button>
             
             <button
               className="py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80  cursor-pointer"
-              style={{ 
+              style={{
                 backgroundColor: '#4a4a4a',
               }}
-              onClick={() => setIsNewActivityModalOpen(true)}
+              onClick={() => setIsNewSessionPopupOpen(true)}
             >
-              New Activity
+              New Session
             </button>
           </div>
 
@@ -568,19 +584,19 @@ export default function GoalDetailPage({
                 style={{ 
                   backgroundColor: 'var(--rookie-primary)',
                 }}
-                onClick={onStartActivity}
+                onClick={handleStartActivity}
               >
                 Start Drawing
               </button>
               
               <button
                 className="py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80 cursor-pointer"
-                style={{ 
+                style={{
                   backgroundColor: '#4a4a4a',
                 }}
-                onClick={() => setIsNewActivityModalOpen(true)}
+                onClick={() => setIsNewSessionPopupOpen(true)}
               >
-                New Activity
+                New Session
               </button>
             </div>
 
@@ -714,8 +730,16 @@ export default function GoalDetailPage({
         </div>
       </div>
 
-      {/* New Activity Modal */}
-      <NewActivityModal 
+      {/* New Session Popup - minimalistic */}
+      <NewSessionPopup
+        isOpen={isNewSessionPopupOpen}
+        onClose={() => setIsNewSessionPopupOpen(false)}
+        onSelectActivity={handleSelectActivity}
+        onNewActivity={handleOpenNewActivity}
+      />
+
+      {/* New Activity Modal - full activity picker */}
+      <NewActivityModal
         isOpen={isNewActivityModalOpen}
         onClose={() => setIsNewActivityModalOpen(false)}
         onSelectActivity={handleSelectActivity}

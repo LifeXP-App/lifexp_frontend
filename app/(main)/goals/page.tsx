@@ -1,14 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
-import FireIcon from "@heroicons/react/24/solid/FireIcon";
-import { 
-  BoltIcon,
-  UsersIcon,
-} from "@heroicons/react/24/solid";
-import { FaBrain, FaHammer } from "react-icons/fa";
-
+import NewSessionPopup from "@/src/components/goals/NewSessionPopup";
+import { ActivityType } from "@/src/lib/types/activityMeta";
 import { CalendarDaysIcon } from "@heroicons/react/24/outline";
+import { BoltIcon, UsersIcon } from "@heroicons/react/24/solid";
+import FireIcon from "@heroicons/react/24/solid/FireIcon";
+import { useRouter } from "next/navigation";
+import React, { useState } from "react";
+import { FaBrain, FaHammer } from "react-icons/fa";
 
 type AspectKey = "physique" | "energy" | "social" | "creativity" | "logic";
 
@@ -70,7 +69,11 @@ const mockGoals: Goal[] = [
 ];
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <h2 className="text-xl font-bold text-black dark:text-white mb-3">{children}</h2>;
+  return (
+    <h2 className="text-xl font-bold text-black dark:text-white mb-3">
+      {children}
+    </h2>
+  );
 }
 
 function GoalCard({
@@ -100,18 +103,19 @@ function GoalCard({
               </p>
 
               {isCompleted && typeof goal.xpReward === "number" && (
-                <span style={{ 
-                backgroundColor: 'var(--rookie-primary)',
-              }} className="ml-2 shrink-0 rounded-full  px-3 py-1 text-xs font-semibold text-white">
+                <span
+                  style={{
+                    backgroundColor: "var(--rookie-primary)",
+                  }}
+                  className="ml-2 shrink-0 rounded-full  px-3 py-1 text-xs font-semibold text-white"
+                >
                   {goal.xpReward}XP
                 </span>
               )}
             </div>
-
-           
           </div>
         </div>
-              
+
         {/* Right meta */}
         {!isCompleted && goal.metaRight && (
           <p className="text-xs text-gray-400 dark:text-gray-500 italic whitespace-nowrap mt-1">
@@ -119,9 +123,9 @@ function GoalCard({
           </p>
         )}
       </div>
-         <p className="text-sm text-gray-500 dark:text-gray-400 mt-3 line-clamp-2">
-              {goal.description}
-            </p>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mt-3 line-clamp-2">
+        {goal.description}
+      </p>
       {/* Completed extra row */}
       {isCompleted && goal.timeSummary && (
         <div className="mt-3 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
@@ -147,11 +151,31 @@ function GoalCard({
       {/* Aspect chips */}
       {isCompleted && goal.aspectXP && (
         <div className="mt-4 grid grid-cols-5 gap-2">
-          <AspectChip icon={<FireIcon className="w-4 h-4" />} value={goal.aspectXP.physique} tint="physique" />
-          <AspectChip icon={<BoltIcon className="w-4 h-4" />} value={goal.aspectXP.energy} tint="energy" />
-          <AspectChip icon={<UsersIcon className="w-4 h-4" />} value={goal.aspectXP.social} tint="social" />
-          <AspectChip icon={<FaBrain className="w-4 h-4" />} value={goal.aspectXP.creativity} tint="creativity" />
-          <AspectChip icon={<FaHammer className="w-4 h-4" />} value={goal.aspectXP.logic} tint="logic" />
+          <AspectChip
+            icon={<FireIcon className="w-4 h-4" />}
+            value={goal.aspectXP.physique}
+            tint="physique"
+          />
+          <AspectChip
+            icon={<BoltIcon className="w-4 h-4" />}
+            value={goal.aspectXP.energy}
+            tint="energy"
+          />
+          <AspectChip
+            icon={<UsersIcon className="w-4 h-4" />}
+            value={goal.aspectXP.social}
+            tint="social"
+          />
+          <AspectChip
+            icon={<FaBrain className="w-4 h-4" />}
+            value={goal.aspectXP.creativity}
+            tint="creativity"
+          />
+          <AspectChip
+            icon={<FaHammer className="w-4 h-4" />}
+            value={goal.aspectXP.logic}
+            tint="logic"
+          />
         </div>
       )}
 
@@ -160,9 +184,9 @@ function GoalCard({
         {primaryCta && (
           <button
             onClick={primaryCta.onClick}
-            style={{ 
-                backgroundColor: 'var(--rookie-primary)',
-              }}
+            style={{
+              backgroundColor: "var(--rookie-primary)",
+            }}
             className="flex-1 rounded-xl cursor-pointer text-white font-semibold py-3 hover:bg-blue-700 dark:hover:bg-blue-600 transition"
           >
             {primaryCta.label}
@@ -212,7 +236,7 @@ function AspectChip({
     <div
       className={`flex items-center justify-center gap-1 rounded-lg px-2 py-2 text-sm font-semibold ${tintMap[tint]}`}
     >
-      <span >{icon}</span>
+      <span>{icon}</span>
       <span>{value}</span>
     </div>
   );
@@ -233,29 +257,31 @@ interface NewGoalModalProps {
 }
 
 function NewGoalModal({ isOpen, onClose, onSubmit }: NewGoalModalProps) {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [selectedPeriod, setSelectedPeriod] = useState<'1w' | '2w' | '1m' | '6m' | 'custom' | null>(null);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [selectedPeriod, setSelectedPeriod] = useState<
+    "1w" | "2w" | "1m" | "6m" | "custom" | null
+  >(null);
   const [showCalendar, setShowCalendar] = useState(false);
-  const [customDate, setCustomDate] = useState('');
+  const [customDate, setCustomDate] = useState("");
 
   if (!isOpen) return null;
 
-  const handlePeriodSelect = (period: '1w' | '2w' | '1m' | '6m' | 'custom') => {
+  const handlePeriodSelect = (period: "1w" | "2w" | "1m" | "6m" | "custom") => {
     setSelectedPeriod(period);
-    if (period === 'custom') {
+    if (period === "custom") {
       setShowCalendar(true);
     } else {
       setShowCalendar(false);
-      setCustomDate('');
+      setCustomDate("");
     }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    let finishByDate = '';
-    if (selectedPeriod === 'custom') {
+
+    let finishByDate = "";
+    if (selectedPeriod === "custom") {
       finishByDate = customDate;
     } else if (selectedPeriod) {
       finishByDate = selectedPeriod;
@@ -268,37 +294,47 @@ function NewGoalModal({ isOpen, onClose, onSubmit }: NewGoalModalProps) {
     });
 
     // Reset form
-    setTitle('');
-    setDescription('');
+    setTitle("");
+    setDescription("");
     setSelectedPeriod(null);
     setShowCalendar(false);
-    setCustomDate('');
+    setCustomDate("");
   };
 
-  const isFormValid = title.trim() !== '' && selectedPeriod !== null && 
-    (selectedPeriod !== 'custom' || customDate !== '');
+  const isFormValid =
+    title.trim() !== "" &&
+    selectedPeriod !== null &&
+    (selectedPeriod !== "custom" || customDate !== "");
 
   return (
     <>
       {/* Backdrop */}
-      <div 
+      <div
         className="fixed inset-0 bg-black/30  bg-opacity-50 z-40 flex items-center justify-center p-4"
         onClick={onClose}
       >
         {/* Modal */}
-        <div 
+        <div
           className="bg-white dark:bg-dark-2 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden dark:border dark:border-gray-800"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200 dark:border-gray-800">
-            <h2 className="text-xl font-bold text-black dark:text-white">Create New Goal</h2>
-            <button 
+            <h2 className="text-xl font-bold text-black dark:text-white">
+              Create New Goal
+            </h2>
+            <button
               onClick={onClose}
               className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-3 transition-colors cursor-pointer"
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path
+                  d="M18 6L6 18M6 6L18 18"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
             </button>
           </div>
@@ -322,7 +358,8 @@ function NewGoalModal({ isOpen, onClose, onSubmit }: NewGoalModalProps) {
             {/* Description Input */}
             <div className="mb-6">
               <label className="block text-sm font-semibold mb-2 text-black dark:text-white">
-                Describe your goal <span className="text-gray-400 font-normal">(optional)</span>
+                Describe your goal{" "}
+                <span className="text-gray-400 font-normal">(optional)</span>
               </label>
               <textarea
                 value={description}
@@ -350,7 +387,9 @@ function NewGoalModal({ isOpen, onClose, onSubmit }: NewGoalModalProps) {
                     key={period.value}
                     type="button"
                     onClick={() =>
-                      handlePeriodSelect(period.value as "1w" | "2w" | "1m" | "6m" | "custom")
+                      handlePeriodSelect(
+                        period.value as "1w" | "2w" | "1m" | "6m" | "custom",
+                      )
                     }
                     className={`
                       aspect-square rounded-full text-sm font-semibold transition-all cursor-pointer
@@ -382,7 +421,7 @@ function NewGoalModal({ isOpen, onClose, onSubmit }: NewGoalModalProps) {
                   type="date"
                   value={customDate}
                   onChange={(e) => setCustomDate(e.target.value)}
-                  min={new Date().toISOString().split('T')[0]}
+                  min={new Date().toISOString().split("T")[0]}
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-dark-3 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                 />
               </div>
@@ -394,9 +433,10 @@ function NewGoalModal({ isOpen, onClose, onSubmit }: NewGoalModalProps) {
               disabled={!isFormValid}
               className={`
                 w-full py-3 rounded-2xl font-semibold text-white text-base transition-all
-                ${isFormValid 
-                  ? 'bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 cursor-pointer active:scale-95' 
-                  : 'bg-gray-300 dark:bg-gray-700 opacity-50 cursor-not-allowed'
+                ${
+                  isFormValid
+                    ? "bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 cursor-pointer active:scale-95"
+                    : "bg-gray-300 dark:bg-gray-700 opacity-50 cursor-not-allowed"
                 }
               `}
             >
@@ -409,17 +449,52 @@ function NewGoalModal({ isOpen, onClose, onSubmit }: NewGoalModalProps) {
   );
 }
 
+interface Activity {
+  id: string;
+  name: string;
+  type: ActivityType;
+}
+
 export default function GoalsPage() {
+  const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
+  const [isSessionPopupOpen, setIsSessionPopupOpen] = useState(false);
+  const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
+
   const ongoing = mockGoals.filter((g) => g.status === "ongoing");
   const planned = mockGoals.filter((g) => g.status === "planned");
   const completed = mockGoals.filter((g) => g.status === "completed");
 
-  const handleCreateGoal = (goal: { title: string; description: string; finishBy: string }) => {
-    console.log('New goal created:', goal);
+  const handleCreateGoal = (goal: {
+    title: string;
+    description: string;
+    finishBy: string;
+  }) => {
+    console.log("New goal created:", goal);
     // Add your logic here to save the goal
     setIsModalOpen(false);
+  };
+
+  const handleOpenSessionPopup = (goalId: string) => {
+    setSelectedGoalId(goalId);
+    setIsSessionPopupOpen(true);
+  };
+
+  const handleSelectActivity = (activity: Activity) => {
+    setIsSessionPopupOpen(false);
+    if (selectedGoalId) {
+      router.push(
+        `/goals/${selectedGoalId}/session/new?activity=${activity.id}`,
+      );
+    }
+  };
+
+  const handleNewActivity = () => {
+    setIsSessionPopupOpen(false);
+    if (selectedGoalId) {
+      // Navigate to goal page which has the full activity modal
+      router.push(`/goals/${selectedGoalId}`);
+    }
   };
 
   return (
@@ -429,12 +504,13 @@ export default function GoalsPage() {
           {/* LEFT MAIN CONTENT */}
           <div className="w-full h-screen overflow-scroll noscrollbar py-4 px-6 md:px-12">
             {/* Title */}
-            <h1 className="text-xl font-bold text-black dark:text-white mb-4">Goals</h1>
+            <h1 className="text-xl font-bold text-black dark:text-white mb-4">
+              Goals
+            </h1>
 
             {/* Create new goal */}
             <button
               onClick={() => setIsModalOpen(true)}
-
               className="w-full rounded-2xl cursor-pointer bg-gray-200 dark:bg-dark-2 text-black dark:text-white font-semibold py-4 flex items-center justify-start gap-3 px-5 hover:bg-gray-300 dark:hover:bg-dark-3 transition"
             >
               <span className="text-lg cursor-pointer leading-none">＋</span>
@@ -452,12 +528,11 @@ export default function GoalsPage() {
                     goal={goal}
                     primaryCta={{
                       label: "New Session",
-                      // navigate to /goals/2/session/3 on click
-                      onClick: () => window.location.href = `/goals/${goal.id}/session/new`,
+                      onClick: () => handleOpenSessionPopup(goal.id),
                     }}
                     secondaryCta={{
                       label: "View Goal",
-                      onClick: () => window.location.href = `/goals/${goal.id}`,
+                      onClick: () => router.push(`/goals/${goal.id}`),
                     }}
                   />
                 ))}
@@ -513,10 +588,18 @@ export default function GoalsPage() {
       </div>
 
       {/* New Goal Modal */}
-      <NewGoalModal 
+      <NewGoalModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleCreateGoal}
+      />
+
+      {/* New Session Popup */}
+      <NewSessionPopup
+        isOpen={isSessionPopupOpen}
+        onClose={() => setIsSessionPopupOpen(false)}
+        onSelectActivity={handleSelectActivity}
+        onNewActivity={handleNewActivity}
       />
     </main>
   );
@@ -535,7 +618,7 @@ function RightSidebar() {
 
     mastery: "Rookie",
     masteryColor: "#4168e2",
-    masteryTextColor:"#9aa0a2",
+    masteryTextColor: "#9aa0a2",
     lifelevel: 4,
     posts: 9,
     followers: 11,
@@ -562,7 +645,9 @@ function RightSidebar() {
               loading="lazy"
               alt="Profile"
             />
-            <h3 className="font-semibold mt-2 dark:text-white">{user.fullname}</h3>
+            <h3 className="font-semibold mt-2 dark:text-white">
+              {user.fullname}
+            </h3>
           </div>
 
           <span className="flex gap-1 justify-center items-center cursor-pointer mt-1">
@@ -581,7 +666,10 @@ function RightSidebar() {
               </svg>
             </button>
 
-            <p className="text-sm font-bold" style={{ color: user.masteryTextColor }}>
+            <p
+              className="text-sm font-bold"
+              style={{ color: user.masteryTextColor }}
+            >
               {user.mastery}
             </p>
             <span className="w-4" />
@@ -596,12 +684,13 @@ function RightSidebar() {
           <Stat label="Completed" value={user.following} />
         </div>
 
-        
-
         {/* XP + STREAK */}
         <div className="mt-4 flex justify-between text-sm gap-4">
           <div className="bg-gray-100 dark:bg-dark-3 w-full flex flex-col rounded-md items-center justify-between p-4">
-            <p className="text-lg font-bold" style={{ color: user.masteryTextColor }}>
+            <p
+              className="text-lg font-bold"
+              style={{ color: user.masteryTextColor }}
+            >
               {user.totalXp} XP
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -615,7 +704,9 @@ function RightSidebar() {
             <p className="text-lg font-extrabold text-gray-400 dark:text-gray-500 flex gap-1 items-center">
               <FireIcon
                 className={`w-6 h-6 inline-block ml-1 ${
-                  user.streak_active ? "text-yellow-500 animate-pulse" : "text-gray-400 dark:text-gray-600"
+                  user.streak_active
+                    ? "text-yellow-500 animate-pulse"
+                    : "text-gray-400 dark:text-gray-600"
                 }`}
               />
               {user.streak}
@@ -623,9 +714,6 @@ function RightSidebar() {
           </div>
         </div>
       </div>
-
-    
-
     </aside>
   );
 }

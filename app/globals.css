@@ -57,6 +57,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-dark-1: var(--dark-1);
+  --color-dark-2: var(--dark-2);
+  --color-dark-3: var(--dark-3);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -84,15 +87,15 @@ body {
 
 
 @utility bg-dark-1 {
-  background-color: var(--dark-1);
+  background-color: var(--color-dark-1);
 }
 
 @utility bg-dark-2 {
-  background-color: var(--dark-2);
+  background-color: var(--color-dark-2);
 }
 
 @utility bg-dark-3 {
-  background-color: var(--dark-3);
+  background-color: var(--color-dark-3);
 }
 
 @media (min-width: 768px) {
