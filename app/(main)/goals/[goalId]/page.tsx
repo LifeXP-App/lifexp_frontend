@@ -4,20 +4,23 @@ import React, { useState } from 'react';
 import RadarChart from "@/src/components/RadarChart";
 import AspectChip from '@/src/components/goals/AspectChip';
 import { mockUser } from "@/src/lib/mock/userData";
+import SessionInfoPopup from "@/src/components/goals/SessionInfoPopup";
+import {BiDumbbell} from "react-icons/bi";
+import CompleteGoalPopup from '@/src/components/goals/CompleteGoalPopup';
 import {
-  FireIcon,
+
   BoltIcon,
   UsersIcon,
   PlayIcon,
 } from "@heroicons/react/24/solid";
 import { FaBrain, FaHammer } from "react-icons/fa";
-import ActivitySelectButton from '@/src/components/goals/ActivityResult';
+import NewActivityModal from '@/src/components/goals/NewActivityModel';
 interface Session {
   id: string;
   sessionNumber: number;
   activity: string;
   xpEarned: number;
-  time: string;
+  dateTime: string;
   duration: string;
   thumbnail?: string;
   emoji?: string;
@@ -47,8 +50,8 @@ interface ActivityDetailProps {
   stats?: ActivityStats;
   aspects?: AspectScore;
   todaySessions?: Session[];
-  yesterdaySessions?: Session[];
   thisWeekSessions?: Session[];
+  olderSessions?: Session[];
   onBack?: () => void;
   onMore?: () => void;
   onStartActivity?: () => void;
@@ -65,157 +68,129 @@ interface Activity {
   type: ActivityType;
 }
 
-const relevantActivities: Activity[] = [
-  { id: "r1", name: "Workout", type: "physique" },
-  { id: "r2", name: "Cardio", type: "energy" },
-  { id: "r3", name: "Deep Work", type: "logic" },
-];
-
-const otherActivities: Activity[] = [
-  { id: "o1", name: "Drawing", type: "creativity" },
-  { id: "o2", name: "Networking", type: "social" },
-  { id: "o3", name: "Studying", type: "logic" },
-];
 
 
-const SessionItem: React.FC<Session> = ({ 
-  sessionNumber, 
-  activity, 
-  xpEarned, 
-  time, 
+const SessionItem: React.FC<Session & { onClick?: () => void }> = ({
+  sessionNumber,
+  activity,
+  xpEarned,
+  dateTime,
   duration,
   thumbnail,
-  emoji
-}) => (
-  <div 
-    className="flex items-center gap-4 p-4 bg-white dark:bg-dark-3 rounded-2xl border transition-shadow cursor-pointer"
-    style={{ borderColor: 'var(--border)' }}
-  >
-    <div 
-      className="w-20 h-20 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden bg-gray-100 dark:bg-dark-3"
-    >
-      {emoji ? (
-        <span className="text-3xl">{emoji}</span>
-      ) : thumbnail ? (
-        <img src={thumbnail} alt="Session" className="w-full h-full object-cover" />
-      ) : (
-        <img 
-          src="https://res.cloudinary.com/dfohn9dcz/image/upload/f_auto,q_auto,w_800,c_fill/v1/posts/user_7/ske_20251115103836"
-          alt="Session thumbnail" 
-          className="w-full h-full object-cover"
-        />
-      )}
-    </div>
-    
-    <div className="flex-1 min-w-0">
-      <h3 className="font-semibold text-lg text-foreground dark:text-white">Session {sessionNumber}</h3>
-      <p className="text-sm font-bold" style={{ color: 'var(--alchemist-primary)' }}>{activity}</p>
-      <p className="text-xs mt-1 font-medium" style={{ color: 'var(--muted)' }}>
-        {xpEarned} XP Earned • {time}
-      </p>
-    </div>
-    
-    <div className="text-right">
-      <div className="font-semibold text-lg text-foreground dark:text-white">{duration}</div>
-    </div>
-  </div>
-);
+  emoji,
+  onClick,
+}) => {
 
-/* ===========================
-   NEW ACTIVITY MODAL
-   =========================== */
+  const [open, setOpen] = React.useState(false);
+  const menuRef = React.useRef<HTMLDivElement>(null);
 
-interface NewActivityModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSelectActivity: (activity: Activity) => void;
-  onGenerateNew: () => void;
-  onStartDrawing: () => void;
-}
+  React.useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
 
-function NewActivityModal({ isOpen, onClose, onSelectActivity, onGenerateNew, onStartDrawing }: NewActivityModalProps) {
-  const [searchQuery, setSearchQuery] = useState('');
-
- 
-
-  if (!isOpen) return null;
-
+  document.addEventListener("mousedown", handleClickOutside);
+  return () => document.removeEventListener("mousedown", handleClickOutside);
+}, []);
   return (
-    <>
-      {/* Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black/30  z-50 flex items-center justify-center p-4"
-        onClick={onClose}
+    <div
+        onClick={onClick}
+        className="flex items-center gap-4 p-4 bg-white dark:bg-dark-3 rounded-2xl border transition-shadow cursor-pointer"
+        style={{ borderColor: "var(--border)" }}
       >
-        {/* Modal */}
-        <div 
-          className="bg-white dark:bg-dark-2 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Header with Search */}
-          <div className="p-5 pb-3">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search activities..."
-                className="w-full pl-11 pr-4 py-3 rounded-2xl border-0 bg-gray-100 dark:bg-dark-3 text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-0 text-base transition-all"
-              />
-            </div>
-          </div>
 
-    
+      <div className="w-20 h-20 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden bg-gray-100 dark:bg-dark-3">
+        {emoji ? (
+          <span className="text-3xl">{emoji}</span>
+        ) : thumbnail ? (
+          <img src={thumbnail} alt="Session" className="w-full h-full object-cover" />
+        ) : (
+          <img
+            src="https://res.cloudinary.com/dfohn9dcz/image/upload/f_auto,q_auto,w_800,c_fill/v1/posts/user_7/ske_20251115103836"
+            alt="Session thumbnail"
+            className="w-full h-full object-cover"
+          />
+        )}
+      </div>
 
-          {/* Recent Activity */}
-          <div className="px-5 pb-2">
-            <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 px-1">Recent</h3>
-             {relevantActivities.map((activity) => (
-              <ActivitySelectButton
-                key={activity.id}
-                activity={activity}
-                onSelect={onSelectActivity}
-              />
-            ))}
-          </div>
+      <div className="flex-1 min-w-0">
+        <h3 className="font-semibold text-lg text-foreground dark:text-white">
+          Session {sessionNumber}
+        </h3>
+        <p className="text-sm font-bold" style={{ color: "var(--alchemist-primary)" }}>
+          {activity}
+        </p>
+        <p className="text-xs mt-1 font-medium" style={{ color: "var(--muted)" }}>
+          {xpEarned} XP Earned • {dateTime}
+        </p>
+      </div>
 
-          {/* Other Activities */}
-          <div className="px-5 pb-3 space-y-2">
-             <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 px-1">Relevent</h3>
-            {otherActivities.map((activity) => (
-    <ActivitySelectButton
-      key={activity.id}
-      activity={activity}
-      onSelect={onSelectActivity}
-    />))}
-          </div>
-
-          {/* Bottom Buttons */}
-          <div className="p-5 pt-3 grid grid-cols-2 gap-3 border-t border-gray-200 dark:border-gray-700">
-            <button
-              onClick={onGenerateNew}
-              className="py-3 px-4 rounded-2xl font-semibold text-white bg-gray-600 dark:bg-gray-700 hover:bg-gray-700 dark:hover:bg-gray-600 transition-all cursor-pointer text-sm"
-            >
-              Generate New
-            </button>
-            <button
-              onClick={onStartDrawing}
-              className="py-3 px-4 rounded-2xl font-semibold text-white transition-all cursor-pointer text-sm"
-              style={{ backgroundColor: 'var(--rookie-primary)' }}
-            >
-              Start Drawing
-            </button>
+      {/* Right side: duration + menu */}
+      <div className="flex items-center gap-3">
+        <div className="text-right">
+          <div className="font-semibold text-lg text-foreground dark:text-white">
+            {duration}
           </div>
         </div>
+
+        {/* Triple-dot dropdown */}
+        <div  ref={menuRef} className="relative">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setOpen((prev) => !prev);
+            }}
+            className="w-9 h-9 cursor-pointer flex items-center justify-center rounded-full hover:opacity-70 active:opacity-40 transition-all"
+          >
+            {/* 3-dot SVG */}
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="5" r="1.8" fill="currentColor" />
+              <circle cx="12" cy="12" r="1.8" fill="currentColor" />
+              <circle cx="12" cy="19" r="1.8" fill="currentColor" />
+            </svg>
+          </button>
+
+          {open && (
+              <div
+                className="absolute left-0 top-10 w-44 bg-white dark:bg-dark-2 border rounded-md shadow-md overflow-hidden z-20"
+                style={{ borderColor: "var(--border)" }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  className="w-full cursor-pointer text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-dark-3 transition-colors"
+                  onClick={() => {
+                    setOpen(false);
+                    console.log("Repeat Session", sessionNumber);
+                  }}
+                >
+                  Repeat Session
+                </button>
+
+                <div className="h-px" style={{ backgroundColor: "var(--border)" }} />
+
+                <button
+                  type="button"
+                  className="w-full   cursor-pointer text-left px-3 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-dark-3 transition-colors"
+                  onClick={() => {
+                    setOpen(false);
+                    console.log("Delete Session", sessionNumber);
+                  }}
+                >
+                  Delete Session
+                </button>
+              </div>
+
+          )}
+        </div>
       </div>
-    </>
+    </div>
   );
-}
+};
+
 
 export default function GoalDetailPage({
   title = "Drawing Mandalorian",
@@ -254,17 +229,17 @@ export default function GoalDetailPage({
       sessionNumber: 8,
       activity: 'Drawing',
       xpEarned: 232,
-      time: '10:23 AM',
+      dateTime: '10:23 AM, 23 Nov 2024',
       duration: '1:12:02'
     }
   ],
-  yesterdaySessions = [
+  thisWeekSessions = [
     {
       id: '2',
       sessionNumber: 7,
       activity: 'Drawing',
       xpEarned: 232,
-      time: '10:23 AM',
+      dateTime: '10:23 AM, 23 Nov 2024',
       duration: '1:12:02'
     },
     {
@@ -272,26 +247,24 @@ export default function GoalDetailPage({
       sessionNumber: 7,
       activity: 'Drawing',
       xpEarned: 232,
-      time: '10:23 AM',
+      dateTime: '10:23 AM, 22 Nov 2024',
       duration: '1:12:02',
       emoji: '🎨'
     }
   ],
-  thisWeekSessions = [
+  olderSessions = [
     {
       id: '4',
       sessionNumber: 6,
       activity: 'Drawing',
       xpEarned: 232,
-      time: '10:23 AM',
+      dateTime: '10:23 AM, 23 Nov 2024',
       duration: '1:12:02'
     }
   ],
   onBack = () => window.history.back(),
   onMore = () => console.log('More'),
   onStartActivity = () => console.log('Start Activity'),
-  onNewActivity = () => console.log('New Activity'),
-  onCompleteGoal = () => console.log('Complete Goal')
 }: ActivityDetailProps) {
   const [isNewActivityModalOpen, setIsNewActivityModalOpen] = useState(false);
 
@@ -308,6 +281,28 @@ export default function GoalDetailPage({
   const handleStartDrawing = () => {
     console.log('Start drawing');
     setIsNewActivityModalOpen(false);
+  };
+
+
+  const [isSessionPopupOpen, setIsSessionPopupOpen] = useState(false);
+  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+
+  const handleOpenSessionPopup = (session: Session) => {
+    setSelectedSession(session);
+    setIsSessionPopupOpen(true);
+  };
+
+
+  const [isCompleteGoalOpen, setIsCompleteGoalOpen] = useState(false);
+
+  const handleOpenCompleteGoal = () => setIsCompleteGoalOpen(true);
+  const handleCloseCompleteGoal = () => setIsCompleteGoalOpen(false);
+
+  const handlePostAchievement = ({ title, description }: { title: string; description: string }) => {
+    console.log("POST ACHIEVEMENT:", { title, description });
+
+    // close after post
+    setIsCompleteGoalOpen(false);
   };
 
   return (
@@ -371,6 +366,39 @@ export default function GoalDetailPage({
         className="min-h-screen"
         style={{ backgroundColor: 'var(--background)' }}
       >
+
+        <SessionInfoPopup
+              isOpen={isSessionPopupOpen}
+              onClose={() => setIsSessionPopupOpen(false)}
+              sessionNumber={selectedSession?.sessionNumber ?? 0}
+              dateText={selectedSession?.dateTime ?? ""}
+              totalDuration={selectedSession?.duration ?? ""}
+              xpEarned={selectedSession?.xpEarned ?? 0}
+              focusedDuration={"--"}
+              nudgeCount={0}
+              nudgeAvatars={[]}
+              activity={{
+                name: selectedSession?.activity ?? "",
+                emoji: "🎨",
+                color: "var(--alchemist-primary)",
+              }}
+            />
+
+        <CompleteGoalPopup
+          isOpen={isCompleteGoalOpen}
+          onClose={handleCloseCompleteGoal}
+          onPost={handlePostAchievement}
+          imageUrl="https://res.cloudinary.com/dfohn9dcz/image/upload/f_auto,q_auto,w_800,c_fill/v1/posts/user_7/ske_20251115103836"
+          defaultTitle={title}
+          defaultDescription={description}
+          timeSpent={stats.timeSpent}
+          xpGained={stats.xpGained}
+          sessionsCount={todaySessions.length + thisWeekSessions.length + olderSessions.length}
+        />
+
+
+
+
         {/* Header */}
         <div className="bg-white dark:bg-dark-2 sticky top-0 z-10 border-b" style={{ borderColor: 'var(--border)' }}>
           <div className="flex items-center justify-between px-6 py-4">
@@ -448,8 +476,8 @@ export default function GoalDetailPage({
             <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--muted)' }}>
               Life Aspects
             </h3>
-            <div className="flex flex-wrap justify-around gap-2">
-              <AspectChip icon={<FireIcon className="w-4 h-4" />} value={341} tint="physique" />
+            <div className="flex  justify-around gap-2">
+              <AspectChip icon={<BiDumbbell className="w-4 h-4" />} value={341} tint="physique" />
               <AspectChip icon={<BoltIcon className="w-4 h-4" />} value={432} tint="energy" />
               <AspectChip icon={<UsersIcon className="w-4 h-4" />} value={234} tint="social" />
               <AspectChip icon={<FaBrain className="w-4 h-4" />} value={324} tint="creativity" />
@@ -460,7 +488,7 @@ export default function GoalDetailPage({
           {/* Action Buttons */}
           <div className="grid grid-cols-2 gap-3 mb-8">
             <button
-              className="py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:scale-95 cursor-pointer"
+              className="py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80  cursor-pointer"
               style={{ 
                 backgroundColor: 'var(--rookie-primary)',
               }}
@@ -470,7 +498,7 @@ export default function GoalDetailPage({
             </button>
             
             <button
-              className="py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:scale-95 cursor-pointer"
+              className="py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80  cursor-pointer"
               style={{ 
                 backgroundColor: '#4a4a4a',
               }}
@@ -480,41 +508,42 @@ export default function GoalDetailPage({
             </button>
           </div>
 
-          {/* Sessions - Today */}
-          {todaySessions.length > 0 && (
-            <div className="mb-8">
-              <h2 className="text-xl font-bold mb-4 text-foreground dark:text-white">Today</h2>
-              <div className="space-y-3">
-                {todaySessions.map(session => (
-                  <SessionItem key={session.id} {...session} />
-                ))}
-              </div>
+           <h2 className="text-xl font-bold my-4 text-foreground dark:text-white">Today</h2>
+            <div className="space-y-3">
+            {todaySessions.map((session) => (
+                <SessionItem
+                  key={session.id}
+                  {...session}
+                  onClick={() => handleOpenSessionPopup(session)}
+                />
+              ))}
             </div>
-          )}
 
-          {/* Sessions - Yesterday */}
-          {yesterdaySessions.length > 0 && (
-            <div className="mb-8">
-              <h2 className="text-xl font-bold mb-4 text-foreground dark:text-white">Yesterday</h2>
-              <div className="space-y-3">
-                {yesterdaySessions.map(session => (
-                  <SessionItem key={session.id} {...session} />
-                ))}
-              </div>
+            
+            {/* Sessions - Yesterday */}
+            <h2 className="text-xl font-bold my-4 text-foreground dark:text-white">This Week</h2>
+            <div className="space-y-3">
+            {thisWeekSessions.map((session) => (
+                <SessionItem
+                  key={session.id}
+                  {...session}
+                  onClick={() => handleOpenSessionPopup(session)}
+                />
+              ))}
             </div>
-          )}
 
-          {/* Sessions - This Week */}
-          {thisWeekSessions.length > 0 && (
-            <div className="mb-8">
-              <h2 className="text-xl font-bold mb-4 text-foreground dark:text-white">This week</h2>
-              <div className="space-y-3">
-                {thisWeekSessions.map(session => (
-                  <SessionItem key={session.id} {...session} />
-                ))}
+
+            <h2 className="text-xl font-bold my-4 text-foreground dark:text-white">Older</h2>
+            {/* Sessions - This Week */}
+            <div className="space-y-3">
+            {olderSessions.map((session) => (
+                <SessionItem
+                  key={session.id}
+                  {...session}
+                  onClick={() => handleOpenSessionPopup(session)}
+                />
+              ))}
               </div>
-            </div>
-          )}
 
           {/* Complete Goal Button - Mobile */}
           <button
@@ -522,7 +551,7 @@ export default function GoalDetailPage({
             style={{ 
               backgroundColor: 'var(--rookie-primary)',
             }}
-            onClick={onCompleteGoal}
+            onClick={handleOpenCompleteGoal}
           >
             Complete Goal
           </button>
@@ -535,7 +564,7 @@ export default function GoalDetailPage({
             {/* Action Buttons */}
             <div className="grid grid-cols-2 gap-3 mb-8">
               <button
-                className="py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:scale-95 cursor-pointer"
+                className="py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80  cursor-pointer"
                 style={{ 
                   backgroundColor: 'var(--rookie-primary)',
                 }}
@@ -545,7 +574,7 @@ export default function GoalDetailPage({
               </button>
               
               <button
-                className="py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:scale-95 cursor-pointer"
+                className="py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80 cursor-pointer"
                 style={{ 
                   backgroundColor: '#4a4a4a',
                 }}
@@ -556,40 +585,42 @@ export default function GoalDetailPage({
             </div>
 
             {/* Sessions - Today */}
-            {todaySessions.length > 0 && (
-              <div className="mb-8">
-                <h2 className="text-xl font-bold mb-4 text-foreground dark:text-white">Today</h2>
-                <div className="space-y-3">
-                  {todaySessions.map(session => (
-                    <SessionItem key={session.id} {...session} />
-                  ))}
-                </div>
-              </div>
-            )}
+            <h2 className="text-xl font-bold my-4 text-foreground dark:text-white">Today</h2>
+            <div className="space-y-3">
+            {todaySessions.map((session) => (
+                <SessionItem
+                  key={session.id}
+                  {...session}
+                  onClick={() => handleOpenSessionPopup(session)}
+                />
+              ))}
+            </div>
 
+            
             {/* Sessions - Yesterday */}
-            {yesterdaySessions.length > 0 && (
-              <div className="mb-8">
-                <h2 className="text-xl font-bold mb-4 text-foreground dark:text-white">Yesterday</h2>
-                <div className="space-y-3">
-                  {yesterdaySessions.map(session => (
-                    <SessionItem key={session.id} {...session} />
-                  ))}
-                </div>
-              </div>
-            )}
+            <h2 className="text-xl font-bold my-4 text-foreground dark:text-white">This Week</h2>
+            <div className="space-y-3">
+            {thisWeekSessions.map((session) => (
+                <SessionItem
+                  key={session.id}
+                  {...session}
+                  onClick={() => handleOpenSessionPopup(session)}
+                />
+              ))}
+            </div>
 
+
+            <h2 className="text-xl font-bold my-4 text-foreground dark:text-white">Older</h2>
             {/* Sessions - This Week */}
-            {thisWeekSessions.length > 0 && (
-              <div className="mb-8">
-                <h2 className="text-xl font-bold mb-4 text-foreground dark:text-white">This week</h2>
-                <div className="space-y-3">
-                  {thisWeekSessions.map(session => (
-                    <SessionItem key={session.id} {...session} />
-                  ))}
-                </div>
+            <div className="space-y-3">
+            {olderSessions.map((session) => (
+                <SessionItem
+                  key={session.id}
+                  {...session}
+                  onClick={() => handleOpenSessionPopup(session)}
+                />
+              ))}
               </div>
-            )}
           </div>
 
           {/* Right Sidebar - Desktop Only */}
@@ -607,8 +638,8 @@ export default function GoalDetailPage({
                {/* Aspect Chips */}
               <div>
                
-                <div className="flex flex-wrap justify-around gap-2">
-                  <AspectChip icon={<FireIcon className="w-4 h-4" />} value={341} tint="physique" />
+                <div className="flex  justify-around gap-2">
+                  <AspectChip icon={<BiDumbbell className="w-4 h-4" />} value={341} tint="physique" />
                   <AspectChip icon={<BoltIcon className="w-4 h-4" />} value={432} tint="energy" />
                   <AspectChip icon={<UsersIcon className="w-4 h-4" />} value={234} tint="social" />
                   <AspectChip icon={<FaBrain className="w-4 h-4" />} value={324} tint="creativity" />
@@ -674,7 +705,7 @@ export default function GoalDetailPage({
                 style={{ 
                   backgroundColor: 'var(--rookie-primary)',
                 }}
-                onClick={onCompleteGoal}
+                onClick={handleOpenCompleteGoal}
               >
                 Complete Goal
               </button>

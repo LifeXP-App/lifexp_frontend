@@ -157,16 +157,21 @@ export default function SessionTimer({ params }: SessionTimerProps) {
       />
 
       {/* Main content */}
-      <div className="relative z-10 h-full flex flex-col items-center justify-center px-6">
+      <div className="relative z-10 h-full flex flex-col items-center justify-around py-20 px-6">
         {/* Goal info - compact */}
         <div className="flex items-center gap-3 mb-8">
-          <span className="text-4xl">{goalData.emoji}</span>
+          
           <div>
-            <h1 className="text-xl font-semibold text-white">
+            <h1 className="text-5xl text-center text-white/40">
               {goalData.title}
             </h1>
-            <p className="text-sm text-gray-500">{goalData.category}</p>
+            
           </div>
+        </div>
+        <div className="flex flex-col items-center gap-4 mb-12">
+          <span className="text-7xl">{goalData.emoji}</span>
+          <p style={{color:goalData.categoryColor}} className="text-xl font-bold">{goalData.category}</p>
+
         </div>
 
         {/* Timer */}
@@ -182,7 +187,7 @@ export default function SessionTimer({ params }: SessionTimerProps) {
             />
           )}
           <div
-            className="text-[120px] md:text-[160px] font-light text-white tracking-tighter tabular-nums"
+            className="text-[100px] md:text-[100px] opacity-80 font-semibold text-white tracking-tighter tabular-nums"
             style={{ fontVariantNumeric: "tabular-nums" }}
           >
             {formatTime(time)}
@@ -226,10 +231,9 @@ export default function SessionTimer({ params }: SessionTimerProps) {
         <div className="flex items-center gap-4">
           <button
             onClick={handleDiscard}
-            className="w-14 h-14 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 flex items-center justify-center transition-colors cursor-pointer"
-            title="Discard"
+            className="h-14 w-24 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-medium transition-colors cursor-pointer"
           >
-            <XMarkIcon className="w-6 h-6 text-gray-400" />
+            Discard
           </button>
 
           <button
@@ -247,7 +251,7 @@ export default function SessionTimer({ params }: SessionTimerProps) {
 
           <button
             onClick={handleFinish}
-            className="px-6 h-14 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-medium transition-colors cursor-pointer"
+            className="px-6 h-14 w-24 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-medium transition-colors cursor-pointer"
           >
             Finish
           </button>
@@ -255,7 +259,7 @@ export default function SessionTimer({ params }: SessionTimerProps) {
       </div>
 
       {/* Keyboard hints */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 text-gray-600 text-xs">
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2  items-center gap-4 text-gray-600 text-xs hidden md:flex">
         <span>
           <kbd className="px-1.5 py-0.5 bg-gray-800 rounded text-gray-500 mr-1">
             Space

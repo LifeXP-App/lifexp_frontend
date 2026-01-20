@@ -34,10 +34,19 @@
 
   /* Life Aspect Colors */
   --aspect-physique: #8d2e2e;
+  --aspect-physique-rgb: 141, 46, 46;
+
   --aspect-energy: #c49352;
-  --aspect-logic: #713599;
-  --aspect-creativity: #4187a2;
+  --aspect-energy-rgb: 196, 147, 82;
+
   --aspect-social: #31784e;
+  --aspect-social-rgb: 49, 120, 78;
+
+  --aspect-creativity: #4187a2;
+  --aspect-creativity-rgb: 65, 135, 162;
+
+  --aspect-logic: #713599;
+  --aspect-logic-rgb: 113, 53, 153;
 
   /* UI Colors */
   --border: #e5e7eb;

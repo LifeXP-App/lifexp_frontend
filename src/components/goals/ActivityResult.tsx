@@ -23,12 +23,17 @@ export default function ActivitySelectButton({
     <button
       onClick={() => onSelect(activity)}
       className="w-full flex items-center justify-between p-4 rounded-2xl transition-all cursor-pointer group"
-      style={{ backgroundColor: meta.cssColorVar }}
+      style={{
+        backgroundColor: `rgba(${meta.cssColorVarRgb}, 0.2)`,
+      }}
     >
       <div className="flex items-center gap-3">
-        <div className="text-gray-700">{meta.icon}</div>
+        <div style={{ color: meta.cssColorVar }}>{meta.icon}</div>
 
-        <span className="text-base font-semibold text-gray-800">
+        <span
+          className="text-base font-semibold"
+          style={{ color: meta.cssColorVar }}
+        >
           {activity.name}
         </span>
       </div>

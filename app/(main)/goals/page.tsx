@@ -100,7 +100,9 @@ function GoalCard({
               </p>
 
               {isCompleted && typeof goal.xpReward === "number" && (
-                <span className="ml-2 shrink-0 rounded-full bg-blue-600 dark:bg-blue-500 px-3 py-1 text-xs font-semibold text-white">
+                <span style={{ 
+                backgroundColor: 'var(--rookie-primary)',
+              }} className="ml-2 shrink-0 rounded-full  px-3 py-1 text-xs font-semibold text-white">
                   {goal.xpReward}XP
                 </span>
               )}
@@ -158,7 +160,10 @@ function GoalCard({
         {primaryCta && (
           <button
             onClick={primaryCta.onClick}
-            className="flex-1 rounded-xl cursor-pointer bg-blue-600 dark:bg-blue-500 text-white font-semibold py-3 hover:bg-blue-700 dark:hover:bg-blue-600 transition"
+            style={{ 
+                backgroundColor: 'var(--rookie-primary)',
+              }}
+            className="flex-1 rounded-xl cursor-pointer text-white font-semibold py-3 hover:bg-blue-700 dark:hover:bg-blue-600 transition"
           >
             {primaryCta.label}
           </button>
@@ -429,6 +434,7 @@ export default function GoalsPage() {
             {/* Create new goal */}
             <button
               onClick={() => setIsModalOpen(true)}
+
               className="w-full rounded-2xl cursor-pointer bg-gray-200 dark:bg-dark-2 text-black dark:text-white font-semibold py-4 flex items-center justify-start gap-3 px-5 hover:bg-gray-300 dark:hover:bg-dark-3 transition"
             >
               <span className="text-lg cursor-pointer leading-none">＋</span>

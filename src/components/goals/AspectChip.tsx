@@ -26,7 +26,7 @@ function AspectChip({
 
   return (
     <div
-      className={`flex items-center justify-center gap-1 rounded-lg px-3 py-2 text-sm font-semibold ${tintMap[tint]}`}
+      className={`flex items-center w-full justify-center gap-1 rounded-lg px-3 py-2 text-sm font-semibold ${tintMap[tint]}`}
     >
       <span >{icon}</span>
       <span>{value}</span>
