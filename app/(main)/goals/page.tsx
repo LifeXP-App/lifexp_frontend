@@ -13,6 +13,7 @@ type AspectKey = "physique" | "energy" | "social" | "creativity" | "logic";
 
 type GoalStatus = "ongoing" | "planned" | "completed";
 
+
 type Goal = {
   id: string;
   emoji: string;
@@ -67,6 +68,51 @@ const mockGoals: Goal[] = [
     },
   },
 ];
+
+import { NudgesLikesSection } from "@/src/components/goals/NudgesLikesSection";
+
+
+type InteractionType = "nudge" | "like";
+type Interactions = {
+  id: string;
+  image: string;
+  username: string;
+
+  type: InteractionType; // ✅ moved here
+
+  goalTitle?: string;
+  activityName?: string;
+
+  date: string;
+  href: string;
+  rounded?: boolean;
+};
+
+const interactions: Interactions[] = [
+  {
+    id: "1",
+    image: "https://res.cloudinary.com/dfohn9dcz/image/upload/f_auto,q_auto,w_800,c_fill/v1755709015/ysyanmka88fuxudiuqhg.jpg",
+    username: "alex",
+    type: "nudge",
+    activityName: "drawing session",
+    date: "2m ago",
+    href: "/goal/1",
+    rounded: true,
+  },
+  {
+    id: "2",
+    image: "https://res.cloudinary.com/dfohn9dcz/image/upload/f_auto,q_auto,w_800,c_fill/v1755709015/ysyanmka88fuxudiuqhg.jpg",
+    username: "maria",
+    type: "like",
+    goalTitle: "Drawing Mandalorian...",
+    date: "10m ago",
+    href: "/goal/1",
+    rounded: true,
+  },
+];
+
+
+
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
@@ -315,12 +361,12 @@ function NewGoalModal({ isOpen, onClose, onSubmit }: NewGoalModalProps) {
       >
         {/* Modal */}
         <div
-          className="bg-white dark:bg-dark-2 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden dark:border dark:border-gray-800"
+          className="bg-gray-100 dark:bg-dark-2 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden dark:border dark:border-gray-800"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200 dark:border-gray-800">
-            <h2 className="text-xl font-bold text-black dark:text-white">
+          <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+            <h2 className="text-xl  font-bold text-black dark:text-white">
               Create New Goal
             </h2>
             <button
@@ -340,8 +386,11 @@ function NewGoalModal({ isOpen, onClose, onSubmit }: NewGoalModalProps) {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="px-6 py-6">
+          <form onSubmit={handleSubmit} >
             {/* Title Input */}
+            <div  className="px-6 pt-6">
+
+           
             <div className="mb-6">
               <label className="block text-sm font-semibold mb-2 text-black dark:text-white">
                 What do you want to achieve?
@@ -375,7 +424,7 @@ function NewGoalModal({ isOpen, onClose, onSubmit }: NewGoalModalProps) {
               <label className="block text-sm font-semibold mb-3 text-black dark:text-white">
                 Finish by
               </label>
-              <div className="grid grid-cols-6 gap-3">
+              <div className="grid grid-cols-5 gap-3">
                 {[
                   { value: "1w", label: "1w" },
                   { value: "2w", label: "2w" },
@@ -413,7 +462,7 @@ function NewGoalModal({ isOpen, onClose, onSubmit }: NewGoalModalProps) {
 
             {/* Calendar Picker */}
             {showCalendar && (
-              <div className="mb-6">
+              <div>
                 <label className="block text-sm font-semibold mb-2 text-black dark:text-white">
                   Select date
                 </label>
@@ -426,8 +475,10 @@ function NewGoalModal({ isOpen, onClose, onSubmit }: NewGoalModalProps) {
                 />
               </div>
             )}
+             </div>
 
-            {/* Submit Button */}
+            <div className="mt-4 p-6 w-full bg-white dark:bg-gray-900  border-t border-gray-200 dark:border-gray-800">
+              {/* Submit Button */}
             <button
               type="submit"
               disabled={!isFormValid}
@@ -442,6 +493,9 @@ function NewGoalModal({ isOpen, onClose, onSubmit }: NewGoalModalProps) {
             >
               Create Goal
             </button>
+
+            </div>
+            
           </form>
         </div>
       </div>
@@ -494,7 +548,7 @@ export default function GoalsPage() {
     if (selectedGoalId) {
       // Navigate to goal page which has the full activity modal
       router.push(`/goals/${selectedGoalId}`);
-    }
+    }                                 
   };
 
   return (
@@ -553,7 +607,7 @@ export default function GoalsPage() {
                       onClick: () => alert(`Start Goal: ${goal.title}`),
                     }}
                     secondaryCta={{
-                      label: "View Goal",
+                      label: "Discard",
                       onClick: () => alert(`View Goal: ${goal.title}`),
                     }}
                   />
@@ -714,6 +768,9 @@ function RightSidebar() {
           </div>
         </div>
       </div>
+      <NudgesLikesSection
+          interactions={interactions}
+        />
     </aside>
   );
 }

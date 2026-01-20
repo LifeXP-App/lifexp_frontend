@@ -36,7 +36,7 @@ export default function NewSessionPopup({
 
   return (
     <div
-      className="fixed inset-0 bg-black/40 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-300"
+      className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4 animate-in fade-in duration-300"
       onClick={onClose}
     >
       <div
@@ -47,7 +47,7 @@ export default function NewSessionPopup({
         <div className="flex items-center justify-between px-6 py-5">
           <div>
             <h2 className="text-xl font-bold text-foreground dark:text-white leading-tight">
-              Next Session
+              Start Session
             </h2>
             <p className="text-xs text-muted-foreground font-medium mt-0.5 opacity-70">
               Pick up where you left off
@@ -56,7 +56,7 @@ export default function NewSessionPopup({
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 flex items-center justify-center rounded-full bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-all cursor-pointer"
+            className="w-9 h-9 flex items-center justify-center rounded-full bg-black/5 dark:bg-white/5  transition-all cursor-pointer"
             aria-label="Close"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -107,7 +107,7 @@ export default function NewSessionPopup({
                         {meta.icon}
                       </div>
                     </div>
-                    <div className="flex flex-col items-start translate-y-[-1px]">
+                    <div className="flex flex-col items-start ">
                       <span
                         className="text-sm font-bold tracking-tight"
                         style={{ color: meta.cssColorVar }}
@@ -124,7 +124,7 @@ export default function NewSessionPopup({
                   </div>
 
                   <div
-                    className="w-8 h-8 rounded-full flex items-center justify-center transition-all bg-white/20 dark:bg-black/10 group-hover:bg-white/40 dark:group-hover:bg-black/20 group-hover:translate-x-1"
+                    className="w-8 h-8 rounded-full flex items-center justify-center transition-all bg-white/20 dark:bg-black/10 group-hover:bg-white/50 dark:group-hover:bg-black/20 "
                     style={{
                       border: `1px solid rgba(${meta.cssColorVarRgb}, 0.2)`,
                     }}
@@ -144,13 +144,13 @@ export default function NewSessionPopup({
         <div className="p-6 pt-2">
           <button
             onClick={onNewActivity}
-            className="w-full py-4 rounded-2xl font-bold text-white transition-all cursor-pointer hover:shadow-[0_8px_20px_-8px_rgba(65,104,226,0.6)] active:scale-[0.97] flex items-center justify-center gap-2 group"
+            className="w-full py-3 rounded-2xl font-medium text-white transition-all cursor-pointer hover:shadow-[0_8px_20px_-8px_rgba(65,104,226,0.6)] active:scale-[0.97] flex items-center justify-center gap-2 group"
             style={{
               background:
                 "linear-gradient(135deg, var(--rookie-primary) 0%, #5d81f2 100%)",
             }}
           >
-            <span className="text-sm">Start New Activity</span>
+            <span >Start New Activity</span>
           </button>
         </div>
       </div>

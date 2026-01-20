@@ -518,7 +518,7 @@ export default function GoalDetailPage({
               style={{
                 backgroundColor: '#4a4a4a',
               }}
-              onClick={() => setIsNewSessionPopupOpen(true)}
+              onClick={() => handleOpenNewActivity()}
             >
               New Session
             </button>
@@ -594,7 +594,7 @@ export default function GoalDetailPage({
                 style={{
                   backgroundColor: '#4a4a4a',
                 }}
-                onClick={() => setIsNewSessionPopupOpen(true)}
+                onClick={() => setIsNewActivityModalOpen(true)}
               >
                 New Session
               </button>
