@@ -17,6 +17,7 @@ import {
 import { FaBrain, FaHammer } from "react-icons/fa";
 import NewActivityModal from '@/src/components/goals/NewActivityModel';
 import NewSessionPopup from '@/src/components/goals/NewSessionPopup';
+import NewGoalModal from '@/src/components/goals/NewGoalModal';
 interface Session {
   id: string;
   sessionNumber: number;
@@ -44,6 +45,7 @@ interface AspectScore {
 }
 
 interface ActivityDetailProps {
+  goalCompleted?: boolean;
   title?: string;
   user?: typeof mockUser;
   radarData?: { aspect: string; value: number; fullMark: number }[];
@@ -156,13 +158,13 @@ const SessionItem: React.FC<Session & { onClick?: () => void }> = ({
 
           {open && (
               <div
-                className="absolute left-0 top-10 w-44 bg-white dark:bg-dark-2 border rounded-md shadow-md overflow-hidden z-20"
+                className="absolute left-0 top-10 w-44 bg-white dark:bg-dark-2 border rounded-md shadow-lg overflow-hidden z-20"
                 style={{ borderColor: "var(--border)" }}
                 onClick={(e) => e.stopPropagation()}
               >
                 <button
                   type="button"
-                  className="w-full cursor-pointer text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-dark-3 transition-colors"
+                  className="w-full cursor-pointer font-medium text-left py-3 px-4 text-sm hover:bg-gray-100 dark:hover:bg-dark-3 transition-colors"
                   onClick={() => {
                     setOpen(false);
                     console.log("Repeat Session", sessionNumber);
@@ -171,11 +173,11 @@ const SessionItem: React.FC<Session & { onClick?: () => void }> = ({
                   Repeat Session
                 </button>
 
-                <div className="h-px" style={{ backgroundColor: "var(--border)" }} />
+
 
                 <button
                   type="button"
-                  className="w-full   cursor-pointer text-left px-3 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-dark-3 transition-colors"
+                  className="w-full   cursor-pointer font-medium text-left py-3 px-4 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-dark-3 transition-colors"
                   onClick={() => {
                     setOpen(false);
                     console.log("Delete Session", sessionNumber);
@@ -194,6 +196,7 @@ const SessionItem: React.FC<Session & { onClick?: () => void }> = ({
 
 
 export default function GoalDetailPage({
+  goalCompleted = false,
   title = "Drawing Mandalorian",
   user = mockUser,
   radarData = [
@@ -321,6 +324,34 @@ export default function GoalDetailPage({
     setIsCompleteGoalOpen(false);
   };
 
+
+    const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const moreMenuRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
+        setIsMoreMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+
+const [isModalOpen, setIsModalOpen] = useState(false);
+    const handleCreateGoal = (goal: {
+    title: string;
+    description: string;
+    finishBy: string;
+  }) => {
+    console.log("New goal created:", goal);
+    // Add your logic here to save the goal
+    setIsModalOpen(false);
+  };
+
+
   return (
     <>
       <style jsx global>{`
@@ -412,7 +443,18 @@ export default function GoalDetailPage({
           sessionsCount={todaySessions.length + thisWeekSessions.length + olderSessions.length}
         />
 
-
+        <NewGoalModal
+                isOpen={isModalOpen}
+                isEdit={true}
+                goalCompleted = {goalCompleted}
+                onClose={() => setIsModalOpen(false)}
+                onSubmit={handleCreateGoal}
+                 initialGoal={{
+                    title: "Drawing Mandalorian",
+                    description: "Get better at drawing daily",
+                    finishBy: "2026-02-01", // or "1w", "2w", "1m", "6m"
+                  }}
+              />
 
 
         {/* Header */}
@@ -429,9 +471,10 @@ export default function GoalDetailPage({
             
             <h1 className="text-xl font-bold flex-1 ml-2 text-foreground dark:text-white">{title}</h1>
             
+            <div ref={moreMenuRef} className="relative">
             <button 
-              className="p-2 cursor-pointer  rounded-lg transition-colors"
-              onClick={onMore}
+              className="p-2 cursor-pointer rounded-lg transition-colors"
+              onClick={() => setIsMoreMenuOpen((prev) => !prev)}
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                 <circle cx="12" cy="6" r="1.5" fill="currentColor"/>
@@ -439,6 +482,54 @@ export default function GoalDetailPage({
                 <circle cx="12" cy="18" r="1.5" fill="currentColor"/>
               </svg>
             </button>
+
+            {isMoreMenuOpen && (
+              <div
+                className="absolute right-0 top-12 w-44 bg-white dark:bg-dark-2 border rounded-sm shadow-lg overflow-hidden z-50"
+                style={{ borderColor: "var(--border)" }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  className="w-full cursor-pointer text-left font-medium py-3 px-4 text-sm hover:bg-gray-100 dark:hover:bg-dark-3 transition-colors"
+                  onClick={() => {
+                    setIsMoreMenuOpen(false);
+                    setIsModalOpen(true);
+                    console.log("Edit Goal");
+                  }}
+                >
+                  Edit Goal
+                </button>
+
+
+
+                <button
+                  type="button"
+                  className="w-full cursor-pointer text-left font-medium py-3 px-4 text-sm hover:bg-gray-100 dark:hover:bg-dark-3 transition-colors"
+                  onClick={() => {
+                    setIsMoreMenuOpen(false);
+                    console.log("Reset Progress");
+                  }}
+                >
+                  Reset Progress
+                </button>
+
+
+
+                <button
+                  type="button"
+                  className="w-full cursor-pointer text-left font-medium py-3 px-4 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-dark-3 transition-colors"
+                  onClick={() => {
+                    setIsMoreMenuOpen(false);
+                    console.log("Delete Goal");
+                  }}
+                >
+                  Delete Goal
+                </button>
+              </div>
+            )}
+          </div>
+
           </div>
         </div>
 
@@ -502,27 +593,30 @@ export default function GoalDetailPage({
           </div>
 
           {/* Action Buttons */}
-          <div className="grid grid-cols-2 gap-3 mb-8">
-            <button
-              className="py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80  cursor-pointer"
-              style={{ 
-                backgroundColor: 'var(--rookie-primary)',
-              }}
-              onClick={handleStartActivity}
-            >
-              Start Drawing
-            </button>
-            
-            <button
-              className="py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80  cursor-pointer"
-              style={{
-                backgroundColor: '#4a4a4a',
-              }}
-              onClick={() => handleOpenNewActivity()}
-            >
-              New Session
-            </button>
-          </div>
+            {!goalCompleted && (
+              <div className="grid grid-cols-2 gap-3 mb-8">
+                <button
+                  className="py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80  cursor-pointer"
+                  style={{ 
+                    backgroundColor: 'var(--rookie-primary)',
+                  }}
+                  onClick={handleStartActivity}
+                >
+                  Start Drawing
+                </button>
+                
+                <button
+                  className="py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80  cursor-pointer"
+                  style={{
+                    backgroundColor: '#4a4a4a',
+                  }}
+                  onClick={() => handleOpenNewActivity()}
+                >
+                  New Session
+                </button>
+              </div>
+            )}
+
 
            <h2 className="text-xl font-bold my-4 text-foreground dark:text-white">Today</h2>
             <div className="space-y-3">
@@ -561,16 +655,26 @@ export default function GoalDetailPage({
               ))}
               </div>
 
+
           {/* Complete Goal Button - Mobile */}
-          <button
-            className="w-full py-3 rounded-2xl font-medium text-white text-md transition-all active:scale-95 cursor-pointer"
-            style={{ 
-              backgroundColor: 'var(--rookie-primary)',
-            }}
-            onClick={handleOpenCompleteGoal}
-          >
-            Complete Goal
-          </button>
+
+              {!goalCompleted && (
+                <div className="mb-6">
+                  <button
+                    className="w-full py-3 rounded-2xl font-medium text-white text-md transition-all active:scale-95 cursor-pointer"
+                    style={{ 
+                      backgroundColor: 'var(--rookie-primary)',
+                    }}
+                    onClick={handleOpenCompleteGoal}
+                  >
+                    Complete Goal
+                  </button>
+                </div>
+              )}
+
+        
+
+
         </div>
 
         {/* Desktop Layout - Two Column */}
@@ -578,27 +682,30 @@ export default function GoalDetailPage({
           {/* Left Column - Main Content */}
           <div className="flex-1">
             {/* Action Buttons */}
-            <div className="grid grid-cols-2 gap-3 mb-8">
-              <button
-                className="py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80  cursor-pointer"
-                style={{ 
-                  backgroundColor: 'var(--rookie-primary)',
-                }}
-                onClick={handleStartActivity}
-              >
-                Start Drawing
-              </button>
-              
-              <button
-                className="py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80 cursor-pointer"
-                style={{
-                  backgroundColor: '#4a4a4a',
-                }}
-                onClick={() => setIsNewActivityModalOpen(true)}
-              >
-                New Session
-              </button>
-            </div>
+              {!goalCompleted && (
+                <div className="grid grid-cols-2 gap-3 mb-8">
+                  <button
+                    className="py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80  cursor-pointer"
+                    style={{ 
+                      backgroundColor: 'var(--rookie-primary)',
+                    }}
+                    onClick={handleStartActivity}
+                  >
+                    Start Drawing
+                  </button>
+                  
+                  <button
+                    className="py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80 cursor-pointer"
+                    style={{
+                      backgroundColor: '#4a4a4a',
+                    }}
+                    onClick={() => setIsNewActivityModalOpen(true)}
+                  >
+                    New Session
+                  </button>
+                </div>
+              )}
+
 
             {/* Sessions - Today */}
             <h2 className="text-xl font-bold my-4 text-foreground dark:text-white">Today</h2>
@@ -716,6 +823,7 @@ export default function GoalDetailPage({
              
 
               {/* Complete Goal Button */}
+               {!goalCompleted && (
               <button
                 className="w-full py-3 rounded-2xl font-medium text-white text-md transition-all active:scale-95 cursor-pointer"
                 style={{ 
@@ -725,6 +833,7 @@ export default function GoalDetailPage({
               >
                 Complete Goal
               </button>
+               )}
             </div>
           </div>
         </div>
