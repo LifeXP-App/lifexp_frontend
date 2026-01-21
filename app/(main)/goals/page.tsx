@@ -136,7 +136,7 @@ function GoalCard({
   const isCompleted = goal.status === "completed";
 
   return (
-    <div className="w-full rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-dark-2 shadow-sm p-4">
+    <div className="w-full rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-dark-2  p-4">
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className=" w-full flex items-start gap-3">
@@ -690,7 +690,7 @@ function RightSidebar() {
   return (
     <aside className="w-2xl hidden md:block">
       {/* PROFILE CARD */}
-      <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border border-gray-200 dark:border-gray-800">
+      <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-gray-800">
         <div className="text-center flex flex-col items-center">
           <div className="flex flex-col items-center">
             <img
