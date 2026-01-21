@@ -22,6 +22,8 @@ export interface LifeAspect {
   icon: string;
 }
 
+export type ProfileVisibility = "public" | "private";
+
 export interface UserProfile {
   id: string;
   fullname: string;
@@ -32,6 +34,8 @@ export interface UserProfile {
   masteryTitle: MasteryTitle;
   masteryLevel: number;
   aspects: Record<AspectType, LifeAspect>;
+  visibility: ProfileVisibility;
+  isFollowing?: boolean;
 }
 
 export interface NavigationItem {
