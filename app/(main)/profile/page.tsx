@@ -1,6 +1,6 @@
 "use client";
 
-import RadarChart from "@/src/components/RadarChart";
+import RadarChart, { RadarDataPoint } from "@/src/components/RadarChart";
 import getAccentColors, {
   hexToRgba as hexToRgbaUtil,
 } from "@/src/components/UserAccent";
@@ -16,15 +16,15 @@ import {
 } from "@/src/lib/mock/profileData";
 import { mockUser } from "@/src/lib/mock/userData";
 import { AspectType } from "@/src/lib/types";
-import {FireIcon} from "@heroicons/react/24/solid";
+import { FireIcon } from "@heroicons/react/24/solid";
 import Image from "next/image";
 
 export default function ProfilePage() {
   const user = mockUser;
   const stats = mockProfileStats;
 
-  // Calculate radar chart points for pentagon
-  const radarData = [
+  // Calculate radar chart points for pentagon (own profile - single data set)
+  const radarData: RadarDataPoint[] = [
     { aspect: "Physique", value: user.aspects.physique.level, fullMark: 12 },
     { aspect: "Energy", value: user.aspects.energy.level, fullMark: 12 },
     { aspect: "Logic", value: user.aspects.logic.level, fullMark: 12 },
