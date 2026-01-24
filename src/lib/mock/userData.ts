@@ -56,6 +56,7 @@ export const mockUser: UserProfile = {
 
 // Mock user for viewing other profiles (public profile)
 export const mockOtherUserPublic: UserProfile = {
+  
   id: "2",
   fullname: "Patty",
   username: "patty",

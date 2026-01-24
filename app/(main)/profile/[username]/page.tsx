@@ -24,35 +24,257 @@ import {
 import { AspectType, UserProfile } from "@/src/lib/types";
 import { FireIcon, LockClosedIcon } from "@heroicons/react/24/solid";
 import Image from "next/image";
-import { use, useState } from "react";
+import { use, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 interface PageProps {
   params: Promise<{ username: string }>;
 }
 
-// Mock function to get user by username
-function getUserByUsername(username: string): UserProfile | null {
-  const users: Record<string, UserProfile> = {
-    patty: mockOtherUserPublic,
-    alexs: mockOtherUserPrivate,
-    mariag: mockOtherUserPrivateFollowing,
-  };
-  return users[username.toLowerCase()] || null;
-}
+import Achievement from "@/src/components/profile/Achievement";
+import DefaultUserProfilePicture from "@/src/components/profile/DefaultUserProfilePicture";
 
-export default function OtherProfilePage({ params }: PageProps) {
+export default function ProfilePage({ params }: PageProps) {
   const { username } = use(params);
-  const profileUser = getUserByUsername(username);
-  const currentUser = mockUser; // The logged-in user
+  const router = useRouter();
+  
+  const [profileUser, setProfileUser] = useState<UserProfile | null>(null);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      setIsLoading(true);
+      
+      try {
+        // Fetch both users directly from Django backend
+        // Using fetch on client side may hit CORS, but if CORS is configured on backend, this will work
+        const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1`;
+        
+        const [profileResponse, currentResponse] = await Promise.all([
+          fetch(`${apiUrl}/users/${username}/`, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            cache: "no-store",
+          }),
+          fetch(`${apiUrl}/users/pat/`, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            cache: "no-store",
+          })
+        ]);
+
+        if (profileResponse.ok) {
+          const profileData = await profileResponse.json();
+          setProfileUser(profileData as UserProfile);
+          setIsFollowing(profileData.isFollowing ?? false);
+        } else {
+          setProfileUser(null);
+        }
+
+        if (currentResponse.ok) {
+          const currentData = await currentResponse.json();
+          setCurrentUser(currentData as UserProfile);
+        } else {
+          setCurrentUser(null);
+        }
+      } catch (err) {
+        console.error("Failed to fetch users:", err);
+        setProfileUser(null);
+        setCurrentUser(null);
+      }
+      
+      setIsLoading(false);
+    };
+
+    fetchUsers();
+  }, [username]);
+
   const stats = mockProfileStats;
 
-  const [isFollowing, setIsFollowing] = useState(profileUser?.isFollowing ?? false);
+  if (isLoading) {
+  return (
+    <main
+      className="w-full flex flex-col md:flex-row overflow-y-auto"
+      style={{ minHeight: "calc(100vh - 60px)" }}
+    >
+      <div className="w-full px-4 py-4 sm:px-6 md:px-8 lg:px-12 xl:px-24">
+        {/* PROFILE HEADER SKELETON */}
+        <div className="relative rounded-xl flex flex-col md:flex-row justify-between w-full mb-4 animate-pulse">
+          <div className="pt-2 sm:p-2 mb-4 flex flex-col gap-2 w-full">
+            <div className="flex flex-row items-center gap-4 sm:gap-8 w-full mb-4">
+              {/* Avatar */}
+              <div className="shrink-0">
+                <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-full bg-gray-200 dark:bg-gray-800" />
+              </div>
+
+              {/* Name + stats */}
+              <div className="flex flex-col w-full">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="h-4 w-32 rounded bg-gray-200 dark:bg-gray-800" />
+                  <div className="h-4 w-24 rounded bg-gray-200 dark:bg-gray-800" />
+                </div>
+
+                <div className="h-3 w-40 rounded bg-gray-200 dark:bg-gray-800 mb-4" />
+
+                <div className="mt-4 flex gap-6 sm:gap-8 text-sm">
+                  <div className="text-center sm:text-left">
+                    <div className="h-4 w-10 rounded bg-gray-200 dark:bg-gray-800 mx-auto sm:mx-0" />
+                    <div className="h-3 w-12 rounded bg-gray-200 dark:bg-gray-800 mt-2 mx-auto sm:mx-0" />
+                  </div>
+
+                  <div className="text-center sm:text-left">
+                    <div className="h-4 w-10 rounded bg-gray-200 dark:bg-gray-800 mx-auto sm:mx-0" />
+                    <div className="h-3 w-16 rounded bg-gray-200 dark:bg-gray-800 mt-2 mx-auto sm:mx-0" />
+                  </div>
+
+                  <div className="text-center sm:text-left">
+                    <div className="h-4 w-10 rounded bg-gray-200 dark:bg-gray-800 mx-auto sm:mx-0" />
+                    <div className="h-3 w-16 rounded bg-gray-200 dark:bg-gray-800 mt-2 mx-auto sm:mx-0" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Title + bio */}
+            <div className="h-4 w-3/5 rounded bg-gray-200 dark:bg-gray-800 mt-2" />
+            <div className="h-3 w-4/5 rounded bg-gray-200 dark:bg-gray-800 mt-2" />
+            <div className="h-3 w-2/3 rounded bg-gray-200 dark:bg-gray-800 mt-2" />
+
+            {/* Ongoing goals skeleton pills */}
+            <div className="mt-4">
+              <div className="h-3 w-28 rounded bg-gray-200 dark:bg-gray-800 mb-3" />
+              <div className="flex gap-2 flex-wrap">
+                {[1, 2, 3, 4].map((i) => (
+                  <span
+                    key={i}
+                    className="px-3 py-1.5 rounded-full bg-gray-200 dark:bg-gray-800 w-24 h-7"
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Buttons skeleton */}
+            <span className="flex flex-col sm:flex-row md:gap-2 gap-4 items-center w-full mt-2 sm:mt-4">
+              <div className="w-48 h-10 rounded-lg bg-gray-200 dark:bg-gray-800" />
+              <div className="w-48 h-10 rounded-lg bg-gray-200 dark:bg-gray-800" />
+            </span>
+          </div>
+
+          {/* Desktop chart skeleton */}
+          <div className="hidden xl:flex w-full focus:outline-none justify-end p-4 sm:p-6 overflow-visible">
+            <div className="w-full max-w-[360px] h-[320px] overflow-visible py-6">
+              <div className="w-full h-full rounded-xl bg-gray-200 dark:bg-gray-800" />
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile chart skeleton */}
+        <div className="xl:hidden my-4 flex justify-center w-full animate-pulse">
+          <div className="w-full bg-white dark:bg-dark-2 rounded-xl border-2 border-gray-200 dark:border-gray-900 p-6">
+            <div className="mx-auto w-full max-w-[280px] h-72 rounded-xl bg-gray-200 dark:bg-gray-800" />
+          </div>
+        </div>
+
+        {/* STREAK / LEVEL / XP skeleton cards */}
+        <div className="my-4 flex flex-col sm:flex-row justify-between text-sm gap-4 animate-pulse">
+          <div className="bg-white dark:bg-dark-2 border-2 rounded-xl border-gray-200 dark:border-gray-900 w-full p-4">
+            <div className="h-3 w-24 rounded bg-gray-200 dark:bg-gray-800 mb-3" />
+            <div className="h-5 w-16 rounded bg-gray-200 dark:bg-gray-800" />
+          </div>
+
+          <div className="bg-white dark:bg-dark-2 border-2 rounded-xl border-gray-200 dark:border-gray-900 w-full p-4">
+            <div className="h-4 w-28 rounded bg-gray-200 dark:bg-gray-800 mb-3" />
+            <div className="h-3 w-40 rounded bg-gray-200 dark:bg-gray-800" />
+          </div>
+
+          <div className="bg-gray-200 dark:bg-dark-2 border-2 rounded-xl border-gray-200 dark:border-gray-900 w-full p-4 animate-pulse">
+            <div className="h-5 w-28 rounded bg-gray-300 dark:bg-gray-800 mb-3" />
+            <div className="h-3 w-44 rounded bg-gray-300 dark:bg-gray-800" />
+          </div>
+        </div>
+
+        {/* Weekly XP chart skeleton */}
+        <div className="p-4 sm:p-6 my-4 bg-white dark:bg-dark-2 dark:border-gray-900 border-2 border-gray-200 rounded-2xl w-full animate-pulse">
+          <div className="flex justify-between items-center mb-4">
+            <span className="flex gap-3 items-center">
+              <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-800" />
+              <div className="h-4 w-40 rounded bg-gray-200 dark:bg-gray-800" />
+            </span>
+          </div>
+
+          <div className="relative h-48 sm:h-64 rounded-xl bg-gray-200 dark:bg-gray-800" />
+        </div>
+
+        {/* Top Activities + Recent Sessions skeleton */}
+        <div className="flex flex-col md:flex-row gap-4 animate-pulse">
+          <div className="p-4 sm:p-6 my-2 bg-white border-2 border-gray-200 dark:bg-dark-2 dark:border-gray-900 rounded-2xl w-full">
+            <div className="h-4 w-32 rounded bg-gray-200 dark:bg-gray-800 mb-6" />
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-4">
+                  <div className="h-4 w-4 rounded bg-gray-200 dark:bg-gray-800" />
+                  <div className="h-10 w-10 rounded bg-gray-200 dark:bg-gray-800" />
+                  <div className="h-4 w-40 rounded bg-gray-200 dark:bg-gray-800" />
+                </div>
+                <div className="h-4 w-14 rounded bg-gray-200 dark:bg-gray-800" />
+              </div>
+            ))}
+          </div>
+
+          <div className="p-4 sm:p-6 my-2 bg-white border-2 border-gray-200 dark:bg-dark-2 dark:border-gray-900 rounded-2xl w-full">
+            <div className="h-4 w-36 rounded bg-gray-200 dark:bg-gray-800 mb-6" />
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="p-3 rounded-lg mb-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 rounded bg-gray-200 dark:bg-gray-800" />
+                    <div>
+                      <div className="h-4 w-44 rounded bg-gray-200 dark:bg-gray-800 mb-2" />
+                      <div className="h-3 w-24 rounded bg-gray-200 dark:bg-gray-800" />
+                    </div>
+                  </div>
+                  <div className="h-4 w-14 rounded bg-gray-200 dark:bg-gray-800" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Achievements skeleton */}
+        <div className="max-w-6xl mx-auto px-2 p-2 pb-12 my-4 rounded-sm w-full animate-pulse">
+          <div className="h-5 w-36 rounded bg-gray-200 dark:bg-gray-800 mb-8" />
+          <div className="flex flex-col gap-6">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="w-full h-28 rounded-2xl bg-gray-200 dark:bg-gray-800" />
+            ))}
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}
+
 
   if (!profileUser) {
     return (
       <main className="w-full flex flex-col items-center justify-center" style={{ minHeight: "calc(100vh - 60px)" }}>
         <h1 className="text-2xl font-bold dark:text-white mb-4">User not found</h1>
         <p className="text-gray-500 dark:text-gray-400">@{username} doesn&apos;t exist</p>
+      </main>
+    );
+  }
+
+  if (!currentUser) {
+    return (
+      <main className="w-full flex flex-col items-center justify-center" style={{ minHeight: "calc(100vh - 60px)" }}>
+        <h1 className="text-2xl font-bold dark:text-white mb-4">Error loading user data</h1>
+        <p className="text-gray-500 dark:text-gray-400">Please try again</p>
       </main>
     );
   }
@@ -150,16 +372,7 @@ export default function OtherProfilePage({ params }: PageProps) {
                     className="h-20 w-20 sm:h-24 sm:w-24 rounded-full object-cover"
                   />
                 ) : (
-                  <div
-                    className="h-20 w-20 sm:h-24 sm:w-24 rounded-full flex items-center justify-center"
-                    style={{
-                      backgroundImage: `linear-gradient(135deg, ${accent.gradStart}, ${accent.gradEnd})`,
-                    }}
-                  >
-                    <span className="text-white text-2xl font-bold">
-                      {profileUser.username[0].toUpperCase()}
-                    </span>
-                  </div>
+                  <DefaultUserProfilePicture username={profileUser.username} accent={{gradStart: accent.gradStart, gradEnd: accent.gradEnd}} />
                 )}
               </div>
               <div className="flex flex-col w-full">
@@ -201,15 +414,15 @@ export default function OtherProfilePage({ params }: PageProps) {
                 </span>
                 <div className="mt-4 flex gap-6 sm:gap-8 text-sm">
                   <div className="text-center sm:text-left">
-                    <p className="font-semibold dark:text-white">{stats.posts}</p>
+                    <p className="font-semibold dark:text-white">{profileUser.posts_count}</p>
                     <p className="text-gray-500 dark:text-gray-400">Posts</p>
                   </div>
                   <div className="text-center sm:text-left cursor-pointer">
-                    <p className="font-semibold dark:text-white">{stats.followers}</p>
+                    <p className="font-semibold dark:text-white">{profileUser.followers_count}</p>
                     <p className="text-gray-500 dark:text-gray-400">Followers</p>
                   </div>
                   <div className="text-center sm:text-left cursor-pointer">
-                    <p className="font-semibold dark:text-white">{stats.following}</p>
+                    <p className="font-semibold dark:text-white">{profileUser.following_count}</p>
                     <p className="text-gray-500 dark:text-gray-400">Following</p>
                   </div>
                 </div>
@@ -219,10 +432,10 @@ export default function OtherProfilePage({ params }: PageProps) {
             {canViewContent && (
               <>
                 <p className="text-gray-800 dark:text-gray-300 font-semibold">
-                  {stats.bio}
+                  {profileUser.title}
                 </p>
 
-                <p className="text-gray-500 dark:text-gray-400">{stats.tagline}</p>
+                <p className="text-gray-500 dark:text-gray-400">{profileUser.bio}</p>
                 {/* Ongoing Goals */}
                 <div className="mt-2">
                   <h3 className="font-bold text-sm mb-3 dark:text-white">Ongoing Goals</h3>
@@ -253,21 +466,30 @@ export default function OtherProfilePage({ params }: PageProps) {
               {isFollowing ? (
                 <button
                   onClick={handleUnfollow}
-                  className="w-full sm:w-auto p-2 rounded-lg cursor-pointer px-12 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-3"
+                  className="cursor-pointer font-medium py-2 font-medium rounded-lg cursor-pointer text-center  w-48  text-white bg-gray-700"
                 >
-                  Following
+                  Unfollow
+                </button>
+              ) : currentUser?.username === profileUser.username ? (
+                <button
+                  onClick={()=> router.push('/profile/edit')}
+                  className="w-full font-medium active:opacity-80 sm:w-auto p-2 rounded-lg cursor-pointer px-12 text-white"
+                  style={{ backgroundColor: accent.primary }}
+                >
+                  Edit Profile
                 </button>
               ) : (
                 <button
                   onClick={handleFollow}
-                  className="w-full sm:w-auto p-2 rounded-lg cursor-pointer px-12 text-white"
+                  className="cursor-pointer  font-medium py-2 font-medium rounded-lg cursor-pointer text-center w-48 text-white"
                   style={{ backgroundColor: accent.primary }}
                 >
                   Follow
                 </button>
               )}
-              <button className="bg-black/70 hover:bg-black text-white px-8 py-2 rounded-md w-full sm:w-48 dark:hover:bg-gray-100 dark:bg-white dark:text-black">
-                Message
+
+              <button className="cursor-pointer  font-medium  bg-black/70 hover:bg-black font-medium text-white text-center py-2 rounded-lg w-48 dark:hover:bg-gray-100 dark:bg-white dark:text-black">
+                Share
               </button>
             </span>
           </div>
@@ -280,7 +502,7 @@ export default function OtherProfilePage({ params }: PageProps) {
                   data={radarData}
                   masteryTitle={profileUser.masteryTitle}
                   username={profileUser.username}
-                  comparisonMode={true}
+                  comparisonMode={currentUser.username !== profileUser.username}
                   comparisonUsername={profileUser.username}
                 />
               </div>
@@ -474,22 +696,25 @@ export default function OtherProfilePage({ params }: PageProps) {
 
             {/* EXPERIENCES */}
             <div className="max-w-6xl mx-auto px-2 p-2 pb-12 my-4 rounded-sm w-full">
-              <div className="grid grid-cols-3 gap-2 lg:gap-4">
+              <div className="flex flex-col gap-8">
                 <h2 className="text-lg sm:text-xl font-semibold col-span-3 dark:text-white">
-                  Experiences
+                  Achievements
                 </h2>
-                {mockExperiences.map((exp) => (
-                  <a
-                    key={exp.id}
-                    href="#"
-                    className="aspect-square overflow-hidden"
-                  >
-                    <img
-                      className="object-cover w-full h-full border-2 border-gray-200 dark:border-gray-800 hover:opacity-90 transition"
-                      src={exp.image}
-                      alt={exp.title}
+
+                {mockExperiences.map((exp, index) => (
+                  <div key={exp.id} className="relative pb-4">
+                    {/* Achievement card */}
+                    <Achievement
+                      emoji="🎶"
+                      title={exp.title}
+                      description={exp.description}
+                      xp={exp.xp}
+                      coverImage={exp.image}
+                      timeText={exp.timeText}
+                      accent={{ primary: "var(--rookie-primary)", secondary: "#4168e2" }}
+                      stats={exp.stats}
                     />
-                  </a>
+                  </div>
                 ))}
               </div>
             </div>

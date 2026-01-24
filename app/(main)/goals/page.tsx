@@ -8,6 +8,8 @@ import FireIcon from "@heroicons/react/24/solid/FireIcon";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import { FaBrain, FaHammer } from "react-icons/fa";
+import { usePopup } from "@/src/context/PopupContext";
+
 
 type AspectKey = "physique" | "energy" | "social" | "creativity" | "logic";
 
@@ -198,7 +200,7 @@ function GoalCard({
       {isCompleted && goal.aspectXP && (
         <div className="mt-4 grid grid-cols-5 gap-2">
           <AspectChip
-            icon={<FireIcon className="w-4 h-4" />}
+            icon={<BiDumbbell className="w-4 h-4" />}
             value={goal.aspectXP.physique}
             tint="physique"
           />
@@ -289,6 +291,7 @@ function AspectChip({
 }
 
 import NewGoalModal from "@/src/components/goals/NewGoalModal";
+import { BiDumbbell } from "react-icons/bi";
 
 interface Activity {
   id: string;
@@ -337,6 +340,9 @@ export default function GoalsPage() {
       router.push(`/goals/${selectedGoalId}`);
     }                                 
   };
+
+
+
 
   return (
     <main className="h-screen w-full bg-gray-100 dark:bg-dark-1 overflow-hidden">
@@ -475,6 +481,7 @@ function RightSidebar() {
     streak_active: false,
   };
 
+  const { openMasteryPopup } = usePopup();
   return (
     <aside className="w-2xl hidden md:block">
       {/* PROFILE CARD */}
@@ -498,6 +505,7 @@ function RightSidebar() {
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
                 fill="currentColor"
+                 onClick={openMasteryPopup} 
                 className="w-4 h-4 text-gray-400 dark:text-gray-500"
               >
                 <path
@@ -508,12 +516,13 @@ function RightSidebar() {
               </svg>
             </button>
 
-            <p
+            <button
               className="text-sm font-bold"
+              onClick={openMasteryPopup} 
               style={{ color: user.masteryTextColor }}
             >
               {user.mastery}
-            </p>
+            </button>
             <span className="w-4" />
           </span>
         </div>

@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { Sidebar } from "../../src/components/Sidebar";
-import "../globals.css"; 
+import "../globals.css";
 import { Providers } from "../providers";
-
+import { Sidebar } from "../../src/components/Sidebar";
+import MasteryPopupWrapper from "../../src/components/MasteryPopupWrapper";
+import { PopupProvider } from "../../src/context/PopupContext";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
 });
+import { AuthProvider } from "@/src/context/AuthContext";
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -31,12 +33,17 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Providers>
+          <AuthProvider>
+          <PopupProvider>
           <div className="flex h-screen overflow-hidden">
+            {/* ✅ Client wrapper handles state */}
+            <MasteryPopupWrapper />
+
             <Sidebar />
-            <main className="flex-1 overflow-y-auto">
-              {children}
-            </main>
+            <main className="flex-1 overflow-y-auto">{children}</main>
           </div>
+          </PopupProvider>
+          </AuthProvider>
         </Providers>
       </body>
     </html>

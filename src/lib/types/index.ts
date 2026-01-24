@@ -28,6 +28,11 @@ export interface UserProfile {
   id: string;
   fullname: string;
   username: string;
+  followers_count: number;
+  following_count: number;
+  posts_count: number;
+  title?: string;
+  bio?: string;
   avatar?: string;
   totalXP: number;
   lifeLevel: number;

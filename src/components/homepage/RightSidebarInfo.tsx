@@ -28,7 +28,7 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
       {/* PROFILE CARD */}
       <div className="bg-white p-6 mb-4 rounded-xl border-2 border-gray-200 dark:bg-dark-2 dark:border-gray-900">
         <div className="text-center flex flex-col items-center">
-          <Link href={`/user/${user.username}`}>
+          <Link href={`/user/${user.username}`} className="flex flex-col items-center gap-2">
             <img
               src={user.profile_picture}
               className="h-24 w-24 object-cover aspect-square p-[1.5px] rounded-full"

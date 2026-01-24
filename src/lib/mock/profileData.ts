@@ -43,7 +43,7 @@ export const mockSessions: Session[] = [
     id: "1",
     activity: "Coding",
     icon: "💻",
-    duration: "2h",
+    duration: "2:00:00",
     timestamp: "2h ago",
     category: "logic",
   },
@@ -51,7 +51,7 @@ export const mockSessions: Session[] = [
     id: "2",
     activity: "Gym workout",
     icon: "🏋️",
-    duration: "1h",
+    duration: "2:13:00",
     timestamp: "5h ago",
     category: "physique",
   },
@@ -59,7 +59,7 @@ export const mockSessions: Session[] = [
     id: "3",
     activity: "Reading",
     icon: "📚",
-    duration: "45min",
+    duration: "1:30:00",
     timestamp: "1d ago",
     category: "energy",
   },
@@ -67,7 +67,7 @@ export const mockSessions: Session[] = [
     id: "4",
     activity: "Team meeting",
     icon: "👥",
-    duration: "30min",
+    duration: "00:12:00",
     timestamp: "1d ago",
     category: "social",
   },
@@ -75,7 +75,7 @@ export const mockSessions: Session[] = [
     id: "5",
     activity: "Design work",
     icon: "🎨",
-    duration: "3h",
+    duration: "2:31:33",
     timestamp: "2d ago",
     category: "creativity",
   },
@@ -103,50 +103,60 @@ export const mockGoals: Goal[] = [
 
 ];
 
-export const mockExperiences: Experience[] = [
+export const mockExperiences = [
   {
-    id: "1",
-    title: "Joined LifeXP",
+    id: 1,
+    title: "Practice for sem end music fest",
+    description:
+      "Locked in and refined the setlist. Clean transitions, tighter timing, better stage confidence.",
+    xp: 120,
     image:
-      "https://res.cloudinary.com/dfohn9dcz/image/upload/v1/posts/user_4/Dra_20250718123716",
-    description: "on the path to become an Alchemist",
+      "https://res.cloudinary.com/dfohn9dcz/image/upload/f_auto,q_auto,w_800,c_fill/v1/posts/user_7/ske_20251115103836",
+    stats: {
+      physique: 150,
+      energy: 200,
+      social: 100,
+      creativity: 400,
+      logic: 250,
+    },
+    timeText: "12h 30m over 3 months",
   },
   {
-    id: "2",
-    title: "First Code Accepted",
+    id: 2,
+    title: "Late night practice session",
+    description:
+      "Ran through the hard parts until muscle memory kicked in. Zero excuses, just reps.",
+    xp: 90,
     image:
- "https://res.cloudinary.com/dfohn9dcz/image/upload/v1/posts/user_4/Dra_20250718123716",
-    description: "LeetCode submission accepted",
+      "https://res.cloudinary.com/dfohn9dcz/image/upload/f_auto,q_auto,w_800,c_fill/v1/posts/user_7/ske_20251115103836",
+    stats: {
+      physique: 90,
+      energy: 260,
+      social: 60,
+      creativity: 320,
+      logic: 180,
+    },
+    timeText: "4h 10m this week",
   },
   {
-    id: "3",
-    title: "Brain Training",
+    id: 3,
+    title: "Rehearsal grind",
+    description:
+      "Full run-through. Fixed timing issues, improved pacing, and kept consistency high.",
+    xp: 110,
     image:
- "https://res.cloudinary.com/dfohn9dcz/image/upload/v1/posts/user_4/Dra_20250718123716",
-    description: "Logic aspect milestone",
-  },
-  {
-    id: "4",
-    title: "Research Paper",
-    image:
- "https://res.cloudinary.com/dfohn9dcz/image/upload/v1/posts/user_4/Dra_20250718123716",
-    description: "Published academic research",
-  },
-  {
-    id: "5",
-    title: "Unsupervised Learning",
-    image:
- "https://res.cloudinary.com/dfohn9dcz/image/upload/v1/posts/user_4/Dra_20250718123716",
-    description: "Completed ML course",
-  },
-  {
-    id: "6",
-    title: "Code Challenge",
-    image:
-       "https://res.cloudinary.com/dfohn9dcz/image/upload/v1/posts/user_4/Dra_20250718123716",
-    description: "Won coding competition",
+      "https://res.cloudinary.com/dfohn9dcz/image/upload/f_auto,q_auto,w_800,c_fill/v1/posts/user_7/ske_20251115103836",
+    stats: {
+      physique: 120,
+      energy: 180,
+      social: 140,
+      creativity: 280,
+      logic: 220,
+    },
+    timeText: "6h 45m over 2 weeks",
   },
 ];
+
 
 export const mockProfileStats = {
   posts: 8,

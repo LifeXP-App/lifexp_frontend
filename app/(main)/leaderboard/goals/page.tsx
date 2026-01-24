@@ -5,6 +5,8 @@ import { useMemo } from "react";
 import { FireIcon } from "@heroicons/react/24/solid";
 import { MASTERY_TYPES } from "@/src/lib/mock/goalLeaderboardData";
 
+
+
 export default function MasteryLeaderboardIndex() {
   const currentUser = useMemo(
     () => ({

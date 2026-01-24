@@ -20,6 +20,14 @@ export default function SettingsPage() {
     appearance: "Light",
   });
 
+  async function handleLogout() {
+  try {
+    await fetch("/api/auth/logout", { method: "POST" });
+  } finally {
+    window.location.href = "/users/login";
+  }
+}
+
   const [saving, setSaving] = useState(false);
 
   async function saveSettings(payload: SettingsFormState) {
@@ -210,7 +218,7 @@ export default function SettingsPage() {
             Invite Friends
           </button>
 
-          <button className="cursor-pointer text-l font-semibold text-left text-red-700 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300">
+          <button onClick={handleLogout} className="cursor-pointer text-l font-semibold text-left text-red-700 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300">
             Log out
           </button>
         </div>

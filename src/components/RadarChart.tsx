@@ -69,13 +69,15 @@ export default function RadarChart({
 }: RadarChartProps) {
   // Radius domain based on fullMark
   const maxMark = useMemo(() => {
-    const values = data.flatMap((d) => [
+  const values = data.flatMap((d) => [
       d.value,
       d.comparisonValue ?? 0,
       d.fullMark ?? 0,
     ]);
     return Math.max(...values, 10);
   }, [data]);
+
+
 
   return (
     <div className="w-full h-full">
@@ -123,7 +125,7 @@ export default function RadarChart({
 
           {/* Primary user radar (You) */}
           <Radar
-            name={comparisonMode ? "You" : username}
+            name={"You"}
             dataKey="value"
             stroke="#4f7df3"
             strokeWidth={2}
