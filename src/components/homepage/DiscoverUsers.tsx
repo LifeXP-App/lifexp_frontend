@@ -40,7 +40,7 @@ export function DiscoverUsers({ suggestedUsers }: DiscoverUsersProps) {
               </Link>
 
               <button
-                className="px-6 py-1 text-sm rounded-lg text-white"
+                className="px-6 py-1 text-sm rounded-lg font-medium cursor-pointer active:opacity-80 text-white"
                 style={{ backgroundColor: "#4168e2" }}
               >
                 Follow

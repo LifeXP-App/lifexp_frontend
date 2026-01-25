@@ -5,6 +5,7 @@ import Link from "next/link";
 type Notification = {
   id: string;
   image: string;
+  sender: string;
   text: string;
   date: string;
   href: string;
@@ -33,7 +34,7 @@ export function RightSidebarNotifications({
     <>
       {/* NOTIFICATIONS */}
       <div className="bg-white w-full p-6 mb-4 rounded-xl border-2 border-gray-200 dark:bg-dark-2 dark:border-gray-900">
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex justify-between items-center mb-6">
           <p className="text-md  font-semibold dark:text-white">Notifications</p>
           {unreadCount > 0 && (
             <span className="h-5 w-5 bg-red-600 text-white text-xs font-bold flex items-center justify-center rounded-full">
@@ -56,7 +57,10 @@ export function RightSidebarNotifications({
                       loading="lazy"
                     />
                     <div className="flex flex-col">
-                      <p dangerouslySetInnerHTML={{ __html: n.text }} />
+                      <p className="text-md font-medium text-gray-900 dark:text-white">
+                        <span className="font-bold">{n.sender}</span>{" "}
+                        <span className="font-medium">{n.text}</span>
+                      </p>
                       <p className="text-gray-500 text-xs">{n.date}</p>
                     </div>
                   </div>

@@ -10,51 +10,14 @@ import { useAuth } from "@/src/context/AuthContext";
 
 /* ---------- MOCK DATA (keep your existing stuff) ---------- */
 
-const notifications = [
-  {
-    id: "1",
-    image:
-      "https://res.cloudinary.com/dfohn9dcz/image/upload/v1/posts/user_4/Fix_20251104092005",
-    text: "<strong>yucey</strong> liked your post",
-    date: "Nov 04, 2025",
-    href: "/post/?v=5dad1c16af24482fbbd935",
-    rounded: false,
-  },
-];
-
-const suggestedUsers = [
-  {
-    username: "yunz",
-    fullname: "Yunz",
-    profile_picture:
-      "https://res.cloudinary.com/dfohn9dcz/image/upload/Screenshot_2025-03-25_at_10.40.01_PM_vugdxk",
-    lifelevel: 1,
-  },
-  {
-    username: "yunz2",
-    fullname: "Yunz",
-    profile_picture:
-      "https://res.cloudinary.com/dfohn9dcz/image/upload/Screenshot_2025-03-25_at_10.40.01_PM_vugdxk",
-    lifelevel: 1,
-  },
-  {
-    username: "yunz3",
-    fullname: "Yunz",
-    profile_picture:
-      "https://res.cloudinary.com/dfohn9dcz/image/upload/Screenshot_2025-03-25_at_10.40.01_PM_vugdxk",
-    lifelevel: 1,
-  },
-  {
-    username: "yun4",
-    fullname: "Yunz",
-    profile_picture:
-      "https://res.cloudinary.com/dfohn9dcz/image/upload/Screenshot_2025-03-25_at_10.40.01_PM_vugdxk",
-    lifelevel: 1,
-  },
-];
 
 /* ---------- POSTS ---------- */
-
+type SuggestedUser = {
+  username: string;
+  fullname: string;
+  profile_picture: string;
+  lifelevel: number;
+};
 const postsData = [
   {
     id: 1,
@@ -192,6 +155,9 @@ type UserApiResponse = {
   following_count: number;
   posts_count: number;
   totalXP: number;
+  xp_to_next_life_level: number;
+  xp_to_next_master_level: number;
+  nextLevelXP: number;
   lifeLevel: number;
   masteryTitle: string;
   masteryLevel: number;
@@ -221,6 +187,7 @@ function UserStatusSkeleton() {
     </div>
   );
 }
+
 function RightSidebarInfoSkeleton() {
   return (
     <aside className="w-full hidden md:block">
@@ -323,7 +290,6 @@ function RightSidebarNotificationsSkeleton() {
   );
 }
 
-
 function DiscoverUsersSkeleton() {
   return (
     <div className="bg-white dark:bg-dark-3 p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 animate-pulse">
@@ -351,6 +317,90 @@ export default function Home() {
 
   const [userData, setUserData] = useState<UserApiResponse | null>(null);
   const [userLoading, setUserLoading] = useState(false);
+
+  type ApiNotification = {
+    id: number | string;
+    recipient: number;
+    sender: any;
+    notification_type: string;
+    message: string;
+    related_object_id: number | null;
+    created_at: string;
+    is_read: boolean;
+    link: string | null;
+    post_uid: string | null;
+    image?: string | null;
+  };
+
+  const [notificationsData, setNotificationsData] = useState<
+    {
+      id: string;
+      image: string;
+      sender: string;
+      text: string;
+      date: string;
+      href: string;
+      rounded?: boolean;
+    }[]
+  >([]);
+
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      setNotificationsLoading(true);
+
+      try {
+        const res = await fetch("/api/notifications", {
+          method: "GET",
+          cache: "no-store",
+        });
+
+        if (!res.ok) {
+          setNotificationsData([]);
+          setUnreadCount(0);
+          return;
+        }
+
+        const raw = await res.json();
+
+        const list = Array.isArray(raw)
+          ? raw
+          : Array.isArray(raw?.notifications)
+          ? raw.notifications
+          : Array.isArray(raw?.results)
+          ? raw.results
+          : [];
+
+        const mapped = list.map((n: ApiNotification) => ({
+          id: String(n.id),
+          image: n.image || "",
+          text: n.message || "",
+          sender: n.sender?.username || " ",
+          date: new Date(n.created_at).toLocaleDateString("en-US", {
+            month: "short",
+            day: "2-digit",
+            year: "numeric",
+          }),
+          href: n.link || "/",
+          rounded: n.notification_type === "follow",
+        }));
+
+        console.log("Fetched notifications:", mapped);
+        setNotificationsData(mapped);
+        setUnreadCount(list.filter((n: ApiNotification) => !n.is_read).length);
+      } catch (err) {
+        console.error("Failed to fetch notifications:", err);
+        setNotificationsData([]);
+        setUnreadCount(0);
+      } finally {
+        setNotificationsLoading(false);
+      }
+    };
+
+    fetchNotifications();
+  }, []);
 
   // Posts (your existing behavior)
   useEffect(() => {
@@ -412,8 +462,19 @@ export default function Home() {
     };
   }, [userData]);
 
+  // ✅ FIXED: include nextLevelXp + correct required field names
   const sidebarUser = useMemo(() => {
     if (!userData || !player) return null;
+
+    const nextLevelXp =
+      typeof userData.nextLevelXP === "number"
+        ? userData.nextLevelXP
+        : typeof userData.xp_to_next_life_level === "number"
+        ? userData.xp_to_next_life_level
+        : 0;
+
+    const progressPercent =
+      nextLevelXp > 0 ? Math.min(100, (userData.totalXP / nextLevelXp) * 100) : 0;
 
     return {
       username: userData.username,
@@ -426,13 +487,76 @@ export default function Home() {
       followers: userData.followers_count,
       following: userData.following_count,
       totalXp: userData.totalXP,
-      nextLevelXp: 0,
-      progressPercent: 0,
+      xpToNextLifeLevel: userData.xp_to_next_life_level,
+      xpToNextMasteryLevel: userData.xp_to_next_master_level,
+      nextLevelXp: nextLevelXp,
+      progressPercent: progressPercent,
       rank: 0,
       streak: 0,
-      streakActive: false,
+      streak_active: false,
     };
   }, [userData, player]);
+
+
+  type DiscoverUserApi = {
+  id: number;
+  username: string;
+  fullname: string;
+  bio: string;
+  mastery_title: string;
+  life_level: number;
+  master_level: number;
+  totalxp: number;
+  primary_color: string;
+  secondary_color: string;
+  post_count: number;
+  follower_count: number;
+  is_following: boolean;
+};
+
+const [discoverUsers, setDiscoverUsers] = useState<SuggestedUser[]>([]);
+const [discoverLoading, setDiscoverLoading] = useState(false);
+
+useEffect(() => {
+  const fetchDiscoverUsers = async () => {
+    setDiscoverLoading(true);
+
+    try {
+      const res = await fetch("/api/discover/users", {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      if (!res.ok) {
+        setDiscoverUsers([]);
+        return;
+      }
+
+      const data = await res.json();
+
+      const list = Array.isArray(data?.users) ? data.users : [];
+
+      const mapped = list.map((u: any) => ({
+        username: u.username,
+        fullname: u.fullname,
+        profile_picture:
+          u.profile_picture ||
+          "https://res.cloudinary.com/dfohn9dcz/image/upload/Screenshot_2025-03-25_at_10.40.01_PM_vugdxk",
+        lifelevel: u.life_level,
+      }));
+
+      setDiscoverUsers(mapped);
+    } catch (err) {
+      console.error("Failed to fetch discover users:", err);
+      setDiscoverUsers([]);
+    } finally {
+      setDiscoverLoading(false);
+    }
+  };
+
+  fetchDiscoverUsers();
+}, []);
+
 
   return (
     <div className="flex w-full">
@@ -463,22 +587,28 @@ export default function Home() {
 
       {/* RIGHT SIDEBAR */}
       <div className="hidden xl:flex flex-col w-[400px] p-6 scrollbar-hide overflow-y-auto h-screen">
-        {showUserSkeleton ? (
-          <>
-            <RightSidebarInfoSkeleton />
-            <RightSidebarNotificationsSkeleton />
-            <DiscoverUsersSkeleton />
-          </>
-        ) : (
-          <>
-            {sidebarUser && <RightSidebarInfo user={sidebarUser} />}
-            <RightSidebarNotifications
-              notifications={notifications}
-              unreadCount={1}
-            />
-            <DiscoverUsers suggestedUsers={suggestedUsers} />
-          </>
-        )}
+  
+
+            {sidebarUser ? <RightSidebarInfo user={sidebarUser} /> : <RightSidebarInfoSkeleton />}
+           
+           
+            {notificationsLoading ? (
+              <RightSidebarNotificationsSkeleton />
+            ) : (
+              <RightSidebarNotifications
+                notifications={notificationsData}
+                unreadCount={unreadCount}
+              />
+            )}
+
+
+            {discoverLoading ? (
+              <DiscoverUsersSkeleton />
+            ) : (
+              <DiscoverUsers suggestedUsers={discoverUsers} />
+            )}
+
+         
       </div>
     </div>
   );

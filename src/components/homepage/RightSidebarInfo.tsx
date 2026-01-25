@@ -15,10 +15,13 @@ type RightSidebarInfoProps = {
     following: number;
     totalXp: number;
     nextLevelXp: number;
+    xpToNextLifeLevel : number;
+    xpToNextMasteryLevel : number;
     progressPercent: number;
     rank: number;
     streak: number;
     streak_active?: boolean; // optional
+
   };
 };
 
@@ -104,16 +107,17 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
             id="next-level-tab"
             className="bg-white p-6 mb-4 rounded-xl border-2 border-gray-200 dark:bg-dark-2 dark:border-gray-900"
             >
+            {user.mastery != "Rookie" ? (
+              <>
             <div className="flex justify-between mb-6">
                 <span className="text-base font-semibold">
                 Mastery at Life Level 10
                 </span>
 
                 <span className="text-sm font-medium opacity-50 flex gap-1 items-center">
-                10000 XP
+                10,000 XP
                 </span>
             </div>
-
             <div className="w-full flex gap-1 items-center">
                 <div
                 className="w-full rounded-full h-2.5 ml-1"
@@ -123,11 +127,42 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
                     className="h-2.5 rounded-full"
                     style={{
                     backgroundColor: "#4168e2",
-                    width: "9.719999999999999%",
+                    width: `${user.totalXp /100}%`,
                     }}
                 />
                 </div>
             </div>
+            </>
+            ):(
+              <>
+              <div className="flex justify-between mb-6">
+                <span className="text-base font-semibold">
+                {user.mastery}
+                </span>
+
+                <span className="text-sm font-medium opacity-50 flex gap-1 items-center">
+                {user.xpToNextMasteryLevel} XP
+                </span>
+            </div>
+            <div className="w-full flex gap-1 items-center">
+                <div
+                className="w-full rounded-full h-2.5 ml-1"
+                style={{ backgroundColor: "#4168e210" }}
+                >
+                <div
+                    className="h-2.5 rounded-full"
+                    style={{
+                    backgroundColor: "#4168e2",
+                    width: `${(user.totalXp / user.xpToNextMasteryLevel) * 100}%`,
+                    }}
+                />
+                </div>
+            </div>
+            </>
+
+            )}
+
+            
             </div>
 
     </aside>
