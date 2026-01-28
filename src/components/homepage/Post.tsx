@@ -3,7 +3,7 @@
 import Link from "next/link";
 
 import { ClockIcon } from "@heroicons/react/24/outline";
-import { HeartIcon, ChatBubbleOvalLeftIcon } from "@heroicons/react/24/solid";
+import { HeartIcon, ChatBubbleOvalLeftIcon, EllipsisVerticalIcon } from "@heroicons/react/24/solid";
 import { Heart } from "lucide-react";
 import { useEffect, useState } from "react";
 import { CommentSection } from "./CommentSection"; // ADD THIS
@@ -183,7 +183,7 @@ export function Post({ post }: { post: PostType }) {
     return (
     <div
       id="post-card"
-      className="mb-6 md:p-6 md:rounded-xl md:border-2 md:bg-white md:border-gray-200 md:dark:bg-dark-2 md:dark:border-gray-900 md:dark:bg-dark-2"
+      className="mb-6 md:p-6 md:rounded-xl md:border-2 md:bg-white md:border-gray-200 md:dark:bg-dark-2 md:dark:border-gray-900 "
     >
       {/* HEADER */}
       
@@ -232,7 +232,7 @@ export function Post({ post }: { post: PostType }) {
                 </p>
               </span>
 
-              <p className="text-sm text-gray-500">{getTimeAgo(post.created_at)}</p>
+              <p className="text-sm text-gray-500">{post.created_at}</p>
             </div>
           </div>
         </Link>
@@ -243,45 +243,59 @@ export function Post({ post }: { post: PostType }) {
             onClick={(e) =>
               toggleDropdown(e.currentTarget as HTMLElement)
             }
-            className="hover:bg-gray-200 dark:hover:bg-gray-800 p-1 rounded-full"
+            className="cursor-pointer hover:opacity-80 active:opacity-60 p-1 rounded-full"
           >
-            ⋮
+            <EllipsisVerticalIcon className="w-6 h-6"/>
           </button>
 
-          <div className="dropdown border-1 border-gray-300 overflow-hidden hidden absolute right-0 mt-2 w-40 bg-white dark:border-gray-900 dark:bg-dark-2 rounded-md shadow-lg z-50">
+          <div className="dropdown  hidden absolute right-0 mt-2 w-44 border bg-white dark:border-gray-900 dark:bg-dark-2 overflow-hidden rounded-sm shadow-lg z-50" style={{ borderColor: "var(--border)" }}>
+
+
             <a
               href={`/post/?v=${post.uid}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full text-sm flex items-center gap-2 dark:text-[#a5a5a6] px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-900"
+              className="block cursor-pointer w-full text-left font-medium py-3 px-4 text-sm
+                        hover:bg-gray-100 dark:hover:bg-dark-3 transition-colors
+                        dark:text-[#a5a5a6]"
             >
               Go to post
             </a>
 
             <button
+              type="button"
               onClick={() => copyPostLink(post.uid)}
-              className="w-full text-sm flex items-center gap-2 dark:text-[#a5a5a6] px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-900"
+              className="w-full cursor-pointer text-left font-medium py-3 px-4 text-sm
+                        hover:bg-gray-100 dark:hover:bg-dark-3 transition-colors
+                        dark:text-[#a5a5a6]"
             >
               Share post
             </button>
 
             {post.own_post ? (
               <button
+                type="button"
                 onClick={() => deletePost(post.id)}
-                className="w-full text-sm flex items-center gap-2 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-900"
+                className="w-full cursor-pointer text-left font-medium py-3 px-4 text-sm text-red-600
+                          hover:bg-gray-100 dark:hover:bg-dark-3 transition-colors"
               >
-                <span className="text-red-600">Delete Post</span>
+                Delete Post
               </button>
             ) : (
               <button
+                type="button"
                 onClick={() => reportPost(post.id)}
-                className="w-full text-sm flex items-center gap-2 dark:text-[#a5a5a6] px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-900"
+                className="w-full cursor-pointer text-left font-medium py-3 px-4 text-sm
+                          hover:bg-gray-100 dark:hover:bg-dark-3 transition-colors
+                          dark:text-[#a5a5a6]"
               >
                 Report
               </button>
             )}
           </div>
-        </div>
+
+          </div>
+
       </div>
 
       {/* IMAGE */}
@@ -289,7 +303,7 @@ export function Post({ post }: { post: PostType }) {
         <div className="w-full my-4">
           <img
             className="w-[100vw] max-w-none md:w-full cursor-pointer md:rounded-lg"
-            style={{ aspectRatio: "16 / 9", objectFit: "cover" }}
+            style={{ aspectRatio: "1.91 / 1", objectFit: "cover" }}
             src={post.post_image.replace(
               "/upload/",
               "/upload/f_auto,q_auto,w_800,c_fill/"

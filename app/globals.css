@@ -9,8 +9,8 @@
   --foreground: #171717;
 
   --dark-1: #000000;
-  --dark-2: #0c1017;
-  --dark-3: #0e141c;
+  --dark-2: #171619;
+  --dark-3: #2d2f32;
   /* Mastery Title Colors */
   --rookie-primary: #4168e2;
   --rookie-primary-rgb: 65, 104, 226;
@@ -67,7 +67,7 @@
 .dark {
   --background: #000000;
   --foreground: #ededed;
-  --border: #262626;
+  --border: rgb(56, 56, 56);
   --card: #1a1a1a;
   --muted: #6b7280;
 }
@@ -100,7 +100,7 @@ body {
 
 @media (min-width: 768px) {
   .dark .md\:dark\:bg-dark-2 {
-    background-color: #0c1017;
+    background-color: var(--color-dark-2);
   }
 }
 

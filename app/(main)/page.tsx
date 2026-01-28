@@ -188,6 +188,44 @@ function UserStatusSkeleton() {
   );
 }
 
+function PostSkeleton() {
+  return (
+    <div className="bg-white dark:bg-dark-2 border-2 border-gray-200 dark:border-gray-900 rounded-xl p-4 mb-4 animate-pulse">
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-4">
+        <div className="h-12 w-12 rounded-full bg-gray-200 dark:bg-gray-800" />
+        <div className="flex-1">
+          <div className="h-4 w-32 rounded bg-gray-200 dark:bg-gray-800 mb-2" />
+          <div className="h-3 w-24 rounded bg-gray-200 dark:bg-gray-800" />
+        </div>
+      </div>
+
+      {/* Title & Content */}
+      <div className="mb-3">
+        <div className="h-5 w-48 rounded bg-gray-200 dark:bg-gray-800 mb-2" />
+        <div className="h-4 w-full rounded bg-gray-200 dark:bg-gray-800 mb-2" />
+        <div className="h-4 w-3/4 rounded bg-gray-200 dark:bg-gray-800" />
+      </div>
+
+      {/* Post Image */}
+      <div className="h-80 w-full rounded-lg bg-gray-200 dark:bg-gray-800 mb-4" />
+
+      {/* XP Distribution */}
+      <div className="flex gap-2 mb-4">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <div key={i} className="flex-1 h-8 rounded bg-gray-200 dark:bg-gray-800" />
+        ))}
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-4">
+        <div className="h-8 w-16 rounded bg-gray-200 dark:bg-gray-800" />
+        <div className="h-8 w-16 rounded bg-gray-200 dark:bg-gray-800" />
+      </div>
+    </div>
+  );
+}
+
 function RightSidebarInfoSkeleton() {
   return (
     <aside className="w-full hidden md:block">
@@ -309,10 +347,37 @@ function DiscoverUsersSkeleton() {
   );
 }
 
+/* ---------- UTILITY FUNCTIONS ---------- */
+
+function getTimeAgo(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  const intervals = [
+    { label: "year", seconds: 31536000 },
+    { label: "month", seconds: 2592000 },
+    { label: "week", seconds: 604800 },
+    { label: "day", seconds: 86400 },
+    { label: "hour", seconds: 3600 },
+    { label: "minute", seconds: 60 },
+    { label: "second", seconds: 1 },
+  ];
+
+  for (const interval of intervals) {
+    const count = Math.floor(seconds / interval.seconds);
+    if (count >= 1) {
+      return `${count} ${interval.label}${count !== 1 ? "s" : ""} ago`;
+    }
+  }
+
+  return "just now";
+}
+
 /* ---------- HOME ---------- */
 
 export default function Home() {
-  const [posts, setPosts] = useState<typeof postsData>([]);
+
   const { me, loading } = useAuth();
 
   const [userData, setUserData] = useState<UserApiResponse | null>(null);
@@ -378,11 +443,7 @@ export default function Home() {
           image: n.image || "",
           text: n.message || "",
           sender: n.sender?.username || " ",
-          date: new Date(n.created_at).toLocaleDateString("en-US", {
-            month: "short",
-            day: "2-digit",
-            year: "numeric",
-          }),
+          date: getTimeAgo(n.created_at),
           href: n.link || "/",
           rounded: n.notification_type === "follow",
         }));
@@ -403,9 +464,106 @@ export default function Home() {
   }, []);
 
   // Posts (your existing behavior)
-  useEffect(() => {
-    setPosts(postsData);
-  }, []);
+  type ApiDiscoverPost = {
+  id: number;
+  uid: string;
+  title: string;
+  content: string;
+  post_image: string | null;
+  created_at: string;
+  duration: string | null;
+  tags: any;
+  xp_distribution: any;
+  user: {
+    username: string;
+    profile_picture: string;
+    fullname: string;
+    mastery_title: string;
+    life_level: number;
+    primary_color: string;
+    secondary_color: string;
+    is_following: boolean;
+  };
+  like_count: number;
+  comment_count: number;
+};
+
+const [posts, setPosts] = useState<typeof postsData>([]);
+const [postsPage, setPostsPage] = useState(1);
+const [postsHasMore, setPostsHasMore] = useState(true);
+const [postsLoading, setPostsLoading] = useState(false);
+
+const loadPosts = async (pageToLoad: number) => {
+  if (postsLoading) return;
+  if (!postsHasMore && pageToLoad !== 1) return;
+
+  setPostsLoading(true);
+
+  try {
+    const res = await fetch(`/api/feed?page=${pageToLoad}&limit=10`, {
+      method: "GET",
+      cache: "no-store",
+    });
+
+    if (!res.ok) {
+      console.error("❌ Failed loading posts:", await res.text());
+      return;
+    }
+
+    const data = await res.json();
+
+    const list: ApiDiscoverPost[] = Array.isArray(data?.posts) ? data.posts : [];
+    const hasMore = !!data?.has_more;
+
+    // ✅ map backend -> your Post component props shape
+    const mapped = list.map((p) => ({
+      id: p.id,
+      uid: p.user.username,
+      username: p.user.username,
+      fullname: p.user.fullname,
+      profile_picture: p.user.profile_picture,
+      created_at: getTimeAgo(p.created_at),
+      started_at: p.created_at, // keep it stable
+      title: p.title,
+      content: p.content,
+      post_image: p.post_image || "",
+      duration: p.duration || "",
+      likes: p.like_count || 0,
+      masterytitle: (p.user.mastery_title || "").trim(),
+      primary: p.user.primary_color || "#4168e2",
+      own_post: false,
+      user_liked: false,
+      xp_data: p.xp_distribution || {
+        physique: 0,
+        energy: 0,
+        social: 0,
+        creativity: 0,
+        logic: 0,
+      },
+
+      // ✅ leave activity session as-is (unchanged dummy)
+      session: postsData[0]?.session,
+
+      // ✅ leave comments as-is (unchanged dummy)
+      comments: postsData[0]?.comments || [],
+    }));
+
+    setPosts((prev) => (pageToLoad === 1 ? mapped : [...prev, ...mapped]));
+    setPostsHasMore(hasMore);
+    setPostsPage(pageToLoad);
+  } catch (err) {
+    console.error("❌ Failed loading discover posts:", err);
+  } finally {
+    setPostsLoading(false);
+  }
+};
+
+// ✅ initial load
+useEffect(() => {
+  loadPosts(1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
+
 
   // ✅ Fetch user profile ONCE when we have username
   useEffect(() => {
@@ -578,9 +736,22 @@ useEffect(() => {
             id="posts-container"
             className="overflow-hidden scrollbar-hide transition-opacity duration-300"
           >
-            {posts.map((post) => (
-              <Post key={post.id} post={post} />
-            ))}
+            {postsLoading && posts.length === 0 ? (
+              <>
+                <PostSkeleton />
+                <PostSkeleton />
+                <PostSkeleton />
+              </>
+            ) : (
+              posts.map((post) => <Post key={post.id} post={post} />)
+            )}
+
+            {/* infinite scroll trigger */}
+            <FeedLoadMore
+              loading={postsLoading}
+              hasMore={postsHasMore}
+              onLoadMore={() => loadPosts(postsPage + 1)}
+            />
           </div>
         </div>
       </main>
@@ -610,6 +781,58 @@ useEffect(() => {
 
          
       </div>
+    </div>
+  );
+}
+
+
+function FeedLoadMore({
+  loading,
+  hasMore,
+  onLoadMore,
+}: {
+  loading: boolean;
+  hasMore: boolean;
+  onLoadMore: () => void;
+}) {
+  const [node, setNode] = useState<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!node) return;
+    if (!hasMore) return;
+
+    const obs = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0];
+        if (first?.isIntersecting && !loading) {
+          onLoadMore();
+        }
+      },
+      { root: null, rootMargin: "600px", threshold: 0 }
+    );
+
+    obs.observe(node);
+
+    return () => {
+      obs.disconnect();
+    };
+  }, [node, loading, hasMore, onLoadMore]);
+
+  return (
+    <div className="py-6 w-full flex items-center justify-center">
+      {hasMore ? (
+        <div ref={setNode} className="w-full flex flex-col items-center">
+          {loading ? 
+          <div className="w-full">
+                <PostSkeleton />
+                <PostSkeleton />
+                <PostSkeleton />
+              </div>
+               :  ""}
+        </div>
+      ) : (
+        <p className="text-sm text-gray-400">No more posts</p>
+      )}
     </div>
   );
 }

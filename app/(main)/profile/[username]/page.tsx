@@ -34,6 +34,36 @@ interface PageProps {
 import Achievement from "@/src/components/profile/Achievement";
 import DefaultUserProfilePicture from "@/src/components/profile/DefaultUserProfilePicture";
 
+type UserPost = {
+  id: number;
+  uid: string;
+  user_username: string;
+  user_profile_picture: string;
+  user_mastery_title: string;
+  user_life_level: number;
+  title: string;
+  content: string;
+  post_image_url: string;
+  duration: string;
+  duration_display: string;
+  xp_distribution: {
+    logic: number;
+    energy: number;
+    social: number;
+    physique: number;
+    creativity: number;
+  };
+  total_xp: number;
+  tags: string;
+  tags_list: string[];
+  justification: string;
+  likes_count: number;
+  comments_count: number;
+  liked_by: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
 export default function ProfilePage({ params }: PageProps) {
   const { username } = use(params);
   const router = useRouter();
@@ -42,6 +72,8 @@ export default function ProfilePage({ params }: PageProps) {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [userPosts, setUserPosts] = useState<UserPost[]>([]);
+  const [postsLoading, setPostsLoading] = useState(false);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -93,6 +125,39 @@ export default function ProfilePage({ params }: PageProps) {
     };
 
     fetchUsers();
+  }, [username]);
+
+  useEffect(() => {
+    const fetchUserPosts = async () => {
+      if (!username) return;
+      
+      setPostsLoading(true);
+      
+      try {
+        const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1`;
+        const response = await fetch(`${apiUrl}/users/${username}/posts/`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          cache: "no-store",
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setUserPosts(data.results || []);
+        } else {
+          setUserPosts([]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch user posts:", err);
+        setUserPosts([]);
+      } finally {
+        setPostsLoading(false);
+      }
+    };
+
+    fetchUserPosts();
   }, [username]);
 
   const stats = mockProfileStats;
@@ -353,6 +418,31 @@ export default function ProfilePage({ params }: PageProps) {
 
   const handleUnfollow = () => {
     setIsFollowing(false);
+  };
+
+  // Helper function to get time ago text
+  const getTimeAgo = (dateString: string): string => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    const intervals = [
+      { label: "year", seconds: 31536000 },
+      { label: "month", seconds: 2592000 },
+      { label: "week", seconds: 604800 },
+      { label: "day", seconds: 86400 },
+      { label: "hour", seconds: 3600 },
+      { label: "minute", seconds: 60 },
+    ];
+
+    for (const interval of intervals) {
+      const count = Math.floor(seconds / interval.seconds);
+      if (count >= 1) {
+        return `${count} ${interval.label}${count !== 1 ? "s" : ""} ago`;
+      }
+    }
+
+    return "just now";
   };
 
   return (
@@ -701,21 +791,38 @@ export default function ProfilePage({ params }: PageProps) {
                   Achievements
                 </h2>
 
-                {mockExperiences.map((exp, index) => (
-                  <div key={exp.id} className="relative pb-4">
-                    {/* Achievement card */}
-                    <Achievement
-                      emoji="🎶"
-                      title={exp.title}
-                      description={exp.description}
-                      xp={exp.xp}
-                      coverImage={exp.image}
-                      timeText={exp.timeText}
-                      accent={{ primary: "var(--rookie-primary)", secondary: "#4168e2" }}
-                      stats={exp.stats}
-                    />
+                {postsLoading ? (
+                  <div className="flex flex-col gap-6 animate-pulse">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="w-full h-28 rounded-2xl bg-gray-200 dark:bg-gray-800" />
+                    ))}
                   </div>
-                ))}
+                ) : userPosts.length > 0 ? (
+                  userPosts.map((post) => (
+                    <div key={post.id} className="relative pb-4">
+                      <Achievement
+                        emoji={post.tags_list[0]?.charAt(0) || "🎯"}
+                        title={post.title}
+                        description={post.content}
+                        xp={post.total_xp}
+                        coverImage={post.post_image_url}
+                        timeText={getTimeAgo(post.created_at)}
+                        accent={{ primary: accent.primary, secondary: accent.secondary }}
+                        stats={{
+                          physique:post.xp_distribution.physique,
+                          energy:post.xp_distribution.energy,
+                          logic:post.xp_distribution.logic,
+                          creativity:post.xp_distribution.creativity,
+                          social:post.xp_distribution.social,
+                        }}
+                      />
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-12">
+                    <p className="text-gray-500 dark:text-gray-400">No posts yet</p>
+                  </div>
+                )}
               </div>
             </div>
           </>

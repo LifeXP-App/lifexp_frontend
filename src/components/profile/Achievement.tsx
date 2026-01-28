@@ -137,40 +137,51 @@ export default function Achievement({
 
           {/* Stats */}
            <div className="mt-4 grid grid-cols-5 gap-2">
-                    {[
-                    {
-                        icon: <BiDumbbell className="w-4 h-4" />,
-                        value: stats.physique,
-                        tint: "physique",
-                    },
-                    {
-                        icon: <BoltIcon className="w-4 h-4" />,
-                        value: stats.energy,
-                        tint: "energy",
-                    },
-                    {
-                        icon: <UsersIcon className="w-4 h-4" />,
-                        value: stats.social,
-                        tint: "social",
-                    },
-                    {
-                        icon: <FaBrain className="w-4 h-4" />,
-                        value: stats.creativity,
-                        tint: "creativity",
-                    },
-                    {
-                        icon: <FaHammer className="w-4 h-4" />,
-                        value: stats.logic,
-                        tint: "logic",
-                    },
-                    ].map((chip) => (
-                    <AspectChip
-                        key={chip.tint}
-                        icon={chip.icon}
-                        value={chip.value}
-                        tint={chip.tint as any}
-                    />
-                    ))}
+                {[
+  {
+    icon: <BiDumbbell className="w-4 h-4" />,
+    value: stats.physique,
+    tint: "physique",
+  },
+  {
+    icon: <BoltIcon className="w-4 h-4" />,
+    value: stats.energy,
+    tint: "energy",
+  },
+  {
+    icon: <UsersIcon className="w-4 h-4" />,
+    value: stats.social,
+    tint: "social",
+  },
+  {
+    icon: <FaBrain className="w-4 h-4" />,
+    value: stats.creativity,
+    tint: "creativity",
+  },
+  {
+    icon: <FaHammer className="w-4 h-4" />,
+    value: stats.logic,
+    tint: "logic",
+  },
+]
+  .sort((a, b) => b.value - a.value)
+  .map((chip, index) => {
+    const isReduced = index >= 2; // last 3
+
+    return (
+      <span className={isReduced ? "opacity-50 scale-95" : ""} key={chip.tint}>
+      <AspectChip
+        key={chip.tint}
+        icon={chip.icon}
+        value={chip.value}
+        tint={chip.tint as any}
+        
+      />
+      </span>
+    );
+  })}
+
+
                 </div>
 
 
