@@ -407,7 +407,7 @@ export function Post({ post }: { post: PostType }) {
 
             {/* COMMENT BUTTON - ADD ONCLICK */}
             <div className="flex items-center gap-2" onClick={() => setShowComments(true)}>
-              <ChatBubbleOvalLeftIcon className="w-8 h-8 text-gray-500 opacity-50 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 cursor-pointer" />
+              <ChatBubbleOvalLeftIcon className="w-8 h-8 text-gray-500 opacity-50 cursor-pointer hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 cursor-pointer" />
               <span className="text-md font-medium text-gray-500 dark:text-gray-400">
                 {post.comments?.length || 0}
               </span>

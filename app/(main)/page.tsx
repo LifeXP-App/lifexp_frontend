@@ -166,6 +166,7 @@ type UserApiResponse = {
   aspects: any;
 };
 
+
 /* ---------- SKELETONS ---------- */
 
 function UserStatusSkeleton() {
@@ -486,6 +487,18 @@ export default function Home() {
   };
   like_count: number;
   comment_count: number;
+  comments: {
+    id: number;
+    content: string;
+    created_at: string;
+    commented_by: {
+      username: string;
+      fullname: string;
+      profile_picture: string;
+      mastery_title: string;
+      life_level: number;
+    };
+  }[];
 };
 
 const [posts, setPosts] = useState<typeof postsData>([]);
@@ -517,36 +530,44 @@ const loadPosts = async (pageToLoad: number) => {
 
     // ✅ map backend -> your Post component props shape
     const mapped = list.map((p) => ({
-      id: p.id,
-      uid: p.user.username,
-      username: p.user.username,
-      fullname: p.user.fullname,
-      profile_picture: p.user.profile_picture,
-      created_at: getTimeAgo(p.created_at),
-      started_at: p.created_at, // keep it stable
-      title: p.title,
-      content: p.content,
-      post_image: p.post_image || "",
-      duration: p.duration || "",
-      likes: p.like_count || 0,
-      masterytitle: (p.user.mastery_title || "").trim(),
-      primary: p.user.primary_color || "#4168e2",
-      own_post: false,
-      user_liked: false,
-      xp_data: p.xp_distribution || {
-        physique: 0,
-        energy: 0,
-        social: 0,
-        creativity: 0,
-        logic: 0,
-      },
+  id: p.id,
+  uid: p.user.username,
+  username: p.user.username,
+  fullname: p.user.fullname,
+  profile_picture: p.user.profile_picture,
+  created_at: getTimeAgo(p.created_at),
+  started_at: p.created_at,
+  title: p.title,
+  content: p.content,
+  post_image: p.post_image || "",
+  duration: p.duration || "",
+  likes: p.like_count || 0,
+  masterytitle: (p.user.mastery_title || "").trim(),
+  primary: p.user.primary_color || "#4168e2",
+  own_post: false,
+  user_liked: false,
 
-      // ✅ leave activity session as-is (unchanged dummy)
-      session: postsData[0]?.session,
+  xp_data: p.xp_distribution || {
+    physique: 0,
+    energy: 0,
+    social: 0,
+    creativity: 0,
+    logic: 0,
+  },
 
-      // ✅ leave comments as-is (unchanged dummy)
-      comments: postsData[0]?.comments || [],
-    }));
+  session: postsData[0]?.session,
+
+  // ✅ REAL COMMENTS FROM BACKEND
+  comments: (p.comments || []).map((c) => ({
+    id: c.id,
+    username: c.commented_by.username,
+    fullname: c.commented_by.fullname,
+    profile_picture: c.commented_by.profile_picture,
+    created_at: getTimeAgo(c.created_at),
+    comment: c.content,
+  })),
+}));
+
 
     setPosts((prev) => (pageToLoad === 1 ? mapped : [...prev, ...mapped]));
     setPostsHasMore(hasMore);

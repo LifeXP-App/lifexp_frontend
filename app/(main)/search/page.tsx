@@ -1,4 +1,61 @@
+"use client";
+import { useEffect, useState } from "react";
+
 export default function SearchPage() {
+
+  type DiscoverPost = {
+  id: number;
+  uid: string;
+  title: string;
+  content: string;
+  post_image: string | null;
+  created_at: string;
+  user: {
+    username: string;
+    fullname: string;
+    mastery_title: string;
+    life_level: number;
+  };
+};
+
+type DiscoverUser = {
+  id: number;
+  username: string;
+  fullname: string;
+  profile_picture: string;
+  mastery_title: string;
+  life_level: number;
+};
+
+
+
+const [posts, setPosts] = useState<DiscoverPost[]>([]);
+const [users, setUsers] = useState<DiscoverUser[]>([]);
+const [loading, setLoading] = useState(true);
+
+useEffect(() => {
+  const load = async () => {
+    try {
+      const [p, u] = await Promise.all([
+        fetch("/api/discover/posts", { cache: "no-store" }),
+        fetch("/api/discover/users", { cache: "no-store" }),
+      ]);
+
+      const postsData = await p.json();
+      const usersData = await u.json();
+
+      setPosts(postsData.posts || []);
+      setUsers(usersData.users || []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  load();
+}, []);
+
   return (
     <div className="h-screen bg-gray-50 dark:bg-[#0a0a0a] overflow-hidden flex">
       {/* Left Column - Search Sidebar */}
@@ -82,13 +139,23 @@ export default function SearchPage() {
                   Recent Posts
                 </h3>
                 <div className="grid grid-cols-3 gap-4">
-                  {[1, 2, 3, 4, 5, 6].map((i) => (
-                    <div
-                      key={i}
-                      className="h-48 bg-gray-200 dark:bg-gray-800 rounded-lg animate-pulse"
-                    />
-                  ))}
+                  {loading
+                    ? [1,2,3,4,5,6].map(i => (
+                        <div key={i} className="h-48 bg-gray-200 dark:bg-gray-800 rounded-lg animate-pulse" />
+                      ))
+                    : posts.map(p => (
+                        <div key={p.id} className="rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-900">
+                          {p.post_image && (
+                            <img src={p.post_image} className="h-40 w-full object-cover" />
+                          )}
+                          <div className="p-3">
+                            <p className="font-semibold text-sm">{p.title}</p>
+                            <p className="text-xs opacity-70">@{p.user.username}</p>
+                          </div>
+                        </div>
+                      ))}
                 </div>
+
               </div>
 
               <div className="grid grid-cols-2 gap-6">
@@ -97,19 +164,23 @@ export default function SearchPage() {
                     Active Users
                   </h3>
                   <div className="space-y-3">
-                    {[1, 2, 3].map((i) => (
-                      <div
-                        key={i}
-                        className="flex items-center gap-4 p-3 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-lg transition-colors"
-                      >
-                        <div className="w-12 h-12 bg-gray-300 dark:bg-gray-700 rounded-full animate-pulse" />
-                        <div className="flex-1">
-                          <div className="h-4 w-32 bg-gray-300 dark:bg-gray-700 rounded animate-pulse mb-2" />
-                          <div className="h-3 w-24 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
+                  {loading
+                    ? [1,2,3].map(i => (
+                        <div key={i} className="flex gap-4 p-3">
+                          <div className="w-12 h-12 bg-gray-300 rounded-full animate-pulse" />
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))
+                    : users.map(u => (
+                        <div key={u.id} className="flex items-center gap-4 p-3 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-lg">
+                          <img src={u.profile_picture} className="w-12 h-12 rounded-full object-cover" />
+                          <div>
+                            <p className="font-semibold">{u.fullname}</p>
+                            <p className="text-sm opacity-70">@{u.username}</p>
+                          </div>
+                        </div>
+                      ))}
+                </div>
+
                 </div>
 
                 <div className="text-left">
