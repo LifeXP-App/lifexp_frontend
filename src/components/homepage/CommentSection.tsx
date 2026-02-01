@@ -206,7 +206,7 @@ export function CommentSection({ postId, comments: initialComments, onClose }: C
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
                 placeholder="Add a comment..."
-                className="w-full px-4 py-3 pr-12 rounded-lg border dark:bg-dark-3"
+                className="w-full px-4 py-3 pr-12 rounded-lg border border-gray-200 dark:bg-dark-3"
               />
 
               {commentText.trim() && (
