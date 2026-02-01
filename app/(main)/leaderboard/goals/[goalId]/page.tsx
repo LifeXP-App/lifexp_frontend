@@ -1,13 +1,7 @@
 "use client";
 
 import LeaderboardSwitcher from "@/src/components/LeaderboardSwitcher";
-import {
-  getMasteryLeaderboard,
-  MASTERY_PAGE_SIZE,
-  MASTERY_TYPES,
-  type MasteryInfo,
-  type MasteryLeaderboardPlayer,
-} from "@/src/lib/mock/goalLeaderboardData";
+import { MASTERY_TYPES, type MasteryInfo } from "@/src/lib/mock/goalLeaderboardData";
 import {
   ChevronDownIcon,
   FireIcon,
@@ -16,6 +10,114 @@ import {
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/src/context/AuthContext";
+
+type MasteryLeaderboardPlayer = {
+  rank: number;
+  username: string;
+  fullname: string;
+  profile_picture: string;
+  xp: number;
+  is_current_user: boolean;
+  user_id: number;
+  lifelevel: number;
+  activity_name: string;
+  masterylevel: string;
+  today: number;
+  status: string | null;
+};
+
+type PaginationInfo = {
+  has_next: boolean;
+  has_previous: boolean;
+  current_page: number;
+  total_pages: number;
+  total_count: number;
+};
+
+type LeaderboardResponse = {
+  success: boolean;
+  players: MasteryLeaderboardPlayer[];
+  pagination: PaginationInfo;
+};
+
+type UserApiResponse = {
+  id: number;
+  fullname: string;
+  username: string;
+  avatar: string | null;
+  followers_count: number;
+  following_count: number;
+  posts_count: number;
+  totalXP: number;
+  lifeLevel: number;
+  masteryTitle: string;
+};
+
+// Skeleton loading components
+function PlayerRowSkeleton() {
+  return (
+    <div className="flex items-center gap-4 p-4 rounded-2xl bg-white dark:bg-dark-2 border border-gray-100 dark:border-gray-800 animate-pulse mb-1">
+      {/* Rank */}
+      <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700" />
+
+      {/* Avatar */}
+      <div className="h-12 w-12 rounded-full bg-gray-200 dark:bg-gray-700" />
+
+      {/* Name */}
+      <div className="flex-1">
+        <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
+        <div className="h-3 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
+      </div>
+
+      {/* XP */}
+      <div className="text-right">
+        <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded mb-1" />
+        <div className="h-3 w-8 bg-gray-200 dark:bg-gray-700 rounded ml-auto" />
+      </div>
+    </div>
+  );
+}
+
+function HeaderSkeleton() {
+  return (
+    <div className="w-full md:w-[calc(100%-450px)] relative flex-1 overflow-y-auto bg-gray-50 dark:bg-dark-1">
+      <div className="relative overflow-visible">
+        <div className="relative px-4 md:px-12 py-8 animate-pulse">
+          {/* Icon and title skeleton */}
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-16 h-16 rounded-2xl bg-gray-200 dark:bg-gray-700" />
+            <div>
+              <div className="h-8 w-40 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
+              <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
+            </div>
+          </div>
+
+          {/* Stats skeleton */}
+          <div className="flex gap-6">
+            <div className="w-36 h-20 rounded-xl bg-gray-200 dark:bg-gray-700" />
+            <div className="w-36 h-20 rounded-xl bg-gray-200 dark:bg-gray-700" />
+          </div>
+        </div>
+      </div>
+
+      {/* Content area skeleton */}
+      <div className="px-4 md:px-12 py-2">
+        {/* Search bar skeleton */}
+        <div className="mb-6">
+          <div className="w-full h-12 rounded-2xl bg-gray-200 dark:bg-gray-700" />
+        </div>
+
+        {/* Player rows skeleton */}
+        <div className="space-y-1">
+          {Array.from({ length: 10 }).map((_, i) => (
+            <PlayerRowSkeleton key={i} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // Crown SVG for 1st place
 function CrownIcon({ color }: { color: string }) {
@@ -143,6 +245,7 @@ function MasteryIcon({
 export default function MasteryLeaderboard() {
   const params = useParams();
   const masteryId = params.goalId as string;
+  const { me } = useAuth();
 
   const [players, setPlayers] = useState<MasteryLeaderboardPlayer[]>([]);
   const [currentMastery, setCurrentMastery] = useState<MasteryInfo | null>(
@@ -154,48 +257,116 @@ export default function MasteryLeaderboard() {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [userData, setUserData] = useState<UserApiResponse | null>(null);
+  const [userLoading, setUserLoading] = useState(false);
 
-  const currentUser = useMemo(
-    () => ({
-      username: "pat",
-      fullname: "Patty",
+  const currentUser = useMemo(() => {
+    if (!userData) return null;
+
+    return {
+      username: userData.username,
+      fullname: userData.fullname,
       profile_picture:
+        userData.avatar ||
         "https://res.cloudinary.com/dfohn9dcz/image/upload/f_auto,q_auto,w_80,h_80,c_thumb/v1752327292/lfco9m4hqq9yin7adl6e.jpg",
-      lifeLevel: 4,
-      posts: 9,
-      followers: 11,
-      following: 45,
-      xp: 972,
+      lifeLevel: userData.lifeLevel,
+      posts: userData.posts_count,
+      followers: userData.followers_count,
+      following: userData.following_count,
+      xp: userData.totalXP,
       streak: 0,
       streak_active: false,
-      masteryTitle: "Rookie",
-    }),
-    [],
-  );
+      masteryTitle: userData.masteryTitle,
+    };
+  }, [userData]);
 
-  const loadPage = useCallback(
-    (page: number, search: string = "") => {
-      setLoading(true);
+  // Fetch user data for sidebar
+  useEffect(() => {
+    const fetchUser = async () => {
+      if (!me?.username) return;
 
-      setTimeout(() => {
-        const response = getMasteryLeaderboard({
-          masteryId,
-          page,
-          pageSize: MASTERY_PAGE_SIZE,
-          search,
+      setUserLoading(true);
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+        if (!baseUrl) return;
+
+        const res = await fetch(`${baseUrl}/api/v1/users/${me.username}/`, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+          cache: "no-store",
         });
 
+        if (!res.ok) {
+          setUserData(null);
+          return;
+        }
+
+        const data = await res.json();
+        setUserData(data);
+      } catch (err) {
+        console.error("Failed to fetch user data:", err);
+        setUserData(null);
+      } finally {
+        setUserLoading(false);
+      }
+    };
+
+    fetchUser();
+  }, [me?.username]);
+
+  const loadPage = useCallback(
+    async (page: number, search: string = "") => {
+      setLoading(true);
+
+      try {
+        const queryParams = new URLSearchParams({
+          page: page.toString(),
+          ...(search && { search }),
+        });
+
+        const res = await fetch(
+          `/api/leaderboard/${masteryId}?${queryParams.toString()}`,
+          { cache: "no-store" }
+        );
+
+        if (!res.ok) {
+          throw new Error("Failed to fetch leaderboard");
+        }
+
+        const response: LeaderboardResponse = await res.json();
+
         if (response.success) {
-          setPlayers(response.players);
-          setCurrentMastery(response.mastery);
+          // Optimize profile picture URLs
+          const optimizedPlayers = response.players.map((player) => ({
+            ...player,
+            profile_picture: player.profile_picture?.includes("cloudinary")
+              ? player.profile_picture.replace(
+                  "/upload/",
+                  "/upload/w_100,q_auto,f_auto/"
+                )
+              : player.profile_picture,
+          }));
+
+          setPlayers(optimizedPlayers);
+
+          // Find mastery info from MASTERY_TYPES
+          const masteryInfo = MASTERY_TYPES.find((m) => m.id === masteryId);
+          if (masteryInfo) {
+            setCurrentMastery(masteryInfo);
+          }
+
           setCurrentPage(response.pagination.current_page);
           setTotalPages(response.pagination.total_pages);
-          setTotalPlayers(response.pagination.total_players);
+          setTotalPlayers(response.pagination.total_count);
         }
+      } catch (err) {
+        console.error("Failed to load leaderboard:", err);
+        setPlayers([]);
+      } finally {
         setLoading(false);
-      }, 250);
+      }
     },
-    [masteryId],
+    [masteryId]
   );
 
   useEffect(() => {
@@ -216,8 +387,10 @@ export default function MasteryLeaderboard() {
   return (
     <main className="flex w-full min-h-screen">
       {/* Main leaderboard list */}
-      {/* Hero Header Banner */}
-      {currentMastery && (
+      {/* Show skeleton while loading initial data */}
+      {!currentMastery ? (
+        <HeaderSkeleton />
+      ) : (
         <div
           className="w-full md:w-[calc(100%-450px)] relative flex-1 overflow-y-auto"
           style={{
@@ -678,74 +851,84 @@ export default function MasteryLeaderboard() {
         )}
 
         {/* User profile card */}
-        <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border border-gray-200 dark:border-gray-800">
-          <div className="text-center flex flex-col items-center">
-            <Link href={`/profile/${currentUser.username}`}>
-              <img
-                src={currentUser.profile_picture}
-                className="h-24 w-24 object-cover aspect-square p-[1.5px] rounded-full"
-                alt={currentUser.fullname}
-              />
-              <h3 className="font-semibold mt-2 dark:text-white">
-                {currentUser.fullname}
-              </h3>
-            </Link>
+        {currentUser ? (
+          <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border border-gray-200 dark:border-gray-800">
+            <div className="text-center flex flex-col items-center">
+              <Link href={`/profile/${currentUser.username}`}>
+                <img
+                  src={currentUser.profile_picture}
+                  className="h-24 w-24 object-cover aspect-square p-[1.5px] rounded-full"
+                  alt={currentUser.fullname}
+                />
+                <h3 className="font-semibold mt-2 dark:text-white">
+                  {currentUser.fullname}
+                </h3>
+              </Link>
 
-            <p className="text-sm font-bold mt-1 text-gray-400 dark:text-gray-500">
-              {currentUser.masteryTitle}
-            </p>
+              <p className="text-sm font-bold mt-1 text-gray-400 dark:text-gray-500">
+                {currentUser.masteryTitle}
+              </p>
+            </div>
+
+            <div className="mt-4 flex justify-between text-sm">
+              <div className="text-center">
+                <p className="font-semibold dark:text-white">
+                  {currentUser.lifeLevel}
+                </p>
+                <p className="text-gray-500 dark:text-gray-400">Life Level</p>
+              </div>
+              <div className="text-center">
+                <p className="font-semibold dark:text-white">
+                  {currentUser.posts}
+                </p>
+                <p className="text-gray-500 dark:text-gray-400">Posts</p>
+              </div>
+              <div className="text-center">
+                <p className="font-semibold dark:text-white">
+                  {currentUser.followers}
+                </p>
+                <p className="text-gray-500 dark:text-gray-400">Followers</p>
+              </div>
+              <div className="text-center">
+                <p className="font-semibold dark:text-white">
+                  {currentUser.following}
+                </p>
+                <p className="text-gray-500 dark:text-gray-400">Following</p>
+              </div>
+            </div>
+
+            <div className="mt-4 flex justify-between text-sm gap-4">
+              <div className="bg-gray-100 dark:bg-dark-3 w-full flex flex-col rounded-md items-center justify-between p-4">
+                <p className="text-lg font-bold text-gray-400 dark:text-gray-500">
+                  {currentUser.xp} XP
+                </p>
+                <p className="text-[10px] cursor-pointer text-gray-500 dark:text-gray-400">
+                  Mastery unlocks at 10K
+                </p>
+              </div>
+
+              <div className="bg-gray-100 w-full hidden md:flex flex-col rounded-md items-center justify-between p-4 dark:bg-dark-3">
+                <p className="text-sm dark:text-gray-300">Streak Count</p>
+                <p className="text-lg font-extrabold text-gray-400 dark:text-gray-600 flex gap-1 items-center">
+                  {currentUser.streak_active ? (
+                    <FireIcon className="w-6 h-6 inline-block ml-1 text-yellow-500 animate-pulse" />
+                  ) : (
+                    <FireIcon className="w-6 h-6 inline-block ml-1 text-gray-400 dark:text-gray-600" />
+                  )}
+                  {currentUser.streak}
+                </p>
+              </div>
+            </div>
           </div>
-
-          <div className="mt-4 flex justify-between text-sm">
-            <div className="text-center">
-              <p className="font-semibold dark:text-white">
-                {currentUser.lifeLevel}
-              </p>
-              <p className="text-gray-500 dark:text-gray-400">Life Level</p>
-            </div>
-            <div className="text-center">
-              <p className="font-semibold dark:text-white">
-                {currentUser.posts}
-              </p>
-              <p className="text-gray-500 dark:text-gray-400">Posts</p>
-            </div>
-            <div className="text-center">
-              <p className="font-semibold dark:text-white">
-                {currentUser.followers}
-              </p>
-              <p className="text-gray-500 dark:text-gray-400">Followers</p>
-            </div>
-            <div className="text-center">
-              <p className="font-semibold dark:text-white">
-                {currentUser.following}
-              </p>
-              <p className="text-gray-500 dark:text-gray-400">Following</p>
+        ) : (
+          <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border border-gray-200 dark:border-gray-800 animate-pulse">
+            <div className="text-center flex flex-col items-center">
+              <div className="h-24 w-24 rounded-full bg-gray-200 dark:bg-gray-700 mb-2" />
+              <div className="h-4 w-32 rounded bg-gray-200 dark:bg-gray-700 mb-2" />
+              <div className="h-3 w-20 rounded bg-gray-200 dark:bg-gray-700" />
             </div>
           </div>
-
-          <div className="mt-4 flex justify-between text-sm gap-4">
-            <div className="bg-gray-100 dark:bg-dark-3 w-full flex flex-col rounded-md items-center justify-between p-4">
-              <p className="text-lg font-bold text-gray-400 dark:text-gray-500">
-                {currentUser.xp} XP
-              </p>
-              <p className="text-[10px] cursor-pointer text-gray-500 dark:text-gray-400">
-                Mastery unlocks at 10K
-              </p>
-            </div>
-
-            <div className="bg-gray-100 w-full hidden md:flex flex-col rounded-md items-center justify-between p-4 dark:bg-dark-3">
-              <p className="text-sm dark:text-gray-300">Streak Count</p>
-              <p className="text-lg font-extrabold text-gray-400 dark:text-gray-600 flex gap-1 items-center">
-                {currentUser.streak_active ? (
-                  <FireIcon className="w-6 h-6 inline-block ml-1 text-yellow-500 animate-pulse" />
-                ) : (
-                  <FireIcon className="w-6 h-6 inline-block ml-1 text-gray-400 dark:text-gray-600" />
-                )}
-                {currentUser.streak}
-              </p>
-            </div>
-          </div>
-        </div>
+        )}
 
         {/* Other leaderboards */}
         <LeaderboardSwitcher currentLeaderboard={masteryId} />
