@@ -333,7 +333,7 @@ export default function RookieLeaderboard() {
         ) : (
           <div className="bg-white dark:bg-dark-2 p-6 rounded-xl border border-gray-200 dark:border-gray-800 mb-4">
             <div className="text-center flex flex-col items-center">
-              <Link href={`/user/${currentUser.username}`}>
+              <Link href={`/profile/${currentUser.username}`}>
                 <img
                   src={currentUser.profile_picture}
                   className="h-24 w-24 rounded-full object-cover"
