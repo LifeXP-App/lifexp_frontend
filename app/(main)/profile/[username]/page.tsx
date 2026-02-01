@@ -525,7 +525,7 @@ export default function ProfilePage({ params }: PageProps) {
                   {profileUser.title}
                 </p>
 
-                <p className="text-gray-500 dark:text-gray-400">{profileUser.bio}</p>
+                <p className="text-gray-500 dark:text-gray-400  whitespace-pre-wrap">{profileUser.bio}</p>
                 {/* Ongoing Goals */}
                 <div className="mt-2">
                   <h3 className="font-bold text-sm mb-3 dark:text-white">Ongoing Goals</h3>

@@ -3,35 +3,145 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/src/context/AuthContext";
+function EditProfileSkeleton() {
+  return (
+    <main className="flex h-screen w-full overflow-hidden">
+      <div className="mx-auto w-full p-8" style={{ width: "80%" }}>
+        {/* Header */}
+        <div className="mb-8 animate-pulse">
+          <div className="h-6 w-40 rounded bg-gray-200 dark:bg-gray-800" />
+        </div>
+
+        {/* Profile picture section */}
+        <div className="flex items-center gap-6 mb-8 animate-pulse">
+          <div className="h-20 w-20 rounded-full bg-gray-200 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700" />
+
+          <div className="flex flex-col gap-3">
+            <div className="h-10 w-36 rounded-md bg-gray-200 dark:bg-gray-800 border border-gray-300 dark:border-gray-700" />
+            <div className="h-4 w-24 rounded bg-gray-200 dark:bg-gray-800" />
+          </div>
+        </div>
+
+        {/* FORM FIELDS */}
+        <div className="space-y-6 animate-pulse">
+          {/* Username */}
+          <div>
+            <div className="h-4 w-24 mb-2 rounded bg-gray-200 dark:bg-gray-800" />
+            <div className="rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 p-1">
+              <div className="h-11 w-full rounded-md bg-gray-200 dark:bg-gray-800" />
+            </div>
+          </div>
+
+          {/* Display Name */}
+          <div>
+            <div className="h-4 w-32 mb-2 rounded bg-gray-200 dark:bg-gray-800" />
+            <div className="rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 p-1">
+              <div className="h-11 w-full rounded-md bg-gray-200 dark:bg-gray-800" />
+            </div>
+          </div>
+
+          {/* Title */}
+          <div>
+            <div className="h-4 w-16 mb-2 rounded bg-gray-200 dark:bg-gray-800" />
+            <div className="rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 p-1">
+              <div className="h-11 w-full rounded-md bg-gray-200 dark:bg-gray-800" />
+            </div>
+          </div>
+
+          {/* Bio */}
+          <div>
+            <div className="h-4 w-16 mb-2 rounded bg-gray-200 dark:bg-gray-800" />
+            <div className="rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 p-1">
+              <div className="h-24 w-full rounded-md bg-gray-200 dark:bg-gray-800" />
+            </div>
+          </div>
+        </div>
+
+        {/* ACTIONS */}
+        <div className="flex justify-end gap-4 mt-8 animate-pulse">
+          <div className="h-10 w-28 rounded-lg bg-gray-300 dark:bg-gray-700 border border-gray-400 dark:border-gray-600" />
+          <div className="h-10 w-32 rounded-lg bg-gray-400 dark:bg-gray-600 border border-gray-500 dark:border-gray-500" />
+        </div>
+      </div>
+    </main>
+  );
+}
+
+
+
 
 export default function EditProfilePage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const router = useRouter();
+  const { me, loading: authLoading } = useAuth();
 
-  // ✅ initial values (what you started with)
-  const initialForm = useMemo(
-    () => ({
-      username: "pat",
-      fullname: "Patty",
-      title: "🌟 Founder @LifeXP",
-      bio: "moment.\n\n天上天下唯我独尊",
-    }),
-    []
-  );
+  /* ---------------- STATE ---------------- */
 
-  const initialPreview = useMemo(
-    () =>
-      "https://res.cloudinary.com/dfohn9dcz/image/upload/v1752327292/lfco9m4hqq9yin7adl6e.jpg",
-    []
-  );
+  const [loading, setLoading] = useState(true);
 
-  const [profilePreview, setProfilePreview] = useState<string>(initialPreview);
-  const [form, setForm] = useState(initialForm);
+  const [initialForm, setInitialForm] = useState<{
+    username: string;
+    fullname: string;
+    title: string;
+    bio: string;
+  } | null>(null);
+
+  const [form, setForm] = useState({
+    username: "",
+    fullname: "",
+    title: "",
+    bio: "",
+  });
+
+  const [initialPreview, setInitialPreview] = useState("");
+  const [profilePreview, setProfilePreview] = useState("");
 
   // popup
   const [showDiscardPopup, setShowDiscardPopup] = useState(false);
 
+  /* ---------------- LOAD PROFILE ---------------- */
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!me) return;
+
+    const loadProfile = async () => {
+      try {
+        const res = await fetch(`/api/users/${me.id}`, {
+          cache: "no-store",
+        });
+
+        if (!res.ok) return;
+
+        const data = await res.json();
+
+        const baseForm = {
+          username: data.username,
+          fullname: data.fullname || "",
+          title: data.title || "",
+          bio: data.bio || "",
+        };
+
+        setInitialForm(baseForm);
+        setForm(baseForm);
+
+        const pic = data.profile_picture || "/default_pfp.png";
+        setInitialPreview(pic);
+        setProfilePreview(pic);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, [authLoading, me]);
+
+  /* ---------------- DIRTY CHECK ---------------- */
+
   const isDirty = useMemo(() => {
+    if (!initialForm) return false;
+
     const formChanged =
       form.fullname !== initialForm.fullname ||
       form.title !== initialForm.title ||
@@ -41,6 +151,8 @@ export default function EditProfilePage() {
 
     return formChanged || photoChanged;
   }, [form, profilePreview, initialForm, initialPreview]);
+
+  /* ---------------- IMAGE HANDLERS ---------------- */
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -56,10 +168,13 @@ export default function EditProfilePage() {
   };
 
   const resetToInitial = () => {
+    if (!initialForm) return;
     setForm(initialForm);
     setProfilePreview(initialPreview);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
+
+  /* ---------------- DISCARD ---------------- */
 
   const handleDiscardClick = () => {
     if (!isDirty) {
@@ -72,29 +187,37 @@ export default function EditProfilePage() {
   const confirmDiscard = () => {
     setShowDiscardPopup(false);
     resetToInitial();
-    router.back(); // or router.push(`/profile/${form.username}`)
+    router.back();
   };
 
   const cancelDiscard = () => {
     setShowDiscardPopup(false);
   };
 
+  /* ---------------- SUBMIT ---------------- */
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!me) return;
 
-    // Send to API route
-    // const fd = new FormData();
-    // fd.append("fullname", form.fullname);
-    // fd.append("title", form.title);
-    // fd.append("bio", form.bio);
-    // if (fileInputRef.current?.files?.[0]) fd.append("profile_picture", fileInputRef.current.files[0]);
-    // await fetch("/api/profile", { method: "POST", body: fd });
+    const res = await fetch(`/api/users/${me.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fullname: form.fullname,
+        title: form.title,
+        bio: form.bio,
+      }),
+    });
 
-    router.push(`/profile/${form.username}`);
-    console.log("Submitted:", form);
+    if (!res.ok) return;
+
+    const updated = await res.json();
+    router.push(`/profile/${me.username}`);
   };
 
-  // ✅ optional: warning when closing tab with changes
+  /* ---------------- UNLOAD WARNING ---------------- */
+
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
       if (!isDirty) return;
@@ -105,6 +228,14 @@ export default function EditProfilePage() {
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
   }, [isDirty]);
+
+  /* ---------------- GUARD ---------------- */
+
+  if (authLoading || loading || !initialForm) {
+    return <EditProfileSkeleton />;
+  }
+
+  /* ---------------- UI (UNCHANGED) ---------------- */
 
   return (
     <>
@@ -208,9 +339,18 @@ export default function EditProfilePage() {
               <textarea
                 rows={3}
                 value={form.bio}
-                onChange={(e) => setForm((p) => ({ ...p, bio: e.target.value }))}
+                onChange={(e) => {
+                  const value = e.target.value;
+
+                  // limit to 3 lines
+                  const lines = value.split("\n");
+                  if (lines.length > 3) return;
+
+                  setForm((p) => ({ ...p, bio: value }));
+                }}
                 className="w-full rounded-lg bg-white border border-gray-400 p-3 focus:outline-none focus:ring-1 focus:ring-[#4168e2] dark:border-[#2d2f32] dark:bg-[#1f2022] dark:text-white"
               />
+
             </div>
 
             {/* Buttons */}
@@ -218,18 +358,22 @@ export default function EditProfilePage() {
               <button
                 type="button"
                 onClick={handleDiscardClick}
-                className="mt-4 cursor-pointer rounded-lg bg-red-700 px-8 py-2 font-medium text-white  active:opacity-80  "
+                disabled={!isDirty}
+                className="mt-4 cursor-pointer rounded-lg bg-red-700 px-8 py-2 font-medium text-white active:opacity-80 disabled:opacity-50 disabled:hidden disabled:cursor-not-allowed"
               >
                 Discard
               </button>
 
+
               <button
-                type="submit"
-                style={{ backgroundColor: "#4168e2" }}
-                className="mt-4 rounded-lg font-medium active:opacity-80 cursor-pointer py-2 px-12 text-white"
-              >
-                Save
-              </button>
+                  type="submit"
+                  disabled={!isDirty}
+                  style={{ backgroundColor: "#4168e2" }}
+                  className="mt-4 rounded-lg font-medium active:opacity-80 cursor-pointer py-2 px-12 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Save
+                </button>
+
             </div>
           </form>
         </div>
