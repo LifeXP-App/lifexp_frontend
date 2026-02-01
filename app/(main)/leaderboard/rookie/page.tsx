@@ -1,12 +1,11 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { FireIcon } from "@heroicons/react/24/solid";
-import { useParams } from "next/navigation";
 import LeaderboardSwitcher from "@/src/components/LeaderboardSwitcher";
 import { useAuth } from "@/src/context/AuthContext";
-import { RightSidebarInfo } from "@/src/components/homepage/RightSidebarInfo";
+import { FireIcon } from "@heroicons/react/24/solid";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 
 type Player = {
   username: string;
@@ -34,34 +33,32 @@ type UserApiResponse = {
 function LeaderboardRowSkeleton() {
   return (
     <div className="flex justify-between items-center w-full px-5 py-4 rounded-xl bg-white dark:bg-dark-2 border-2 border-gray-200 dark:border-gray-900 animate-pulse">
-  <div className="flex items-center gap-4">
-    {/* rank */}
-    <div className="w-5 flex justify-center">
-      <div className="h-4 w-3 rounded bg-gray-200 dark:bg-gray-800" />
+      <div className="flex items-center gap-4">
+        {/* rank */}
+        <div className="w-5 flex justify-center">
+          <div className="h-4 w-3 rounded bg-gray-200 dark:bg-gray-800" />
+        </div>
+
+        {/* avatar */}
+        <div className="h-10 w-10 rounded-full p-[1.5px] bg-gray-200 dark:bg-gray-800">
+          <div className="h-full w-full rounded-full bg-gray-300 dark:bg-gray-700" />
+        </div>
+
+        {/* name + subtitle */}
+        <div className="flex flex-col gap-2">
+          <div className="h-4 w-32 rounded bg-gray-200 dark:bg-gray-800" />
+          <div className="h-3 w-20 rounded bg-gray-200/70 dark:bg-gray-800/70" />
+        </div>
+      </div>
+
+      {/* XP block */}
+      <div className="flex flex-col items-end gap-2">
+        <div className="h-4 w-20 rounded bg-gray-200 dark:bg-gray-800" />
+        <div className="h-3 w-12 rounded bg-gray-200/70 dark:bg-gray-800/70" />
+      </div>
     </div>
-
-    {/* avatar */}
-    <div className="h-10 w-10 rounded-full p-[1.5px] bg-gray-200 dark:bg-gray-800">
-      <div className="h-full w-full rounded-full bg-gray-300 dark:bg-gray-700" />
-    </div>
-
-    {/* name + subtitle */}
-    <div className="flex flex-col gap-2">
-      <div className="h-4 w-32 rounded bg-gray-200 dark:bg-gray-800" />
-      <div className="h-3 w-20 rounded bg-gray-200/70 dark:bg-gray-800/70" />
-    </div>
-  </div>
-
-  {/* XP block */}
-  <div className="flex flex-col items-end gap-2">
-    <div className="h-4 w-20 rounded bg-gray-200 dark:bg-gray-800" />
-    <div className="h-3 w-12 rounded bg-gray-200/70 dark:bg-gray-800/70" />
-  </div>
-</div>
-
   );
 }
-
 
 function RightSidebarInfoSkeleton() {
   return (
@@ -119,12 +116,9 @@ function RightSidebarInfoSkeleton() {
       </div>
 
       {/* NEXT LEVEL TAB CARD */}
-    
     </aside>
   );
 }
-
-
 
 export default function RookieLeaderboard() {
   const [players, setPlayers] = useState<Player[]>([]);
@@ -136,19 +130,16 @@ export default function RookieLeaderboard() {
   const [userData, setUserData] = useState<UserApiResponse | null>(null);
   const [userLoading, setUserLoading] = useState(false);
 
-
   const params = useParams();
   const masteryId = params.goalId as string;
 
   // TODO: Replace with real session user
-  
 
   async function loadPage(_: number) {
     setLoading(true);
 
     try {
       const res = await fetch("/api/xp/leaderboard", { cache: "no-store" });
-
 
       if (!res.ok) throw new Error("Failed to fetch leaderboard");
 
@@ -160,9 +151,9 @@ export default function RookieLeaderboard() {
         xp: u.total_xp,
         rank: u.rank,
         profile_picture: u.profile_picture.replace(
-    "/upload/",
-    `/upload/w_100,q_auto,f_auto/`
-  ),
+          "/upload/",
+          `/upload/w_100,q_auto,f_auto/`,
+        ),
       }));
 
       setPlayers(mapped);
@@ -179,7 +170,7 @@ export default function RookieLeaderboard() {
     loadPage(1);
   }, []);
 
-   useEffect(() => {
+  useEffect(() => {
     const fetchUser = async () => {
       if (!me?.username) return;
 
@@ -212,7 +203,6 @@ export default function RookieLeaderboard() {
     fetchUser();
   }, [me?.username]);
 
-  
   const currentUser = useMemo(() => {
     if (!userData) return null;
 
@@ -240,12 +230,10 @@ export default function RookieLeaderboard() {
       streak: 0,
       streak_active: false,
       masteryTitle: userData.masteryTitle,
-
     };
   }, [userData]);
   const showSidebarSkeleton =
-    authLoading || userLoading || !me?.username || !currentUser ;
-
+    authLoading || userLoading || !me?.username || !currentUser;
 
   const RankBadge = ({ rank }: { rank: number }) => {
     if (rank === 1)
@@ -305,14 +293,13 @@ export default function RookieLeaderboard() {
           </span>
         </div>
 
-       <div
-          className={`space-y-2 transition-opacity duration-200`}>
+        <div className={`space-y-2 transition-opacity duration-200`}>
           {loading
             ? Array.from({ length: 10 }).map((_, i) => (
                 <LeaderboardRowSkeleton key={i} />
               ))
             : players.map((u) => (
-                <Link key={u.username} href={`/user/${u.username}`}>
+                <Link key={u.username} href={`/profile/${u.username}`}>
                   <div className="flex hover:bg-white dark:hover:bg-dark-2 cursor-pointer justify-between items-center w-full px-5 py-4 rounded-xl transition-all bg-white/50 dark:bg-dark-1 border border-transparent hover:border-gray-200 dark:hover:border-gray-700">
                     <div className="flex items-center gap-4">
                       <div className="w-5 flex justify-center">
@@ -337,81 +324,80 @@ export default function RookieLeaderboard() {
                 </Link>
               ))}
         </div>
-
       </div>
 
       {/* Profile sidebar */}
       <aside className="w-[450px] p-6 overflow-auto hidden md:block h-screen">
-
         {showSidebarSkeleton ? (
-        <RightSidebarInfoSkeleton />
-      ) :(
-        <div className="bg-white dark:bg-dark-2 p-6 rounded-xl border border-gray-200 dark:border-gray-800 mb-4">
-          <div className="text-center flex flex-col items-center">
-            <Link href={`/user/${currentUser.username}`}>
-              <img
-                src={currentUser.profile_picture}
-                className="h-24 w-24 rounded-full object-cover"
-                alt={currentUser.fullname}
-              />
-              <h3 className="font-semibold mt-2 dark:text-white">
-                {currentUser.fullname}
-              </h3>
-            </Link>
-
-            <p className="text-sm font-bold mt-1 text-gray-400">
-              {currentUser.masteryTitle}
-            </p>
-          </div>
-
-          <div className="mt-4 flex justify-between text-sm">
-            <div className="text-center">
-              <p className="font-semibold">{currentUser.lifeLevel}</p>
-              <p className="text-gray-500">Life Level</p>
-            </div>
-            <div className="text-center">
-              <p className="font-semibold">{currentUser.posts}</p>
-              <p className="text-gray-500">Posts</p>
-            </div>
-            <div className="text-center">
-              <p className="font-semibold">{currentUser.followers}</p>
-              <p className="text-gray-500">Followers</p>
-            </div>
-            <div className="text-center">
-              <p className="font-semibold">{currentUser.following}</p>
-              <p className="text-gray-500">Following</p>
-            </div>
-          </div>
-
-          <div className="mt-4 flex gap-4">
-            <div className="bg-gray-100 dark:bg-dark-3 w-full rounded-md p-4 text-center">
-              <p className="text-lg font-bold text-gray-400">
-                {currentUser.xp} XP
-              </p>
-              <p className="text-[10px] text-gray-500">
-                Mastery unlocks at 10K
-              </p>
-            </div>
-
-            <div className="bg-gray-100 dark:bg-dark-3 w-full rounded-md p-4 text-center">
-              <p className="text-sm">Streak</p>
-              <p className="text-lg font-extrabold  flex items-center justify-center gap-1 ">
-                <FireIcon
-                  className={`w-6 h-6 ${
-                    currentUser.streak_active
-                      ? "text-yellow-500 animate-pulse"
-                      : "text-gray-400"
-                  }`}
+          <RightSidebarInfoSkeleton />
+        ) : (
+          <div className="bg-white dark:bg-dark-2 p-6 rounded-xl border border-gray-200 dark:border-gray-800 mb-4">
+            <div className="text-center flex flex-col items-center">
+              <Link href={`/user/${currentUser.username}`}>
+                <img
+                  src={currentUser.profile_picture}
+                  className="h-24 w-24 rounded-full object-cover"
+                  alt={currentUser.fullname}
                 />
-                <span className={ !currentUser.streak_active ? "opacity-40": ""}>
-                    {currentUser.streak}
-                </span>
-                
+                <h3 className="font-semibold mt-2 dark:text-white">
+                  {currentUser.fullname}
+                </h3>
+              </Link>
+
+              <p className="text-sm font-bold mt-1 text-gray-400">
+                {currentUser.masteryTitle}
               </p>
             </div>
+
+            <div className="mt-4 flex justify-between text-sm">
+              <div className="text-center">
+                <p className="font-semibold">{currentUser.lifeLevel}</p>
+                <p className="text-gray-500">Life Level</p>
+              </div>
+              <div className="text-center">
+                <p className="font-semibold">{currentUser.posts}</p>
+                <p className="text-gray-500">Posts</p>
+              </div>
+              <div className="text-center">
+                <p className="font-semibold">{currentUser.followers}</p>
+                <p className="text-gray-500">Followers</p>
+              </div>
+              <div className="text-center">
+                <p className="font-semibold">{currentUser.following}</p>
+                <p className="text-gray-500">Following</p>
+              </div>
+            </div>
+
+            <div className="mt-4 flex gap-4">
+              <div className="bg-gray-100 dark:bg-dark-3 w-full rounded-md p-4 text-center">
+                <p className="text-lg font-bold text-gray-400">
+                  {currentUser.xp} XP
+                </p>
+                <p className="text-[10px] text-gray-500">
+                  Mastery unlocks at 10K
+                </p>
+              </div>
+
+              <div className="bg-gray-100 dark:bg-dark-3 w-full rounded-md p-4 text-center">
+                <p className="text-sm">Streak</p>
+                <p className="text-lg font-extrabold  flex items-center justify-center gap-1 ">
+                  <FireIcon
+                    className={`w-6 h-6 ${
+                      currentUser.streak_active
+                        ? "text-yellow-500 animate-pulse"
+                        : "text-gray-400"
+                    }`}
+                  />
+                  <span
+                    className={!currentUser.streak_active ? "opacity-40" : ""}
+                  >
+                    {currentUser.streak}
+                  </span>
+                </p>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
         <LeaderboardSwitcher currentLeaderboard={masteryId} />
       </aside>
