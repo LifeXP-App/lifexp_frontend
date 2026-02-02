@@ -22,7 +22,7 @@ export async function GET() {
       return NextResponse.json({ detail: "Not authenticated" }, { status: 401 });
     }
 
-    const target = `${baseUrl}/api/v1/users/?page=1&page_size=5&ordering=-totalxp`;
+    const target = `${baseUrl}/api/v1/activities/?page=1&page_size=3`;
 
     let res = await fetch(target, {
       headers: { Authorization: `Bearer ${access}` },

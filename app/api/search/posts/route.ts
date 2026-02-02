@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { cookies } from "next/headers";
 import { refreshTokens } from "@/src/lib/auth/refreshTokens";
 import { sharedRefresh } from "@/src/lib/auth/refreshLock";
@@ -12,7 +12,7 @@ async function safeJson(res: Response) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
     const cookieStore = await cookies();
@@ -22,7 +22,16 @@ export async function GET() {
       return NextResponse.json({ detail: "Not authenticated" }, { status: 401 });
     }
 
-    const target = `${baseUrl}/api/v1/users/?page=1&page_size=5&ordering=-totalxp`;
+    const searchParams = request.nextUrl.searchParams;
+    const query = searchParams.get("q");
+    const page = searchParams.get("page") || "1";
+    const limit = searchParams.get("limit") || "20";
+
+    if (!query) {
+      return NextResponse.json({ error: "Search query is required" }, { status: 400 });
+    }
+
+    const target = `${baseUrl}/api/v1/search/posts/?q=${encodeURIComponent(query)}&page=${page}&limit=${limit}`;
 
     let res = await fetch(target, {
       headers: { Authorization: `Bearer ${access}` },

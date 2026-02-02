@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { cookies } from "next/headers";
 import { refreshTokens } from "@/src/lib/auth/refreshTokens";
 import { sharedRefresh } from "@/src/lib/auth/refreshLock";
@@ -12,7 +12,8 @@ async function safeJson(res: Response) {
   }
 }
 
-export async function GET() {
+// DELETE - Clear all search history
+export async function DELETE(request: NextRequest) {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
     const cookieStore = await cookies();
@@ -22,9 +23,16 @@ export async function GET() {
       return NextResponse.json({ detail: "Not authenticated" }, { status: 401 });
     }
 
-    const target = `${baseUrl}/api/v1/users/?page=1&page_size=5&ordering=-totalxp`;
+    const searchParams = request.nextUrl.searchParams;
+    const type = searchParams.get("type");
+
+    let target = `${baseUrl}/api/v1/search/history/clear/`;
+    if (type) {
+      target += `?type=${type}`;
+    }
 
     let res = await fetch(target, {
+      method: "DELETE",
       headers: { Authorization: `Bearer ${access}` },
       cache: "no-store",
     });
@@ -38,6 +46,7 @@ export async function GET() {
       access = tokens.access;
 
       res = await fetch(target, {
+        method: "DELETE",
         headers: { Authorization: `Bearer ${access}` },
         cache: "no-store",
       });
