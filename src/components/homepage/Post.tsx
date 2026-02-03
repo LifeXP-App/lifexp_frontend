@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ClockIcon } from "@heroicons/react/24/outline";
 import { HeartIcon, ChatBubbleOvalLeftIcon, EllipsisVerticalIcon } from "@heroicons/react/24/solid";
 import { Heart } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { CommentSection } from "./CommentSection"; // ADD THIS
 
 /* ---------------- HELPERS (ported 1:1) ---------------- */
@@ -165,18 +165,103 @@ export function Post({ post }: { post: PostType }) {
 
     const [liked, setLiked] = useState(post.user_liked);
     const [likes, setLikes] = useState(post.likes);
-    const [showComments, setShowComments] = useState(false); // ADD THIS
+    const [showComments, setShowComments] = useState(false);
+    const [isLiking, setIsLiking] = useState(false);
+    const [likeError, setLikeError] = useState<string | null>(null);
 
+    // Refs for race condition prevention
+    const abortControllerRef = useRef<AbortController | null>(null);
+    const lastClickTimeRef = useRef<number>(0);
+    const isMountedRef = useRef(true);
+
+    // Cleanup on unmount
     useEffect(() => {
-      if (liked) {
-        setLikes(post.likes + 1);
-      } else {
-        setLikes(post.likes);
-      }
-    }, [liked, post.likes]);
+      isMountedRef.current = true;
+      return () => {
+        isMountedRef.current = false;
+        // Cancel any pending requests
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
+        }
+      };
+    }, []);
 
-    const handleLike = () => {
+    const handleLike = async () => {
+      // Prevent spam clicking - rate limit to 500ms between clicks
+      const now = Date.now();
+      if (now - lastClickTimeRef.current < 500) {
+        return;
+      }
+      lastClickTimeRef.current = now;
+
+      // Prevent concurrent requests
+      if (isLiking) return;
+
+      // Cancel any pending request
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+
+      // Create new abort controller for this request
+      abortControllerRef.current = new AbortController();
+
+      // Optimistic UI update
+      const previousLiked = liked;
+      const previousLikes = likes;
+
       setLiked(!liked);
+      setLikes(liked ? likes - 1 : likes + 1);
+      setIsLiking(true);
+      setLikeError(null);
+
+      try {
+        // 10 second timeout
+        const timeoutId = setTimeout(() => abortControllerRef.current?.abort(), 10000);
+
+        const res = await fetch(`/api/posts/${post.id}/like`, {
+          method: "POST",
+          cache: "no-store",
+          signal: abortControllerRef.current.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!res.ok) {
+          // Only revert if component is still mounted
+          if (isMountedRef.current) {
+            setLiked(previousLiked);
+            setLikes(previousLikes);
+            setLikeError("Failed to update like");
+          }
+          console.error("Failed to like post");
+          return;
+        }
+
+        const data = await res.json();
+
+        // Sync with server response (only if component is still mounted)
+        if (isMountedRef.current) {
+          setLiked(data.liked);
+          setLikes(data.likes_count);
+        }
+      } catch (error) {
+        // Don't show error if request was aborted intentionally
+        if (error instanceof Error && error.name === "AbortError") {
+          return;
+        }
+
+        // Revert on error (only if component is still mounted)
+        if (isMountedRef.current) {
+          setLiked(previousLiked);
+          setLikes(previousLikes);
+          setLikeError("Network error. Please try again.");
+        }
+        console.error("Error liking post:", error);
+      } finally {
+        if (isMountedRef.current) {
+          setIsLiking(false);
+        }
+      }
     };
 
 
@@ -391,17 +476,32 @@ export function Post({ post }: { post: PostType }) {
             </div>
 
 
+          {/* Error notification */}
+          {likeError && (
+            <div className="mb-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center justify-between">
+              <span className="text-sm text-red-600 dark:text-red-400">{likeError}</span>
+              <button
+                onClick={() => setLikeError(null)}
+                className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
           <div className="flex items-center mt-4 gap-6 justify-between">
             <div className="flex items-center gap-2"  onClick={handleLike}>
               <HeartIcon
-                className={`w-8 h-8 cursor-pointer ${
+                className={`w-8 h-8 transition-all ${
+                  isLiking ? "opacity-50 cursor-wait" : "cursor-pointer"
+                } ${
                   liked ? "text-red-700 fill-red-700" : "text-gray-500 opacity-50 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                 }`}
               />
               <span className="text-md font-medium text-gray-500 dark:text-gray-400">
                 {likes}
               </span>
-            
+
             </div>
 
 
