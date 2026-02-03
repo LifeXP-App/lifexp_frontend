@@ -10,6 +10,9 @@ export const mockUser: UserProfile = {
   masteryTitle: "Rookie",
   masteryLevel: 3,
   visibility: "public",
+  followers_count: 120,
+  following_count: 85,
+  posts_count: 45,
   aspects: {
     physique: {
       id: "physique",
@@ -56,7 +59,7 @@ export const mockUser: UserProfile = {
 
 // Mock user for viewing other profiles (public profile)
 export const mockOtherUserPublic: UserProfile = {
-  
+
   id: "2",
   fullname: "Patty",
   username: "patty",
@@ -67,6 +70,9 @@ export const mockOtherUserPublic: UserProfile = {
   masteryLevel: 2,
   visibility: "public",
   isFollowing: true,
+  followers_count: 250,
+  following_count: 180,
+  posts_count: 67,
   aspects: {
     physique: {
       id: "physique",
@@ -123,6 +129,9 @@ export const mockOtherUserPrivate: UserProfile = {
   masteryLevel: 1,
   visibility: "private",
   isFollowing: false,
+  followers_count: 500,
+  following_count: 320,
+  posts_count: 89,
   aspects: {
     physique: {
       id: "physique",
@@ -179,6 +188,9 @@ export const mockOtherUserPrivateFollowing: UserProfile = {
   masteryLevel: 1,
   visibility: "private",
   isFollowing: true,
+  followers_count: 340,
+  following_count: 290,
+  posts_count: 72,
   aspects: {
     physique: {
       id: "physique",

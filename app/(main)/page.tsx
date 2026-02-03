@@ -13,10 +13,12 @@ import { useAuth } from "@/src/context/AuthContext";
 
 /* ---------- POSTS ---------- */
 type SuggestedUser = {
+  id: string | number;
   username: string;
   fullname: string;
   profile_picture: string;
   lifelevel: number;
+  is_following?: boolean;
 };
 const postsData = [
   {
@@ -716,12 +718,14 @@ useEffect(() => {
       const list = Array.isArray(data?.users) ? data.users : [];
 
       const mapped = list.map((u: any) => ({
+        id: u.id,
         username: u.username,
         fullname: u.fullname,
         profile_picture:
           u.profile_picture ||
           "https://res.cloudinary.com/dfohn9dcz/image/upload/Screenshot_2025-03-25_at_10.40.01_PM_vugdxk",
         lifelevel: u.life_level,
+        is_following: u.is_following ?? false,
       }));
 
       setDiscoverUsers(mapped);

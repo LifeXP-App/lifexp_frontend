@@ -24,9 +24,11 @@ import {
 import { AspectType, UserProfile } from "@/src/lib/types";
 import { FireIcon, LockClosedIcon } from "@heroicons/react/24/solid";
 import Image from "next/image";
-import { use, useState, useEffect } from "react";
+import { use, useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { FaSquareWhatsapp, FaLinkedin } from "react-icons/fa6";
+import { toggleFollow } from "@/lib/api/users";
+import { useAuth } from "@/src/context/AuthContext";
 
 interface PageProps {
   params: Promise<{ username: string }>;
@@ -34,6 +36,7 @@ interface PageProps {
 
 import Achievement from "@/src/components/profile/Achievement";
 import DefaultUserProfilePicture from "@/src/components/profile/DefaultUserProfilePicture";
+import FollowersFollowingPopup from "@/src/components/profile/FollowersFollowingPopup";
 
 type UserPost = {
   id: number;
@@ -70,30 +73,40 @@ type UserPost = {
 export default function ProfilePage({ params }: PageProps) {
   const { username } = use(params);
   const router = useRouter();
-  
+  const { me } = useAuth();
+
   const [profileUser, setProfileUser] = useState<UserProfile | null>(null);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [userPosts, setUserPosts] = useState<UserPost[]>([]);
   const [postsLoading, setPostsLoading] = useState(false);
+  const [isFollowingLoading, setIsFollowingLoading] = useState(false);
 
   const [showShare, setShowShare] = useState(false);
+  const [showFollowersPopup, setShowFollowersPopup] = useState(false);
+  const [showFollowingPopup, setShowFollowingPopup] = useState(false);
+  const [profileUrl, setProfileUrl] = useState("");
 
-  // current window's link
-  const profileUrl = window.location.origin + `/profile/${username}`;
+  // Race condition handling refs
+  const lastFollowClickRef = useRef(0);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const isMountedRef = useRef(true);
 
   
 
   useEffect(() => {
     const fetchUsers = async () => {
+      if (!me?.username) return;
+
       setIsLoading(true);
-      
+
       try {
-        // Fetch both users directly from Django backend
-        // Using fetch on client side may hit CORS, but if CORS is configured on backend, this will work
         const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1`;
-        
+
+        // Fetch both profile user and current user for radar chart comparison
         const [profileResponse, currentResponse] = await Promise.all([
           fetch(`${apiUrl}/users/${username}/`, {
             method: "GET",
@@ -102,7 +115,7 @@ export default function ProfilePage({ params }: PageProps) {
             },
             cache: "no-store",
           }),
-          fetch(`${apiUrl}/users/pat/`, {
+          fetch(`${apiUrl}/users/${me.username}/`, {
             method: "GET",
             headers: {
               "Content-Type": "application/json",
@@ -115,6 +128,8 @@ export default function ProfilePage({ params }: PageProps) {
           const profileData = await profileResponse.json();
           setProfileUser(profileData as UserProfile);
           setIsFollowing(profileData.isFollowing ?? false);
+          setFollowersCount(profileData.followers_count ?? 0);
+          setFollowingCount(profileData.following_count ?? 0);
         } else {
           setProfileUser(null);
         }
@@ -130,12 +145,12 @@ export default function ProfilePage({ params }: PageProps) {
         setProfileUser(null);
         setCurrentUser(null);
       }
-      
+
       setIsLoading(false);
     };
 
     fetchUsers();
-  }, [username]);
+  }, [username, me?.username]);
 
   useEffect(() => {
     const fetchUserPosts = async () => {
@@ -168,6 +183,22 @@ export default function ProfilePage({ params }: PageProps) {
     };
 
     fetchUserPosts();
+  }, [username]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      abortControllerRef.current?.abort();
+    };
+  }, []);
+
+  // Set profile URL on client side
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setProfileUrl(window.location.origin + `/profile/${username}`);
+    }
   }, [username]);
 
   const stats = mockProfileStats;
@@ -424,12 +455,118 @@ export default function ProfilePage({ params }: PageProps) {
     return ASPECT_COLORS[category].primary;
   };
 
-  const handleFollow = () => {
+  const handleFollow = async () => {
+    if (!profileUser) return;
+
+    // Prevent spam clicking - rate limit to 500ms between clicks
+    const now = Date.now();
+    if (now - lastFollowClickRef.current < 500) {
+      return;
+    }
+    lastFollowClickRef.current = now;
+
+    // Prevent concurrent requests
+    if (isFollowingLoading) return;
+
+    // Cancel any pending request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create new abort controller for this request
+    abortControllerRef.current = new AbortController();
+
+    // Optimistic UI update
+    const previousFollowing = isFollowing;
+    const previousFollowersCount = followersCount;
+
     setIsFollowing(true);
+    setFollowersCount(followersCount + 1);
+    setIsFollowingLoading(true);
+
+    try {
+      const data = await toggleFollow(profileUser.id);
+
+      // Sync with server response (only if component is still mounted)
+      if (isMountedRef.current) {
+        setIsFollowing(data.following);
+        setFollowersCount(data.followers_count);
+        setFollowingCount(data.following_count);
+      }
+    } catch (error) {
+      // Don't show error if request was aborted intentionally
+      if (error instanceof Error && error.name === "AbortError") {
+        return;
+      }
+
+      // Revert on error (only if component is still mounted)
+      if (isMountedRef.current) {
+        setIsFollowing(previousFollowing);
+        setFollowersCount(previousFollowersCount);
+        console.error("Failed to follow user:", error);
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setIsFollowingLoading(false);
+      }
+    }
   };
 
-  const handleUnfollow = () => {
+  const handleUnfollow = async () => {
+    if (!profileUser) return;
+
+    // Prevent spam clicking - rate limit to 500ms between clicks
+    const now = Date.now();
+    if (now - lastFollowClickRef.current < 500) {
+      return;
+    }
+    lastFollowClickRef.current = now;
+
+    // Prevent concurrent requests
+    if (isFollowingLoading) return;
+
+    // Cancel any pending request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create new abort controller for this request
+    abortControllerRef.current = new AbortController();
+
+    // Optimistic UI update
+    const previousFollowing = isFollowing;
+    const previousFollowersCount = followersCount;
+
     setIsFollowing(false);
+    setFollowersCount(Math.max(0, followersCount - 1));
+    setIsFollowingLoading(true);
+
+    try {
+      const data = await toggleFollow(profileUser.id);
+
+      // Sync with server response (only if component is still mounted)
+      if (isMountedRef.current) {
+        setIsFollowing(data.following);
+        setFollowersCount(data.followers_count);
+        setFollowingCount(data.following_count);
+      }
+    } catch (error) {
+      // Don't show error if request was aborted intentionally
+      if (error instanceof Error && error.name === "AbortError") {
+        return;
+      }
+
+      // Revert on error (only if component is still mounted)
+      if (isMountedRef.current) {
+        setIsFollowing(previousFollowing);
+        setFollowersCount(previousFollowersCount);
+        console.error("Failed to unfollow user:", error);
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setIsFollowingLoading(false);
+      }
+    }
   };
 
   // Helper function to get time ago text
@@ -561,9 +698,28 @@ export default function ProfilePage({ params }: PageProps) {
   </div>
 )}
 
-      
-      
-      
+      {/* Followers Popup */}
+      {profileUser && (
+        <FollowersFollowingPopup
+          isOpen={showFollowersPopup}
+          onClose={() => setShowFollowersPopup(false)}
+          userId={profileUser.id}
+          type="followers"
+          initialCount={followersCount}
+        />
+      )}
+
+      {/* Following Popup */}
+      {profileUser && (
+        <FollowersFollowingPopup
+          isOpen={showFollowingPopup}
+          onClose={() => setShowFollowingPopup(false)}
+          userId={profileUser.id}
+          type="following"
+          initialCount={followingCount}
+        />
+      )}
+
       <div className="w-full px-4 py-4 sm:px-6 md:px-8 lg:px-12 xl:px-24">
         {/* PROFILE HEADER */}
         <div className="relative rounded-xl flex flex-col md:flex-row justify-between w-full mb-4">
@@ -624,12 +780,18 @@ export default function ProfilePage({ params }: PageProps) {
                     <p className="font-semibold dark:text-white">{profileUser.posts_count}</p>
                     <p className="text-gray-500 dark:text-gray-400">Posts</p>
                   </div>
-                  <div className="text-center sm:text-left cursor-pointer">
-                    <p className="font-semibold dark:text-white">{profileUser.followers_count}</p>
+                  <div
+                    className="text-center sm:text-left cursor-pointer hover:opacity-70 transition-opacity"
+                    onClick={() => setShowFollowersPopup(true)}
+                  >
+                    <p className="font-semibold dark:text-white">{followersCount}</p>
                     <p className="text-gray-500 dark:text-gray-400">Followers</p>
                   </div>
-                  <div className="text-center sm:text-left cursor-pointer">
-                    <p className="font-semibold dark:text-white">{profileUser.following_count}</p>
+                  <div
+                    className="text-center sm:text-left cursor-pointer hover:opacity-70 transition-opacity"
+                    onClick={() => setShowFollowingPopup(true)}
+                  >
+                    <p className="font-semibold dark:text-white">{followingCount}</p>
                     <p className="text-gray-500 dark:text-gray-400">Following</p>
                   </div>
                 </div>
@@ -670,28 +832,33 @@ export default function ProfilePage({ params }: PageProps) {
             )}
 
             <span className="flex flex-col sm:flex-row md:gap-2 gap-4 items-center w-full mt-2 sm:mt-4">
-              {isFollowing ? (
-                <button
-                  onClick={handleUnfollow}
-                  className="cursor-pointer font-medium py-2 font-medium rounded-lg cursor-pointer text-center  w-48  text-white bg-gray-700"
-                >
-                  Unfollow
-                </button>
-              ) : currentUser?.username === profileUser.username ? (
+              {me?.username === profileUser.username ? (
                 <button
                   onClick={()=> router.push('/profile/edit')}
-                  className="w-full font-medium active:opacity-80 sm:w-auto p-2 rounded-lg cursor-pointer px-12 text-white"
-                  style={{ backgroundColor: accent.primary }}
+                  className="w-full font-medium active:opacity-80 sm:w-auto p-2 rounded-lg cursor-pointer px-12 text-white bg-black"
                 >
                   Edit Profile
+                </button>
+              ) : isFollowing ? (
+                <button
+                  onClick={handleUnfollow}
+                  disabled={isFollowingLoading}
+                  className={`font-medium py-2 rounded-lg text-center w-48 text-white bg-gray-700 ${
+                    isFollowingLoading ? "opacity-50 cursor-wait" : "cursor-pointer"
+                  }`}
+                >
+                  {isFollowingLoading ? "Loading..." : "Unfollow"}
                 </button>
               ) : (
                 <button
                   onClick={handleFollow}
-                  className="cursor-pointer  font-medium py-2 font-medium rounded-lg cursor-pointer text-center w-48 text-white"
+                  disabled={isFollowingLoading}
+                  className={`font-medium py-2 rounded-lg text-center w-48 text-white ${
+                    isFollowingLoading ? "opacity-50 cursor-wait" : "cursor-pointer"
+                  }`}
                   style={{ backgroundColor: accent.primary }}
                 >
-                  Follow
+                  {isFollowingLoading ? "Loading..." : "Follow"}
                 </button>
               )}
 

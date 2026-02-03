@@ -6,27 +6,22 @@ import getAccentColors, {
 } from "@/src/components/UserAccent";
 import XPChart from "@/src/components/XPChart";
 import PrivateProfileNotice from "@/src/components/profile/PrivateProfileNotice";
+import { useAuth } from "@/src/context/AuthContext";
 import { ASPECT_COLORS } from "@/src/lib/constants/aspects";
 import {
   mockActivities,
-  mockExperiences,
   mockGoals,
   mockProfileStats,
   mockSessions,
   mockWeeklyXP,
 } from "@/src/lib/mock/profileData";
-import {
-  mockOtherUserPrivate,
-  mockOtherUserPrivateFollowing,
-  mockOtherUserPublic,
-  mockUser,
-} from "@/src/lib/mock/userData";
 import { AspectType, UserProfile } from "@/src/lib/types";
 import { FireIcon, LockClosedIcon } from "@heroicons/react/24/solid";
 import Image from "next/image";
-import { use, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { FaSquareWhatsapp, FaLinkedin } from "react-icons/fa6";
+import { use, useEffect, useRef, useState } from "react";
+import { FaLinkedin, FaSquareWhatsapp } from "react-icons/fa6";
+import { toggleFollow } from "@/lib/api/users";
 
 interface PageProps {
   params: Promise<{ username: string }>;
@@ -34,6 +29,7 @@ interface PageProps {
 
 import Achievement from "@/src/components/profile/Achievement";
 import DefaultUserProfilePicture from "@/src/components/profile/DefaultUserProfilePicture";
+import FollowersFollowingPopup from "@/src/components/profile/FollowersFollowingPopup";
 
 type UserPost = {
   id: number;
@@ -65,35 +61,40 @@ type UserPost = {
   updated_at: string;
 };
 
-
-
 export default function ProfilePage({ params }: PageProps) {
   const { username } = use(params);
   const router = useRouter();
-  
+  const { me } = useAuth();
+
   const [profileUser, setProfileUser] = useState<UserProfile | null>(null);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [userPosts, setUserPosts] = useState<UserPost[]>([]);
   const [postsLoading, setPostsLoading] = useState(false);
+  const [isFollowingLoading, setIsFollowingLoading] = useState(false);
 
   const [showShare, setShowShare] = useState(false);
+  const [showFollowersPopup, setShowFollowersPopup] = useState(false);
+  const [showFollowingPopup, setShowFollowingPopup] = useState(false);
+  const [profileUrl, setProfileUrl] = useState("");
 
-  // current window's link
-  const profileUrl = window.location.origin + `/u/${username}`;
-
-  
+  // Race condition handling refs
+  const lastFollowClickRef = useRef(0);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
     const fetchUsers = async () => {
+      if (!me?.username) return;
+
       setIsLoading(true);
-      
+
       try {
-        // Fetch both users directly from Django backend
-        // Using fetch on client side may hit CORS, but if CORS is configured on backend, this will work
         const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1`;
-        
+
         const [profileResponse, currentResponse] = await Promise.all([
           fetch(`${apiUrl}/users/${username}/`, {
             method: "GET",
@@ -102,19 +103,21 @@ export default function ProfilePage({ params }: PageProps) {
             },
             cache: "no-store",
           }),
-          fetch(`${apiUrl}/users/pat/`, {
+          fetch(`${apiUrl}/users/${me.username}/`, {
             method: "GET",
             headers: {
               "Content-Type": "application/json",
             },
             cache: "no-store",
-          })
+          }),
         ]);
 
         if (profileResponse.ok) {
           const profileData = await profileResponse.json();
           setProfileUser(profileData as UserProfile);
           setIsFollowing(profileData.isFollowing ?? false);
+          setFollowersCount(profileData.followers_count ?? 0);
+          setFollowingCount(profileData.following_count ?? 0);
         } else {
           setProfileUser(null);
         }
@@ -130,19 +133,19 @@ export default function ProfilePage({ params }: PageProps) {
         setProfileUser(null);
         setCurrentUser(null);
       }
-      
+
       setIsLoading(false);
     };
 
     fetchUsers();
-  }, [username]);
+  }, [username, me?.username]);
 
   useEffect(() => {
     const fetchUserPosts = async () => {
       if (!username) return;
-      
+
       setPostsLoading(true);
-      
+
       try {
         const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1`;
         const response = await fetch(`${apiUrl}/users/${username}/posts/`, {
@@ -170,195 +173,336 @@ export default function ProfilePage({ params }: PageProps) {
     fetchUserPosts();
   }, [username]);
 
+  // Cleanup on unmount
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      abortControllerRef.current?.abort();
+    };
+  }, []);
+
+  // Set profile URL on client side
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setProfileUrl(window.location.origin + `/u/${username}`);
+    }
+  }, [username]);
+
   const stats = mockProfileStats;
 
-  
+  const handleFollow = async () => {
+    if (!profileUser) return;
+
+    // Prevent spam clicking - rate limit to 500ms between clicks
+    const now = Date.now();
+    if (now - lastFollowClickRef.current < 500) {
+      return;
+    }
+    lastFollowClickRef.current = now;
+
+    // Prevent concurrent requests
+    if (isFollowingLoading) return;
+
+    // Cancel any pending request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create new abort controller for this request
+    abortControllerRef.current = new AbortController();
+
+    // Optimistic UI update
+    const previousFollowing = isFollowing;
+    const previousFollowersCount = followersCount;
+
+    setIsFollowing(true);
+    setFollowersCount(followersCount + 1);
+    setIsFollowingLoading(true);
+
+    try {
+      const data = await toggleFollow(profileUser.id);
+
+      // Sync with server response (only if component is still mounted)
+      if (isMountedRef.current) {
+        setIsFollowing(data.following);
+        setFollowersCount(data.followers_count);
+        setFollowingCount(data.following_count);
+      }
+    } catch (error) {
+      // Don't show error if request was aborted intentionally
+      if (error instanceof Error && error.name === "AbortError") {
+        return;
+      }
+
+      // Revert on error (only if component is still mounted)
+      if (isMountedRef.current) {
+        setIsFollowing(previousFollowing);
+        setFollowersCount(previousFollowersCount);
+        console.error("Failed to follow user:", error);
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setIsFollowingLoading(false);
+      }
+    }
+  };
+
+  const handleUnfollow = async () => {
+    if (!profileUser) return;
+
+    // Prevent spam clicking - rate limit to 500ms between clicks
+    const now = Date.now();
+    if (now - lastFollowClickRef.current < 500) {
+      return;
+    }
+    lastFollowClickRef.current = now;
+
+    // Prevent concurrent requests
+    if (isFollowingLoading) return;
+
+    // Cancel any pending request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create new abort controller for this request
+    abortControllerRef.current = new AbortController();
+
+    // Optimistic UI update
+    const previousFollowing = isFollowing;
+    const previousFollowersCount = followersCount;
+
+    setIsFollowing(false);
+    setFollowersCount(Math.max(0, followersCount - 1));
+    setIsFollowingLoading(true);
+
+    try {
+      const data = await toggleFollow(profileUser.id);
+
+      // Sync with server response (only if component is still mounted)
+      if (isMountedRef.current) {
+        setIsFollowing(data.following);
+        setFollowersCount(data.followers_count);
+        setFollowingCount(data.following_count);
+      }
+    } catch (error) {
+      // Don't show error if request was aborted intentionally
+      if (error instanceof Error && error.name === "AbortError") {
+        return;
+      }
+
+      // Revert on error (only if component is still mounted)
+      if (isMountedRef.current) {
+        setIsFollowing(previousFollowing);
+        setFollowersCount(previousFollowersCount);
+        console.error("Failed to unfollow user:", error);
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setIsFollowingLoading(false);
+      }
+    }
+  };
 
   if (isLoading) {
-  return (
-    <main
-      className="w-full flex flex-col md:flex-row overflow-y-auto"
-      style={{ minHeight: "calc(100vh - 60px)" }}
-    >
-      <div className="w-full px-4 py-4 sm:px-6 md:px-8 lg:px-12 xl:px-24">
-        {/* PROFILE HEADER SKELETON */}
-        <div className="relative rounded-xl flex flex-col md:flex-row justify-between w-full mb-4 animate-pulse">
-          <div className="pt-2 sm:p-2 mb-4 flex flex-col gap-2 w-full">
-            <div className="flex flex-row items-center gap-4 sm:gap-8 w-full mb-4">
-              {/* Avatar */}
-              <div className="shrink-0">
-                <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-full bg-gray-200 dark:bg-gray-800" />
-              </div>
-
-              {/* Name + stats */}
-              <div className="flex flex-col w-full">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="h-4 w-32 rounded bg-gray-200 dark:bg-gray-800" />
-                  <div className="h-4 w-24 rounded bg-gray-200 dark:bg-gray-800" />
+    return (
+      <main
+        className="w-full flex flex-col md:flex-row overflow-y-auto"
+        style={{ minHeight: "calc(100vh - 60px)" }}
+      >
+        <div className="w-full px-4 py-4 sm:px-6 md:px-8 lg:px-12 xl:px-24">
+          {/* PROFILE HEADER SKELETON */}
+          <div className="relative rounded-xl flex flex-col md:flex-row justify-between w-full mb-4 animate-pulse">
+            <div className="pt-2 sm:p-2 mb-4 flex flex-col gap-2 w-full">
+              <div className="flex flex-row items-center gap-4 sm:gap-8 w-full mb-4">
+                {/* Avatar */}
+                <div className="shrink-0">
+                  <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-full bg-gray-200 dark:bg-gray-800" />
                 </div>
 
-                <div className="h-3 w-40 rounded bg-gray-200 dark:bg-gray-800 mb-4" />
-
-                <div className="mt-4 flex gap-6 sm:gap-8 text-sm">
-                  <div className="text-center sm:text-left">
-                    <div className="h-4 w-10 rounded bg-gray-200 dark:bg-gray-800 mx-auto sm:mx-0" />
-                    <div className="h-3 w-12 rounded bg-gray-200 dark:bg-gray-800 mt-2 mx-auto sm:mx-0" />
+                {/* Name + stats */}
+                <div className="flex flex-col w-full">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="h-4 w-32 rounded bg-gray-200 dark:bg-gray-800" />
+                    <div className="h-4 w-24 rounded bg-gray-200 dark:bg-gray-800" />
                   </div>
 
-                  <div className="text-center sm:text-left">
-                    <div className="h-4 w-10 rounded bg-gray-200 dark:bg-gray-800 mx-auto sm:mx-0" />
-                    <div className="h-3 w-16 rounded bg-gray-200 dark:bg-gray-800 mt-2 mx-auto sm:mx-0" />
-                  </div>
+                  <div className="h-3 w-40 rounded bg-gray-200 dark:bg-gray-800 mb-4" />
 
-                  <div className="text-center sm:text-left">
-                    <div className="h-4 w-10 rounded bg-gray-200 dark:bg-gray-800 mx-auto sm:mx-0" />
-                    <div className="h-3 w-16 rounded bg-gray-200 dark:bg-gray-800 mt-2 mx-auto sm:mx-0" />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Title + bio */}
-            <div className="h-4 w-3/5 rounded bg-gray-200 dark:bg-gray-800 mt-2" />
-            <div className="h-3 w-4/5 rounded bg-gray-200 dark:bg-gray-800 mt-2" />
-            <div className="h-3 w-2/3 rounded bg-gray-200 dark:bg-gray-800 mt-2" />
-
-            {/* Ongoing goals skeleton pills */}
-            <div className="mt-4">
-              <div className="h-3 w-28 rounded bg-gray-200 dark:bg-gray-800 mb-3" />
-              <div className="flex gap-2 flex-wrap">
-                {[1, 2, 3, 4].map((i) => (
-                  <span
-                    key={i}
-                    className="px-3 py-1.5 rounded-full bg-gray-200 dark:bg-gray-800 w-24 h-7"
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Buttons skeleton */}
-            <span className="flex flex-col sm:flex-row md:gap-2 gap-4 items-center w-full mt-2 sm:mt-4">
-              <div className="w-48 h-10 rounded-lg bg-gray-200 dark:bg-gray-800" />
-              <div className="w-48 h-10 rounded-lg bg-gray-200 dark:bg-gray-800" />
-            </span>
-          </div>
-
-          {/* Desktop chart skeleton */}
-          <div className="hidden xl:flex w-full focus:outline-none justify-end p-4 sm:p-6 overflow-visible">
-            <div className="w-full max-w-[360px] h-[320px] overflow-visible py-6">
-              <div className="w-full h-full rounded-xl bg-gray-200 dark:bg-gray-800" />
-            </div>
-          </div>
-        </div>
-
-        {/* Mobile chart skeleton */}
-        <div className="xl:hidden my-4 flex justify-center w-full animate-pulse">
-          <div className="w-full bg-white dark:bg-dark-2 rounded-xl border-2 border-gray-200 dark:border-gray-900 p-6">
-            <div className="mx-auto w-full max-w-[280px] h-72 rounded-xl bg-gray-200 dark:bg-gray-800" />
-          </div>
-        </div>
-
-        {/* STREAK / LEVEL / XP skeleton cards */}
-        <div className="my-4 flex flex-col sm:flex-row justify-between text-sm gap-4 animate-pulse">
-          <div className="bg-white dark:bg-dark-2 border-2 rounded-xl border-gray-200 dark:border-gray-900 w-full p-4">
-            <div className="h-3 w-24 rounded bg-gray-200 dark:bg-gray-800 mb-3" />
-            <div className="h-5 w-16 rounded bg-gray-200 dark:bg-gray-800" />
-          </div>
-
-          <div className="bg-white dark:bg-dark-2 border-2 rounded-xl border-gray-200 dark:border-gray-900 w-full p-4">
-            <div className="h-4 w-28 rounded bg-gray-200 dark:bg-gray-800 mb-3" />
-            <div className="h-3 w-40 rounded bg-gray-200 dark:bg-gray-800" />
-          </div>
-
-          <div className="bg-gray-200 dark:bg-dark-2 border-2 rounded-xl border-gray-200 dark:border-gray-900 w-full p-4 animate-pulse">
-            <div className="h-5 w-28 rounded bg-gray-300 dark:bg-gray-800 mb-3" />
-            <div className="h-3 w-44 rounded bg-gray-300 dark:bg-gray-800" />
-          </div>
-        </div>
-
-        {/* Weekly XP chart skeleton */}
-        <div className="p-4 sm:p-6 my-4 bg-white dark:bg-dark-2 dark:border-gray-900 border-2 border-gray-200 rounded-2xl w-full animate-pulse">
-          <div className="flex justify-between items-center mb-4">
-            <span className="flex gap-3 items-center">
-              <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-800" />
-              <div className="h-4 w-40 rounded bg-gray-200 dark:bg-gray-800" />
-            </span>
-          </div>
-
-          <div className="relative h-48 sm:h-64 rounded-xl bg-gray-200 dark:bg-gray-800" />
-        </div>
-
-        {/* Top Activities + Recent Sessions skeleton */}
-        <div className="flex flex-col md:flex-row gap-4 animate-pulse">
-          <div className="p-4 sm:p-6 my-2 bg-white border-2 border-gray-200 dark:bg-dark-2 dark:border-gray-900 rounded-2xl w-full">
-            <div className="h-4 w-32 rounded bg-gray-200 dark:bg-gray-800 mb-6" />
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="flex items-center justify-between mb-5">
-                <div className="flex items-center gap-4">
-                  <div className="h-4 w-4 rounded bg-gray-200 dark:bg-gray-800" />
-                  <div className="h-10 w-10 rounded bg-gray-200 dark:bg-gray-800" />
-                  <div className="h-4 w-40 rounded bg-gray-200 dark:bg-gray-800" />
-                </div>
-                <div className="h-4 w-14 rounded bg-gray-200 dark:bg-gray-800" />
-              </div>
-            ))}
-          </div>
-
-          <div className="p-4 sm:p-6 my-2 bg-white border-2 border-gray-200 dark:bg-dark-2 dark:border-gray-900 rounded-2xl w-full">
-            <div className="h-4 w-36 rounded bg-gray-200 dark:bg-gray-800 mb-6" />
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="p-3 rounded-lg mb-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 rounded bg-gray-200 dark:bg-gray-800" />
-                    <div>
-                      <div className="h-4 w-44 rounded bg-gray-200 dark:bg-gray-800 mb-2" />
-                      <div className="h-3 w-24 rounded bg-gray-200 dark:bg-gray-800" />
+                  <div className="mt-4 flex gap-6 sm:gap-8 text-sm">
+                    <div className="text-center sm:text-left">
+                      <div className="h-4 w-10 rounded bg-gray-200 dark:bg-gray-800 mx-auto sm:mx-0" />
+                      <div className="h-3 w-12 rounded bg-gray-200 dark:bg-gray-800 mt-2 mx-auto sm:mx-0" />
                     </div>
+
+                    <div className="text-center sm:text-left">
+                      <div className="h-4 w-10 rounded bg-gray-200 dark:bg-gray-800 mx-auto sm:mx-0" />
+                      <div className="h-3 w-16 rounded bg-gray-200 dark:bg-gray-800 mt-2 mx-auto sm:mx-0" />
+                    </div>
+
+                    <div className="text-center sm:text-left">
+                      <div className="h-4 w-10 rounded bg-gray-200 dark:bg-gray-800 mx-auto sm:mx-0" />
+                      <div className="h-3 w-16 rounded bg-gray-200 dark:bg-gray-800 mt-2 mx-auto sm:mx-0" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Title + bio */}
+              <div className="h-4 w-3/5 rounded bg-gray-200 dark:bg-gray-800 mt-2" />
+              <div className="h-3 w-4/5 rounded bg-gray-200 dark:bg-gray-800 mt-2" />
+              <div className="h-3 w-2/3 rounded bg-gray-200 dark:bg-gray-800 mt-2" />
+
+              {/* Ongoing goals skeleton pills */}
+              <div className="mt-4">
+                <div className="h-3 w-28 rounded bg-gray-200 dark:bg-gray-800 mb-3" />
+                <div className="flex gap-2 flex-wrap">
+                  {[1, 2, 3, 4].map((i) => (
+                    <span
+                      key={i}
+                      className="px-3 py-1.5 rounded-full bg-gray-200 dark:bg-gray-800 w-24 h-7"
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Buttons skeleton */}
+              <span className="flex flex-col sm:flex-row md:gap-2 gap-4 items-center w-full mt-2 sm:mt-4">
+                <div className="w-48 h-10 rounded-lg bg-gray-200 dark:bg-gray-800" />
+                <div className="w-48 h-10 rounded-lg bg-gray-200 dark:bg-gray-800" />
+              </span>
+            </div>
+
+            {/* Desktop chart skeleton */}
+            <div className="hidden xl:flex w-full focus:outline-none justify-end p-4 sm:p-6 overflow-visible">
+              <div className="w-full max-w-[360px] h-[320px] overflow-visible py-6">
+                <div className="w-full h-full rounded-xl bg-gray-200 dark:bg-gray-800" />
+              </div>
+            </div>
+          </div>
+
+          {/* Mobile chart skeleton */}
+          <div className="xl:hidden my-4 flex justify-center w-full animate-pulse">
+            <div className="w-full bg-white dark:bg-dark-2 rounded-xl border-2 border-gray-200 dark:border-gray-900 p-6">
+              <div className="mx-auto w-full max-w-[280px] h-72 rounded-xl bg-gray-200 dark:bg-gray-800" />
+            </div>
+          </div>
+
+          {/* STREAK / LEVEL / XP skeleton cards */}
+          <div className="my-4 flex flex-col sm:flex-row justify-between text-sm gap-4 animate-pulse">
+            <div className="bg-white dark:bg-dark-2 border-2 rounded-xl border-gray-200 dark:border-gray-900 w-full p-4">
+              <div className="h-3 w-24 rounded bg-gray-200 dark:bg-gray-800 mb-3" />
+              <div className="h-5 w-16 rounded bg-gray-200 dark:bg-gray-800" />
+            </div>
+
+            <div className="bg-white dark:bg-dark-2 border-2 rounded-xl border-gray-200 dark:border-gray-900 w-full p-4">
+              <div className="h-4 w-28 rounded bg-gray-200 dark:bg-gray-800 mb-3" />
+              <div className="h-3 w-40 rounded bg-gray-200 dark:bg-gray-800" />
+            </div>
+
+            <div className="bg-gray-200 dark:bg-dark-2 border-2 rounded-xl border-gray-200 dark:border-gray-900 w-full p-4 animate-pulse">
+              <div className="h-5 w-28 rounded bg-gray-300 dark:bg-gray-800 mb-3" />
+              <div className="h-3 w-44 rounded bg-gray-300 dark:bg-gray-800" />
+            </div>
+          </div>
+
+          {/* Weekly XP chart skeleton */}
+          <div className="p-4 sm:p-6 my-4 bg-white dark:bg-dark-2 dark:border-gray-900 border-2 border-gray-200 rounded-2xl w-full animate-pulse">
+            <div className="flex justify-between items-center mb-4">
+              <span className="flex gap-3 items-center">
+                <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-800" />
+                <div className="h-4 w-40 rounded bg-gray-200 dark:bg-gray-800" />
+              </span>
+            </div>
+
+            <div className="relative h-48 sm:h-64 rounded-xl bg-gray-200 dark:bg-gray-800" />
+          </div>
+
+          {/* Top Activities + Recent Sessions skeleton */}
+          <div className="flex flex-col md:flex-row gap-4 animate-pulse">
+            <div className="p-4 sm:p-6 my-2 bg-white border-2 border-gray-200 dark:bg-dark-2 dark:border-gray-900 rounded-2xl w-full">
+              <div className="h-4 w-32 rounded bg-gray-200 dark:bg-gray-800 mb-6" />
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-4">
+                    <div className="h-4 w-4 rounded bg-gray-200 dark:bg-gray-800" />
+                    <div className="h-10 w-10 rounded bg-gray-200 dark:bg-gray-800" />
+                    <div className="h-4 w-40 rounded bg-gray-200 dark:bg-gray-800" />
                   </div>
                   <div className="h-4 w-14 rounded bg-gray-200 dark:bg-gray-800" />
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+
+            <div className="p-4 sm:p-6 my-2 bg-white border-2 border-gray-200 dark:bg-dark-2 dark:border-gray-900 rounded-2xl w-full">
+              <div className="h-4 w-36 rounded bg-gray-200 dark:bg-gray-800 mb-6" />
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="p-3 rounded-lg mb-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="h-10 w-10 rounded bg-gray-200 dark:bg-gray-800" />
+                      <div>
+                        <div className="h-4 w-44 rounded bg-gray-200 dark:bg-gray-800 mb-2" />
+                        <div className="h-3 w-24 rounded bg-gray-200 dark:bg-gray-800" />
+                      </div>
+                    </div>
+                    <div className="h-4 w-14 rounded bg-gray-200 dark:bg-gray-800" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Achievements skeleton */}
+          <div className="max-w-6xl mx-auto px-2 p-2 pb-12 my-4 rounded-sm w-full animate-pulse">
+            <div className="h-5 w-36 rounded bg-gray-200 dark:bg-gray-800 mb-8" />
+            <div className="flex flex-col gap-6">
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="w-full h-28 rounded-2xl bg-gray-200 dark:bg-gray-800"
+                />
+              ))}
+            </div>
           </div>
         </div>
-
-        {/* Achievements skeleton */}
-        <div className="max-w-6xl mx-auto px-2 p-2 pb-12 my-4 rounded-sm w-full animate-pulse">
-          <div className="h-5 w-36 rounded bg-gray-200 dark:bg-gray-800 mb-8" />
-          <div className="flex flex-col gap-6">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="w-full h-28 rounded-2xl bg-gray-200 dark:bg-gray-800" />
-            ))}
-          </div>
-        </div>
-      </div>
-    </main>
-  );
-}
-
+      </main>
+    );
+  }
 
   if (!profileUser) {
     return (
-      <main className="w-full flex flex-col items-center justify-center" style={{ minHeight: "calc(100vh - 60px)" }}>
-        <h1 className="text-2xl font-bold dark:text-white mb-4">User not found</h1>
-        <p className="text-gray-500 dark:text-gray-400">@{username} doesn&apos;t exist</p>
+      <main
+        className="w-full flex flex-col items-center justify-center"
+        style={{ minHeight: "calc(100vh - 60px)" }}
+      >
+        <h1 className="text-2xl font-bold dark:text-white mb-4">
+          User not found
+        </h1>
+        <p className="text-gray-500 dark:text-gray-400">
+          @{username} doesn&apos;t exist
+        </p>
       </main>
     );
   }
 
   if (!currentUser) {
     return (
-      <main className="w-full flex flex-col items-center justify-center" style={{ minHeight: "calc(100vh - 60px)" }}>
-        <h1 className="text-2xl font-bold dark:text-white mb-4">Error loading user data</h1>
+      <main
+        className="w-full flex flex-col items-center justify-center"
+        style={{ minHeight: "calc(100vh - 60px)" }}
+      >
+        <h1 className="text-2xl font-bold dark:text-white mb-4">
+          Error loading user data
+        </h1>
         <p className="text-gray-500 dark:text-gray-400">Please try again</p>
       </main>
     );
   }
 
   // Check if profile content should be visible
-  const canViewContent =
-    profileUser.visibility === "public" || isFollowing;
+  const canViewContent = profileUser.visibility === "public" || isFollowing;
 
   // Calculate radar chart points with comparison data
   const radarData: RadarDataPoint[] = [
@@ -369,7 +513,7 @@ export default function ProfilePage({ params }: PageProps) {
       fullMark: Math.max(
         currentUser.aspects.physique.currentXP,
         profileUser.aspects.physique.currentXP,
-        1200
+        1200,
       ),
     },
     {
@@ -379,7 +523,7 @@ export default function ProfilePage({ params }: PageProps) {
       fullMark: Math.max(
         currentUser.aspects.energy.currentXP,
         profileUser.aspects.energy.currentXP,
-        1200
+        1200,
       ),
     },
     {
@@ -389,7 +533,7 @@ export default function ProfilePage({ params }: PageProps) {
       fullMark: Math.max(
         currentUser.aspects.logic.currentXP,
         profileUser.aspects.logic.currentXP,
-        1200
+        1200,
       ),
     },
     {
@@ -399,7 +543,7 @@ export default function ProfilePage({ params }: PageProps) {
       fullMark: Math.max(
         currentUser.aspects.creativity.currentXP,
         profileUser.aspects.creativity.currentXP,
-        1200
+        1200,
       ),
     },
     {
@@ -409,7 +553,7 @@ export default function ProfilePage({ params }: PageProps) {
       fullMark: Math.max(
         currentUser.aspects.social.currentXP,
         profileUser.aspects.social.currentXP,
-        1200
+        1200,
       ),
     },
   ];
@@ -422,14 +566,6 @@ export default function ProfilePage({ params }: PageProps) {
 
   const getAspectColor = (category: AspectType) => {
     return ASPECT_COLORS[category].primary;
-  };
-
-  const handleFollow = () => {
-    setIsFollowing(true);
-  };
-
-  const handleUnfollow = () => {
-    setIsFollowing(false);
   };
 
   // Helper function to get time ago text
@@ -457,54 +593,50 @@ export default function ProfilePage({ params }: PageProps) {
     return "just now";
   };
 
-
-
-
-      
-
-
   return (
-    <main className="w-full flex flex-col md:flex-row overflow-y-auto" style={{ minHeight: "calc(100vh - 60px)" }}>
-      
-
+    <main
+      className="w-full flex flex-col md:flex-row overflow-y-auto"
+      style={{ minHeight: "calc(100vh - 60px)" }}
+    >
       {showShare && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 ">
-    <div className="w-full max-w-md rounded-2xl bg-white dark:bg-dark-2 border-2 border-gray-200 dark:border-gray-900 p-6 relative">
-      
-      {/* Header */}
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold dark:text-white">
-          Share Profile
-        </h3>
-        <button
-          onClick={() => setShowShare(false)}
-          className="text-gray-400 hover:text-gray-600 text-xl cursor-pointer dark:hover:text-gray-300"
-        >
-          ✕
-        </button>
-      </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 ">
+          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-dark-2 border-2 border-gray-200 dark:border-gray-900 p-6 relative">
+            {/* Header */}
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold dark:text-white">
+                Share Profile
+              </h3>
+              <button
+                onClick={() => setShowShare(false)}
+                className="text-gray-400 hover:text-gray-600 text-xl cursor-pointer dark:hover:text-gray-300"
+              >
+                ✕
+              </button>
+            </div>
 
-      {/* Profile link box */}
-      <div className="mb-4 text-gray-600 dark:text-gray-400 flex gap-2 w-full">
-        <div className="flex items-center gap-2 w-full bg-gray-100 dark:bg-dark-3 border border-gray-200 dark:border-gray-800 rounded-lg p-2 ">
-                <p id="profile-url" className="text-md active:opacity-75 m-2 truncate text-gray-700 dark:text-gray-300 flex-1">
+            {/* Profile link box */}
+            <div className="mb-4 text-gray-600 dark:text-gray-400 flex gap-2 w-full">
+              <div className="flex items-center gap-2 w-full bg-gray-100 dark:bg-dark-3 border border-gray-200 dark:border-gray-800 rounded-lg p-2 ">
+                <p
+                  id="profile-url"
+                  className="text-md active:opacity-75 m-2 truncate text-gray-700 dark:text-gray-300 flex-1"
+                >
                   {profileUrl}
                 </p>
-                
-                 <button
+
+                <button
                   onClick={() => {
                     navigator.clipboard.writeText(profileUrl);
-                    const button = document.querySelector('#copy-button');
+                    const button = document.querySelector("#copy-button");
                     if (button) {
                       button.textContent = "Copied!";
                       // disable button
-                      button.setAttribute('disabled', 'true');
+                      button.setAttribute("disabled", "true");
                       setTimeout(() => {
                         button.textContent = "Copy";
-                        button.removeAttribute('disabled');
+                        button.removeAttribute("disabled");
                       }, 2000);
                     }
-                   
                   }}
                   id="copy-button"
                   className="text-sm font-medium  py-1 disabled:opacity-50 w-18 h-full rounded-full cursor-pointer active:opacity-75 text-white"
@@ -512,58 +644,74 @@ export default function ProfilePage({ params }: PageProps) {
                 >
                   Copy
                 </button>
-
               </div>
-             
-      </div>
-      
+            </div>
 
-      {/* Social buttons */}
-      <div className="grid grid-cols-3 gap-3">
-        <a
-          href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(
-            profileUrl
-          )}`}
-          target="_blank"
-          className="flex flex-col items-center justify-center p-3 rounded-xl border border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-dark-3 transition"
-        >
-          <span className="text-xl">𝕏</span>
-          <span className="text-xs mt-1 text-gray-600 dark:text-gray-400">
-            X
-          </span>
-        </a>
+            {/* Social buttons */}
+            <div className="grid grid-cols-3 gap-3">
+              <a
+                href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(
+                  profileUrl,
+                )}`}
+                target="_blank"
+                className="flex flex-col items-center justify-center p-3 rounded-xl border border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-dark-3 transition"
+              >
+                <span className="text-xl">𝕏</span>
+                <span className="text-xs mt-1 text-gray-600 dark:text-gray-400">
+                  X
+                </span>
+              </a>
 
-        <a
-          href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(
-            profileUrl
-          )}`}
-          target="_blank"
-          className="flex flex-col items-center justify-center p-3 rounded-xl border border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-dark-3 transition"
-        >
-          <FaLinkedin className="w-8 h-8 fill-blue-500" />
-          <span className="text-xs mt-1 text-gray-600 dark:text-gray-400">
-            LinkedIn
-          </span>
-        </a>
+              <a
+                href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(
+                  profileUrl,
+                )}`}
+                target="_blank"
+                className="flex flex-col items-center justify-center p-3 rounded-xl border border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-dark-3 transition"
+              >
+                <FaLinkedin className="w-8 h-8 fill-blue-500" />
+                <span className="text-xs mt-1 text-gray-600 dark:text-gray-400">
+                  LinkedIn
+                </span>
+              </a>
 
-        <a
-          href={`https://wa.me/?text=${encodeURIComponent(profileUrl)}`}
-          target="_blank"
-          className="flex flex-col items-center justify-center p-3 rounded-xl border border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-dark-3 transition"
-        >
-          <FaSquareWhatsapp className="w-8 h-8 fill-green-700" />
-          <span className="text-xs mt-1 text-gray-600 dark:text-gray-400">
-            WhatsApp
-          </span>
-        </a>
-      </div>
-    </div>
-  </div>
-)}
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(profileUrl)}`}
+                target="_blank"
+                className="flex flex-col items-center justify-center p-3 rounded-xl border border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-dark-3 transition"
+              >
+                <FaSquareWhatsapp className="w-8 h-8 fill-green-700" />
+                <span className="text-xs mt-1 text-gray-600 dark:text-gray-400">
+                  WhatsApp
+                </span>
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
 
-      
-      
-      
+      {/* Followers Popup */}
+      {profileUser && (
+        <FollowersFollowingPopup
+          isOpen={showFollowersPopup}
+          onClose={() => setShowFollowersPopup(false)}
+          userId={profileUser.id}
+          type="followers"
+          initialCount={followersCount}
+        />
+      )}
+
+      {/* Following Popup */}
+      {profileUser && (
+        <FollowersFollowingPopup
+          isOpen={showFollowingPopup}
+          onClose={() => setShowFollowingPopup(false)}
+          userId={profileUser.id}
+          type="following"
+          initialCount={followingCount}
+        />
+      )}
+
       <div className="w-full px-4 py-4 sm:px-6 md:px-8 lg:px-12 xl:px-24">
         {/* PROFILE HEADER */}
         <div className="relative rounded-xl flex flex-col md:flex-row justify-between w-full mb-4">
@@ -579,12 +727,20 @@ export default function ProfilePage({ params }: PageProps) {
                     className="h-20 w-20 sm:h-24 sm:w-24 rounded-full object-cover"
                   />
                 ) : (
-                  <DefaultUserProfilePicture username={profileUser.username} accent={{gradStart: accent.gradStart, gradEnd: accent.gradEnd}} />
+                  <DefaultUserProfilePicture
+                    username={profileUser.username}
+                    accent={{
+                      gradStart: accent.gradStart,
+                      gradEnd: accent.gradEnd,
+                    }}
+                  />
                 )}
               </div>
               <div className="flex flex-col w-full">
                 <span className="flex items-center gap-2 mb-1">
-                  <p className="text-base font-bold dark:text-white">{profileUser.fullname}</p>
+                  <p className="text-base font-bold dark:text-white">
+                    {profileUser.fullname}
+                  </p>
                   <p className="text-base font-medium text-gray-500 dark:text-gray-400">
                     @{profileUser.username}
                   </p>
@@ -621,16 +777,32 @@ export default function ProfilePage({ params }: PageProps) {
                 </span>
                 <div className="mt-4 flex gap-6 sm:gap-8 text-sm">
                   <div className="text-center sm:text-left">
-                    <p className="font-semibold dark:text-white">{profileUser.posts_count}</p>
+                    <p className="font-semibold dark:text-white">
+                      {profileUser.posts_count}
+                    </p>
                     <p className="text-gray-500 dark:text-gray-400">Posts</p>
                   </div>
-                  <div className="text-center sm:text-left cursor-pointer">
-                    <p className="font-semibold dark:text-white">{profileUser.followers_count}</p>
-                    <p className="text-gray-500 dark:text-gray-400">Followers</p>
+                  <div
+                    className="text-center sm:text-left cursor-pointer hover:opacity-70 transition-opacity"
+                    onClick={() => setShowFollowersPopup(true)}
+                  >
+                    <p className="font-semibold dark:text-white">
+                      {followersCount}
+                    </p>
+                    <p className="text-gray-500 dark:text-gray-400">
+                      Followers
+                    </p>
                   </div>
-                  <div className="text-center sm:text-left cursor-pointer">
-                    <p className="font-semibold dark:text-white">{profileUser.following_count}</p>
-                    <p className="text-gray-500 dark:text-gray-400">Following</p>
+                  <div
+                    className="text-center sm:text-left cursor-pointer hover:opacity-70 transition-opacity"
+                    onClick={() => setShowFollowingPopup(true)}
+                  >
+                    <p className="font-semibold dark:text-white">
+                      {followingCount}
+                    </p>
+                    <p className="text-gray-500 dark:text-gray-400">
+                      Following
+                    </p>
                   </div>
                 </div>
               </div>
@@ -642,10 +814,14 @@ export default function ProfilePage({ params }: PageProps) {
                   {profileUser.title}
                 </p>
 
-                <p className="text-gray-500 dark:text-gray-400  whitespace-pre-wrap">{profileUser.bio}</p>
+                <p className="text-gray-500 dark:text-gray-400  whitespace-pre-wrap">
+                  {profileUser.bio}
+                </p>
                 {/* Ongoing Goals */}
                 <div className="mt-2">
-                  <h3 className="font-bold text-sm mb-3 dark:text-white">Ongoing Goals</h3>
+                  <h3 className="font-bold text-sm mb-3 dark:text-white">
+                    Ongoing Goals
+                  </h3>
                   <div className="flex gap-2 flex-wrap">
                     {mockGoals.map((goal) => (
                       <span
@@ -654,7 +830,7 @@ export default function ProfilePage({ params }: PageProps) {
                         style={{
                           backgroundColor: hexToRgba(
                             getAspectColor(goal.category),
-                            0.15
+                            0.15,
                           ),
                           border: `1px solid ${getAspectColor(goal.category)}`,
                           color: getAspectColor(goal.category),
@@ -670,28 +846,33 @@ export default function ProfilePage({ params }: PageProps) {
             )}
 
             <span className="flex flex-col sm:flex-row md:gap-2 gap-4 items-center w-full mt-2 sm:mt-4">
-              {isFollowing ? (
+              {me?.username === profileUser.username ? (
                 <button
-                  onClick={handleUnfollow}
-                  className="cursor-pointer font-medium py-2 font-medium rounded-lg cursor-pointer text-center  w-48  text-white bg-gray-700"
-                >
-                  Unfollow
-                </button>
-              ) : currentUser?.username === profileUser.username ? (
-                <button
-                  onClick={()=> router.push('/u/edit')}
-                  className="w-full font-medium active:opacity-80 sm:w-auto p-2 rounded-lg cursor-pointer px-12 text-white"
-                  style={{ backgroundColor: accent.primary }}
+                  onClick={() => router.push("/profile/edit")}
+                  className="w-full font-medium active:opacity-80 sm:w-auto p-2 rounded-lg cursor-pointer px-12 text-white bg-black"
                 >
                   Edit Profile
+                </button>
+              ) : isFollowing ? (
+                <button
+                  onClick={handleUnfollow}
+                  disabled={isFollowingLoading}
+                  className={`font-medium py-2 rounded-lg text-center w-48 text-white bg-gray-700 ${
+                    isFollowingLoading ? "opacity-50 cursor-wait" : "cursor-pointer"
+                  }`}
+                >
+                  {isFollowingLoading ? "Loading..." : "Unfollow"}
                 </button>
               ) : (
                 <button
                   onClick={handleFollow}
-                  className="cursor-pointer  font-medium py-2 font-medium rounded-lg cursor-pointer text-center w-48 text-white"
+                  disabled={isFollowingLoading}
+                  className={`font-medium py-2 rounded-lg text-center w-48 text-white ${
+                    isFollowingLoading ? "opacity-50 cursor-wait" : "cursor-pointer"
+                  }`}
                   style={{ backgroundColor: accent.primary }}
                 >
-                  Follow
+                  {isFollowingLoading ? "Loading..." : "Follow"}
                 </button>
               )}
 
@@ -749,7 +930,10 @@ export default function ProfilePage({ params }: PageProps) {
               <div className="bg-white dark:bg-dark-2 border-2 rounded-xl border-gray-200 dark:border-gray-900 w-full flex flex-col rounded-md items-center justify-between p-4">
                 <p className="text-sm dark:text-gray-300">Streak Count</p>
                 <div className="flex gap-2 items-center">
-                  <FireIcon className="size-6 text-gray-400 dark:text-gray-500" fill="#BBBBBB" />
+                  <FireIcon
+                    className="size-6 text-gray-400 dark:text-gray-500"
+                    fill="#BBBBBB"
+                  />
                   <p className="text-lg font-bold text-gray-400 dark:text-gray-600">
                     {stats.streakCount}
                   </p>
@@ -764,7 +948,10 @@ export default function ProfilePage({ params }: PageProps) {
                   </p>
                 </span>
                 <span className="flex items-center justify-center gap-1">
-                  <p style={{ fontSize: "11px" }} className="text-gray-500 dark:text-gray-400">
+                  <p
+                    style={{ fontSize: "11px" }}
+                    className="text-gray-500 dark:text-gray-400"
+                  >
                     Member since {stats.memberSince}
                   </p>
                 </span>
@@ -793,7 +980,10 @@ export default function ProfilePage({ params }: PageProps) {
                       clipRule="evenodd"
                     />
                   </svg>
-                  <p style={{ fontSize: "11px" }} className="text-gray-400 dark:text-gray-500">
+                  <p
+                    style={{ fontSize: "11px" }}
+                    className="text-gray-400 dark:text-gray-500"
+                  >
                     Mastery unlocks at {stats.xpToMastery.toLocaleString()}
                   </p>
                 </span>
@@ -846,7 +1036,9 @@ export default function ProfilePage({ params }: PageProps) {
             <div className="flex flex-col md:flex-row gap-4">
               <div className="p-4 sm:p-6 my-2 bg-white border-2 border-gray-200 dark:bg-dark-2 dark:border-gray-900 rounded-2xl w-full">
                 <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-lg font-bold dark:text-white">Top Activities</h2>
+                  <h2 className="text-lg font-bold dark:text-white">
+                    Top Activities
+                  </h2>
                   <span className="text-gray-500 dark:text-gray-400 text-sm"></span>
                 </div>
 
@@ -875,12 +1067,17 @@ export default function ProfilePage({ params }: PageProps) {
               {/* Recent Sessions */}
               <div className="p-4 sm:p-6 my-2 bg-white border-2 border-gray-200 dark:bg-dark-2 dark:border-gray-900 rounded-2xl w-full">
                 <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-lg font-bold dark:text-white">Recent Sessions</h2>
+                  <h2 className="text-lg font-bold dark:text-white">
+                    Recent Sessions
+                  </h2>
                   <span className="text-gray-500 dark:text-gray-400 text-sm"></span>
                 </div>
 
                 {mockSessions.map((session) => (
-                  <div key={session.id} className="p-3 hover:bg-gray-100 dark:hover:bg-dark-3 rounded-lg transition-colors cursor-pointer">
+                  <div
+                    key={session.id}
+                    className="p-3 hover:bg-gray-100 dark:hover:bg-dark-3 rounded-lg transition-colors cursor-pointer"
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2 sm:space-x-4">
                         <div className="flex items-center space-x-2 sm:space-x-4">
@@ -914,7 +1111,10 @@ export default function ProfilePage({ params }: PageProps) {
                 {postsLoading ? (
                   <div className="flex flex-col gap-6 animate-pulse">
                     {[1, 2, 3].map((i) => (
-                      <div key={i} className="w-full h-28 rounded-2xl bg-gray-200 dark:bg-gray-800" />
+                      <div
+                        key={i}
+                        className="w-full h-28 rounded-2xl bg-gray-200 dark:bg-gray-800"
+                      />
                     ))}
                   </div>
                 ) : userPosts.length > 0 ? (
@@ -927,20 +1127,25 @@ export default function ProfilePage({ params }: PageProps) {
                         xp={post.total_xp}
                         coverImage={post.post_image_url}
                         timeText={getTimeAgo(post.created_at)}
-                        accent={{ primary: accent.primary, secondary: accent.secondary }}
+                        accent={{
+                          primary: accent.primary,
+                          secondary: accent.secondary,
+                        }}
                         stats={{
-                          physique:post.xp_distribution.physique,
-                          energy:post.xp_distribution.energy,
-                          logic:post.xp_distribution.logic,
-                          creativity:post.xp_distribution.creativity,
-                          social:post.xp_distribution.social,
+                          physique: post.xp_distribution.physique,
+                          energy: post.xp_distribution.energy,
+                          logic: post.xp_distribution.logic,
+                          creativity: post.xp_distribution.creativity,
+                          social: post.xp_distribution.social,
                         }}
                       />
                     </div>
                   ))
                 ) : (
                   <div className="text-center py-12">
-                    <p className="text-gray-500 dark:text-gray-400">No posts yet</p>
+                    <p className="text-gray-500 dark:text-gray-400">
+                      No posts yet
+                    </p>
                   </div>
                 )}
               </div>

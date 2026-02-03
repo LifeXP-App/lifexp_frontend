@@ -45,8 +45,8 @@ export function useSearch(options: UseSearchOptions) {
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
 
-  const debounceTimerRef = useRef<NodeJS.Timeout>();
-  const abortControllerRef = useRef<AbortController>();
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const performSearch = useCallback(
     async (searchQuery: string, pageNum: number) => {

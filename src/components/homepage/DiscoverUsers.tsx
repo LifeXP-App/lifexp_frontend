@@ -1,11 +1,15 @@
 "use client";
 import Link from "next/link";
+import { useState, useRef } from "react";
+import { toggleFollow } from "@/lib/api/users";
 
 type SuggestedUser = {
+  id: string | number;
   username: string;
   fullname: string;
   profile_picture: string;
   lifelevel: number;
+  is_following?: boolean;
 };
 
 type DiscoverUsersProps = {
@@ -13,6 +17,67 @@ type DiscoverUsersProps = {
 };
 
 export function DiscoverUsers({ suggestedUsers }: DiscoverUsersProps) {
+  // Track follow state for each user
+  const [followStates, setFollowStates] = useState<Record<string | number, boolean>>(() => {
+    const initial: Record<string | number, boolean> = {};
+    suggestedUsers.forEach(user => {
+      initial[user.id] = user.is_following ?? false;
+    });
+    return initial;
+  });
+
+  // Track loading state for each user
+  const [loadingStates, setLoadingStates] = useState<Record<string | number, boolean>>({});
+
+  // Race condition handling
+  const lastClickTimeRef = useRef<Record<string | number, number>>({});
+  const abortControllersRef = useRef<Record<string | number, AbortController>>({});
+
+  const handleFollowToggle = async (user: SuggestedUser) => {
+    const userId = user.id;
+
+    // Prevent spam clicking - rate limit to 500ms between clicks
+    const now = Date.now();
+    if (now - (lastClickTimeRef.current[userId] || 0) < 500) {
+      return;
+    }
+    lastClickTimeRef.current[userId] = now;
+
+    // Prevent concurrent requests
+    if (loadingStates[userId]) return;
+
+    // Cancel any pending request for this user
+    if (abortControllersRef.current[userId]) {
+      abortControllersRef.current[userId].abort();
+    }
+
+    // Create new abort controller for this request
+    abortControllersRef.current[userId] = new AbortController();
+
+    // Optimistic UI update
+    const previousFollowing = followStates[userId];
+
+    setFollowStates(prev => ({ ...prev, [userId]: !previousFollowing }));
+    setLoadingStates(prev => ({ ...prev, [userId]: true }));
+
+    try {
+      const data = await toggleFollow(userId);
+
+      // Sync with server response
+      setFollowStates(prev => ({ ...prev, [userId]: data.following }));
+    } catch (error) {
+      // Don't show error if request was aborted intentionally
+      if (error instanceof Error && error.name === "AbortError") {
+        return;
+      }
+
+      // Revert on error
+      setFollowStates(prev => ({ ...prev, [userId]: previousFollowing }));
+      console.error("Failed to toggle follow:", error);
+    } finally {
+      setLoadingStates(prev => ({ ...prev, [userId]: false }));
+    }
+  };
     return (
         <>
         
@@ -40,10 +105,16 @@ export function DiscoverUsers({ suggestedUsers }: DiscoverUsersProps) {
               </Link>
 
               <button
-                className="px-6 py-1 text-sm rounded-lg font-medium cursor-pointer active:opacity-80 text-white"
-                style={{ backgroundColor: "#4168e2" }}
+                onClick={() => handleFollowToggle(u)}
+                disabled={loadingStates[u.id]}
+                className={`px-6 py-1 text-sm rounded-lg font-medium text-white ${
+                  loadingStates[u.id] ? "opacity-50 cursor-wait" : "cursor-pointer active:opacity-80"
+                } ${
+                  followStates[u.id] ? "bg-gray-700" : ""
+                }`}
+                style={{ backgroundColor: followStates[u.id] ? undefined : "#4168e2" }}
               >
-                Follow
+                {loadingStates[u.id] ? "..." : followStates[u.id] ? "Following" : "Follow"}
               </button>
             </div>
           ))}
