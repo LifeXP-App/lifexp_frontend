@@ -170,7 +170,7 @@ export default function FollowersFollowingPopup({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
       onClick={onClose}
     >
       <div
@@ -191,7 +191,7 @@ export default function FollowersFollowingPopup({
         </div>
 
         {/* Search */}
-        <div className="p-4 border-b border-gray-200 dark:border-gray-800">
+        <div className="p-4 bg-gray-100 dark:bg-dark-2  ">
           <input
             type="text"
             placeholder="Search..."
@@ -202,7 +202,7 @@ export default function FollowersFollowingPopup({
         </div>
 
         {/* User List */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto p-4 bg-gray-100 dark:bg-dark-2 noscrollbar">
           {loading && page === 1 ? (
             <div className="flex flex-col gap-4">
               {[1, 2, 3].map((i) => (

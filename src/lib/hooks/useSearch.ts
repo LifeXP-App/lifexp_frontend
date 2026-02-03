@@ -70,10 +70,16 @@ export function useSearch(options: UseSearchOptions) {
           setResults(data.results);
           setCounts(data.counts);
           setPagination(null);
-        } else if (searchType === "posts") {
+        }  else if (searchType === "posts") {
           const data = await searchPosts(searchQuery, pageNum, limit);
+
+          const normalizedPosts = data.posts.map((post: any) => ({
+            ...post,
+            post_image: post.post_image ?? post.post_image_url ?? null,
+          }));
+
           setResults((prev) => ({
-            posts: pageNum === 1 ? data.posts : [...prev.posts, ...data.posts],
+            posts: pageNum === 1 ? normalizedPosts : [...prev.posts, ...normalizedPosts],
             users: [],
             activities: [],
           }));

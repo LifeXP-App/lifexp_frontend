@@ -848,8 +848,9 @@ export default function ProfilePage({ params }: PageProps) {
             <span className="flex flex-col sm:flex-row md:gap-2 gap-4 items-center w-full mt-2 sm:mt-4">
               {me?.username === profileUser.username ? (
                 <button
-                  onClick={() => router.push("/profile/edit")}
-                  className="w-full font-medium active:opacity-80 sm:w-auto p-2 rounded-lg cursor-pointer px-12 text-white bg-black"
+                  onClick={() => router.push("/u/edit")}
+                  style={{ backgroundColor: accent.primary }}
+                  className="w-full font-medium active:opacity-80 sm:w-auto p-2 rounded-lg cursor-pointer px-12 text-white "
                 >
                   Edit Profile
                 </button>

@@ -24,7 +24,7 @@ export async function GET(req: Request) {
 
     const { searchParams } = new URL(req.url);
     const page = searchParams.get("page") || "1";
-    const limit = searchParams.get("limit") || "20";
+    const limit = searchParams.get("limit") || "6";
 
     const cookieStore = await cookies();
     let access = cookieStore.get("access")?.value;

@@ -257,14 +257,7 @@ export default function SearchPage() {
               <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
                 Recent
               </h3>
-              {history.length > 0 && (
-                <button
-                  onClick={handleClearHistory}
-                  className="text-xs text-red-500 hover:text-red-700"
-                >
-                  Clear All
-                </button>
-              )}
+              
             </div>
             {history.length === 0 ? (
               <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -403,43 +396,32 @@ export default function SearchPage() {
           {showContent && (
             <div>
               {/* Posts Results - 3 Column Grid */}
+              {/* Recent Posts */}
               {filteredResults.posts.length > 0 && (
                 <div className="text-left mb-10">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                    {query ? "Posts" : "Recent Posts"}
-                    {query && counts.posts > 0 && (
-                      <span className="ml-2 text-sm opacity-70">({counts.posts})</span>
-                    )}
+                    Recent Posts ({filteredResults.posts.length})
                   </h3>
                   <div className="grid grid-cols-3 gap-4">
                     {filteredResults.posts.map((post) => (
                       <Link
                         key={post.id}
                         href={`/post/${post.uid}`}
-                        className="rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-900 hover:shadow-lg transition-shadow"
+                        className="block h-48 bg-gray-200 dark:bg-gray-800 rounded-lg overflow-hidden"
                       >
                         {post.post_image && (
                           <img
                             src={post.post_image}
                             alt={post.title}
-                            className="h-40 w-full object-cover"
+                            className="h-full w-full object-cover"
                           />
                         )}
-                        <div className="p-3">
-                          <p className="font-semibold text-sm text-gray-900 dark:text-white">
-                            {post.title}
-                          </p>
-                          {post.user && (
-                            <p className="text-xs opacity-70 text-gray-600 dark:text-gray-400">
-                              @{post.user.username}
-                            </p>
-                          )}
-                        </div>
                       </Link>
                     ))}
                   </div>
                 </div>
               )}
+
 
               {/* Users and Activities - Side by Side */}
               {(filteredResults.users.length > 0 || filteredResults.activities.length > 0) && (
