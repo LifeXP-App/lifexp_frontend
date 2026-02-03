@@ -81,7 +81,7 @@ export default function ProfilePage({ params }: PageProps) {
   const [showShare, setShowShare] = useState(false);
 
   // current window's link
-  const profileUrl = window.location.origin + `/profile/${username}`;
+  const profileUrl = window.location.origin + `/u/${username}`;
 
   
 
@@ -679,7 +679,7 @@ export default function ProfilePage({ params }: PageProps) {
                 </button>
               ) : currentUser?.username === profileUser.username ? (
                 <button
-                  onClick={()=> router.push('/profile/edit')}
+                  onClick={()=> router.push('/u/edit')}
                   className="w-full font-medium active:opacity-80 sm:w-auto p-2 rounded-lg cursor-pointer px-12 text-white"
                   style={{ backgroundColor: accent.primary }}
                 >

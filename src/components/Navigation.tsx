@@ -31,7 +31,7 @@ const NAV_ITEMS = [
     ],
     icon: "trophy",
   },
-  { label: "Profile", href: `/profile/${me?.username}`, active: ["/profile"], icon: "user" },
+  { label: "Profile", href: `/u/${me?.username}`, active: ["/u"], icon: "user" },
   { label: "Settings", href: "/settings", active: ["/settings"], icon: "settings" },
 ];
 
