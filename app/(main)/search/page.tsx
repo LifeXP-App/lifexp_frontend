@@ -1,8 +1,8 @@
 "use client";
-import { useState, useMemo, useEffect } from "react";
 import { useSearch } from "@/src/lib/hooks/useSearch";
 import { useSearchHistory } from "@/src/lib/hooks/useSearchHistory";
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 
 type FilterType = "posts" | "users" | "activities";
 
@@ -45,13 +45,19 @@ type DiscoverActivity = {
 };
 
 export default function SearchPage() {
-  const [activeFilters, setActiveFilters] = useState<FilterType[]>(["posts", "users", "activities"]);
+  const [activeFilters, setActiveFilters] = useState<FilterType[]>([
+    "posts",
+    "users",
+    "activities",
+  ]);
   const [query, setQuery] = useState("");
 
   // Recent content state
   const [recentPosts, setRecentPosts] = useState<DiscoverPost[]>([]);
   const [recentUsers, setRecentUsers] = useState<DiscoverUser[]>([]);
-  const [recentActivities, setRecentActivities] = useState<DiscoverActivity[]>([]);
+  const [recentActivities, setRecentActivities] = useState<DiscoverActivity[]>(
+    [],
+  );
   const [loadingRecent, setLoadingRecent] = useState(true);
 
   // Determine search type based on active filters
@@ -66,20 +72,15 @@ export default function SearchPage() {
   }, [activeFilters]);
 
   // Use search hook with current filter
-  const {
-    results,
-    counts,
-    pagination,
-    isLoading,
-    error,
-    loadMore,
-  } = useSearch({
-    query,
-    searchType,
-    limit: searchType === "global" ? 10 : 20,
-    debounceMs: 500,
-    autoSaveHistory: true,
-  });
+  const { results, counts, pagination, isLoading, error, loadMore } = useSearch(
+    {
+      query,
+      searchType,
+      limit: searchType === "global" ? 10 : 20,
+      debounceMs: 500,
+      autoSaveHistory: true,
+    },
+  );
 
   // Search history hook
   const { history, deleteItem, clearAll } = useSearchHistory({
@@ -104,7 +105,9 @@ export default function SearchPage() {
         // Handle paginated response format
         setRecentPosts(postsData.results || postsData.posts || []);
         setRecentUsers(usersData.results || usersData.users || []);
-        setRecentActivities(activitiesData.results || activitiesData.activities || []);
+        setRecentActivities(
+          activitiesData.results || activitiesData.activities || [],
+        );
       } catch (e) {
         console.error(e);
       } finally {
@@ -122,7 +125,9 @@ export default function SearchPage() {
       return {
         posts: activeFilters.includes("posts") ? recentPosts : [],
         users: activeFilters.includes("users") ? recentUsers : [],
-        activities: activeFilters.includes("activities") ? recentActivities : [],
+        activities: activeFilters.includes("activities")
+          ? recentActivities
+          : [],
       };
     }
 
@@ -130,9 +135,18 @@ export default function SearchPage() {
     return {
       posts: activeFilters.includes("posts") ? results.posts : [],
       users: activeFilters.includes("users") ? results.users : [],
-      activities: activeFilters.includes("activities") ? results.activities : [],
+      activities: activeFilters.includes("activities")
+        ? results.activities
+        : [],
     };
-  }, [activeFilters, results, query, recentPosts, recentUsers, recentActivities]);
+  }, [
+    activeFilters,
+    results,
+    query,
+    recentPosts,
+    recentUsers,
+    recentActivities,
+  ]);
 
   const toggleFilter = (filter: FilterType) => {
     setActiveFilters((prev) => {
@@ -220,7 +234,9 @@ export default function SearchPage() {
             >
               Posts
               {query && counts.posts > 0 && (
-                <span className="ml-2 text-xs opacity-75">({counts.posts})</span>
+                <span className="ml-2 text-xs opacity-75">
+                  ({counts.posts})
+                </span>
               )}
             </button>
             <button
@@ -233,7 +249,9 @@ export default function SearchPage() {
             >
               Users
               {query && counts.users > 0 && (
-                <span className="ml-2 text-xs opacity-75">({counts.users})</span>
+                <span className="ml-2 text-xs opacity-75">
+                  ({counts.users})
+                </span>
               )}
             </button>
             <button
@@ -246,7 +264,9 @@ export default function SearchPage() {
             >
               Activities
               {query && counts.activities > 0 && (
-                <span className="ml-2 text-xs opacity-75">({counts.activities})</span>
+                <span className="ml-2 text-xs opacity-75">
+                  ({counts.activities})
+                </span>
               )}
             </button>
           </div>
@@ -257,7 +277,6 @@ export default function SearchPage() {
               <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
                 Recent
               </h3>
-              
             </div>
             {history.length === 0 ? (
               <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -310,7 +329,10 @@ export default function SearchPage() {
                   <div className="h-6 w-32 bg-gray-300 dark:bg-gray-700 rounded animate-pulse mb-4" />
                   <div className="grid grid-cols-3 gap-4">
                     {[1, 2, 3, 4, 5, 6].map((i) => (
-                      <div key={i} className="rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-900">
+                      <div
+                        key={i}
+                        className="rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-900"
+                      >
                         <div className="h-40 w-full bg-gray-300 dark:bg-gray-700 animate-pulse" />
                         <div className="p-3">
                           <div className="h-4 w-3/4 bg-gray-300 dark:bg-gray-700 rounded animate-pulse mb-2" />
@@ -323,7 +345,8 @@ export default function SearchPage() {
               )}
 
               {/* Skeleton Loaders for Users and Activities */}
-              {(activeFilters.includes("users") || activeFilters.includes("activities")) && (
+              {(activeFilters.includes("users") ||
+                activeFilters.includes("activities")) && (
                 <div className="grid grid-cols-2 gap-6">
                   {/* Users Skeleton */}
                   {activeFilters.includes("users") && (
@@ -422,9 +445,9 @@ export default function SearchPage() {
                 </div>
               )}
 
-
               {/* Users and Activities - Side by Side */}
-              {(filteredResults.users.length > 0 || filteredResults.activities.length > 0) && (
+              {(filteredResults.users.length > 0 ||
+                filteredResults.activities.length > 0) && (
                 <div className="grid grid-cols-2 gap-6">
                   {/* Users Column */}
                   {filteredResults.users.length > 0 && (
@@ -432,14 +455,16 @@ export default function SearchPage() {
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                         {query ? "Users" : "Active Users"}
                         {query && counts.users > 0 && (
-                          <span className="ml-2 text-sm opacity-70">({counts.users})</span>
+                          <span className="ml-2 text-sm opacity-70">
+                            ({counts.users})
+                          </span>
                         )}
                       </h3>
                       <div className="space-y-3">
                         {filteredResults.users.map((user) => (
                           <Link
                             key={user.id}
-                            href={`/profile/${user.username}`}
+                            href={`/u/${user.username}`}
                             className="flex items-center gap-4 p-3 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-lg transition-colors"
                           >
                             {user.profile_picture && (
@@ -469,7 +494,9 @@ export default function SearchPage() {
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                         {query ? "Activities" : "Recent Activities"}
                         {query && counts.activities > 0 && (
-                          <span className="ml-2 text-sm opacity-70">({counts.activities})</span>
+                          <span className="ml-2 text-sm opacity-70">
+                            ({counts.activities})
+                          </span>
                         )}
                       </h3>
                       <div className="space-y-3">

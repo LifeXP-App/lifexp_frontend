@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { FireIcon, InformationCircleIcon } from "@heroicons/react/24/solid";
+import Link from "next/link";
 type RightSidebarInfoProps = {
   user: {
     username: string;
@@ -15,13 +15,12 @@ type RightSidebarInfoProps = {
     following: number;
     totalXp: number;
     nextLevelXp: number;
-    xpToNextLifeLevel : number;
-    xpToNextMasteryLevel : number;
+    xpToNextLifeLevel: number;
+    xpToNextMasteryLevel: number;
     progressPercent: number;
     rank: number;
     streak: number;
     streak_active?: boolean; // optional
-
   };
 };
 
@@ -31,7 +30,10 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
       {/* PROFILE CARD */}
       <div className="bg-white p-6 mb-4 rounded-xl border-2 border-gray-200 dark:bg-dark-2 dark:border-gray-900">
         <div className="text-center flex flex-col items-center">
-          <Link href={`/user/${user.username}`} className="flex flex-col items-center gap-2">
+          <Link
+            href={`/u/${user.username}`}
+            className="flex flex-col items-center gap-2"
+          >
             <img
               src={user.profile_picture}
               className="h-24 w-24 object-cover aspect-square p-[1.5px] rounded-full"
@@ -43,9 +45,14 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
 
           <span className="flex gap-1 justify-center items-center cursor-pointer">
             <button type="button" className="mastery-info flex cursor-pointer">
-                <InformationCircleIcon className="w-4 h-4 text-gray-400 dark:text-gray-600 dark:hover:text-gray-400"/>
+              <InformationCircleIcon className="w-4 h-4 text-gray-400 dark:text-gray-600 dark:hover:text-gray-400" />
             </button>
-            <p className="text-sm font-bold" style={{ color: user.mastery=="Rookie" ?  "#9aa0ae" : user.masteryColor }}>
+            <p
+              className="text-sm font-bold"
+              style={{
+                color: user.mastery == "Rookie" ? "#9aa0ae" : user.masteryColor,
+              }}
+            >
               {user.mastery}
             </p>
             <span className="w-4" />
@@ -80,7 +87,12 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
         {/* XP + STREAK */}
         <div className="mt-4 flex justify-between text-sm gap-4">
           <div className="bg-gray-100 w-full flex flex-col rounded-md items-center justify-between p-4 dark:bg-gray-900 dark:bg-opacity-50">
-            <p className="text-lg font-bold"  style={{ color: user.mastery=="Rookie" ?  "#9aa0ae" : user.masteryColor }}>
+            <p
+              className="text-lg font-bold"
+              style={{
+                color: user.mastery == "Rookie" ? "#9aa0ae" : user.masteryColor,
+              }}
+            >
               {user.totalXp} XP
             </p>
             <Link href={`/leaderboard/${user.mastery.toLowerCase()}`}>
@@ -93,78 +105,72 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
           <div className="bg-gray-100 w-full hidden md:flex flex-col rounded-md items-center justify-between p-4 dark:bg-gray-900 dark:bg-opacity-50">
             <p className="text-sm">Streak Count</p>
             <p className="text-lg font-extrabold text-gray-400 dark:text-gray-600 flex gap-1 items-center">
-             
               {user.streak_active ? (
                 <FireIcon className="w-6 h-6 inline-block ml-1 text-yellow-500 animate-pulse" />
-              ) : 
-              <FireIcon className="w-6 h-6 inline-block ml-1 text-gray-400 dark:text-gray-600" />}
-               {user.streak}
+              ) : (
+                <FireIcon className="w-6 h-6 inline-block ml-1 text-gray-400 dark:text-gray-600" />
+              )}
+              {user.streak}
             </p>
           </div>
         </div>
       </div>
       <div
-            id="next-level-tab"
-            className="bg-white p-6 mb-4 rounded-xl border-2 border-gray-200 dark:bg-dark-2 dark:border-gray-900"
-            >
-            {user.mastery != "Rookie" ? (
-              <>
+        id="next-level-tab"
+        className="bg-white p-6 mb-4 rounded-xl border-2 border-gray-200 dark:bg-dark-2 dark:border-gray-900"
+      >
+        {user.mastery != "Rookie" ? (
+          <>
             <div className="flex justify-between mb-6">
-                <span className="text-base font-semibold">
+              <span className="text-base font-semibold">
                 Mastery at Life Level 10
-                </span>
+              </span>
 
-                <span className="text-sm font-medium opacity-50 flex gap-1 items-center">
+              <span className="text-sm font-medium opacity-50 flex gap-1 items-center">
                 10,000 XP
-                </span>
+              </span>
             </div>
             <div className="w-full flex gap-1 items-center">
-                <div
+              <div
                 className="w-full rounded-full h-2.5 ml-1"
                 style={{ backgroundColor: "#4168e210" }}
-                >
+              >
                 <div
-                    className="h-2.5 rounded-full"
-                    style={{
+                  className="h-2.5 rounded-full"
+                  style={{
                     backgroundColor: "#4168e2",
-                    width: `${user.totalXp /100}%`,
-                    }}
+                    width: `${user.totalXp / 100}%`,
+                  }}
                 />
-                </div>
+              </div>
             </div>
-            </>
-            ):(
-              <>
-              <div className="flex justify-between mb-6">
-                <span className="text-base font-semibold">
-                {user.mastery}
-                </span>
+          </>
+        ) : (
+          <>
+            <div className="flex justify-between mb-6">
+              <span className="text-base font-semibold">{user.mastery}</span>
 
-                <span className="text-sm font-medium opacity-50 flex gap-1 items-center">
+              <span className="text-sm font-medium opacity-50 flex gap-1 items-center">
                 {user.xpToNextMasteryLevel} XP
-                </span>
+              </span>
             </div>
             <div className="w-full flex gap-1 items-center">
-                <div
+              <div
                 className="w-full rounded-full h-2.5 ml-1"
                 style={{ backgroundColor: "#4168e210" }}
-                >
+              >
                 <div
-                    className="h-2.5 rounded-full"
-                    style={{
+                  className="h-2.5 rounded-full"
+                  style={{
                     backgroundColor: "#4168e2",
                     width: `${(user.totalXp / user.xpToNextMasteryLevel) * 100}%`,
-                    }}
+                  }}
                 />
-                </div>
+              </div>
             </div>
-            </>
-
-            )}
-
-            
-            </div>
-
+          </>
+        )}
+      </div>
     </aside>
   );
 }

@@ -1,11 +1,9 @@
 "use client";
 
+import { MASTERY_TYPES } from "@/src/lib/mock/goalLeaderboardData";
+import { FireIcon } from "@heroicons/react/24/solid";
 import Link from "next/link";
 import { useMemo } from "react";
-import { FireIcon } from "@heroicons/react/24/solid";
-import { MASTERY_TYPES } from "@/src/lib/mock/goalLeaderboardData";
-
-
 
 export default function MasteryLeaderboardIndex() {
   const currentUser = useMemo(
@@ -23,7 +21,7 @@ export default function MasteryLeaderboardIndex() {
       streak_active: false,
       masteryTitle: "Rookie",
     }),
-    []
+    [],
   );
 
   return (
@@ -31,7 +29,9 @@ export default function MasteryLeaderboardIndex() {
       {/* Main content */}
       <div className="w-full md:w-[calc(100%-450px)] relative flex-1 overflow-y-auto py-2 px-4 md:py-8 md:px-12">
         <div className="mb-6">
-          <h1 className="text-xl font-semibold dark:text-white">Mastery Leaderboards</h1>
+          <h1 className="text-xl font-semibold dark:text-white">
+            Mastery Leaderboards
+          </h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1">
             Compete with others who share your mastery path
           </p>
@@ -59,7 +59,9 @@ export default function MasteryLeaderboardIndex() {
                 <div className="flex items-start gap-4">
                   <span className="text-4xl">{mastery.emoji}</span>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-lg dark:text-white">{mastery.name}</h3>
+                    <h3 className="font-semibold text-lg dark:text-white">
+                      {mastery.name}
+                    </h3>
                     <p
                       className="text-sm font-medium mt-0.5"
                       style={{ color: mastery.color }}
@@ -89,13 +91,15 @@ export default function MasteryLeaderboardIndex() {
       <aside className="w-[450px] p-6 overflow-auto hidden md:block h-screen">
         <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-gray-800">
           <div className="text-center flex flex-col items-center">
-            <Link href={`/user/${currentUser.username}`}>
+            <Link href={`/u/${currentUser.username}`}>
               <img
                 src={currentUser.profile_picture}
                 className="h-24 w-24 object-cover aspect-square p-[1.5px] rounded-full"
                 alt={currentUser.fullname}
               />
-              <h3 className="font-semibold mt-2 dark:text-white">{currentUser.fullname}</h3>
+              <h3 className="font-semibold mt-2 dark:text-white">
+                {currentUser.fullname}
+              </h3>
             </Link>
 
             <p className="text-sm font-bold mt-1 text-gray-400 dark:text-gray-500">
@@ -105,19 +109,27 @@ export default function MasteryLeaderboardIndex() {
 
           <div className="mt-4 flex justify-between text-sm">
             <div className="text-center">
-              <p className="font-semibold dark:text-white">{currentUser.lifeLevel}</p>
+              <p className="font-semibold dark:text-white">
+                {currentUser.lifeLevel}
+              </p>
               <p className="text-gray-500 dark:text-gray-400">Life Level</p>
             </div>
             <div className="text-center">
-              <p className="font-semibold dark:text-white">{currentUser.posts}</p>
+              <p className="font-semibold dark:text-white">
+                {currentUser.posts}
+              </p>
               <p className="text-gray-500 dark:text-gray-400">Posts</p>
             </div>
             <div className="text-center">
-              <p className="font-semibold dark:text-white">{currentUser.followers}</p>
+              <p className="font-semibold dark:text-white">
+                {currentUser.followers}
+              </p>
               <p className="text-gray-500 dark:text-gray-400">Followers</p>
             </div>
             <div className="text-center">
-              <p className="font-semibold dark:text-white">{currentUser.following}</p>
+              <p className="font-semibold dark:text-white">
+                {currentUser.following}
+              </p>
               <p className="text-gray-500 dark:text-gray-400">Following</p>
             </div>
           </div>
@@ -152,14 +164,19 @@ export default function MasteryLeaderboardIndex() {
             How Mastery Works
           </h4>
           <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
-            Your mastery title reflects your strongest life aspect. Earn XP in different aspects to shape your path:
+            Your mastery title reflects your strongest life aspect. Earn XP in
+            different aspects to shape your path:
           </p>
           <div className="space-y-2 text-sm">
             {MASTERY_TYPES.map((m) => (
               <div key={m.id} className="flex items-center gap-2">
                 <span>{m.emoji}</span>
-                <span className="font-medium" style={{ color: m.color }}>{m.name}</span>
-                <span className="text-gray-500 dark:text-gray-400">– {m.aspect}</span>
+                <span className="font-medium" style={{ color: m.color }}>
+                  {m.name}
+                </span>
+                <span className="text-gray-500 dark:text-gray-400">
+                  – {m.aspect}
+                </span>
               </div>
             ))}
           </div>

@@ -1,8 +1,8 @@
 "use client";
 
+import { FireIcon } from "@heroicons/react/24/solid";
 import Image from "next/image";
 import Link from "next/link";
-import {FireIcon} from "@heroicons/react/24/solid";
 
 /* ---------------- TYPES ---------------- */
 
@@ -23,13 +23,13 @@ export type UserStatusProps = {
 export function UserStatus({ player }: UserStatusProps) {
   // ✅ deterministic default (hydration-safe)
   const activityText =
-  player.activity && player.activity.trim().length > 0
-    ? player.activity
-    : "🌙 Idling";
+    player.activity && player.activity.trim().length > 0
+      ? player.activity
+      : "🌙 Idling";
 
   return (
     <div className="mb-8 pl-2 md:pl-0 flex gap-4 overflow-x-auto whitespace-nowrap scrollbar-hide">
-      <Link href={`/user/${player.username}`}>
+      <Link href={`/u/${player.username}`}>
         <div className="bg-white dark:bg-dark-2 border-2 border-gray-200 dark:border-gray-900 flex p-3 rounded-xl gap-3 min-w-[200px] max-w-[250px] items-center cursor-pointer flex-shrink-0">
           <Image
             src={player.profile_picture}
@@ -41,9 +41,7 @@ export function UserStatus({ player }: UserStatusProps) {
           />
 
           <div className="flex flex-col justify-between">
-            <h1 className="text-md font-semibold">
-              {player.fullname}
-            </h1>
+            <h1 className="text-md font-semibold">{player.fullname}</h1>
 
             <p className="text-xs font-medium text-black/40 dark:text-white/40">
               Life Level {player.lifelevel}
@@ -53,13 +51,11 @@ export function UserStatus({ player }: UserStatusProps) {
               <p className="font-semibold text-xs ml-1">
                 {activityText} · {player.streak_count}
               </p>
-              {player.streak_active ?(
+              {player.streak_active ? (
                 <FireIcon className="w-4 h-4 text-yellow-500 ml-1" />
-                
-              )
-              :
-              <FireIcon className="w-4 h-4 text-gray-400 ml-1" />
-            }
+              ) : (
+                <FireIcon className="w-4 h-4 text-gray-400 ml-1" />
+              )}
             </div>
           </div>
         </div>
