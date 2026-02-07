@@ -699,23 +699,54 @@ const [discoverUsers, setDiscoverUsers] = useState<SuggestedUser[]>([]);
 const [discoverLoading, setDiscoverLoading] = useState(false);
 
 useEffect(() => {
+  console.log("[DiscoverUsers] useEffect mounted/triggered");
+
   const fetchDiscoverUsers = async () => {
+    console.log("[DiscoverUsers] Starting fetch...");
     setDiscoverLoading(true);
 
     try {
-      const res = await fetch("/api/discover/users", {
+      const fetchUrl = "/api/discover/users";
+      console.log("[DiscoverUsers] Calling:", fetchUrl);
+      console.log("[DiscoverUsers] Fetch config:", {
+        method: "GET",
+        cache: "no-store",
+        url: window.location.origin + fetchUrl,
+      });
+
+      const startTime = performance.now();
+      const res = await fetch(fetchUrl, {
         method: "GET",
         cache: "no-store",
       });
+      const endTime = performance.now();
+
+      console.log("[DiscoverUsers] Response received in:", (endTime - startTime).toFixed(2), "ms");
+      console.log("[DiscoverUsers] Response status:", res.status);
+      console.log("[DiscoverUsers] Response ok:", res.ok);
+      console.log("[DiscoverUsers] Response headers:", Object.fromEntries(res.headers.entries()));
 
       if (!res.ok) {
+        const errorText = await res.text();
+        console.error("[DiscoverUsers] Request failed:", {
+          status: res.status,
+          statusText: res.statusText,
+          body: errorText,
+        });
         setDiscoverUsers([]);
         return;
       }
 
       const data = await res.json();
+      console.log("[DiscoverUsers] Response data:", data);
 
-      const list = Array.isArray(data?.users) ? data.users : [];
+      // Handle both paginated (results) and non-paginated (users) response formats
+      const list = Array.isArray(data?.results)
+        ? data.results
+        : Array.isArray(data?.users)
+          ? data.users
+          : [];
+      console.log("[DiscoverUsers] Parsed users list:", list);
 
       const mapped = list.map((u: any) => ({
         id: u.id,
@@ -724,16 +755,22 @@ useEffect(() => {
         profile_picture:
           u.profile_picture ||
           "https://res.cloudinary.com/dfohn9dcz/image/upload/Screenshot_2025-03-25_at_10.40.01_PM_vugdxk",
-        lifelevel: u.life_level,
+        lifelevel: u.lifelevel || u.life_level, // Handle both field names
         is_following: u.is_following ?? false,
       }));
 
+      console.log("[DiscoverUsers] Mapped users:", mapped);
       setDiscoverUsers(mapped);
     } catch (err) {
-      console.error("Failed to fetch discover users:", err);
+      console.error("[DiscoverUsers] Exception caught:", err);
+      console.error("[DiscoverUsers] Error details:", {
+        message: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+      });
       setDiscoverUsers([]);
     } finally {
       setDiscoverLoading(false);
+      console.log("[DiscoverUsers] Fetch complete");
     }
   };
 

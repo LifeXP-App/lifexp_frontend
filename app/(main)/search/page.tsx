@@ -90,17 +90,36 @@ export default function SearchPage() {
 
   // Load recent content when component mounts
   useEffect(() => {
+    console.log("[SearchPage] useEffect mounted");
+
     const loadRecentContent = async () => {
       try {
+        console.log("[SearchPage] Fetching recent content...");
+
         const [p, u, a] = await Promise.all([
           fetch("/api/discover/posts", { cache: "no-store" }),
           fetch("/api/discover/users", { cache: "no-store" }),
           fetch("/api/discover/activities", { cache: "no-store" }),
         ]);
 
+        console.log("[SearchPage] Fetch complete. Statuses:", {
+          posts: p.status,
+          users: u.status,
+          activities: a.status,
+        });
+
         const postsData = await p.json();
         const usersData = await u.json();
         const activitiesData = await a.json();
+
+        console.log("[SearchPage] Data received:", {
+          postsCount: postsData.results?.length || postsData.posts?.length || 0,
+          usersCount: usersData.results?.length || usersData.users?.length || 0,
+          activitiesCount:
+            activitiesData.results?.length ||
+            activitiesData.activities?.length ||
+            0,
+        });
 
         // Handle paginated response format
         setRecentPosts(postsData.results || postsData.posts || []);
@@ -109,7 +128,7 @@ export default function SearchPage() {
           activitiesData.results || activitiesData.activities || [],
         );
       } catch (e) {
-        console.error(e);
+        console.error("[SearchPage] Error loading recent content:", e);
       } finally {
         setLoadingRecent(false);
       }
