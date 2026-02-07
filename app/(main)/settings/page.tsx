@@ -1,10 +1,9 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 
 type AccountType = "Private" | "Public";
 type Notifications = "On" | "Off";
@@ -69,7 +68,9 @@ export default function SettingsPage() {
   const [form, setForm] = useState<SettingsFormState | null>(null);
 
   // ✅ keep initial form so Save disables when unchanged
-  const [initialForm, setInitialForm] = useState<SettingsFormState | null>(null);
+  const [initialForm, setInitialForm] = useState<SettingsFormState | null>(
+    null,
+  );
 
   const [saving, setSaving] = useState(false);
   const [loadingSettings, setLoadingSettings] = useState(true);
@@ -82,7 +83,6 @@ export default function SettingsPage() {
     }
   }
 
-
   const { setTheme } = useTheme();
 
   useEffect(() => {
@@ -91,8 +91,6 @@ export default function SettingsPage() {
     const nextTheme = form.appearance === "Dark" ? "dark" : "light";
     setTheme(nextTheme);
   }, [form?.appearance, setTheme]);
-
-
 
   // ✅ convert backend -> UI form
   function backendToForm(data: BackendSettings): SettingsFormState {
@@ -239,7 +237,7 @@ export default function SettingsPage() {
                 setForm((prev) =>
                   prev
                     ? { ...prev, account_type: e.target.value as AccountType }
-                    : prev
+                    : prev,
                 )
               }
               className="cursor-pointer text-sm md:text-base block appearance-none w-full bg-white dark:bg-gray-900 border border-gray-800 dark:border-gray-600 hover:border-gray-500 dark:hover:border-gray-400 px-4 py-2 pr-8 rounded leading-tight text-black dark:text-white"
@@ -283,7 +281,7 @@ export default function SettingsPage() {
                         ...prev,
                         notifications: e.target.value as Notifications,
                       }
-                    : prev
+                    : prev,
                 )
               }
               className="cursor-pointer text-sm md:text-base block appearance-none w-full bg-white dark:bg-gray-900 border border-gray-800 dark:border-gray-600 hover:border-gray-500 dark:hover:border-gray-400 px-4 py-2 pr-8 rounded leading-tight text-black dark:text-white"
@@ -324,7 +322,7 @@ export default function SettingsPage() {
                 setForm((prev) =>
                   prev
                     ? { ...prev, appearance: e.target.value as Appearance }
-                    : prev
+                    : prev,
                 )
               }
               className="cursor-pointer text-sm md:text-base block appearance-none w-full bg-white dark:bg-gray-900 border border-gray-800 dark:border-gray-600 hover:border-gray-500 dark:hover:border-gray-400 px-4 py-2 pr-8 rounded leading-tight text-black dark:text-white"
@@ -371,7 +369,7 @@ export default function SettingsPage() {
           </h2>
 
           <Link
-            href="/profile/edit"
+            href="/u/edit"
             className="cursor-pointer active:opacity-80 text-l font-semibold text-left text-gray-800 dark:text-gray-200 hover:text-gray-600 dark:hover:text-gray-400"
           >
             Edit Profile

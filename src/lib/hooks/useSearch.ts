@@ -67,7 +67,40 @@ export function useSearch(options: UseSearchOptions) {
       try {
         if (searchType === "global") {
           const data = await globalSearch(searchQuery, limit);
-          setResults(data.results);
+
+          // Log the raw data to debug image loading
+          console.log("Global search raw data:", data);
+
+          // Normalize post images and user profile pictures for global search
+          const normalizedResults = {
+            ...data.results,
+            posts: data.results.posts.map((post: any) => {
+              console.log("Post image data:", {
+                id: post.id,
+                post_image: post.post_image,
+                post_image_url: post.post_image_url,
+              });
+              return {
+                ...post,
+                post_image: post.post_image ?? post.post_image_url ?? null,
+              };
+            }),
+            users: data.results.users.map((user: any) => {
+              console.log("User profile picture data:", {
+                id: user.id,
+                username: user.username,
+                profile_picture: user.profile_picture,
+                profile_pic: user.profile_pic,
+                profile_picture_url: user.profile_picture_url,
+              });
+              return {
+                ...user,
+                profile_picture: user.profile_picture ?? user.profile_pic ?? user.profile_picture_url ?? null,
+              };
+            }),
+          };
+
+          setResults(normalizedResults);
           setCounts(data.counts);
           setPagination(null);
         }  else if (searchType === "posts") {
@@ -86,9 +119,15 @@ export function useSearch(options: UseSearchOptions) {
           setPagination(data.pagination);
         } else if (searchType === "users") {
           const data = await searchUsers(searchQuery, pageNum, limit);
+
+          const normalizedUsers = data.users.map((user: any) => ({
+            ...user,
+            profile_picture: user.profile_picture ?? user.profile_pic ?? user.profile_picture_url ?? null,
+          }));
+
           setResults((prev) => ({
             posts: [],
-            users: pageNum === 1 ? data.users : [...prev.users, ...data.users],
+            users: pageNum === 1 ? normalizedUsers : [...prev.users, ...normalizedUsers],
             activities: [],
           }));
           setPagination(data.pagination);

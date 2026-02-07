@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import Link from "next/link";
 import { toggleFollow } from "@/lib/api/users";
 import getAccentColors from "@/src/components/UserAccent";
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 
 type User = {
   id: number;
@@ -42,7 +42,9 @@ export default function FollowersFollowingPopup({
 
   // Track follow state for each user
   const [followStates, setFollowStates] = useState<Record<number, boolean>>({});
-  const [loadingStates, setLoadingStates] = useState<Record<number, boolean>>({});
+  const [loadingStates, setLoadingStates] = useState<Record<number, boolean>>(
+    {},
+  );
 
   // Race condition handling
   const lastClickTimeRef = useRef<Record<number, number>>({});
@@ -69,7 +71,10 @@ export default function FollowersFollowingPopup({
     }
   }, [searchQuery]);
 
-  const fetchUsers = async (pageNum: number = 1, search: string = searchQuery) => {
+  const fetchUsers = async (
+    pageNum: number = 1,
+    search: string = searchQuery,
+  ) => {
     setLoading(true);
 
     try {
@@ -84,13 +89,16 @@ export default function FollowersFollowingPopup({
         params.append("search", search);
       }
 
-      const response = await fetch(`${apiUrl}/users/${userId}/${endpoint}/?${params}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await fetch(
+        `${apiUrl}/users/${userId}/${endpoint}/?${params}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          cache: "no-store",
         },
-        cache: "no-store",
-      });
+      );
 
       if (response.ok) {
         const data = await response.json();
@@ -206,7 +214,10 @@ export default function FollowersFollowingPopup({
           {loading && page === 1 ? (
             <div className="flex flex-col gap-4">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="flex items-center justify-between animate-pulse">
+                <div
+                  key={i}
+                  className="flex items-center justify-between animate-pulse"
+                >
                   <div className="flex items-center gap-3">
                     <div className="h-12 w-12 rounded-full bg-gray-200 dark:bg-gray-700" />
                     <div>
@@ -227,14 +238,18 @@ export default function FollowersFollowingPopup({
           ) : (
             <div className="flex flex-col gap-3">
               {users.map((user) => {
-                const masteryTitle = user.mastery_title || user.masterytitle || "Novice";
+                const masteryTitle =
+                  user.mastery_title || user.masterytitle || "Novice";
                 const accent = getAccentColors(masteryTitle);
                 return (
                   <div
                     key={user.id}
                     className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-dark-3"
                   >
-                    <Link href={`/profile/${user.username}`} className="flex items-center gap-3 flex-1">
+                    <Link
+                      href={`/u/${user.username}`}
+                      className="flex items-center gap-3 flex-1"
+                    >
                       {user.profile_picture ? (
                         <img
                           src={user.profile_picture}
@@ -254,7 +269,9 @@ export default function FollowersFollowingPopup({
                         </div>
                       )}
                       <div className="flex flex-col">
-                        <p className="text-sm font-semibold dark:text-white">{user.fullname}</p>
+                        <p className="text-sm font-semibold dark:text-white">
+                          {user.fullname}
+                        </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
                           @{user.username} • Level {user.lifelevel}
                         </p>
@@ -266,11 +283,21 @@ export default function FollowersFollowingPopup({
                         onClick={() => handleFollowToggle(user)}
                         disabled={loadingStates[user.id]}
                         className={`px-4 py-1.5 text-sm rounded-lg font-medium text-white ${
-                          loadingStates[user.id] ? "opacity-50 cursor-wait" : "cursor-pointer active:opacity-80"
+                          loadingStates[user.id]
+                            ? "opacity-50 cursor-wait"
+                            : "cursor-pointer active:opacity-80"
                         } ${followStates[user.id] ? "bg-gray-700" : ""}`}
-                        style={{ backgroundColor: followStates[user.id] ? undefined : "#4168e2" }}
+                        style={{
+                          backgroundColor: followStates[user.id]
+                            ? undefined
+                            : "#4168e2",
+                        }}
                       >
-                        {loadingStates[user.id] ? "..." : followStates[user.id] ? "Following" : "Follow"}
+                        {loadingStates[user.id]
+                          ? "..."
+                          : followStates[user.id]
+                            ? "Following"
+                            : "Follow"}
                       </button>
                     )}
                   </div>

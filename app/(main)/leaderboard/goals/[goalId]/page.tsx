@@ -1,7 +1,11 @@
 "use client";
 
 import LeaderboardSwitcher from "@/src/components/LeaderboardSwitcher";
-import { MASTERY_TYPES, type MasteryInfo } from "@/src/lib/mock/goalLeaderboardData";
+import { useAuth } from "@/src/context/AuthContext";
+import {
+  MASTERY_TYPES,
+  type MasteryInfo,
+} from "@/src/lib/mock/goalLeaderboardData";
 import {
   ChevronDownIcon,
   FireIcon,
@@ -10,7 +14,6 @@ import {
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useAuth } from "@/src/context/AuthContext";
 
 type MasteryLeaderboardPlayer = {
   rank: number;
@@ -326,7 +329,7 @@ export default function MasteryLeaderboard() {
 
         const res = await fetch(
           `/api/leaderboard/${masteryId}?${queryParams.toString()}`,
-          { cache: "no-store" }
+          { cache: "no-store" },
         );
 
         if (!res.ok) {
@@ -342,7 +345,7 @@ export default function MasteryLeaderboard() {
             profile_picture: player.profile_picture?.includes("cloudinary")
               ? player.profile_picture.replace(
                   "/upload/",
-                  "/upload/w_100,q_auto,f_auto/"
+                  "/upload/w_100,q_auto,f_auto/",
                 )
               : player.profile_picture,
           }));
@@ -366,7 +369,7 @@ export default function MasteryLeaderboard() {
         setLoading(false);
       }
     },
-    [masteryId]
+    [masteryId],
   );
 
   useEffect(() => {
@@ -622,7 +625,7 @@ export default function MasteryLeaderboard() {
                 return (
                   <Link
                     key={u.username}
-                    href={`/profile/${u.username}`}
+                    href={`/u/${u.username}`}
                     className="block mb-1"
                   >
                     <div
@@ -854,7 +857,7 @@ export default function MasteryLeaderboard() {
         {currentUser ? (
           <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border border-gray-200 dark:border-gray-800">
             <div className="text-center flex flex-col items-center">
-              <Link href={`/profile/${currentUser.username}`}>
+              <Link href={`/u/${currentUser.username}`}>
                 <img
                   src={currentUser.profile_picture}
                   className="h-24 w-24 object-cover aspect-square p-[1.5px] rounded-full"

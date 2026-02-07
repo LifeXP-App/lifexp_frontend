@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useAuth } from "@/src/context/AuthContext";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/src/context/AuthContext";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 function EditProfileSkeleton() {
   return (
     <main className="flex h-screen w-full overflow-hidden">
@@ -67,9 +67,6 @@ function EditProfileSkeleton() {
     </main>
   );
 }
-
-
-
 
 export default function EditProfilePage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -213,7 +210,7 @@ export default function EditProfilePage() {
     if (!res.ok) return;
 
     const updated = await res.json();
-    router.push(`/profile/${me.username}`);
+    router.push(`/u/${me.username}`);
   };
 
   /* ---------------- UNLOAD WARNING ---------------- */
@@ -350,7 +347,6 @@ export default function EditProfilePage() {
                 }}
                 className="w-full rounded-lg bg-white border border-gray-400 p-3 focus:outline-none focus:ring-1 focus:ring-[#4168e2] dark:border-[#2d2f32] dark:bg-[#1f2022] dark:text-white"
               />
-
             </div>
 
             {/* Buttons */}
@@ -364,16 +360,14 @@ export default function EditProfilePage() {
                 Discard
               </button>
 
-
               <button
-                  type="submit"
-                  disabled={!isDirty}
-                  style={{ backgroundColor: "#4168e2" }}
-                  className="mt-4 rounded-lg font-medium active:opacity-80 cursor-pointer py-2 px-12 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Save
-                </button>
-
+                type="submit"
+                disabled={!isDirty}
+                style={{ backgroundColor: "#4168e2" }}
+                className="mt-4 rounded-lg font-medium active:opacity-80 cursor-pointer py-2 px-12 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Save
+              </button>
             </div>
           </form>
         </div>

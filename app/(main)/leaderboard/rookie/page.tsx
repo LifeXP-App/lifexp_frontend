@@ -299,7 +299,7 @@ export default function RookieLeaderboard() {
                 <LeaderboardRowSkeleton key={i} />
               ))
             : players.map((u) => (
-                <Link key={u.username} href={`/profile/${u.username}`}>
+                <Link key={u.username} href={`/u/${u.username}`}>
                   <div className="flex hover:bg-white dark:hover:bg-dark-2 cursor-pointer justify-between items-center w-full px-5 py-4 rounded-xl transition-all bg-white/50 dark:bg-dark-1 border border-transparent hover:border-gray-200 dark:hover:border-gray-700">
                     <div className="flex items-center gap-4">
                       <div className="w-5 flex justify-center">
@@ -333,7 +333,7 @@ export default function RookieLeaderboard() {
         ) : (
           <div className="bg-white dark:bg-dark-2 p-6 rounded-xl border border-gray-200 dark:border-gray-800 mb-4">
             <div className="text-center flex flex-col items-center">
-              <Link href={`/profile/${currentUser.username}`}>
+              <Link href={`/u/${currentUser.username}`}>
                 <img
                   src={currentUser.profile_picture}
                   className="h-24 w-24 rounded-full object-cover"

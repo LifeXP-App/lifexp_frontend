@@ -3,9 +3,12 @@
 import Link from "next/link";
 
 import { ClockIcon } from "@heroicons/react/24/outline";
-import { HeartIcon, ChatBubbleOvalLeftIcon, EllipsisVerticalIcon } from "@heroicons/react/24/solid";
-import { Heart } from "lucide-react";
-import { useEffect, useState, useRef } from "react";
+import {
+  ChatBubbleOvalLeftIcon,
+  EllipsisVerticalIcon,
+  HeartIcon,
+} from "@heroicons/react/24/solid";
+import { useEffect, useRef, useState } from "react";
 import { CommentSection } from "./CommentSection"; // ADD THIS
 
 /* ---------------- HELPERS (ported 1:1) ---------------- */
@@ -47,7 +50,7 @@ export type PostType = {
   fullname: string;
   profile_picture: string;
   created_at: string;
-  started_at:string;
+  started_at: string;
   title?: string;
   content: string;
   post_image: string;
@@ -68,14 +71,14 @@ export type PostType = {
   justification?: string;
   likedbyprofiles?: [string, string][];
   session: {
-    number : number;
+    number: number;
     total_sessions: number;
     activity: {
       name: string;
-      type : string;
+      type: string;
       emoji: string;
     };
-    duration:string;
+    duration: string;
     xp_gained: number;
     dateTime: string;
     session_post_image_url?: string;
@@ -97,202 +100,206 @@ export function Post({ post }: { post: PostType }) {
   const dark =
     typeof document !== "undefined" &&
     document.documentElement.classList.contains("dark");
-    
-    const getTimeAgo = (createdAt: string | Date): string => {
-      const now = new Date();
-      const createdAtDate = new Date(createdAt);
-      const diffInMs = now.getTime() - createdAtDate.getTime();
-      
-      const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
-      const diffInHours = Math.floor(diffInMinutes / 60);
-      const diffInDays = Math.floor(diffInHours / 24);
-      const diffInWeeks = Math.floor(diffInDays / 7);
-      const diffInMonths = Math.floor(diffInDays / 30);
-      const diffInYears = Math.floor(diffInDays / 365);
-      
-      if (diffInMs < 60000) return "just now";
-      if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
-      if (diffInHours < 24) return `${diffInHours}h ago`;
-      if (diffInDays < 7) return `${diffInDays}d ago`;
-      if (diffInWeeks < 4) return `${diffInWeeks}w ago`;
-      if (diffInMonths < 12) return `${diffInMonths}mo ago`;
-      return createdAtDate.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
-    };
-   
-    const getDuration = (startedAt: string | Date, createdAt: string | Date): string => {
-      const startDate = new Date(startedAt);
-      const endDate = new Date(createdAt);
-      
-      // Calculate difference in milliseconds
-      const diffInMs = endDate.getTime() - startDate.getTime();
-      
-      // Handle negative duration (if created_at is before started_at)
-      if (diffInMs < 0) {
-        return "0s";
+
+  const getTimeAgo = (createdAt: string | Date): string => {
+    const now = new Date();
+    const createdAtDate = new Date(createdAt);
+    const diffInMs = now.getTime() - createdAtDate.getTime();
+
+    const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    const diffInDays = Math.floor(diffInHours / 24);
+    const diffInWeeks = Math.floor(diffInDays / 7);
+    const diffInMonths = Math.floor(diffInDays / 30);
+    const diffInYears = Math.floor(diffInDays / 365);
+
+    if (diffInMs < 60000) return "just now";
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    if (diffInHours < 24) return `${diffInHours}h ago`;
+    if (diffInDays < 7) return `${diffInDays}d ago`;
+    if (diffInWeeks < 4) return `${diffInWeeks}w ago`;
+    if (diffInMonths < 12) return `${diffInMonths}mo ago`;
+    return createdAtDate.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const getDuration = (
+    startedAt: string | Date,
+    createdAt: string | Date,
+  ): string => {
+    const startDate = new Date(startedAt);
+    const endDate = new Date(createdAt);
+
+    // Calculate difference in milliseconds
+    const diffInMs = endDate.getTime() - startDate.getTime();
+
+    // Handle negative duration (if created_at is before started_at)
+    if (diffInMs < 0) {
+      return "0s";
+    }
+
+    // Calculate time units
+    const diffInSeconds = Math.floor(diffInMs / 1000);
+    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    const diffInDays = Math.floor(diffInHours / 24);
+
+    // Get remainders
+    const seconds = diffInSeconds % 60;
+    const minutes = diffInMinutes % 60;
+    const hours = diffInHours % 24;
+
+    // Format based on magnitude
+    if (diffInDays > 0) {
+      if (hours > 0) {
+        return `${diffInDays}d ${hours}h`;
       }
-      
-      // Calculate time units
-      const diffInSeconds = Math.floor(diffInMs / 1000);
-      const diffInMinutes = Math.floor(diffInSeconds / 60);
-      const diffInHours = Math.floor(diffInMinutes / 60);
-      const diffInDays = Math.floor(diffInHours / 24);
-      
-      // Get remainders
-      const seconds = diffInSeconds % 60;
-      const minutes = diffInMinutes % 60;
-      const hours = diffInHours % 24;
-      
-      // Format based on magnitude
-      if (diffInDays > 0) {
-        if (hours > 0) {
-          return `${diffInDays}d ${hours}h`;
-        }
-        return `${diffInDays}d`;
-      } else if (diffInHours > 0) {
-        if (minutes > 0) {
-          return `${diffInHours}h ${minutes}m`;
-        }
-        return `${diffInHours}h`;
-      } else if (diffInMinutes > 0) {
-        if (seconds > 0) {
-          return `${diffInMinutes}m ${seconds}s`;
-        }
-        return `${diffInMinutes}m`;
-      } else {
-        return `${diffInSeconds}s`;
+      return `${diffInDays}d`;
+    } else if (diffInHours > 0) {
+      if (minutes > 0) {
+        return `${diffInHours}h ${minutes}m`;
       }
-    };
-
-    const [liked, setLiked] = useState(post.user_liked);
-    const [likes, setLikes] = useState(post.likes);
-    const [showComments, setShowComments] = useState(false);
-    const [isLiking, setIsLiking] = useState(false);
-    const [likeError, setLikeError] = useState<string | null>(null);
-
-    // Refs for race condition prevention
-    const abortControllerRef = useRef<AbortController | null>(null);
-    const lastClickTimeRef = useRef<number>(0);
-    const isMountedRef = useRef(true);
-
-    // Cleanup on unmount
-    useEffect(() => {
-      isMountedRef.current = true;
-      return () => {
-        isMountedRef.current = false;
-        // Cancel any pending requests
-        if (abortControllerRef.current) {
-          abortControllerRef.current.abort();
-        }
-      };
-    }, []);
-
-    const handleLike = async () => {
-      // Prevent spam clicking - rate limit to 500ms between clicks
-      const now = Date.now();
-      if (now - lastClickTimeRef.current < 500) {
-        return;
+      return `${diffInHours}h`;
+    } else if (diffInMinutes > 0) {
+      if (seconds > 0) {
+        return `${diffInMinutes}m ${seconds}s`;
       }
-      lastClickTimeRef.current = now;
+      return `${diffInMinutes}m`;
+    } else {
+      return `${diffInSeconds}s`;
+    }
+  };
 
-      // Prevent concurrent requests
-      if (isLiking) return;
+  const [liked, setLiked] = useState(post.user_liked);
+  const [likes, setLikes] = useState(post.likes);
+  const [showComments, setShowComments] = useState(false);
+  const [isLiking, setIsLiking] = useState(false);
+  const [likeError, setLikeError] = useState<string | null>(null);
 
-      // Cancel any pending request
+  // Refs for race condition prevention
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const lastClickTimeRef = useRef<number>(0);
+  const isMountedRef = useRef(true);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      // Cancel any pending requests
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
+    };
+  }, []);
 
-      // Create new abort controller for this request
-      abortControllerRef.current = new AbortController();
+  const handleLike = async () => {
+    // Prevent spam clicking - rate limit to 500ms between clicks
+    const now = Date.now();
+    if (now - lastClickTimeRef.current < 500) {
+      return;
+    }
+    lastClickTimeRef.current = now;
 
-      // Optimistic UI update
-      const previousLiked = liked;
-      const previousLikes = likes;
+    // Prevent concurrent requests
+    if (isLiking) return;
 
-      setLiked(!liked);
-      setLikes(liked ? likes - 1 : likes + 1);
-      setIsLiking(true);
-      setLikeError(null);
+    // Cancel any pending request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
 
-      try {
-        // 10 second timeout
-        const timeoutId = setTimeout(() => abortControllerRef.current?.abort(), 10000);
+    // Create new abort controller for this request
+    abortControllerRef.current = new AbortController();
 
-        const res = await fetch(`/api/posts/${post.id}/like`, {
-          method: "POST",
-          cache: "no-store",
-          signal: abortControllerRef.current.signal,
-        });
+    // Optimistic UI update
+    const previousLiked = liked;
+    const previousLikes = likes;
 
-        clearTimeout(timeoutId);
+    setLiked(!liked);
+    setLikes(liked ? likes - 1 : likes + 1);
+    setIsLiking(true);
+    setLikeError(null);
 
-        if (!res.ok) {
-          // Only revert if component is still mounted
-          if (isMountedRef.current) {
-            setLiked(previousLiked);
-            setLikes(previousLikes);
-            setLikeError("Failed to update like");
-          }
-          console.error("Failed to like post");
-          return;
-        }
+    try {
+      // 10 second timeout
+      const timeoutId = setTimeout(
+        () => abortControllerRef.current?.abort(),
+        10000,
+      );
 
-        const data = await res.json();
+      const res = await fetch(`/api/posts/${post.id}/like`, {
+        method: "POST",
+        cache: "no-store",
+        signal: abortControllerRef.current.signal,
+      });
 
-        // Sync with server response (only if component is still mounted)
-        if (isMountedRef.current) {
-          setLiked(data.liked);
-          setLikes(data.likes_count);
-        }
-      } catch (error) {
-        // Don't show error if request was aborted intentionally
-        if (error instanceof Error && error.name === "AbortError") {
-          return;
-        }
+      clearTimeout(timeoutId);
 
-        // Revert on error (only if component is still mounted)
+      if (!res.ok) {
+        // Only revert if component is still mounted
         if (isMountedRef.current) {
           setLiked(previousLiked);
           setLikes(previousLikes);
-          setLikeError("Network error. Please try again.");
+          setLikeError("Failed to update like");
         }
-        console.error("Error liking post:", error);
-      } finally {
-        if (isMountedRef.current) {
-          setIsLiking(false);
-        }
+        console.error("Failed to like post");
+        return;
       }
-    };
 
+      const data = await res.json();
 
-    return (
+      // Sync with server response (only if component is still mounted)
+      if (isMountedRef.current) {
+        setLiked(data.liked);
+        setLikes(data.likes_count);
+      }
+    } catch (error) {
+      // Don't show error if request was aborted intentionally
+      if (error instanceof Error && error.name === "AbortError") {
+        return;
+      }
+
+      // Revert on error (only if component is still mounted)
+      if (isMountedRef.current) {
+        setLiked(previousLiked);
+        setLikes(previousLikes);
+        setLikeError("Network error. Please try again.");
+      }
+      console.error("Error liking post:", error);
+    } finally {
+      if (isMountedRef.current) {
+        setIsLiking(false);
+      }
+    }
+  };
+
+  return (
     <div
       id="post-card"
       className="mb-6 md:p-6 md:rounded-xl md:border-2 md:bg-white md:border-gray-200 md:dark:bg-dark-2 md:dark:border-gray-900 "
     >
       {/* HEADER */}
-      
-
 
       {/* COMMENT SECTION MODAL - ADD THIS */}
-            {showComments && (
-              <CommentSection
-                postId={post.id}
-                comments={post.comments || []}
-                onClose={() => setShowComments(false)}
-              />
-            )}
-
-
-
+      {showComments && (
+        <CommentSection
+          postId={post.id}
+          comments={post.comments || []}
+          onClose={() => setShowComments(false)}
+        />
+      )}
 
       <div className="flex px-2 md:px-0 items-center mb-4">
-        <Link href={`/user/${post.username}`}>
+        <Link href={`/u/${post.username}`}>
           <div className="flex items-center cursor-pointer">
             <img
               src={post.profile_picture.replace(
                 "/upload/",
-                "/upload/f_auto,q_auto,w_800,c_fill/"
+                "/upload/f_auto,q_auto,w_800,c_fill/",
               )}
               className={`rounded-full w-10 h-10 object-cover aspect-square ${
                 post.masterytitle === "Rookie"
@@ -325,17 +332,16 @@ export function Post({ post }: { post: PostType }) {
         {/* DROPDOWN */}
         <div className="relative inline-block text-left ml-auto">
           <button
-            onClick={(e) =>
-              toggleDropdown(e.currentTarget as HTMLElement)
-            }
+            onClick={(e) => toggleDropdown(e.currentTarget as HTMLElement)}
             className="cursor-pointer hover:opacity-80 active:opacity-60 p-1 rounded-full"
           >
-            <EllipsisVerticalIcon className="w-6 h-6"/>
+            <EllipsisVerticalIcon className="w-6 h-6" />
           </button>
 
-          <div className="dropdown  hidden absolute right-0 mt-2 w-44 border bg-white dark:border-gray-900 dark:bg-dark-2 overflow-hidden rounded-sm shadow-lg z-50" style={{ borderColor: "var(--border)" }}>
-
-
+          <div
+            className="dropdown  hidden absolute right-0 mt-2 w-44 border bg-white dark:border-gray-900 dark:bg-dark-2 overflow-hidden rounded-sm shadow-lg z-50"
+            style={{ borderColor: "var(--border)" }}
+          >
             <a
               href={`/post/?v=${post.uid}`}
               target="_blank"
@@ -378,9 +384,7 @@ export function Post({ post }: { post: PostType }) {
               </button>
             )}
           </div>
-
-          </div>
-
+        </div>
       </div>
 
       {/* IMAGE */}
@@ -391,7 +395,7 @@ export function Post({ post }: { post: PostType }) {
             style={{ aspectRatio: "1.91 / 1", objectFit: "cover" }}
             src={post.post_image.replace(
               "/upload/",
-              "/upload/f_auto,q_auto,w_800,c_fill/"
+              "/upload/f_auto,q_auto,w_800,c_fill/",
             )}
           />
         </div>
@@ -401,8 +405,8 @@ export function Post({ post }: { post: PostType }) {
       <div className="px-2 md:px-0">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-base md:text-lg font-bold dark:text-[#dfdfe0]">
-          {post.title || ""}
-        </h3>
+            {post.title || ""}
+          </h3>
           <span
             className="text-sm font-bold px-3 py-1 rounded-full"
             style={{
@@ -410,13 +414,9 @@ export function Post({ post }: { post: PostType }) {
               color: "#fff",
             }}
           >
-
-           {Object.values(post.xp_data).reduce((sum, val) => sum + val, 0)} XP
-
+            {Object.values(post.xp_data).reduce((sum, val) => sum + val, 0)} XP
           </span>
         </div>
-
-        
 
         <p className="post-content text-sm md:text-base text-gray-700 dark:text-[#dfdfe0]/80">
           {linkify(post.content)}
@@ -424,103 +424,100 @@ export function Post({ post }: { post: PostType }) {
 
         <div className="flex items-center mt-3 gap-1 text-sm font-medium text-gray-500 dark:text-gray-400">
           <ClockIcon className="w-5 h-5 inline-block mr-1" />
-          <span>{post.duration} over {getDuration(post.started_at, post.created_at)}</span>
+          <span>
+            {post.duration} over {getDuration(post.started_at, post.created_at)}
+          </span>
         </div>
 
-            <div className="border border-gray-200 dark:border-gray-700 rounded-lg flex gap-4 bg-white dark:bg-dark-3 mt-4 p-2">
-             {
-              post.session.session_post_image_url && post.session.session_post_image_url.trim() !== "" ?
-                <img
-                  className="w-24 cursor-pointer md:rounded-lg"
-                  style={{ aspectRatio: "1 / 1", objectFit: "cover" }}
-                  src={post.session.session_post_image_url?.replace(
-                    "/upload/",
-                    "/upload/f_auto,q_auto,w_150,c_fill/"
-                  )}
-                />
-                :
-                <div className="w-24 h-24 shrink-0 bg-gray-100 dark:bg-gray-800 flex items-center justify-center rounded-lg">
-                  <span className="text-4xl">{post.session.activity.emoji}</span>
-                </div>
-            }
-              
-
-
-
-                <div className="flex flex-col gap-1 justify-center w-full">
-                    <p className="text-sm md:text-lg font-semibold dark:text-[#dfdfe0]">
-                  
-                    Session {post.session.number} of {post.session.total_sessions}
-                  </p>
-
-
-               <p 
-                  className={`text-sm font-bold`}
-                  style={{ color: `var(--aspect-${post.session.activity.type.toLowerCase()})` }}
-                >
-                  {post.session.activity.name}
-                </p>
-                  
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {post.session.xp_gained} XP Earned •  {new Date(post.session.dateTime).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
-                  </p>
-                </div>
-
-                <p className="text-sm md:text-xl font-bold flex mr-4 items-center text-black dark:text-[#dfdfe0]">
-                  
-                  {post.session.duration}
-                  </p>
-
-
-
-            </div>
-
-
-          {/* Error notification */}
-          {likeError && (
-            <div className="mb-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center justify-between">
-              <span className="text-sm text-red-600 dark:text-red-400">{likeError}</span>
-              <button
-                onClick={() => setLikeError(null)}
-                className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200"
-              >
-                ✕
-              </button>
+        <div className="border border-gray-200 dark:border-gray-700 rounded-lg flex gap-4 bg-white dark:bg-dark-3 mt-4 p-2">
+          {post.session.session_post_image_url &&
+          post.session.session_post_image_url.trim() !== "" ? (
+            <img
+              className="w-24 cursor-pointer md:rounded-lg"
+              style={{ aspectRatio: "1 / 1", objectFit: "cover" }}
+              src={post.session.session_post_image_url?.replace(
+                "/upload/",
+                "/upload/f_auto,q_auto,w_150,c_fill/",
+              )}
+            />
+          ) : (
+            <div className="w-24 h-24 shrink-0 bg-gray-100 dark:bg-gray-800 flex items-center justify-center rounded-lg">
+              <span className="text-4xl">{post.session.activity.emoji}</span>
             </div>
           )}
 
-          <div className="flex items-center mt-4 gap-6 justify-between">
-            <div className="flex items-center gap-2"  onClick={handleLike}>
-              <HeartIcon
-                className={`w-8 h-8 transition-all ${
-                  isLiking ? "opacity-50 cursor-wait" : "cursor-pointer"
-                } ${
-                  liked ? "text-red-700 fill-red-700" : "text-gray-500 opacity-50 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                }`}
-              />
-              <span className="text-md font-medium text-gray-500 dark:text-gray-400">
-                {likes}
-              </span>
+          <div className="flex flex-col gap-1 justify-center w-full">
+            <p className="text-sm md:text-lg font-semibold dark:text-[#dfdfe0]">
+              Session {post.session.number} of {post.session.total_sessions}
+            </p>
 
-            </div>
+            <p
+              className={`text-sm font-bold`}
+              style={{
+                color: `var(--aspect-${post.session.activity.type.toLowerCase()})`,
+              }}
+            >
+              {post.session.activity.name}
+            </p>
 
-
-            {/* COMMENT BUTTON - ADD ONCLICK */}
-            <div className="flex items-center gap-2" onClick={() => setShowComments(true)}>
-              <ChatBubbleOvalLeftIcon className="w-8 h-8 text-gray-500 opacity-50 cursor-pointer hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 cursor-pointer" />
-              <span className="text-md font-medium text-gray-500 dark:text-gray-400">
-                {post.comments?.length || 0}
-              </span>
-            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {post.session.xp_gained} XP Earned •{" "}
+              {new Date(post.session.dateTime).toLocaleDateString(undefined, {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+              })}
+            </p>
           </div>
 
+          <p className="text-sm md:text-xl font-bold flex mr-4 items-center text-black dark:text-[#dfdfe0]">
+            {post.session.duration}
+          </p>
+        </div>
 
+        {/* Error notification */}
+        {likeError && (
+          <div className="mb-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center justify-between">
+            <span className="text-sm text-red-600 dark:text-red-400">
+              {likeError}
+            </span>
+            <button
+              onClick={() => setLikeError(null)}
+              className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200"
+            >
+              ✕
+            </button>
+          </div>
+        )}
 
+        <div className="flex items-center mt-4 gap-6 justify-between">
+          <div className="flex items-center gap-2" onClick={handleLike}>
+            <HeartIcon
+              className={`w-8 h-8 transition-all ${
+                isLiking ? "opacity-50 cursor-wait" : "cursor-pointer"
+              } ${
+                liked
+                  ? "text-red-700 fill-red-700"
+                  : "text-gray-500 opacity-50 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              }`}
+            />
+            <span className="text-md font-medium text-gray-500 dark:text-gray-400">
+              {likes}
+            </span>
+          </div>
 
-
+          {/* COMMENT BUTTON - ADD ONCLICK */}
+          <div
+            className="flex items-center gap-2"
+            onClick={() => setShowComments(true)}
+          >
+            <ChatBubbleOvalLeftIcon className="w-8 h-8 text-gray-500 opacity-50 cursor-pointer hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 cursor-pointer" />
+            <span className="text-md font-medium text-gray-500 dark:text-gray-400">
+              {post.comments?.length || 0}
+            </span>
+          </div>
+        </div>
       </div>
-
-      
     </div>
   );
 }
