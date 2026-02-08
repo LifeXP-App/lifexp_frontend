@@ -183,10 +183,15 @@ const ActivityLeaderboard: React.FC<{ users: LeaderboardUser[] }> = ({ users }) 
       style={{ borderColor: "var(--border)" }}
     >
       
-        <h3 className="font-semibold text-lg mb-6">
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="font-semibold text-lg ">
           Top Players for Drawing
         </h3>
+        <p className="text-sm font-medium" style={{ color: "var(--muted)" }}>
+          2220 Overall
+        </p>
 
+      </div>
 
 
       <div className="divide-y" style={{ borderColor: "var(--border)" }}>

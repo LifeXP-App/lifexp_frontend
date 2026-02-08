@@ -16,7 +16,10 @@ console.log(me)
 const NAV_ITEMS = [
   { label: "Feed", href: "/", active: ["/"], icon: "home" },
   { label: "Search", href: "/search", active: ["/search"], icon: "search" },
-  { label: "Goals", href: "/goals", active: ["/goals"], icon: "squares" },
+  { label: "Goals", href: "/goals", active: [
+    "/goals",
+    "/a"
+  ], icon: "squares" },
   {
     label: "Leaderboard",
     href: "/leaderboard/rookie",
