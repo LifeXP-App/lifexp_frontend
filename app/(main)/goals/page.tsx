@@ -39,7 +39,9 @@ type UserGoalsInfo = {
   masteryColor: string;
   masteryTextColor: string;
   lifelevel: number;
-  goals: number;
+  ongoing: number;
+  planned:number;
+  completed:number;
   followers: number;
   following: number;
   totalXp: number;
@@ -384,22 +386,8 @@ function RightSidebarInfoSkeleton() {
         </div>
       </div>
 
-      {/* NEXT LEVEL TAB CARD */}
-      <div
-        id="next-level-tab"
-        className="bg-white p-6 mb-4 rounded-xl border-2 border-gray-200 dark:bg-dark-2 dark:border-gray-900 animate-pulse"
-      >
-        <div className="flex justify-between mb-6">
-          <div className="h-4 w-44 rounded bg-gray-200 dark:bg-gray-800" />
-          <div className="h-4 w-16 rounded bg-gray-200 dark:bg-gray-800" />
-        </div>
-
-        <div className="w-full flex gap-1 items-center">
-          <div className="w-full rounded-full h-2.5 ml-1 bg-gray-200 dark:bg-gray-800 overflow-hidden">
-            <div className="h-2.5 w-[12%] rounded-full bg-gray-300 dark:bg-gray-700" />
-          </div>
-        </div>
-      </div>
+     
+     
     </aside>
   );
 }
@@ -453,8 +441,9 @@ export default function GoalsPage() {
     const fetchSidebarInfo = async () => {
       try {
         setSidebarLoading(true);
+        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-        const res = await fetch(`/api/v1/goals/info/${me.username}/`, {
+        const res = await fetch(`${baseUrl}/api/v1/goals/info/${me.username}/`, {
           cache: "no-store",
         });
 
@@ -737,9 +726,9 @@ function RightSidebar({ user }: { user: UserGoalsInfo }) {
         {/* STATS */}
         <div className="mt-4 flex justify-between text-sm">
           <Stat label="Life Level" value={user.lifelevel} />
-          <Stat label="Ongoing" value={user.goals} />
-          <Stat label="Planned" value={user.followers} />
-          <Stat label="Completed" value={user.following} />
+          <Stat label="Ongoing" value={user.ongoing} />
+          <Stat label="Planned" value={user.planned} />
+          <Stat label="Completed" value={user.completed} />
         </div>
 
         {/* XP + STREAK */}
