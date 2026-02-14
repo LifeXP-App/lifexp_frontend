@@ -39,7 +39,7 @@ type UserGoalsInfo = {
   masteryColor: string;
   masteryTextColor: string;
   lifelevel: number;
-  posts: number;
+  goals: number;
   followers: number;
   following: number;
   totalXp: number;
@@ -412,37 +412,37 @@ export default function GoalsPage() {
 
   const { me, loading: authLoading } = useAuth();
 
-  const [posts, setPosts] = useState<GoalPost[]>([]);
-  const [postsLoading, setPostsLoading] = useState(false);
+  const [goals, setGoals] = useState<GoalPost[]>([]);
+  const [goalsLoading, setGoalsLoading] = useState(false);
 
   useEffect(() => {
     if (authLoading || !me?.username) return;
 
-    const fetchPosts = async () => {
+    const fetchGoals = async () => {
       try {
-        setPostsLoading(true);
+        setGoalsLoading(true);
 
-        const res = await fetch(`/api/posts/u/${me.username}`, {
+        const res = await fetch(`/api/goals/u/${me.username}`, {
           cache: "no-store",
         });
 
-        if (!res.ok) throw new Error("Failed to fetch posts");
+        if (!res.ok) throw new Error("Failed to fetch goals");
 
         const data = await res.json();
-        setPosts(Array.isArray(data.results) ? data.results : []);
+        setGoals(Array.isArray(data.results) ? data.results : []);
       } catch (e) {
         console.error(e);
       } finally {
-        setPostsLoading(false);
+        setGoalsLoading(false);
       }
     };
 
-    fetchPosts();
+    fetchGoals();
   }, [me, authLoading]);
 
-  const plannedPosts = posts.filter((p) => p.status === "planned");
-  const ongoingPosts = posts.filter((p) => p.status === "ongoing");
-  const completedPosts = posts.filter((p) => p.status === "completed");
+  const plannedGoals = goals.filter((p) => p.status === "planned");
+  const ongoingGoals = goals.filter((p) => p.status === "ongoing");
+  const completedGoals = goals.filter((p) => p.status === "completed");
 
   const [sidebarInfo, setSidebarInfo] = useState<UserGoalsInfo | null>(null);
   const [sidebarLoading, setSidebarLoading] = useState(false);
@@ -533,37 +533,37 @@ export default function GoalsPage() {
 
             {/* Ongoing */}
             <div className="mt-6">
-              {(ongoingPosts.length > 0 || postsLoading) && (
+              {(ongoingGoals.length > 0 || goalsLoading) && (
                 <>
-                  <SectionTitle>Ongoing ({ongoingPosts.length})</SectionTitle>
+                  <SectionTitle>Ongoing ({ongoingGoals.length})</SectionTitle>
                 </>
               )}
-              {postsLoading ? (
+              {goalsLoading ? (
                 <>
                   <GoalsSectionSkeleton count={2} />
                 </>
               ) : (
                 <div className="space-y-4">
-                  {ongoingPosts.map((post) => (
+                  {ongoingGoals.map((goal) => (
                     <GoalCard
-                      key={post.id}
+                      key={goal.id}
                       goal={{
-                        id: post.id,
-                        emoji: post.emoji || "🎯",
-                        title: post.title,
-                        description: post.content,
+                        id: goal.id,
+                        emoji: goal.emoji || "🎯",
+                        title: goal.title,
+                        description: goal.content,
                         status: "ongoing",
-                        metaRight: post.duration_display
-                          ? `${post.duration_display} spent`
+                        metaRight: goal.duration_display
+                          ? `${goal.duration_display} spent`
                           : undefined,
                       }}
                       primaryCta={{
                         label: "New Session",
-                        onClick: () => router.push(`/posts/${post.uid}`),
+                        onClick: () => router.push(`/goals/${goal.uid}`),
                       }}
                       secondaryCta={{
                         label: "View",
-                        onClick: () => router.push(`/posts/${post.uid}`),
+                        onClick: () => router.push(`/goals/${goal.uid}`),
                       }}
                     />
                   ))}
@@ -573,36 +573,36 @@ export default function GoalsPage() {
 
             {/* Planned */}
             <div className="mt-6">
-              {(plannedPosts.length > 0 || postsLoading) && (
+              {(plannedGoals.length > 0 || goalsLoading) && (
                 <>
-                  <SectionTitle>Planned ({plannedPosts.length})</SectionTitle>
+                  <SectionTitle>Planned ({plannedGoals.length})</SectionTitle>
                 </>
               )}
 
-              {postsLoading ? (
+              {goalsLoading ? (
                 <>
                   <GoalsSectionSkeleton count={2} />
                 </>
               ) : (
                 <div className="space-y-4">
-                  {plannedPosts.map((post) => (
+                  {plannedGoals.map((goal) => (
                     <GoalCard
-                      key={post.id}
+                      key={goal.id}
                       goal={{
-                        id: post.id,
-                        emoji: post.emoji || "🎯",
-                        title: post.title,
-                        description: post.content,
+                        id: goal.id,
+                        emoji: goal.emoji || "🎯",
+                        title: goal.title,
+                        description: goal.content,
                         status: "planned",
                         metaRight: "Planned",
                       }}
                       primaryCta={{
                         label: "Start",
-                        onClick: () => handleOpenActivityModal(post.id),
+                        onClick: () => handleOpenActivityModal(goal.id),
                       }}
                       secondaryCta={{
                         label: "Discard",
-                        onClick: () => router.push(`/posts/${post.uid}`),
+                        onClick: () => router.push(`/goals/${goal.uid}`),
                       }}
                     />
                   ))}
@@ -612,37 +612,37 @@ export default function GoalsPage() {
 
             {/* Completed */}
             <div className="mt-6">
-              {(completedPosts.length > 0 || postsLoading) && (
+              {(completedGoals.length > 0 || goalsLoading) && (
                 <>
                   <SectionTitle>
-                    Completed ({completedPosts.length})
+                    Completed ({completedGoals.length})
                   </SectionTitle>
                 </>
               )}
-              {postsLoading ? (
+              {goalsLoading ? (
                 <>
                   <GoalsSectionSkeleton count={2} />
                 </>
               ) : (
                 <div className="space-y-4">
-                  {completedPosts.map((post) => (
+                  {completedGoals.map((goal) => (
                     <GoalCard
-                      key={post.id}
+                      key={goal.id}
                       goal={{
-                        id: post.id,
-                        emoji: post.emoji || "🎯",
-                        title: post.title,
-                        description: post.content,
+                        id: goal.id,
+                        emoji: goal.emoji || "🎯",
+                        title: goal.title,
+                        description: goal.content,
                         status: "completed",
-                        xpReward: post.total_xp,
-                        timeSummary: post.duration_display
-                          ? post.duration_display
+                        xpReward: goal.total_xp,
+                        timeSummary: goal.duration_display
+                          ? goal.duration_display
                           : undefined,
-                        aspectXP: post.xp_distribution,
+                        aspectXP: goal.xp_distribution,
                       }}
                       showAchievementCta={{
                         label: "View Achievement",
-                        onClick: () => router.push(`/posts/${post.uid}`),
+                        onClick: () => router.push(`/goals/${goal.uid}`),
                       }}
                     />
                   ))}
@@ -737,7 +737,7 @@ function RightSidebar({ user }: { user: UserGoalsInfo }) {
         {/* STATS */}
         <div className="mt-4 flex justify-between text-sm">
           <Stat label="Life Level" value={user.lifelevel} />
-          <Stat label="Ongoing" value={user.posts} />
+          <Stat label="Ongoing" value={user.goals} />
           <Stat label="Planned" value={user.followers} />
           <Stat label="Completed" value={user.following} />
         </div>
