@@ -7,31 +7,102 @@ import {
   PauseIcon,
   PlayIcon,
   UsersIcon,
-  XMarkIcon,
 } from "@heroicons/react/24/solid";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { use, useCallback, useEffect, useRef, useState } from "react";
 import { FaBrain, FaHammer } from "react-icons/fa";
-import Link from "next/link";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
+import { useAuth } from "@/src/context/AuthContext";
+
 interface SessionTimerProps {
-  params: {
+  params: Promise<{
     goalId: string;
     sessionId: string;
-  };
+  }>;
 }
 
 export default function SessionTimer({ params }: SessionTimerProps) {
+  const { goalId, sessionId: sessionIdStr } = use(params);
+  const searchParams = useSearchParams();
   const router = useRouter();
-  const [time, setTime] = useState(0);
-  const [isRunning, setIsRunning] = useState(true);
+  const { me } = useAuth();
+
+  const isNew = sessionIdStr === "new";
+  const [createdSessionId, setCreatedSessionId] = useState<Id<"sessions"> | null>(null);
+  const creatingRef = useRef(false);
+
+  const sessionId = isNew ? createdSessionId : (sessionIdStr as Id<"sessions">);
+
   const [showStats, setShowStats] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const [displayTime, setDisplayTime] = useState(0);
 
+  // ── Convex subscription & mutations ──
+  const session = useQuery(
+    api.sessions.getSession,
+    sessionId ? { sessionId } : "skip"
+  );
+  const startMutation = useMutation(api.sessions.startSession);
+  const heartbeatMutation = useMutation(api.sessions.heartbeat);
+  const pauseMutation = useMutation(api.sessions.pauseSession);
+  const resumeMutation = useMutation(api.sessions.resumeSession);
+  const completeMutation = useMutation(api.sessions.completeSession);
+  const abandonMutation = useMutation(api.sessions.abandonSession);
+
+  const isRunning = session?.status === "live";
+  const isPaused = session?.status === "paused";
+
+  // ── Check for existing active session before creating ──
+  const existingSession = useQuery(
+    api.sessions.getActiveSession,
+    isNew && me ? { userId: String(me.id) } : "skip"
+  );
+
+  // ── Create session when sessionId is "new" ──
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    if (!isNew || createdSessionId || creatingRef.current || !me) return;
+    // Wait for existingSession query to resolve (undefined = loading)
+    if (existingSession === undefined) return;
 
-  // Mock data
+    // If user already has an active/paused session, redirect to it
+    if (existingSession) {
+      router.replace(`/goals/${goalId}/session/${existingSession._id}`);
+      return;
+    }
+
+    creatingRef.current = true;
+
+    const activityId = searchParams.get("activity") || "unknown";
+
+    // TODO: Fetch AI-calculated XP rates from Django before creating session
+    // For now using placeholder rates
+    const placeholderRates = {
+      physique: 0.5,
+      energy: 0.3,
+      logic: 0.2,
+      creativity: 0.8,
+      social: 0.1,
+    };
+
+    startMutation({
+      userId: String(me.id),
+      goalId,
+      activityId,
+      rates: placeholderRates,
+      deviceContext: { platform: "web" },
+    })
+      .then((id) => {
+        setCreatedSessionId(id);
+        router.replace(`/goals/${goalId}/session/${id}`);
+      })
+      .catch((err) => {
+        console.error("Failed to start session:", err);
+        creatingRef.current = false;
+      });
+  }, [isNew, createdSessionId, me, existingSession, goalId, searchParams, startMutation, router]);
+
+  // TODO: Fetch goal data from Django REST API using goalId
   const goalData = {
     title: "Drawing Mandalorian",
     emoji: "🎨",
@@ -39,75 +110,109 @@ export default function SessionTimer({ params }: SessionTimerProps) {
     categoryColor: "#4187a2",
   };
 
-  const sessionData = {
-    xpGained: 192,
-    aspects: [
-      {
-        name: "Creativity",
-        icon: <FaBrain className="w-4 h-4" />,
-        xp: 19,
-        color: "#4187a2",
-      },
-      {
-        name: "Physique",
-        icon: <FireIcon className="w-4 h-4" />,
-        xp: 24,
-        color: "#8d2e2e",
-      },
-      {
-        name: "Energy",
-        icon: <BoltIcon className="w-4 h-4" />,
-        xp: 122,
-        color: "#c49352",
-      },
-      {
-        name: "Logic",
-        icon: <FaHammer className="w-4 h-4" />,
-        xp: 54,
-        color: "#713599",
-      },
-      {
-        name: "Social",
-        icon: <UsersIcon className="w-4 h-4" />,
-        xp: 32,
-        color: "#31784e",
-      },
-    ],
-  };
-
-  // Timer logic
+  // ── Sync display time from Convex (only jump forward) ──
   useEffect(() => {
-    if (!mounted) return;
-    let interval: NodeJS.Timeout;
-    if (isRunning) {
-      interval = setInterval(() => {
-        setTime((prev) => prev + 1);
-      }, 1000);
+    if (session) {
+      setDisplayTime((prev) =>
+        Math.max(prev, Math.floor(session.focusedDurationSeconds))
+      );
     }
-    return () => clearInterval(interval);
-  }, [isRunning, mounted]);
+  }, [session?.focusedDurationSeconds]);
 
-  // Update browser tab title with timer
+  // ── Local 1s tick for smooth display when live ──
   useEffect(() => {
-    if (!mounted) return;
-    const timeStr = formatTime(time);
-    const status = isRunning ? "▶" : "⏸";
-    document.title = `${status} ${timeStr} - ${goalData.title}`;
-    return () => {
-      document.title = "LifeXP";
-    };
-  }, [time, isRunning, mounted, goalData.title]);
+    if (!isRunning) return;
+    const interval = setInterval(() => {
+      setDisplayTime((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isRunning]);
 
-  // Keyboard shortcuts
+  // ── Heartbeat every 5s when live ──
+  useEffect(() => {
+    if (!isRunning || !sessionId) return;
+    const interval = setInterval(() => {
+      heartbeatMutation({ sessionId }).catch(console.error);
+    }, 5000);
+    heartbeatMutation({ sessionId }).catch(console.error); // immediate first beat
+    return () => clearInterval(interval);
+  }, [isRunning, sessionId, heartbeatMutation]);
+
+  // ── Redirect on completion ──
+  useEffect(() => {
+    if (session?.status === "completed" && sessionId) {
+      router.push(`/goals/${goalId}/session/${sessionId}/reflection`);
+    }
+  }, [session?.status, goalId, sessionId, router]);
+
+  // ── XP data from Convex ──
+  const xpGained = session?.xpTotal ?? 0;
+  const aspects = [
+    {
+      name: "Creativity",
+      icon: <FaBrain className="w-4 h-4" />,
+      xp: Math.floor(session?.xpBreakdown?.creativity ?? 0),
+      color: "#4187a2",
+    },
+    {
+      name: "Physique",
+      icon: <FireIcon className="w-4 h-4" />,
+      xp: Math.floor(session?.xpBreakdown?.physique ?? 0),
+      color: "#8d2e2e",
+    },
+    {
+      name: "Energy",
+      icon: <BoltIcon className="w-4 h-4" />,
+      xp: Math.floor(session?.xpBreakdown?.energy ?? 0),
+      color: "#c49352",
+    },
+    {
+      name: "Logic",
+      icon: <FaHammer className="w-4 h-4" />,
+      xp: Math.floor(session?.xpBreakdown?.logic ?? 0),
+      color: "#713599",
+    },
+    {
+      name: "Social",
+      icon: <UsersIcon className="w-4 h-4" />,
+      xp: Math.floor(session?.xpBreakdown?.social ?? 0),
+      color: "#31784e",
+    },
+  ];
+
+  // ── Handlers ──
+  const isActive = isRunning || isPaused;
+
+  const handleToggle = useCallback(async () => {
+    if (!sessionId || !isActive) return;
+    if (isRunning) {
+      await pauseMutation({ sessionId, reason: "user_initiated" });
+    } else if (isPaused) {
+      await resumeMutation({ sessionId });
+    }
+  }, [isRunning, isPaused, isActive, sessionId, pauseMutation, resumeMutation]);
+
+  const handleFinish = useCallback(async () => {
+    if (!sessionId || !isActive) return;
+    await completeMutation({ sessionId, reason: "manual" });
+  }, [sessionId, isActive, completeMutation]);
+
+  const handleDiscard = useCallback(async () => {
+    if (!sessionId || !isActive) return;
+    if (confirm("Discard this session?")) {
+      await abandonMutation({ sessionId, interruptionReason: "user_discarded" });
+    }
+  }, [sessionId, isActive, abandonMutation]);
+
+  // ── Keyboard shortcuts ──
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if user is typing in an input
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
       switch (e.code) {
         case "Space":
           e.preventDefault();
-          setIsRunning((prev) => !prev);
+          handleToggle();
           break;
         case "Escape":
           handleFinish();
@@ -117,7 +222,17 @@ export default function SessionTimer({ params }: SessionTimerProps) {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [handleToggle, handleFinish]);
+
+  // ── Update browser tab title with timer ──
+  useEffect(() => {
+    const timeStr = formatTime(displayTime);
+    const status = isRunning ? "▶" : "⏸";
+    document.title = `${status} ${timeStr} - ${goalData.title}`;
+    return () => {
+      document.title = "LifeXP";
+    };
+  }, [displayTime, isRunning, goalData.title]);
 
   const formatTime = (seconds: number) => {
     const hrs = Math.floor(seconds / 3600);
@@ -129,18 +244,8 @@ export default function SessionTimer({ params }: SessionTimerProps) {
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const handleFinish = () => {
-    setIsRunning(false);
-    router.push(`/goals`);
-  };
-
-  const handleDiscard = () => {
-    if (confirm("Discard this session?")) {
-      router.push(`/goals`);
-    }
-  };
-
-  if (!mounted) {
+  // ── Loading state ──
+  if (session === undefined) {
     return (
       <div className="h-screen w-full bg-black flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-gray-700 border-t-gray-400 rounded-full animate-spin" />
@@ -160,12 +265,12 @@ export default function SessionTimer({ params }: SessionTimerProps) {
       <div className="relative z-10 h-full flex flex-col items-center justify-around py-20 px-6">
         {/* Goal info - compact */}
         <div className="flex items-center gap-3 mb-8">
-          
+
           <div>
             <h1 className="text-5xl text-center text-white/40">
               {goalData.title}
             </h1>
-            
+
           </div>
         </div>
         <div className="flex flex-col items-center gap-4 mb-12">
@@ -190,7 +295,7 @@ export default function SessionTimer({ params }: SessionTimerProps) {
             className="text-[100px] md:text-[100px] opacity-80 font-semibold text-white tracking-tighter tabular-nums"
             style={{ fontVariantNumeric: "tabular-nums" }}
           >
-            {formatTime(time)}
+            {formatTime(displayTime)}
           </div>
         </div>
 
@@ -203,7 +308,7 @@ export default function SessionTimer({ params }: SessionTimerProps) {
             className="text-lg font-semibold"
             style={{ color: goalData.categoryColor }}
           >
-            +{sessionData.xpGained} XP
+            +{Math.floor(xpGained)} XP
           </span>
           <ChevronUpIcon
             className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${showStats ? "rotate-180" : ""}`}
@@ -214,7 +319,7 @@ export default function SessionTimer({ params }: SessionTimerProps) {
         {showStats && (
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 translate-y-8 bg-gray-900/90 backdrop-blur-xl rounded-2xl p-5 border border-gray-800 min-w-[280px]">
             <div className="flex flex-wrap gap-3 justify-center">
-              {sessionData.aspects.map((aspect, i) => (
+              {aspects.map((aspect, i) => (
                 <div
                   key={i}
                   className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-800/50"
@@ -237,7 +342,7 @@ export default function SessionTimer({ params }: SessionTimerProps) {
           </button>
 
           <button
-            onClick={() => setIsRunning(!isRunning)}
+            onClick={handleToggle}
             className="w-20 h-20 rounded-full flex items-center justify-center transition-all cursor-pointer hover:scale-105"
             style={{ backgroundColor: goalData.categoryColor }}
             title={isRunning ? "Pause" : "Resume"}

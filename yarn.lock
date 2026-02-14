@@ -168,6 +168,11 @@
   dependencies:
     tslib "^2.4.0"
 
+"@esbuild/linux-x64@0.27.0":
+  version "0.27.0"
+  resolved "https://registry.npmjs.org/@esbuild/linux-x64/-/linux-x64-0.27.0.tgz"
+  integrity sha512-1hBWx4OUJE2cab++aVZ7pObD6s+DK4mPGpemtnAORBvb5l/g5xFGk0vc0PjSkrDs0XaXj9yyob3d14XqvnQ4gw==
+
 "@eslint-community/eslint-utils@^4.8.0", "@eslint-community/eslint-utils@^4.9.1":
   version "4.9.1"
   resolved "https://registry.npmjs.org/@eslint-community/eslint-utils/-/eslint-utils-4.9.1.tgz"
@@ -358,10 +363,10 @@
     "@jridgewell/resolve-uri" "^3.1.0"
     "@jridgewell/sourcemap-codec" "^1.4.14"
 
-"@next/env@16.1.1":
-  version "16.1.1"
-  resolved "https://registry.npmjs.org/@next/env/-/env-16.1.1.tgz"
-  integrity sha512-3oxyM97Sr2PqiVyMyrZUtrtM3jqqFxOQJVuKclDsgj/L728iZt/GyslkN4NwarledZATCenbk4Offjk1hQmaAA==
+"@next/env@16.1.6":
+  version "16.1.6"
+  resolved "https://registry.npmjs.org/@next/env/-/env-16.1.6.tgz"
+  integrity sha512-N1ySLuZjnAtN3kFnwhAwPvZah8RJxKasD7x1f8shFqhncnWZn4JMfg37diLNuoHsLAlrDfM3g4mawVdtAG8XLQ==
 
 "@next/eslint-plugin-next@16.1.1":
   version "16.1.1"
@@ -370,15 +375,10 @@
   dependencies:
     fast-glob "3.3.1"
 
-"@next/swc-linux-x64-gnu@16.1.1":
-  version "16.1.1"
-  resolved "https://registry.npmjs.org/@next/swc-linux-x64-gnu/-/swc-linux-x64-gnu-16.1.1.tgz"
-  integrity sha512-20bYDfgOQAPUkkKBnyP9PTuHiJGM7HzNBbuqmD0jiFVZ0aOldz+VnJhbxzjcSabYsnNjMPsE0cyzEudpYxsrUQ==
-
-"@next/swc-linux-x64-musl@16.1.1":
-  version "16.1.1"
-  resolved "https://registry.npmjs.org/@next/swc-linux-x64-musl/-/swc-linux-x64-musl-16.1.1.tgz"
-  integrity sha512-9pRbK3M4asAHQRkwaXwu601oPZHghuSC8IXNENgbBSyImHv/zY4K5udBusgdHkvJ/Tcr96jJwQYOll0qU8+fPA==
+"@next/swc-linux-x64-gnu@16.1.6":
+  version "16.1.6"
+  resolved "https://registry.npmjs.org/@next/swc-linux-x64-gnu/-/swc-linux-x64-gnu-16.1.6.tgz"
+  integrity sha512-2eEBDkFlMMNQnkTyPBhQOAyn2qMxyG2eE7GPH2WIDGEpEILcBPI/jdSv4t6xupSP+ot/jkfrCShLAa7+ZUPcJQ==
 
 "@nodelib/fs.scandir@2.1.5":
   version "2.1.5"
@@ -980,6 +980,14 @@ convert-source-map@^2.0.0:
   resolved "https://registry.npmjs.org/convert-source-map/-/convert-source-map-2.0.0.tgz"
   integrity sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==
 
+convex@^1.31.7:
+  version "1.31.7"
+  resolved "https://registry.npmjs.org/convex/-/convex-1.31.7.tgz"
+  integrity sha512-PtNMe1mAIOvA8Yz100QTOaIdgt2rIuWqencVXrb4McdhxBHZ8IJ1eXTnrgCC9HydyilGT1pOn+KNqT14mqn9fQ==
+  dependencies:
+    esbuild "0.27.0"
+    prettier "^3.0.0"
+
 cross-spawn@^7.0.6:
   version "7.0.6"
   resolved "https://registry.npmjs.org/cross-spawn/-/cross-spawn-7.0.6.tgz"
@@ -1307,6 +1315,38 @@ es-toolkit@^1.39.3:
   version "1.43.0"
   resolved "https://registry.npmjs.org/es-toolkit/-/es-toolkit-1.43.0.tgz"
   integrity sha512-SKCT8AsWvYzBBuUqMk4NPwFlSdqLpJwmy6AP322ERn8W2YLIB6JBXnwMI2Qsh2gfphT3q7EKAxKb23cvFHFwKA==
+
+esbuild@0.27.0:
+  version "0.27.0"
+  resolved "https://registry.npmjs.org/esbuild/-/esbuild-0.27.0.tgz"
+  integrity sha512-jd0f4NHbD6cALCyGElNpGAOtWxSq46l9X/sWB0Nzd5er4Kz2YTm+Vl0qKFT9KUJvD8+fiO8AvoHhFvEatfVixA==
+  optionalDependencies:
+    "@esbuild/aix-ppc64" "0.27.0"
+    "@esbuild/android-arm" "0.27.0"
+    "@esbuild/android-arm64" "0.27.0"
+    "@esbuild/android-x64" "0.27.0"
+    "@esbuild/darwin-arm64" "0.27.0"
+    "@esbuild/darwin-x64" "0.27.0"
+    "@esbuild/freebsd-arm64" "0.27.0"
+    "@esbuild/freebsd-x64" "0.27.0"
+    "@esbuild/linux-arm" "0.27.0"
+    "@esbuild/linux-arm64" "0.27.0"
+    "@esbuild/linux-ia32" "0.27.0"
+    "@esbuild/linux-loong64" "0.27.0"
+    "@esbuild/linux-mips64el" "0.27.0"
+    "@esbuild/linux-ppc64" "0.27.0"
+    "@esbuild/linux-riscv64" "0.27.0"
+    "@esbuild/linux-s390x" "0.27.0"
+    "@esbuild/linux-x64" "0.27.0"
+    "@esbuild/netbsd-arm64" "0.27.0"
+    "@esbuild/netbsd-x64" "0.27.0"
+    "@esbuild/openbsd-arm64" "0.27.0"
+    "@esbuild/openbsd-x64" "0.27.0"
+    "@esbuild/openharmony-arm64" "0.27.0"
+    "@esbuild/sunos-x64" "0.27.0"
+    "@esbuild/win32-arm64" "0.27.0"
+    "@esbuild/win32-ia32" "0.27.0"
+    "@esbuild/win32-x64" "0.27.0"
 
 escalade@^3.2.0:
   version "3.2.0"
@@ -2267,26 +2307,26 @@ next-themes@^0.4.6:
   resolved "https://registry.npmjs.org/next-themes/-/next-themes-0.4.6.tgz"
   integrity sha512-pZvgD5L0IEvX5/9GWyHMf3m8BKiVQwsCMHfoFosXtXBMnaS0ZnIJ9ST4b4NqLVKDEm8QBxoNNGNaBv2JNF6XNA==
 
-next@16.1.1:
-  version "16.1.1"
-  resolved "https://registry.npmjs.org/next/-/next-16.1.1.tgz"
-  integrity sha512-QI+T7xrxt1pF6SQ/JYFz95ro/mg/1Znk5vBebsWwbpejj1T0A23hO7GYEaVac9QUOT2BIMiuzm0L99ooq7k0/w==
+next@16.1.6:
+  version "16.1.6"
+  resolved "https://registry.npmjs.org/next/-/next-16.1.6.tgz"
+  integrity sha512-hkyRkcu5x/41KoqnROkfTm2pZVbKxvbZRuNvKXLRXxs3VfyO0WhY50TQS40EuKO9SW3rBj/sF3WbVwDACeMZyw==
   dependencies:
-    "@next/env" "16.1.1"
+    "@next/env" "16.1.6"
     "@swc/helpers" "0.5.15"
     baseline-browser-mapping "^2.8.3"
     caniuse-lite "^1.0.30001579"
     postcss "8.4.31"
     styled-jsx "5.1.6"
   optionalDependencies:
-    "@next/swc-darwin-arm64" "16.1.1"
-    "@next/swc-darwin-x64" "16.1.1"
-    "@next/swc-linux-arm64-gnu" "16.1.1"
-    "@next/swc-linux-arm64-musl" "16.1.1"
-    "@next/swc-linux-x64-gnu" "16.1.1"
-    "@next/swc-linux-x64-musl" "16.1.1"
-    "@next/swc-win32-arm64-msvc" "16.1.1"
-    "@next/swc-win32-x64-msvc" "16.1.1"
+    "@next/swc-darwin-arm64" "16.1.6"
+    "@next/swc-darwin-x64" "16.1.6"
+    "@next/swc-linux-arm64-gnu" "16.1.6"
+    "@next/swc-linux-arm64-musl" "16.1.6"
+    "@next/swc-linux-x64-gnu" "16.1.6"
+    "@next/swc-linux-x64-musl" "16.1.6"
+    "@next/swc-win32-arm64-msvc" "16.1.6"
+    "@next/swc-win32-x64-msvc" "16.1.6"
     sharp "^0.34.4"
 
 node-releases@^2.0.27:
@@ -2465,6 +2505,11 @@ prelude-ls@^1.2.1:
   resolved "https://registry.npmjs.org/prelude-ls/-/prelude-ls-1.2.1.tgz"
   integrity sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==
 
+prettier@^3.0.0:
+  version "3.8.1"
+  resolved "https://registry.npmjs.org/prettier/-/prettier-3.8.1.tgz"
+  integrity sha512-UOnG6LftzbdaHZcKoPFtOcCKztrQ57WkHDeRD9t/PTQtmT0NHSeWWepj6pS0z/N7+08BHFDQVUrfmfMRcZwbMg==
+
 prop-types@^15.8.1:
   version "15.8.1"
   resolved "https://registry.npmjs.org/prop-types/-/prop-types-15.8.1.tgz"
@@ -2509,7 +2554,7 @@ react-is@^16.13.1, "react-is@^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0":
     "@types/use-sync-external-store" "^0.0.6"
     use-sync-external-store "^1.4.0"
 
-react@*, "react@^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0", "react@^16.8 || ^17 || ^18 || ^19 || ^19.0.0-rc", "react@^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0", "react@^16.9.0 || ^17.0.0 || ^18 || ^19", "react@^18.0 || ^19", "react@^18.0.0 || ^19.0.0", "react@^18.2.0 || 19.0.0-rc-de68d2f4-20241204 || ^19.0.0", react@^19.2.3, "react@>= 16 || ^19.0.0-rc", "react@>= 16.8.0 || 17.x.x || ^18.0.0-0 || ^19.0.0-0", react@19.2.3:
+react@*, "react@^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0", "react@^16.8 || ^17 || ^18 || ^19 || ^19.0.0-rc", "react@^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0", "react@^16.9.0 || ^17.0.0 || ^18 || ^19", "react@^18.0 || ^19", "react@^18.0.0 || ^19.0.0", "react@^18.0.0 || ^19.0.0-0 || ^19.0.0", "react@^18.2.0 || 19.0.0-rc-de68d2f4-20241204 || ^19.0.0", react@^19.2.3, "react@>= 16 || ^19.0.0-rc", "react@>= 16.8.0 || 17.x.x || ^18.0.0-0 || ^19.0.0-0", react@19.2.3:
   version "19.2.3"
   resolved "https://registry.npmjs.org/react/-/react-19.2.3.tgz"
   integrity sha512-Ku/hhYbVjOQnXDZFv2+RibmLFGwFdeeKHFcOTlrt7xplBnya5OGn/hIRDsqDiSUcfORsDC7MPxwork8jBwsIWA==
