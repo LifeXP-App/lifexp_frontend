@@ -29,7 +29,7 @@ export function NudgesLikesSection({
   return (
     <>
       {/* NOTIFICATIONS */}
-      <div className="bg-white w-full p-6 mb-4 rounded-xl border-2 border-gray-200 dark:bg-dark-2 dark:border-gray-900">
+      <div className="bg-white w-full p-6 mb-4 rounded-xl border-2 border-gray-200 dark:bg-dark-2 dark:border-gray-800">
         <div className="flex justify-between items-center mb-4">
           <p className="text-md font-semibold dark:text-white">Recent Interactions</p>
 
