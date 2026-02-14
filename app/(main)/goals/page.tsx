@@ -399,6 +399,7 @@ export default function GoalsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
+  const [deletingGoalId, setDeletingGoalId] = useState<string | null>(null);
 
   const { me, loading: authLoading } = useAuth();
 
@@ -502,6 +503,55 @@ export default function GoalsPage() {
     }
   };
 
+  const handleDeleteGoal = async (goalUid: string) => {
+    try {
+      setDeletingGoalId(goalUid);
+
+      // Optimistically remove from UI
+      const goalToDelete = goals.find(g => g.uid === goalUid);
+      setGoals(prev => prev.filter(g => g.uid !== goalUid));
+
+      const res = await fetch(`/api/goals/${goalUid}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        // Restore goal on error
+        if (goalToDelete) {
+          setGoals(prev => [...prev, goalToDelete]);
+        }
+
+        if (res.status === 401) {
+          alert("Session expired. Please log in again.");
+          router.push("/users/login");
+          return;
+        }
+
+        const errorData = await res.json().catch(() => ({ detail: "Failed to delete goal" }));
+        alert(errorData.detail || "Failed to delete goal");
+        return;
+      }
+
+      // Success - goal already removed from UI
+    } catch (error) {
+      console.error("Error deleting goal:", error);
+      alert("An error occurred while deleting the goal");
+
+      // Refresh goals list on error
+      if (me?.username) {
+        const res = await fetch(`/api/goals/u/${me.username}`, {
+          cache: "no-store",
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setGoals(Array.isArray(data.results) ? data.results : []);
+        }
+      }
+    } finally {
+      setDeletingGoalId(null);
+    }
+  };
+
   return (
     <main className="h-screen w-full bg-gray-100 dark:bg-dark-1 overflow-hidden">
       <div className="mx-auto w-full  px-4 py-6">
@@ -592,8 +642,13 @@ export default function GoalsPage() {
                         onClick: () => handleOpenActivityModal(goal.id),
                       }}
                       secondaryCta={{
-                        label: "Discard",
-                        onClick: () => router.push(`/goals/${goal.uid}`),
+                        label: deletingGoalId === goal.uid ? "Deleting..." : "Discard",
+                        onClick: () => {
+                          if (deletingGoalId) return; // Prevent multiple clicks
+                          if (window.confirm(`Are you sure you want to discard "${goal.title}"?`)) {
+                            handleDeleteGoal(goal.uid);
+                          }
+                        },
                       }}
                     />
                   ))}
