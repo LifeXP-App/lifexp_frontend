@@ -422,6 +422,7 @@ export default function GoalsPage() {
       try {
         setPostsLoading(true);
 
+        // TODO: Should change to goals model when backend is ready, currently using posts for quick iteration
         const res = await fetch(`/api/posts/u/${me.username}`, {
           cache: "no-store",
         });
@@ -559,11 +560,11 @@ export default function GoalsPage() {
                       }}
                       primaryCta={{
                         label: "New Session",
-                        onClick: () => router.push(`/posts/${post.uid}`),
+                        onClick: () => handleOpenActivityModal(post.id),
                       }}
                       secondaryCta={{
                         label: "View",
-                        onClick: () => router.push(`/posts/${post.uid}`),
+                        onClick: () => router.push(`/goal/${post.uid}`),
                       }}
                     />
                   ))}
