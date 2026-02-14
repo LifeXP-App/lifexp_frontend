@@ -335,7 +335,7 @@ function RightSidebarInfoSkeleton() {
   return (
     <aside className="w-2xl hidden md:block">
       {/* PROFILE CARD */}
-      <div className="bg-white p-6 mb-4 rounded-xl border-2 border-gray-200 dark:bg-dark-2 dark:border-gray-900 animate-pulse">
+      <div className="bg-white p-6 mb-4 rounded-xl border-2 border-gray-200 dark:bg-dark-2 dark:border-gray-800 animate-pulse">
         <div className="text-center flex flex-col items-center">
           {/* avatar */}
           <div className="h-24 w-24 aspect-square p-[1.5px] rounded-full bg-gray-200 dark:bg-gray-800 mb-3" />
@@ -385,6 +385,8 @@ function RightSidebarInfoSkeleton() {
           </div>
         </div>
       </div>
+
+      <RecentInteractionsSkeleton/>
 
      
      
@@ -674,6 +676,47 @@ export default function GoalsPage() {
 /* ===========================
    RIGHT SIDEBAR (APPENDED)
    =========================== */
+
+   function RecentInteractionsSkeleton() {
+  return (
+    <div className="bg-white dark:bg-dark-2 w-full p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-gray-800 animate-pulse">
+      
+      {/* Header */}
+      <div className="flex justify-between items-center mb-4">
+        <div className="h-4 w-40 rounded bg-gray-200 dark:bg-gray-800" />
+      </div>
+
+      {/* List */}
+      <div className="max-h-80 overflow-y-auto">
+        <ul className="flex flex-col gap-4">
+          
+          {Array.from({ length: 3 }).map((_, i) => (
+            <li key={i} className="flex gap-4">
+              
+              {/* Avatar */}
+              <div className="relative w-12 h-12 flex-shrink-0">
+                <div className="h-12 w-12 rounded-full bg-gray-200 dark:bg-gray-800" />
+                
+                {/* small interaction bubble */}
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-gray-300 dark:bg-gray-700 border border-gray-200 dark:border-gray-800" />
+              </div>
+
+              {/* Text content */}
+              <div className="flex flex-col flex-1 gap-2">
+                <div className="h-4 w-3/4 rounded bg-gray-200 dark:bg-gray-800" />
+                <div className="h-3 w-1/4 rounded bg-gray-200 dark:bg-gray-800" />
+              </div>
+            </li>
+          ))}
+
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+
+
 
 function RightSidebar({ user }: { user: UserGoalsInfo }) {
   const { openMasteryPopup } = usePopup();
