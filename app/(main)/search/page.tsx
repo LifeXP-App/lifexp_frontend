@@ -319,7 +319,7 @@ export default function SearchPage() {
                     </div>
                     <button
                       onClick={(e) => handleDeleteHistoryItem(item.id, e)}
-                      className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity"
+                      className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-opacity"
                     >
                       ✕
                     </button>
