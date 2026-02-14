@@ -1,23 +1,18 @@
 "use client";
 
-import NewSessionPopup from "@/src/components/goals/NewSessionPopup";
+import NewActivityModal from "@/src/components/goals/NewActivityModel";
+import { useAuth } from "@/src/context/AuthContext";
+import { usePopup } from "@/src/context/PopupContext";
 import { ActivityType } from "@/src/lib/types/activityMeta";
-import { CalendarDaysIcon } from "@heroicons/react/24/outline";
 import { BoltIcon, UsersIcon } from "@heroicons/react/24/solid";
 import FireIcon from "@heroicons/react/24/solid/FireIcon";
 import { useRouter } from "next/navigation";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { FaBrain, FaHammer } from "react-icons/fa";
-import { usePopup } from "@/src/context/PopupContext";
-import { useEffect } from "react";
-import { useAuth } from "@/src/context/AuthContext";
-
-
 
 type AspectKey = "physique" | "energy" | "social" | "creativity" | "logic";
 
 type GoalStatus = "ongoing" | "planned" | "completed";
-
 
 type Goal = {
   id: string;
@@ -55,47 +50,19 @@ type UserGoalsInfo = {
   streak_active: boolean;
 };
 
-
-const mockGoals: Goal[] = [
-  {
-    id: "g1",
-    emoji: "🎨",
-    title: "Drawing Mandalorian",
-    description:
-      "Wanted to get back to drawing and make some really good art of one of my favorite characters, so here it...",
-    status: "ongoing",
-    metaRight: "5h 20m spent",
-  },
-  {
-    id: "g2",
-    emoji: "💪",
-    title: "Gain 3lbs in 2 weeks through stre..",
-    description:
-      "Haven't been working out for sometime so I wanted to focus for the next 2 weeks, and try to gain atleast...",
-    status: "planned",
-    metaRight: "Planned",
-  },
-  {
-    id: "g3",
-    emoji: "🎶",
-    title: "Practice for sem end music fest",
-    description:
-      "Wanted to get back to drawing and make some really good art of one of my favorite characters, so here it...",
-    status: "completed",
-    xpReward: 120,
-    timeSummary: "12h 30m over 3 months",
-    aspectXP: {
-      physique: 24,
-      energy: 24,
-      social: 24,
-      creativity: 24,
-      logic: 24,
-    },
-  },
-];
+type GoalPost = {
+  id: string;
+  uid: string;
+  title: string;
+  content: string;
+  status: GoalStatus;
+  emoji?: string | null;
+  duration_display?: string | null;
+  total_xp?: number;
+  xp_distribution?: Record<AspectKey, number>;
+};
 
 import { NudgesLikesSection } from "@/src/components/goals/NudgesLikesSection";
-
 
 type InteractionType = "nudge" | "like";
 type Interactions = {
@@ -116,7 +83,8 @@ type Interactions = {
 const interactions: Interactions[] = [
   {
     id: "1",
-    image: "https://res.cloudinary.com/dfohn9dcz/image/upload/f_auto,q_auto,w_800,c_fill/v1755709015/ysyanmka88fuxudiuqhg.jpg",
+    image:
+      "https://res.cloudinary.com/dfohn9dcz/image/upload/f_auto,q_auto,w_800,c_fill/v1755709015/ysyanmka88fuxudiuqhg.jpg",
     username: "alex",
     type: "nudge",
     activityName: "drawing session",
@@ -126,7 +94,8 @@ const interactions: Interactions[] = [
   },
   {
     id: "2",
-    image: "https://res.cloudinary.com/dfohn9dcz/image/upload/f_auto,q_auto,w_800,c_fill/v1755709015/ysyanmka88fuxudiuqhg.jpg",
+    image:
+      "https://res.cloudinary.com/dfohn9dcz/image/upload/f_auto,q_auto,w_800,c_fill/v1755709015/ysyanmka88fuxudiuqhg.jpg",
     username: "maria",
     type: "like",
     goalTitle: "Drawing Mandalorian...",
@@ -135,9 +104,6 @@ const interactions: Interactions[] = [
     rounded: true,
   },
 ];
-
-
-
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
@@ -294,9 +260,7 @@ function GoalCardSkeleton() {
           {/* emoji placeholder */}
           <div className="h-4 w-4 rounded bg-gray-200 dark:bg-gray-800 mt-1" />
 
-
-            <div className="h-6 w-3/4 rounded bg-gray-200 dark:bg-gray-800" />
-
+          <div className="h-6 w-3/4 rounded bg-gray-200 dark:bg-gray-800" />
         </div>
 
         {/* meta right */}
@@ -306,7 +270,6 @@ function GoalCardSkeleton() {
       {/* description */}
       <div className="mt-4 space-y-2">
         <div className="h-3 w-full rounded bg-gray-200 dark:bg-gray-800" />
-
       </div>
 
       {/* buttons */}
@@ -318,15 +281,9 @@ function GoalCardSkeleton() {
   );
 }
 
-function GoalsSectionSkeleton({
-  count = 2,
-}: {
-
-  count?: number;
-}) {
+function GoalsSectionSkeleton({ count = 2 }: { count?: number }) {
   return (
     <div className="mt-6">
-
       <div className="space-y-6">
         {Array.from({ length: count }).map((_, i) => (
           <GoalCardSkeleton key={i} />
@@ -447,23 +404,18 @@ function RightSidebarInfoSkeleton() {
   );
 }
 
-
-
 export default function GoalsPage() {
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isSessionPopupOpen, setIsSessionPopupOpen] = useState(false);
+  const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
-
-
 
   const { me, loading: authLoading } = useAuth();
 
-  const [posts, setPosts] = useState<any[]>([]);
-  const [nextPage, setNextPage] = useState<string | null>(null);
+  const [posts, setPosts] = useState<GoalPost[]>([]);
   const [postsLoading, setPostsLoading] = useState(false);
 
-    useEffect(() => {
+  useEffect(() => {
     if (authLoading || !me?.username) return;
 
     const fetchPosts = async () => {
@@ -477,8 +429,7 @@ export default function GoalsPage() {
         if (!res.ok) throw new Error("Failed to fetch posts");
 
         const data = await res.json();
-        setPosts(data.results || []);
-        setNextPage(data.next || null);
+        setPosts(Array.isArray(data.results) ? data.results : []);
       } catch (e) {
         console.error(e);
       } finally {
@@ -494,35 +445,32 @@ export default function GoalsPage() {
   const completedPosts = posts.filter((p) => p.status === "completed");
 
   const [sidebarInfo, setSidebarInfo] = useState<UserGoalsInfo | null>(null);
-    const [sidebarLoading, setSidebarLoading] = useState(false);
+  const [sidebarLoading, setSidebarLoading] = useState(false);
 
-    useEffect(() => {
-      if (!me?.username) return;
+  useEffect(() => {
+    if (!me?.username) return;
 
-      const fetchSidebarInfo = async () => {
-        try {
-          setSidebarLoading(true);
+    const fetchSidebarInfo = async () => {
+      try {
+        setSidebarLoading(true);
 
-          const res = await fetch(
-            `/api/v1/goals/info/${me.username}/`,
-            { cache: "no-store" }
-          );
+        const res = await fetch(`/api/v1/goals/info/${me.username}/`, {
+          cache: "no-store",
+        });
 
-          if (!res.ok) throw new Error("Failed to fetch sidebar info");
+        if (!res.ok) throw new Error("Failed to fetch sidebar info");
 
-          const data = await res.json();
-          setSidebarInfo(data);
-        } catch (e) {
-          console.error(e);
-        } finally {
-          setSidebarLoading(false);
-        }
-      };
+        const data = await res.json();
+        setSidebarInfo(data);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setSidebarLoading(false);
+      }
+    };
 
-      fetchSidebarInfo();
-    }, [me?.username]);
-
-
+    fetchSidebarInfo();
+  }, [me?.username]);
 
   const handleCreateGoal = (goal: {
     title: string;
@@ -534,13 +482,13 @@ export default function GoalsPage() {
     setIsModalOpen(false);
   };
 
-  const handleOpenSessionPopup = (goalId: string) => {
+  const handleOpenActivityModal = (goalId: string) => {
     setSelectedGoalId(goalId);
-    setIsSessionPopupOpen(true);
+    setIsActivityModalOpen(true);
   };
 
   const handleSelectActivity = (activity: Activity) => {
-    setIsSessionPopupOpen(false);
+    setIsActivityModalOpen(false);
     if (selectedGoalId) {
       router.push(
         `/goals/${selectedGoalId}/session/new?activity=${activity.id}`,
@@ -548,16 +496,20 @@ export default function GoalsPage() {
     }
   };
 
-  const handleNewActivity = () => {
-    setIsSessionPopupOpen(false);
+  const handleGenerateNewActivity = () => {
+    setIsActivityModalOpen(false);
     if (selectedGoalId) {
       // Navigate to goal page which has the full activity modal
       router.push(`/goals/${selectedGoalId}`);
-    }                                 
+    }
   };
 
-
-
+  const handleStartDrawing = () => {
+    setIsActivityModalOpen(false);
+    if (selectedGoalId) {
+      router.push(`/goals/${selectedGoalId}`);
+    }
+  };
 
   return (
     <main className="h-screen w-full bg-gray-100 dark:bg-dark-1 overflow-hidden">
@@ -581,44 +533,42 @@ export default function GoalsPage() {
 
             {/* Ongoing */}
             <div className="mt-6">
-              {(ongoingPosts.length > 0 || postsLoading)  && (
+              {(ongoingPosts.length > 0 || postsLoading) && (
                 <>
                   <SectionTitle>Ongoing ({ongoingPosts.length})</SectionTitle>
                 </>
               )}
-             {postsLoading ? (
-              <>
-                <GoalsSectionSkeleton count={2} />
-              </>
-            ) : (
-
-              <div className="space-y-4">
-                
-                {ongoingPosts.map((post) => (
-                  <GoalCard
-                    key={post.id}
-                    goal={{
-                      id: post.id,
-                      emoji: post.emoji || "🎯",
-                      title: post.title,
-                      description: post.content,
-                      status: "ongoing",
-                      metaRight: post.duration_display
-                        ? `${post.duration_display} spent`
-                        : undefined,
-                    }}
-                    primaryCta={{
-                      label: "New Session",
-                      onClick: () => router.push(`/posts/${post.uid}`),
-                    }}
-                    secondaryCta={{
-                      label: "View",
-                      onClick: () => router.push(`/posts/${post.uid}`),
-                    }}
-                  />
-                ))}
-              </div>
-            )}
+              {postsLoading ? (
+                <>
+                  <GoalsSectionSkeleton count={2} />
+                </>
+              ) : (
+                <div className="space-y-4">
+                  {ongoingPosts.map((post) => (
+                    <GoalCard
+                      key={post.id}
+                      goal={{
+                        id: post.id,
+                        emoji: post.emoji || "🎯",
+                        title: post.title,
+                        description: post.content,
+                        status: "ongoing",
+                        metaRight: post.duration_display
+                          ? `${post.duration_display} spent`
+                          : undefined,
+                      }}
+                      primaryCta={{
+                        label: "New Session",
+                        onClick: () => router.push(`/posts/${post.uid}`),
+                      }}
+                      secondaryCta={{
+                        label: "View",
+                        onClick: () => router.push(`/posts/${post.uid}`),
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Planned */}
@@ -628,73 +578,75 @@ export default function GoalsPage() {
                   <SectionTitle>Planned ({plannedPosts.length})</SectionTitle>
                 </>
               )}
-              
-          {postsLoading ? (
-                      <>
-                        <GoalsSectionSkeleton  count={2} />
-                      </>
-                    ) : (
-              <div className="space-y-4">
-                {plannedPosts.map((post) => (
-                      <GoalCard
-                        key={post.id}
-                        goal={{
-                          id: post.id,
-                          emoji: post.emoji || "🎯",
-                          title: post.title,
-                          description: post.content,
-                          status: "planned",
-                          metaRight: "Planned",
-                        }}
-                        primaryCta={{
-                          label: "Start",
-                          onClick: () => router.push(`/posts/${post.uid}`),
-                        }}
-                        secondaryCta={{
-                          label: "Discard",
-                          onClick: () => router.push(`/posts/${post.uid}`),
-                        }}
-                      />
-                    ))}
-              </div>
-                    )}
+
+              {postsLoading ? (
+                <>
+                  <GoalsSectionSkeleton count={2} />
+                </>
+              ) : (
+                <div className="space-y-4">
+                  {plannedPosts.map((post) => (
+                    <GoalCard
+                      key={post.id}
+                      goal={{
+                        id: post.id,
+                        emoji: post.emoji || "🎯",
+                        title: post.title,
+                        description: post.content,
+                        status: "planned",
+                        metaRight: "Planned",
+                      }}
+                      primaryCta={{
+                        label: "Start",
+                        onClick: () => handleOpenActivityModal(post.id),
+                      }}
+                      secondaryCta={{
+                        label: "Discard",
+                        onClick: () => router.push(`/posts/${post.uid}`),
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Completed */}
             <div className="mt-6">
               {(completedPosts.length > 0 || postsLoading) && (
                 <>
-                  <SectionTitle>Completed ({completedPosts.length})</SectionTitle>
+                  <SectionTitle>
+                    Completed ({completedPosts.length})
+                  </SectionTitle>
                 </>
               )}
               {postsLoading ? (
-                      <>
-                        <GoalsSectionSkeleton  count={2} />
-                      </>
-                    ) : (
-              <div className="space-y-4">
-                {completedPosts.map((post) => (
-                  <GoalCard
-                    key={post.id}
-                    goal={{
-                      id: post.id,
-                      emoji: post.emoji || "🎯",
-                      title: post.title,
-                      description: post.content,
-                      status: "completed",
-                      xpReward: post.total_xp,
-                      timeSummary: post.duration_display
-                        ? post.duration_display
-                        : undefined,
-                      aspectXP: post.xp_distribution,
-                    }}
-                    showAchievementCta={{
-                      label: "View Achievement",
-                      onClick: () => router.push(`/posts/${post.uid}`),
-                    }}
-                  />
-                ))}
-              </div>
+                <>
+                  <GoalsSectionSkeleton count={2} />
+                </>
+              ) : (
+                <div className="space-y-4">
+                  {completedPosts.map((post) => (
+                    <GoalCard
+                      key={post.id}
+                      goal={{
+                        id: post.id,
+                        emoji: post.emoji || "🎯",
+                        title: post.title,
+                        description: post.content,
+                        status: "completed",
+                        xpReward: post.total_xp,
+                        timeSummary: post.duration_display
+                          ? post.duration_display
+                          : undefined,
+                        aspectXP: post.xp_distribution,
+                      }}
+                      showAchievementCta={{
+                        label: "View Achievement",
+                        onClick: () => router.push(`/posts/${post.uid}`),
+                      }}
+                    />
+                  ))}
+                </div>
               )}
             </div>
 
@@ -703,11 +655,10 @@ export default function GoalsPage() {
 
           {/* RIGHT SIDEBAR (DESKTOP ONLY) */}
           {sidebarLoading || !sidebarInfo ? (
-                <RightSidebarInfoSkeleton />
-              ) : (
-                <RightSidebar user={sidebarInfo} />
-              )}
-
+            <RightSidebarInfoSkeleton />
+          ) : (
+            <RightSidebar user={sidebarInfo} />
+          )}
         </div>
       </div>
 
@@ -719,12 +670,13 @@ export default function GoalsPage() {
         onSubmit={handleCreateGoal}
       />
 
-      {/* New Session Popup */}
-      <NewSessionPopup
-        isOpen={isSessionPopupOpen}
-        onClose={() => setIsSessionPopupOpen(false)}
+      {/* New Activity Modal */}
+      <NewActivityModal
+        isOpen={isActivityModalOpen}
+        onClose={() => setIsActivityModalOpen(false)}
         onSelectActivity={handleSelectActivity}
-        onNewActivity={handleNewActivity}
+        onGenerateNew={handleGenerateNewActivity}
+        onStartDrawing={handleStartDrawing}
       />
     </main>
   );
@@ -742,6 +694,7 @@ function RightSidebar({ user }: { user: UserGoalsInfo }) {
       <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-gray-800">
         <div className="text-center flex flex-col items-center">
           <div className="flex flex-col items-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={user.profile_picture}
               className="h-24 w-24 object-cover aspect-square p-[1.5px] rounded-full"
@@ -759,7 +712,7 @@ function RightSidebar({ user }: { user: UserGoalsInfo }) {
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
                 fill="currentColor"
-                 onClick={openMasteryPopup} 
+                onClick={openMasteryPopup}
                 className="w-4 h-4 text-gray-400 dark:text-gray-500"
               >
                 <path
@@ -772,7 +725,7 @@ function RightSidebar({ user }: { user: UserGoalsInfo }) {
 
             <button
               className="text-sm font-bold"
-              onClick={openMasteryPopup} 
+              onClick={openMasteryPopup}
               style={{ color: user.masteryTextColor }}
             >
               {user.mastery}
@@ -819,9 +772,7 @@ function RightSidebar({ user }: { user: UserGoalsInfo }) {
           </div>
         </div>
       </div>
-      <NudgesLikesSection
-          interactions={interactions}
-        />
+      <NudgesLikesSection interactions={interactions} />
     </aside>
   );
 }
