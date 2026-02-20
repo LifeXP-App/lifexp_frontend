@@ -12,7 +12,7 @@ import { FaBrain, FaHammer } from "react-icons/fa";
 
 type AspectKey = "physique" | "energy" | "social" | "creativity" | "logic";
 
-type GoalStatus = "ongoing" | "planned" | "completed";
+type GoalStatus = "active" | "completed" | "paused" | "abandoned";
 
 type Goal = {
   id: string;
@@ -40,8 +40,8 @@ type UserGoalsInfo = {
   masteryTextColor: string;
   lifelevel: number;
   ongoing: number;
-  planned:number;
-  completed:number;
+  planned: number;
+  completed: number;
   followers: number;
   following: number;
   totalXp: number;
@@ -54,14 +54,14 @@ type UserGoalsInfo = {
 
 type GoalPost = {
   id: string;
-  uid: string;
   title: string;
-  content: string;
+  description?: string | null;
   status: GoalStatus;
   emoji?: string | null;
-  duration_display?: string | null;
-  total_xp?: number;
-  xp_distribution?: Record<AspectKey, number>;
+  days_total: number;
+  days_completed?: number;
+  created_at?: string;
+  updated_at?: string;
 };
 
 import { NudgesLikesSection } from "@/src/components/goals/NudgesLikesSection";
@@ -386,10 +386,7 @@ function RightSidebarInfoSkeleton() {
         </div>
       </div>
 
-      <RecentInteractionsSkeleton/>
-
-     
-     
+      <RecentInteractionsSkeleton />
     </aside>
   );
 }
@@ -407,13 +404,13 @@ export default function GoalsPage() {
   const [goalsLoading, setGoalsLoading] = useState(false);
 
   useEffect(() => {
-    if (authLoading || !me?.username) return;
+    if (authLoading || !me) return;
 
     const fetchGoals = async () => {
       try {
         setGoalsLoading(true);
 
-        const res = await fetch(`/api/goals/u/${me.username}`, {
+        const res = await fetch(`/api/goals`, {
           cache: "no-store",
         });
 
@@ -431,8 +428,10 @@ export default function GoalsPage() {
     fetchGoals();
   }, [me, authLoading]);
 
-  const plannedGoals = goals.filter((p) => p.status === "planned");
-  const ongoingGoals = goals.filter((p) => p.status === "ongoing");
+  const plannedGoals = goals.filter(
+    (p) => p.status === "paused" || p.status === "abandoned",
+  );
+  const ongoingGoals = goals.filter((p) => p.status === "active");
   const completedGoals = goals.filter((p) => p.status === "completed");
 
   const [sidebarInfo, setSidebarInfo] = useState<UserGoalsInfo | null>(null);
@@ -446,9 +445,12 @@ export default function GoalsPage() {
         setSidebarLoading(true);
         const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-        const res = await fetch(`${baseUrl}/api/v1/goals/info/${me.username}/`, {
-          cache: "no-store",
-        });
+        const res = await fetch(
+          `${baseUrl}/api/v1/goals/info/${me.username}/`,
+          {
+            cache: "no-store",
+          },
+        );
 
         if (!res.ok) throw new Error("Failed to fetch sidebar info");
 
@@ -464,14 +466,69 @@ export default function GoalsPage() {
     fetchSidebarInfo();
   }, [me?.username]);
 
-  const handleCreateGoal = (goal: {
+  const handleCreateGoal = async (goal: {
     title: string;
     description: string;
     finishBy: string;
   }) => {
-    console.log("New goal created:", goal);
-    // Add your logic here to save the goal
-    setIsModalOpen(false);
+    try {
+      setIsModalOpen(false);
+      setGoalsLoading(true);
+
+      const payload: {
+        title: string;
+        description?: string;
+        finish_by?: string;
+      } = { title: goal.title };
+      if (goal.description) payload.description = goal.description;
+      if (goal.finishBy) payload.finish_by = goal.finishBy;
+
+      const res = await fetch("/api/goals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        if (res.status === 401) {
+          alert("Session expired. Please log in again.");
+          router.push("/users/login");
+          return;
+        }
+        // Try to parse detailed error if available
+        let errorMsg = "Failed to create goal";
+        try {
+          const errorData = await res.json();
+          if (errorData.detail) errorMsg = errorData.detail;
+          else if (typeof errorData === "object") {
+            // Might be a field-level error object
+            errorMsg = JSON.stringify(errorData);
+          }
+        } catch {
+          // ignore parsing error
+        }
+        throw new Error(errorMsg);
+      }
+
+      // Success, refresh list
+      if (me) {
+        const fetchRes = await fetch(`/api/goals`, { cache: "no-store" });
+        if (fetchRes.ok) {
+          const data = await fetchRes.json();
+          setGoals(Array.isArray(data.results) ? data.results : []);
+        }
+      }
+    } catch (error: unknown) {
+      console.error("Error creating goal:", error);
+      const message =
+        error instanceof Error
+          ? error.message
+          : "An error occurred while creating the goal";
+      alert(message);
+      // Could consider reopening modal, or let user click it again
+    } finally {
+      setGoalsLoading(false);
+    }
   };
 
   const handleOpenActivityModal = (goalId: string) => {
@@ -503,22 +560,22 @@ export default function GoalsPage() {
     }
   };
 
-  const handleDeleteGoal = async (goalUid: string) => {
+  const handleDeleteGoal = async (goalId: string) => {
     try {
-      setDeletingGoalId(goalUid);
+      setDeletingGoalId(goalId);
 
       // Optimistically remove from UI
-      const goalToDelete = goals.find(g => g.uid === goalUid);
-      setGoals(prev => prev.filter(g => g.uid !== goalUid));
+      const goalToDelete = goals.find((g) => g.id === goalId);
+      setGoals((prev) => prev.filter((g) => g.id !== goalId));
 
-      const res = await fetch(`/api/goals/${goalUid}`, {
+      const res = await fetch(`/api/goals/${goalId}`, {
         method: "DELETE",
       });
 
       if (!res.ok) {
         // Restore goal on error
         if (goalToDelete) {
-          setGoals(prev => [...prev, goalToDelete]);
+          setGoals((prev) => [...prev, goalToDelete]);
         }
 
         if (res.status === 401) {
@@ -527,7 +584,9 @@ export default function GoalsPage() {
           return;
         }
 
-        const errorData = await res.json().catch(() => ({ detail: "Failed to delete goal" }));
+        const errorData = await res
+          .json()
+          .catch(() => ({ detail: "Failed to delete goal" }));
         alert(errorData.detail || "Failed to delete goal");
         return;
       }
@@ -538,8 +597,8 @@ export default function GoalsPage() {
       alert("An error occurred while deleting the goal");
 
       // Refresh goals list on error
-      if (me?.username) {
-        const res = await fetch(`/api/goals/u/${me.username}`, {
+      if (me) {
+        const res = await fetch(`/api/goals`, {
           cache: "no-store",
         });
         if (res.ok) {
@@ -592,19 +651,20 @@ export default function GoalsPage() {
                         id: goal.id,
                         emoji: goal.emoji || "🎯",
                         title: goal.title,
-                        description: goal.content,
-                        status: "ongoing",
-                        metaRight: goal.duration_display
-                          ? `${goal.duration_display} spent`
-                          : undefined,
+                        description: goal.description || "",
+                        status: goal.status,
+                        metaRight:
+                          typeof goal.days_completed === "number"
+                            ? `${goal.days_completed}/${goal.days_total} days`
+                            : `${goal.days_total} days target`,
                       }}
                       primaryCta={{
                         label: "New Session",
-                        onClick: () => router.push(`/goals/${goal.uid}`),
+                        onClick: () => router.push(`/goals/${goal.id}`),
                       }}
                       secondaryCta={{
                         label: "View",
-                        onClick: () => router.push(`/goals/${goal.uid}`),
+                        onClick: () => router.push(`/goals/${goal.id}`),
                       }}
                     />
                   ))}
@@ -633,20 +693,28 @@ export default function GoalsPage() {
                         id: goal.id,
                         emoji: goal.emoji || "🎯",
                         title: goal.title,
-                        description: goal.content,
-                        status: "planned",
-                        metaRight: "Planned",
+                        description: goal.description || "",
+                        status: goal.status,
+                        metaRight:
+                          goal.status === "paused" ? "Paused" : "Abandoned",
                       }}
                       primaryCta={{
                         label: "Start",
                         onClick: () => handleOpenActivityModal(goal.id),
                       }}
                       secondaryCta={{
-                        label: deletingGoalId === goal.uid ? "Deleting..." : "Discard",
+                        label:
+                          deletingGoalId === goal.id
+                            ? "Deleting..."
+                            : "Discard",
                         onClick: () => {
                           if (deletingGoalId) return; // Prevent multiple clicks
-                          if (window.confirm(`Are you sure you want to discard "${goal.title}"?`)) {
-                            handleDeleteGoal(goal.uid);
+                          if (
+                            window.confirm(
+                              `Are you sure you want to discard "${goal.title}"?`,
+                            )
+                          ) {
+                            handleDeleteGoal(goal.id);
                           }
                         },
                       }}
@@ -678,17 +746,16 @@ export default function GoalsPage() {
                         id: goal.id,
                         emoji: goal.emoji || "🎯",
                         title: goal.title,
-                        description: goal.content,
-                        status: "completed",
-                        xpReward: goal.total_xp,
-                        timeSummary: goal.duration_display
-                          ? goal.duration_display
-                          : undefined,
-                        aspectXP: goal.xp_distribution,
+                        description: goal.description || "",
+                        status: goal.status,
+                        timeSummary:
+                          typeof goal.days_completed === "number"
+                            ? `${goal.days_completed}/${goal.days_total} days completed`
+                            : `${goal.days_total} days goal`,
                       }}
                       showAchievementCta={{
                         label: "View Achievement",
-                        onClick: () => router.push(`/goals/${goal.uid}`),
+                        onClick: () => router.push(`/goals/${goal.id}`),
                       }}
                     />
                   ))}
@@ -732,10 +799,9 @@ export default function GoalsPage() {
    RIGHT SIDEBAR (APPENDED)
    =========================== */
 
-   function RecentInteractionsSkeleton() {
+function RecentInteractionsSkeleton() {
   return (
     <div className="bg-white dark:bg-dark-2 w-full p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-gray-800 animate-pulse">
-      
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <div className="h-4 w-40 rounded bg-gray-200 dark:bg-gray-800" />
@@ -744,14 +810,12 @@ export default function GoalsPage() {
       {/* List */}
       <div className="max-h-80 overflow-y-auto">
         <ul className="flex flex-col gap-4">
-          
           {Array.from({ length: 3 }).map((_, i) => (
             <li key={i} className="flex gap-4">
-              
               {/* Avatar */}
-              <div className="relative w-12 h-12 flex-shrink-0">
+              <div className="relative w-12 h-12 shrink-0">
                 <div className="h-12 w-12 rounded-full bg-gray-200 dark:bg-gray-800" />
-                
+
                 {/* small interaction bubble */}
                 <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-gray-300 dark:bg-gray-700 border border-gray-200 dark:border-gray-800" />
               </div>
@@ -763,15 +827,11 @@ export default function GoalsPage() {
               </div>
             </li>
           ))}
-
         </ul>
       </div>
     </div>
   );
 }
-
-
-
 
 function RightSidebar({ user }: { user: UserGoalsInfo }) {
   const { openMasteryPopup } = usePopup();
