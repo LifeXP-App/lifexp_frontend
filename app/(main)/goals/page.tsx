@@ -408,12 +408,14 @@ export default function GoalsPage() {
 
   useEffect(() => {
     if (authLoading || !me?.username) return;
+    console.log("AuthLoading",authLoading)
+    console.log("Me:",me)
 
     const fetchGoals = async () => {
       try {
         setGoalsLoading(true);
 
-        const res = await fetch(`/api/goals/u/${me.username}`, {
+        const res = await fetch(`/api/goals`, {
           cache: "no-store",
         });
 

@@ -23,7 +23,7 @@ export async function serverAuthFetch(url: string, init?: RequestInit) {
 
   // 2) if expired -> refresh once -> retry
   if (res.status === 401) {
-    const refreshRes = await fetch("http://localhost:3000/api/auth/refresh", {
+    const refreshRes = await fetch("/api/auth/refresh", {
       method: "POST",
       cache: "no-store",
     });

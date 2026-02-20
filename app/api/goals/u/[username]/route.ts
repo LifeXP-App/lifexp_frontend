@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const target = `${baseUrl}/api/v1/goals/`;
+    const target = `${baseUrl}/api/v1/goals/?username=${username}`;
 
     let res = await fetch(target, {
       headers: {
