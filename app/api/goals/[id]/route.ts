@@ -49,6 +49,30 @@ async function authedFetch(url: string, options: RequestInit = {}) {
   });
 }
 
+/* ---------------- GET GOAL ---------------- */
+export async function GET(
+  req: Request,
+  context: { params: Promise<{ id: string }> }
+) {
+  const { id } = await context.params;
+
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
+  const res = await authedFetch(`${baseUrl}/api/v1/goals/${id}/`);
+
+  // If authedFetch returned a NextResponse (auth error), return it directly
+  if (res instanceof NextResponse) {
+    return res;
+  }
+
+  const text = await res.text();
+  try {
+    const data = JSON.parse(text);
+    return NextResponse.json(data, { status: res.status });
+  } catch {
+    return NextResponse.json({ detail: text }, { status: res.status });
+  }
+}
+
 /* ---------------- DELETE GOAL ---------------- */
 export async function DELETE(
   req: Request,
