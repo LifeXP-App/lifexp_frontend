@@ -134,6 +134,8 @@ export default function EditProfilePage() {
     loadProfile();
   }, [authLoading, me]);
 
+
+  const [profileFile, setProfileFile] = useState<File | null>(null);
   /* ---------------- DIRTY CHECK ---------------- */
 
   const isDirty = useMemo(() => {
@@ -152,15 +154,18 @@ export default function EditProfilePage() {
   /* ---------------- IMAGE HANDLERS ---------------- */
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const file = e.target.files?.[0];
+  if (!file) return;
 
-    const url = URL.createObjectURL(file);
-    setProfilePreview(url);
-  };
+  setProfileFile(file); // store file
+
+  const url = URL.createObjectURL(file);
+  setProfilePreview(url);
+};
 
   const removeProfile = () => {
     setProfilePreview("");
+    setProfileFile(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -197,19 +202,31 @@ export default function EditProfilePage() {
     e.preventDefault();
     if (!me) return;
 
+    const formData = new FormData();
+
+    formData.append("fullname", form.fullname);
+    formData.append("title", form.title);
+    formData.append("bio", form.bio);
+
+    if (profileFile) {
+      formData.append("profile_picture", profileFile);
+    }
+
+    // if user removed photo
+    if (!profilePreview) {
+      formData.append("profile_picture", "");
+    }
+
     const res = await fetch(`/api/users/${me.id}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        fullname: form.fullname,
-        title: form.title,
-        bio: form.bio,
-      }),
+      body: formData,
     });
 
-    if (!res.ok) return;
+    if (!res.ok) {
+      console.log(await res.text());
+      return;
+    }
 
-    const updated = await res.json();
     router.push(`/u/${me.username}`);
   };
 

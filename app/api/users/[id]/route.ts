@@ -62,13 +62,14 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   const { id } = await context.params;
-  const body = await req.json();
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
+
+  const formData = await req.formData();
 
   const res = await authedFetch(`${baseUrl}/api/v1/users/${id}/`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: formData, // DO NOT JSON.stringify
+    // DO NOT set Content-Type
   });
 
   return NextResponse.json(await safeJson(res), { status: res.status });
