@@ -12,7 +12,10 @@ async function safeJson(res: Response) {
   }
 }
 
-export async function GET(request: NextRequest) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ username: string }> }
+) {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
     const cookieStore = await cookies();
@@ -25,8 +28,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const searchParams = request.nextUrl.searchParams;
-    const username = searchParams.get("username");
+    const { username } = await params;
 
     if (!username) {
       return NextResponse.json(
