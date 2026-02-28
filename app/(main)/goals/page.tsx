@@ -53,17 +53,22 @@ type UserGoalsInfo = {
 };
 
 type GoalPost = {
-  id: string;
+  id: number;
+  uid: string;
   title: string;
-  description?: string | null;
-  status: GoalStatus;
+  content: string;
   emoji?: string | null;
-  days_total: number;
-  days_completed?: number;
-  created_at?: string;
-  updated_at?: string;
+  status: GoalStatus;
+  duration_display?: string;
+  xp_distribution?: {
+    physique: number;
+    energy: number;
+    social: number;
+    creativity: number;
+    logic: number;
+  };
+  total_xp?: number;
 };
-
 import { NudgesLikesSection } from "@/src/components/goals/NudgesLikesSection";
 
 type InteractionType = "nudge" | "like";
@@ -739,26 +744,36 @@ export default function GoalsPage() {
                 </>
               ) : (
                 <div className="space-y-4">
-                  {completedGoals.map((goal) => (
-                    <GoalCard
-                      key={goal.id}
-                      goal={{
-                        id: goal.id,
-                        emoji: goal.emoji || "🎯",
-                        title: goal.title,
-                        description: goal.description || "",
-                        status: goal.status,
-                        timeSummary:
-                          typeof goal.days_completed === "number"
-                            ? `${goal.days_completed}/${goal.days_total} days completed`
-                            : `${goal.days_total} days goal`,
-                      }}
-                      showAchievementCta={{
-                        label: "View Achievement",
-                        onClick: () => router.push(`/goals/${goal.id}`),
-                      }}
-                    />
-                  ))}
+                 {completedGoals.map((goal) => (
+                      <GoalCard
+                        key={goal.id}
+                        goal={{
+                          id: String(goal.id),
+                          emoji: goal.emoji || "🎯",
+                          title: goal.title,
+                          description: goal.content || "",
+                          status: goal.status,
+
+                          timeSummary: goal.duration_display ?? "",
+
+                          xpReward: goal.total_xp ?? 0,
+
+                          aspectXP: goal.xp_distribution
+                            ? {
+                                physique: goal.xp_distribution.physique ?? 0,
+                                energy: goal.xp_distribution.energy ?? 0,
+                                social: goal.xp_distribution.social ?? 0,
+                                creativity: goal.xp_distribution.creativity ?? 0,
+                                logic: goal.xp_distribution.logic ?? 0,
+                              }
+                            : undefined,
+                        }}
+                        showAchievementCta={{
+                          label: "View Achievement",
+                          onClick: () => router.push(`/goals/${goal.id}`),
+                        }}
+                      />
+                    ))}
                 </div>
               )}
             </div>
