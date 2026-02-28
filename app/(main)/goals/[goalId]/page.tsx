@@ -1,24 +1,20 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
 import RadarChart from "@/src/components/RadarChart";
-import AspectChip from '@/src/components/goals/AspectChip';
-import { mockUser } from "@/src/lib/mock/userData";
+import AspectChip from "@/src/components/goals/AspectChip";
+import CompleteGoalPopup from "@/src/components/goals/CompleteGoalPopup";
+import NewActivityModal from "@/src/components/goals/NewActivityModel";
+import NewGoalModal from "@/src/components/goals/NewGoalModal";
+import NewSessionPopup from "@/src/components/goals/NewSessionPopup";
 import SessionInfoPopup from "@/src/components/goals/SessionInfoPopup";
+import { useGoal } from "@/src/lib/hooks/useGoals";
+import { GoalsService, Session } from "@/src/lib/services/goals";
+import { ActivityType } from "@/src/lib/types/activityMeta";
+import { BoltIcon, UsersIcon } from "@heroicons/react/24/solid";
+import { useParams, useRouter } from "next/navigation";
+import React, { useState } from "react";
 import { BiDumbbell } from "react-icons/bi";
-import CompleteGoalPopup from '@/src/components/goals/CompleteGoalPopup';
-import {
-  BoltIcon,
-  UsersIcon,
-} from "@heroicons/react/24/solid";
 import { FaBrain, FaHammer } from "react-icons/fa";
-import NewActivityModal from '@/src/components/goals/NewActivityModel';
-import NewSessionPopup from '@/src/components/goals/NewSessionPopup';
-import NewGoalModal from '@/src/components/goals/NewGoalModal';
-import { useGoal } from '@/src/lib/hooks/useGoals';
-import { Session, GoalsService } from '@/src/lib/services/goals';
-import { ACTIVITY_META, ActivityType } from "@/src/lib/types/activityMeta";
 
 interface Activity {
   id: string;
@@ -37,7 +33,6 @@ const SessionItem: React.FC<any & { onClick?: () => void }> = ({
   emoji,
   onClick,
 }) => {
-
   const [open, setOpen] = React.useState(false);
   const menuRef = React.useRef<HTMLDivElement>(null);
 
@@ -57,12 +52,15 @@ const SessionItem: React.FC<any & { onClick?: () => void }> = ({
       className="flex items-center gap-4 p-4 bg-white dark:bg-dark-3 rounded-2xl border transition-shadow cursor-pointer"
       style={{ borderColor: "var(--border)" }}
     >
-
       <div className="w-20 h-20 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden bg-gray-100 dark:bg-dark-3">
         {emoji ? (
           <span className="text-3xl">{emoji}</span>
         ) : thumbnail ? (
-          <img src={thumbnail} alt="Session" className="w-full h-full object-cover" />
+          <img
+            src={thumbnail}
+            alt="Session"
+            className="w-full h-full object-cover"
+          />
         ) : (
           <img
             src="https://res.cloudinary.com/dfohn9dcz/image/upload/f_auto,q_auto,w_800,c_fill/v1/posts/user_7/ske_20251115103836"
@@ -74,12 +72,18 @@ const SessionItem: React.FC<any & { onClick?: () => void }> = ({
 
       <div className="flex-1 min-w-0">
         <h3 className="font-semibold text-lg text-foreground dark:text-white">
-          Session {sessionNumber || '?'}
+          Session {sessionNumber || "?"}
         </h3>
-        <p className="text-sm font-bold" style={{ color: "var(--alchemist-primary)" }}>
+        <p
+          className="text-sm font-bold"
+          style={{ color: "var(--alchemist-primary)" }}
+        >
           {activity}
         </p>
-        <p className="text-xs mt-1 font-medium" style={{ color: "var(--muted)" }}>
+        <p
+          className="text-xs mt-1 font-medium"
+          style={{ color: "var(--muted)" }}
+        >
           {xpEarned} XP Earned • {dateTime}
         </p>
       </div>
@@ -127,8 +131,6 @@ const SessionItem: React.FC<any & { onClick?: () => void }> = ({
                 Repeat Session
               </button>
 
-
-
               <button
                 type="button"
                 className="w-full   cursor-pointer font-medium text-left py-3 px-4 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-dark-3 transition-colors"
@@ -140,14 +142,12 @@ const SessionItem: React.FC<any & { onClick?: () => void }> = ({
                 Delete Session
               </button>
             </div>
-
           )}
         </div>
       </div>
     </div>
   );
 };
-
 
 export default function GoalDetailPage() {
   const params = useParams();
@@ -158,27 +158,27 @@ export default function GoalDetailPage() {
 
   // Helper to format duration seconds into HH:MM:SS
   const formatDuration = (seconds: number | null) => {
-    if (!seconds) return '00:00:00';
+    if (!seconds) return "00:00:00";
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
     const s = seconds % 60;
-    return `${h > 0 ? h + ':' : ''}${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    return `${h > 0 ? h + ":" : ""}${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
   // Helper to format date
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
   const handleStartActivity = () => {
-    const activityId = goal?.category ? 'Drawing' : 'drawing'; // Fallback
+    const activityId = goal?.category ? "Drawing" : "drawing"; // Fallback
     router.push(`/goals/${goalId}/session/new`);
   };
 
@@ -193,7 +193,7 @@ export default function GoalDetailPage() {
   };
 
   const handleGenerateNew = () => {
-    console.log('Generate new activity');
+    console.log("Generate new activity");
     setIsNewActivityModalOpen(false);
   };
 
@@ -207,7 +207,6 @@ export default function GoalDetailPage() {
     setIsNewActivityModalOpen(true);
   };
 
-
   const [isSessionPopupOpen, setIsSessionPopupOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
 
@@ -216,26 +215,31 @@ export default function GoalDetailPage() {
     setIsSessionPopupOpen(true);
   };
 
-
   const [isCompleteGoalOpen, setIsCompleteGoalOpen] = useState(false);
 
   const handleOpenCompleteGoal = () => setIsCompleteGoalOpen(true);
   const handleCloseCompleteGoal = () => setIsCompleteGoalOpen(false);
 
-  const handlePostAchievement = ({ title, description }: { title: string; description: string }) => {
+  const handlePostAchievement = ({
+    title,
+    description,
+  }: {
+    title: string;
+    description: string;
+  }) => {
     console.log("POST ACHIEVEMENT:", { title, description });
     // close after post
     setIsCompleteGoalOpen(false);
   };
 
   const handleDeleteGoal = async () => {
-    if (confirm('Are you sure you want to delete this goal?')) {
+    if (confirm("Are you sure you want to delete this goal?")) {
       try {
         await GoalsService.deleteGoal(goalId);
-        router.push('/goals');
+        router.push("/goals");
       } catch (err) {
-        console.error('Failed to delete goal:', err);
-        alert('Failed to delete goal');
+        console.error("Failed to delete goal:", err);
+        alert("Failed to delete goal");
       }
     }
   };
@@ -245,7 +249,10 @@ export default function GoalDetailPage() {
 
   React.useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
+      if (
+        moreMenuRef.current &&
+        !moreMenuRef.current.contains(e.target as Node)
+      ) {
         setIsMoreMenuOpen(false);
       }
     };
@@ -254,15 +261,23 @@ export default function GoalDetailPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const handleCreateGoal = (goal: {
+  const handleCreateGoal = async (data: {
     title: string;
     description: string;
     finishBy: string;
   }) => {
-    console.log("New goal created:", goal);
-    // Add your logic here to save the goal
+    try {
+      await GoalsService.updateGoal(goalId, {
+        title: data.title,
+        description: data.description,
+        ...(data.finishBy ? { finish_by: data.finishBy } : {}),
+      });
+      await refetch();
+    } catch (err) {
+      console.error("Failed to update goal:", err);
+      alert("Failed to update goal");
+    }
     setIsModalOpen(false);
   };
 
@@ -270,32 +285,88 @@ export default function GoalDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--background)' }}>
-        <p className="text-foreground dark:text-white">Loading goal details...</p>
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ backgroundColor: "var(--background)" }}
+      >
+        <p className="text-foreground dark:text-white">
+          Loading goal details...
+        </p>
       </div>
     );
   }
 
   if (error || !goal) {
     return (
-      <div className="min-h-screen flex items-center justify-center flex-col gap-4" style={{ backgroundColor: 'var(--background)' }}>
-        <p className="text-red-500">{error || 'Goal not found'}</p>
-        <button onClick={onBack} className="text-blue-500 hover:underline">Go Back</button>
+      <div
+        className="min-h-screen flex items-center justify-center flex-col gap-4"
+        style={{ backgroundColor: "var(--background)" }}
+      >
+        <p className="text-red-500">{error || "Goal not found"}</p>
+        <button onClick={onBack} className="text-blue-500 hover:underline">
+          Go Back
+        </button>
       </div>
     );
   }
 
-  const goalCompleted = goal.status === 'completed';
-  const description = `Status: ${goal.status}. ${goal.days_completed} / ${goal.days_total} days completed.`;
+  const goalCompleted = goal.status === "completed";
+  const goalDescription = goal.description || "";
+  const statusText = `${goal.days_completed} / ${goal.days_total} days completed`;
 
   // Calculate stats from sessions
-  const totalDurationSeconds = sessions.reduce((acc, s) => acc + (s.total_duration_seconds || 0), 0);
-  const totalXp = sessions.reduce((acc, s) => acc + s.xp_total, 0);
+  const totalDurationSeconds = sessions.reduce(
+    (acc, s) => acc + (s.total_duration_seconds || 0),
+    0,
+  );
+  const totalXpFromSessions = sessions.reduce((acc, s) => acc + s.xp_total, 0);
+  const totalXp =
+    sessions.length > 0
+      ? totalXpFromSessions
+      : typeof goal.total_xp === "number"
+        ? goal.total_xp
+        : 0;
+
+  // Aspect XP totals across all sessions
+  const aspectXpFromSessions = {
+    physique: sessions.reduce((acc, s) => acc + s.xp_physique, 0),
+    energy: sessions.reduce((acc, s) => acc + s.xp_energy, 0),
+    logic: sessions.reduce((acc, s) => acc + s.xp_logic, 0),
+    creativity: sessions.reduce((acc, s) => acc + s.xp_creativity, 0),
+    social: sessions.reduce((acc, s) => acc + s.xp_social, 0),
+  };
+
+  const aspectXp =
+    sessions.length > 0
+      ? aspectXpFromSessions
+      : {
+          physique: goal.xp_distribution?.physique ?? 0,
+          energy: goal.xp_distribution?.energy ?? 0,
+          logic: goal.xp_distribution?.logic ?? 0,
+          creativity: goal.xp_distribution?.creativity ?? 0,
+          social: goal.xp_distribution?.social ?? 0,
+        };
+
+  const maxAspectXp = Math.max(...Object.values(aspectXp), 1);
+
+  // Session number map: #1 = oldest, #N = most recent
+  const sessionNumberMap = Object.fromEntries(
+    [...sessions]
+      .sort(
+        (a, b) =>
+          new Date(a.started_at).getTime() - new Date(b.started_at).getTime(),
+      )
+      .map((s, i) => [s.id, i + 1]),
+  );
 
   // Group sessions
   const today = new Date().toDateString();
-  const todaySessions = sessions.filter(s => new Date(s.started_at).toDateString() === today);
-  const otherSessions = sessions.filter(s => new Date(s.started_at).toDateString() !== today); // Simplified logic for demo
+  const todaySessions = sessions.filter(
+    (s) => new Date(s.started_at).toDateString() === today,
+  );
+  const otherSessions = sessions.filter(
+    (s) => new Date(s.started_at).toDateString() !== today,
+  ); // Simplified logic for demo
 
   return (
     <>
@@ -349,24 +420,39 @@ export default function GoalDetailPage() {
 
         body {
           margin: 0;
-          font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+          font-family:
+            "DM Sans",
+            -apple-system,
+            BlinkMacSystemFont,
+            sans-serif;
           -webkit-font-smoothing: antialiased;
         }
       `}</style>
 
       <div
         className="min-h-screen"
-        style={{ backgroundColor: 'var(--background)' }}
+        style={{ backgroundColor: "var(--background)" }}
       >
-
         <SessionInfoPopup
           isOpen={isSessionPopupOpen}
           onClose={() => setIsSessionPopupOpen(false)}
-          sessionNumber={selectedSession ? Number(selectedSession.id) : 0} // using minimal mock ID logic
-          dateText={selectedSession ? formatDate(selectedSession.started_at) : ""}
-          totalDuration={selectedSession ? formatDuration(selectedSession.total_duration_seconds) : ""}
+          sessionNumber={
+            selectedSession ? (sessionNumberMap[selectedSession.id] ?? 0) : 0
+          }
+          dateText={
+            selectedSession ? formatDate(selectedSession.started_at) : ""
+          }
+          totalDuration={
+            selectedSession
+              ? formatDuration(selectedSession.total_duration_seconds)
+              : ""
+          }
           xpEarned={selectedSession?.xp_total ?? 0}
-          focusedDuration={selectedSession ? formatDuration(selectedSession.focused_duration_seconds) : "--"}
+          focusedDuration={
+            selectedSession
+              ? formatDuration(selectedSession.focused_duration_seconds)
+              : "--"
+          }
           nudgeCount={0}
           nudgeAvatars={[]}
           activity={{
@@ -382,13 +468,14 @@ export default function GoalDetailPage() {
           onPost={handlePostAchievement}
           imageUrl="https://res.cloudinary.com/dfohn9dcz/image/upload/f_auto,q_auto,w_800,c_fill/v1/posts/user_7/ske_20251115103836"
           defaultTitle={goal.title}
-          defaultDescription={description}
+          defaultDescription={goalDescription || statusText}
           timeSpent={formatDuration(totalDurationSeconds)}
           xpGained={totalXp}
           sessionsCount={sessions.length}
         />
 
         <NewGoalModal
+          key={goal.updated_at}
           isOpen={isModalOpen}
           isEdit={true}
           goalCompleted={goalCompleted}
@@ -396,25 +483,35 @@ export default function GoalDetailPage() {
           onSubmit={handleCreateGoal}
           initialGoal={{
             title: goal.title,
-            description: description,
-            finishBy: "2026-02-01", // Placeholder
+            description: goalDescription,
+            finishBy: goal.finish_by || "",
           }}
         />
 
-
         {/* Header */}
-        <div className="bg-white dark:bg-dark-2 sticky top-0 z-10 border-b" style={{ borderColor: 'var(--border)' }}>
+        <div
+          className="bg-white dark:bg-dark-2 sticky top-0 z-10 border-b"
+          style={{ borderColor: "var(--border)" }}
+        >
           <div className="flex items-center justify-between px-6 py-4">
             <button
               className="p-2 -ml-2 cursor-pointer  rounded-lg transition-colors"
               onClick={onBack}
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path
+                  d="M15 18L9 12L15 6"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
             </button>
 
-            <h1 className="text-xl font-bold flex-1 ml-2 text-foreground dark:text-white">{goal.title}</h1>
+            <h1 className="text-xl font-bold flex-1 ml-2 text-foreground dark:text-white">
+              {goal.title}
+            </h1>
 
             <div ref={moreMenuRef} className="relative">
               <button
@@ -445,8 +542,6 @@ export default function GoalDetailPage() {
                     Edit Goal
                   </button>
 
-
-
                   <button
                     type="button"
                     className="w-full cursor-pointer text-left font-medium py-3 px-4 text-sm hover:bg-gray-100 dark:hover:bg-dark-3 transition-colors"
@@ -457,8 +552,6 @@ export default function GoalDetailPage() {
                   >
                     Reset Progress
                   </button>
-
-
 
                   <button
                     type="button"
@@ -473,62 +566,105 @@ export default function GoalDetailPage() {
                 </div>
               )}
             </div>
-
           </div>
         </div>
 
         {/* Mobile Layout - Single Scroll */}
         <div className="block lg:hidden px-6 py-6">
           {/* Creation Date */}
-          <p className="text-sm mb-3" style={{ color: 'var(--muted)' }}>
+          <p className="text-sm mb-3" style={{ color: "var(--muted)" }}>
             Created on {formatDate(goal.created_at)}
           </p>
 
           {/* Description */}
-          <p className="text-base mb-6 text-foreground dark:text-white">
-            {description}
+          {goalDescription && (
+            <p className="text-base mb-4 text-foreground dark:text-white">
+              {goalDescription}
+            </p>
+          )}
+          <p className="text-sm mb-6" style={{ color: "var(--muted)" }}>
+            {statusText}
           </p>
 
           {/* Stats */}
           <div className="space-y-4 mb-6">
             <div className="flex items-center justify-between">
-              <span className="text-sm" style={{ color: 'var(--muted)' }}>Time Spent</span>
-              <span className="text-lg font-bold text-foreground dark:text-white">{formatDuration(totalDurationSeconds)}</span>
+              <span className="text-sm" style={{ color: "var(--muted)" }}>
+                Time Spent
+              </span>
+              <span className="text-lg font-bold text-foreground dark:text-white">
+                {formatDuration(totalDurationSeconds)}
+              </span>
             </div>
 
-            <div className="h-px" style={{ backgroundColor: 'var(--border)' }} />
+            <div
+              className="h-px"
+              style={{ backgroundColor: "var(--border)" }}
+            />
 
             <div className="flex items-center justify-between">
-              <span className="text-sm" style={{ color: 'var(--muted)' }}>XP gained</span>
-              <span className="text-lg font-bold text-foreground dark:text-white">{totalXp}</span>
+              <span className="text-sm" style={{ color: "var(--muted)" }}>
+                XP gained
+              </span>
+              <span className="text-lg font-bold text-foreground dark:text-white">
+                {totalXp}
+              </span>
             </div>
 
-            <div className="h-px" style={{ backgroundColor: 'var(--border)' }} />
+            <div
+              className="h-px"
+              style={{ backgroundColor: "var(--border)" }}
+            />
 
             <div className="flex items-center justify-between">
-              <span className="text-sm" style={{ color: 'var(--muted)' }}>Likes</span>
+              <span className="text-sm" style={{ color: "var(--muted)" }}>
+                Likes
+              </span>
               <div className="flex items-center gap-2">
                 <div className="flex -space-x-2">
-                  <div
-                    className="w-6 h-6 rounded-full border-2 border-white dark:border-dark-2 bg-gray-400"
-                  />
+                  <div className="w-6 h-6 rounded-full border-2 border-white dark:border-dark-2 bg-gray-400" />
                 </div>
-                <span className="text-md font-semibold text-foreground dark:text-white">+0</span>
+                <span className="text-md font-semibold text-foreground dark:text-white">
+                  +0
+                </span>
               </div>
             </div>
           </div>
 
           {/* Aspect Chips */}
           <div className="mb-6">
-            <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--muted)' }}>
+            <h3
+              className="text-sm font-semibold mb-3"
+              style={{ color: "var(--muted)" }}
+            >
               Life Aspects
             </h3>
             <div className="flex  justify-around gap-2">
-              <AspectChip icon={<BiDumbbell className="w-4 h-4" />} value={0} tint="physique" />
-              <AspectChip icon={<BoltIcon className="w-4 h-4" />} value={0} tint="energy" />
-              <AspectChip icon={<UsersIcon className="w-4 h-4" />} value={0} tint="social" />
-              <AspectChip icon={<FaBrain className="w-4 h-4" />} value={0} tint="creativity" />
-              <AspectChip icon={<FaHammer className="w-4 h-4" />} value={0} tint="logic" />
+              <AspectChip
+                icon={<BiDumbbell className="w-4 h-4" />}
+                value={aspectXp.physique}
+                tint="physique"
+              />
+              <AspectChip
+                icon={<BoltIcon className="w-4 h-4" />}
+                value={aspectXp.energy}
+                tint="energy"
+              />
+              <AspectChip
+                icon={<UsersIcon className="w-4 h-4" />}
+                value={aspectXp.social}
+                tint="social"
+              />
+              <AspectChip
+                icon={<FaBrain className="w-4 h-4" />}
+                value={aspectXp.creativity}
+                tint="creativity"
+              />
+              <AspectChip
+                icon={<FaHammer className="w-4 h-4" />}
+                value={aspectXp.logic}
+                tint="logic"
+              />
             </div>
           </div>
 
@@ -538,17 +674,17 @@ export default function GoalDetailPage() {
               <button
                 className="py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80  cursor-pointer"
                 style={{
-                  backgroundColor: 'var(--rookie-primary)',
+                  backgroundColor: "var(--rookie-primary)",
                 }}
                 onClick={handleStartActivity}
               >
-                Start {goal.category?.name || 'Session'}
+                Start {goal.category?.name || "Session"}
               </button>
 
               <button
                 className="py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80  cursor-pointer"
                 style={{
-                  backgroundColor: '#4a4a4a',
+                  backgroundColor: "#4a4a4a",
                 }}
                 onClick={() => handleOpenNewActivity()}
               >
@@ -557,14 +693,15 @@ export default function GoalDetailPage() {
             </div>
           )}
 
-
-          <h2 className="text-xl font-bold my-4 text-foreground dark:text-white">Today</h2>
+          <h2 className="text-xl font-bold my-4 text-foreground dark:text-white">
+            Today
+          </h2>
           <div className="space-y-3">
             {todaySessions.map((session) => (
               <SessionItem
                 key={session.id}
-                sessionNumber={Number(session.id) || 0} // Using ID as number fallback
-                activity={session.activity?.name || 'Activity'}
+                sessionNumber={sessionNumberMap[session.id] || 0}
+                activity={session.activity?.name || "Activity"}
                 xpEarned={session.xp_total}
                 dateTime={formatDate(session.started_at)}
                 duration={formatDuration(session.total_duration_seconds)}
@@ -572,18 +709,21 @@ export default function GoalDetailPage() {
                 onClick={() => handleOpenSessionPopup(session)}
               />
             ))}
-            {todaySessions.length === 0 && <p className="text-sm text-gray-500">No sessions today</p>}
+            {todaySessions.length === 0 && (
+              <p className="text-sm text-gray-500">No sessions today</p>
+            )}
           </div>
 
-
           {/* Sessions - Earlier */}
-          <h2 className="text-xl font-bold my-4 text-foreground dark:text-white">History</h2>
+          <h2 className="text-xl font-bold my-4 text-foreground dark:text-white">
+            History
+          </h2>
           <div className="space-y-3">
             {otherSessions.map((session) => (
               <SessionItem
                 key={session.id}
-                sessionNumber={Number(session.id) || 0}
-                activity={session.activity?.name || 'Activity'}
+                sessionNumber={sessionNumberMap[session.id] || 0}
+                activity={session.activity?.name || "Activity"}
                 xpEarned={session.xp_total}
                 dateTime={formatDate(session.started_at)}
                 duration={formatDuration(session.total_duration_seconds)}
@@ -591,9 +731,10 @@ export default function GoalDetailPage() {
                 onClick={() => handleOpenSessionPopup(session)}
               />
             ))}
-            {otherSessions.length === 0 && <p className="text-sm text-gray-500">No past sessions</p>}
+            {otherSessions.length === 0 && (
+              <p className="text-sm text-gray-500">No past sessions</p>
+            )}
           </div>
-
 
           {/* Complete Goal Button - Mobile */}
 
@@ -602,7 +743,7 @@ export default function GoalDetailPage() {
               <button
                 className="w-full py-3 rounded-2xl font-medium text-white text-md transition-all active:scale-95 cursor-pointer"
                 style={{
-                  backgroundColor: 'var(--rookie-primary)',
+                  backgroundColor: "var(--rookie-primary)",
                 }}
                 onClick={handleOpenCompleteGoal}
               >
@@ -622,17 +763,17 @@ export default function GoalDetailPage() {
                 <button
                   className="py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80  cursor-pointer"
                   style={{
-                    backgroundColor: 'var(--rookie-primary)',
+                    backgroundColor: "var(--rookie-primary)",
                   }}
                   onClick={handleStartActivity}
                 >
-                  Start {goal.category?.name || 'Session'}
+                  Start {goal.category?.name || "Session"}
                 </button>
 
                 <button
                   className="py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80 cursor-pointer"
                   style={{
-                    backgroundColor: '#4a4a4a',
+                    backgroundColor: "#4a4a4a",
                   }}
                   onClick={() => setIsNewActivityModalOpen(true)}
                 >
@@ -641,15 +782,16 @@ export default function GoalDetailPage() {
               </div>
             )}
 
-
             {/* Sessions - Today */}
-            <h2 className="text-xl font-bold my-4 text-foreground dark:text-white">Today</h2>
+            <h2 className="text-xl font-bold my-4 text-foreground dark:text-white">
+              Today
+            </h2>
             <div className="space-y-3">
               {todaySessions.map((session) => (
                 <SessionItem
                   key={session.id}
-                  sessionNumber={Number(session.id) || 0}
-                  activity={session.activity?.name || 'Activity'}
+                  sessionNumber={sessionNumberMap[session.id] || 0}
+                  activity={session.activity?.name || "Activity"}
                   xpEarned={session.xp_total}
                   dateTime={formatDate(session.started_at)}
                   duration={formatDuration(session.total_duration_seconds)}
@@ -657,18 +799,21 @@ export default function GoalDetailPage() {
                   onClick={() => handleOpenSessionPopup(session)}
                 />
               ))}
-              {todaySessions.length === 0 && <p className="text-sm text-gray-500">No sessions today</p>}
+              {todaySessions.length === 0 && (
+                <p className="text-sm text-gray-500">No sessions today</p>
+              )}
             </div>
 
-
             {/* Sessions - History */}
-            <h2 className="text-xl font-bold my-4 text-foreground dark:text-white">History</h2>
+            <h2 className="text-xl font-bold my-4 text-foreground dark:text-white">
+              History
+            </h2>
             <div className="space-y-3">
               {otherSessions.map((session) => (
                 <SessionItem
                   key={session.id}
-                  sessionNumber={Number(session.id) || 0}
-                  activity={session.activity?.name || 'Activity'}
+                  sessionNumber={sessionNumberMap[session.id] || 0}
+                  activity={session.activity?.name || "Activity"}
                   xpEarned={session.xp_total}
                   dateTime={formatDate(session.started_at)}
                   duration={formatDuration(session.total_duration_seconds)}
@@ -676,23 +821,46 @@ export default function GoalDetailPage() {
                   onClick={() => handleOpenSessionPopup(session)}
                 />
               ))}
-              {otherSessions.length === 0 && <p className="text-sm text-gray-500">No past sessions</p>}
+              {otherSessions.length === 0 && (
+                <p className="text-sm text-gray-500">No past sessions</p>
+              )}
             </div>
-
           </div>
 
           {/* Right Sidebar - Desktop Only */}
           <div style={{ width: "450px" }} className="flex-shrink-0">
-            <div className="sticky top-24 space-y-6 bg-white dark:bg-dark-2 rounded-2xl p-6 border" style={{ borderColor: 'var(--border)' }}>
-
+            <div
+              className="sticky top-24 space-y-6 bg-white dark:bg-dark-2 rounded-2xl p-6 border"
+              style={{ borderColor: "var(--border)" }}
+            >
               <div className="w-full h-[220px]">
                 <RadarChart
                   data={[
-                    { aspect: "Physique", value: 1, fullMark: 12 },
-                    { aspect: "Energy", value: 1, fullMark: 12 },
-                    { aspect: "Logic", value: 1, fullMark: 12 },
-                    { aspect: "Creativity", value: 1, fullMark: 12 },
-                    { aspect: "Social", value: 1, fullMark: 12 },
+                    {
+                      aspect: "Physique",
+                      value: aspectXp.physique,
+                      fullMark: maxAspectXp,
+                    },
+                    {
+                      aspect: "Energy",
+                      value: aspectXp.energy,
+                      fullMark: maxAspectXp,
+                    },
+                    {
+                      aspect: "Logic",
+                      value: aspectXp.logic,
+                      fullMark: maxAspectXp,
+                    },
+                    {
+                      aspect: "Creativity",
+                      value: aspectXp.creativity,
+                      fullMark: maxAspectXp,
+                    },
+                    {
+                      aspect: "Social",
+                      value: aspectXp.social,
+                      fullMark: maxAspectXp,
+                    },
                   ]}
                   masteryTitle={"Beginner"}
                   username={"User"}
@@ -701,70 +869,105 @@ export default function GoalDetailPage() {
 
               {/* Aspect Chips */}
               <div>
-
                 <div className="flex  justify-around gap-2">
-                  <AspectChip icon={<BiDumbbell className="w-4 h-4" />} value={0} tint="physique" />
-                  <AspectChip icon={<BoltIcon className="w-4 h-4" />} value={0} tint="energy" />
-                  <AspectChip icon={<UsersIcon className="w-4 h-4" />} value={0} tint="social" />
-                  <AspectChip icon={<FaBrain className="w-4 h-4" />} value={0} tint="creativity" />
-                  <AspectChip icon={<FaHammer className="w-4 h-4" />} value={0} tint="logic" />
+                  <AspectChip
+                    icon={<BiDumbbell className="w-4 h-4" />}
+                    value={aspectXp.physique}
+                    tint="physique"
+                  />
+                  <AspectChip
+                    icon={<BoltIcon className="w-4 h-4" />}
+                    value={aspectXp.energy}
+                    tint="energy"
+                  />
+                  <AspectChip
+                    icon={<UsersIcon className="w-4 h-4" />}
+                    value={aspectXp.social}
+                    tint="social"
+                  />
+                  <AspectChip
+                    icon={<FaBrain className="w-4 h-4" />}
+                    value={aspectXp.creativity}
+                    tint="creativity"
+                  />
+                  <AspectChip
+                    icon={<FaHammer className="w-4 h-4" />}
+                    value={aspectXp.logic}
+                    tint="logic"
+                  />
                 </div>
               </div>
 
               {/* Creation Date */}
 
-              <p className="text-sm" style={{ color: 'var(--muted)' }}>
+              <p className="text-sm" style={{ color: "var(--muted)" }}>
                 Created on {formatDate(goal.created_at)}
               </p>
 
-
               {/* Description */}
-
-              <p className="text-md text-foreground dark:text-white">
-                {description}
+              {goalDescription && (
+                <p className="text-md text-foreground dark:text-white">
+                  {goalDescription}
+                </p>
+              )}
+              <p className="text-sm" style={{ color: "var(--muted)" }}>
+                {statusText}
               </p>
-
 
               {/* Stats */}
               <div className="space-y-4">
                 {/* Time Spent */}
                 <div className="flex items-center justify-between">
-                  <span className="text-sm" style={{ color: 'var(--muted)' }}>Time Spent</span>
-                  <span className="text-lg font-bold text-foreground dark:text-white">{formatDuration(totalDurationSeconds)}</span>
+                  <span className="text-sm" style={{ color: "var(--muted)" }}>
+                    Time Spent
+                  </span>
+                  <span className="text-lg font-bold text-foreground dark:text-white">
+                    {formatDuration(totalDurationSeconds)}
+                  </span>
                 </div>
 
-                <div className="h-px" style={{ backgroundColor: 'var(--border)' }} />
+                <div
+                  className="h-px"
+                  style={{ backgroundColor: "var(--border)" }}
+                />
 
                 {/* XP Gained */}
                 <div className="flex items-center justify-between">
-                  <span className="text-sm" style={{ color: 'var(--muted)' }}>XP gained</span>
-                  <span className="text-lg font-bold text-foreground dark:text-white">{totalXp}</span>
+                  <span className="text-sm" style={{ color: "var(--muted)" }}>
+                    XP gained
+                  </span>
+                  <span className="text-lg font-bold text-foreground dark:text-white">
+                    {totalXp}
+                  </span>
                 </div>
 
-                <div className="h-px" style={{ backgroundColor: 'var(--border)' }} />
+                <div
+                  className="h-px"
+                  style={{ backgroundColor: "var(--border)" }}
+                />
 
                 {/* Likes */}
                 <div className="flex items-center justify-between">
-                  <span className="text-sm" style={{ color: 'var(--muted)' }}>Likes</span>
+                  <span className="text-sm" style={{ color: "var(--muted)" }}>
+                    Likes
+                  </span>
                   <div className="flex items-center gap-2">
                     <div className="flex -space-x-2">
-                      <div
-                        className="w-6 h-6 rounded-full border-2 border-white dark:border-dark-2 bg-gray-400"
-                      />
+                      <div className="w-6 h-6 rounded-full border-2 border-white dark:border-dark-2 bg-gray-400" />
                     </div>
-                    <span className="text-md font-semibold text-foreground dark:text-white">+0</span>
+                    <span className="text-md font-semibold text-foreground dark:text-white">
+                      +0
+                    </span>
                   </div>
                 </div>
               </div>
-
-
 
               {/* Complete Goal Button */}
               {!goalCompleted && (
                 <button
                   className="w-full py-3 rounded-2xl font-medium text-white text-md transition-all active:scale-95 cursor-pointer"
                   style={{
-                    backgroundColor: 'var(--rookie-primary)',
+                    backgroundColor: "var(--rookie-primary)",
                   }}
                   onClick={handleOpenCompleteGoal}
                 >

@@ -12,7 +12,13 @@ import { FaBrain, FaHammer } from "react-icons/fa";
 
 type AspectKey = "physique" | "energy" | "social" | "creativity" | "logic";
 
-type GoalStatus = "active" | "completed" | "paused" | "abandoned";
+type GoalStatus =
+  | "active"
+  | "ongoing"
+  | "completed"
+  | "planned"
+  | "paused"
+  | "abandoned";
 
 type Goal = {
   id: string;
@@ -69,6 +75,111 @@ type GoalPost = {
   };
   total_xp?: number;
 };
+
+function extractGoalsFromResponse(data: unknown): GoalPost[] {
+  const normalizeStatus = (status: unknown): GoalStatus => {
+    if (status === "ongoing") return "ongoing";
+    if (status === "planned") return "planned";
+    if (status === "completed") return "completed";
+    if (status === "paused") return "paused";
+    if (status === "abandoned") return "abandoned";
+    return "active";
+  };
+
+  const normalizeGoal = (item: unknown): GoalPost | null => {
+    if (!item || typeof item !== "object") return null;
+
+    const goal = item as Record<string, unknown>;
+    const rawId = goal.id;
+    const rawTitle =
+      typeof goal.title === "string"
+        ? goal.title
+        : typeof goal.content === "string"
+          ? goal.content
+          : null;
+
+    if ((typeof rawId !== "string" && typeof rawId !== "number") || !rawTitle) {
+      return null;
+    }
+
+    return {
+      id: String(rawId),
+      title: rawTitle,
+      description:
+        typeof goal.description === "string"
+          ? goal.description
+          : typeof goal.content === "string"
+            ? goal.content
+            : null,
+      status: normalizeStatus(goal.status),
+      emoji: typeof goal.emoji === "string" ? goal.emoji : null,
+      days_total: typeof goal.days_total === "number" ? goal.days_total : 0,
+      days_completed:
+        typeof goal.days_completed === "number"
+          ? goal.days_completed
+          : undefined,
+      created_at:
+        typeof goal.created_at === "string" ? goal.created_at : undefined,
+      updated_at:
+        typeof goal.updated_at === "string" ? goal.updated_at : undefined,
+    };
+  };
+
+  const normalizeList = (items: unknown[]): GoalPost[] => {
+    return items
+      .map((item) => normalizeGoal(item))
+      .filter((goal): goal is GoalPost => goal !== null);
+  };
+
+  if (Array.isArray(data)) {
+    return normalizeList(data);
+  }
+
+  if (data && typeof data === "object" && "data" in data) {
+    const nestedData = (data as { data: unknown }).data;
+    if (Array.isArray(nestedData)) {
+      return normalizeList(nestedData);
+    }
+    if (
+      nestedData &&
+      typeof nestedData === "object" &&
+      "results" in nestedData &&
+      Array.isArray((nestedData as { results: unknown }).results)
+    ) {
+      return normalizeList((nestedData as { results: unknown[] }).results);
+    }
+  }
+
+  if (
+    data &&
+    typeof data === "object" &&
+    "results" in data &&
+    Array.isArray((data as { results: unknown }).results)
+  ) {
+    return normalizeList((data as { results: unknown[] }).results);
+  }
+
+  if (
+    data &&
+    typeof data === "object" &&
+    "goals" in data &&
+    Array.isArray((data as { goals: unknown }).goals)
+  ) {
+    return normalizeList((data as { goals: unknown[] }).goals);
+  }
+
+  if (
+    data &&
+    typeof data === "object" &&
+    "items" in data &&
+    Array.isArray((data as { items: unknown }).items)
+  ) {
+    return normalizeList((data as { items: unknown[] }).items);
+  }
+
+  return [];
+}
+
 import { NudgesLikesSection } from "@/src/components/goals/NudgesLikesSection";
 
 type InteractionType = "nudge" | "like";
@@ -125,16 +236,21 @@ function GoalCard({
   primaryCta,
   secondaryCta,
   showAchievementCta,
+  onCardClick,
 }: {
   goal: Goal;
   primaryCta?: { label: string; onClick: () => void };
   secondaryCta?: { label: string; onClick: () => void };
   showAchievementCta?: { label: string; onClick: () => void };
+  onCardClick?: () => void;
 }) {
   const isCompleted = goal.status === "completed";
 
   return (
-    <div className="w-full rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-dark-2  p-4">
+    <div
+      className={`w-full rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-dark-2 p-4 ${onCardClick ? "cursor-pointer" : ""}`}
+      onClick={onCardClick}
+    >
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className=" w-full flex items-start gap-3">
@@ -227,7 +343,10 @@ function GoalCard({
       <div className="mt-6  flex gap-3">
         {primaryCta && (
           <button
-            onClick={primaryCta.onClick}
+            onClick={(e) => {
+              e.stopPropagation();
+              primaryCta.onClick();
+            }}
             style={{
               backgroundColor: "var(--rookie-primary)",
             }}
@@ -239,7 +358,10 @@ function GoalCard({
 
         {secondaryCta && (
           <button
-            onClick={secondaryCta.onClick}
+            onClick={(e) => {
+              e.stopPropagation();
+              secondaryCta.onClick();
+            }}
             className="flex-1 rounded-xl cursor-pointer bg-gray-700 dark:bg-gray-600 text-white font-semibold py-3 hover:bg-gray-800 dark:hover:bg-gray-700 transition"
           >
             {secondaryCta.label}
@@ -248,7 +370,10 @@ function GoalCard({
 
         {showAchievementCta && (
           <button
-            onClick={showAchievementCta.onClick}
+            onClick={(e) => {
+              e.stopPropagation();
+              showAchievementCta.onClick();
+            }}
             className="w-full rounded-xl bg-gray-700 dark:bg-gray-600 text-white font-semibold py-3 hover:bg-gray-800 dark:hover:bg-gray-700 transition"
           >
             {showAchievementCta.label}
@@ -422,7 +547,7 @@ export default function GoalsPage() {
         if (!res.ok) throw new Error("Failed to fetch goals");
 
         const data = await res.json();
-        setGoals(Array.isArray(data.results) ? data.results : []);
+        setGoals(extractGoalsFromResponse(data));
       } catch (e) {
         console.error(e);
       } finally {
@@ -434,9 +559,14 @@ export default function GoalsPage() {
   }, [me, authLoading]);
 
   const plannedGoals = goals.filter(
-    (p) => p.status === "paused" || p.status === "abandoned",
+    (p) =>
+      p.status === "planned" ||
+      p.status === "paused" ||
+      p.status === "abandoned",
   );
-  const ongoingGoals = goals.filter((p) => p.status === "active");
+  const ongoingGoals = goals.filter(
+    (p) => p.status === "active" || p.status === "ongoing",
+  );
   const completedGoals = goals.filter((p) => p.status === "completed");
 
   const [sidebarInfo, setSidebarInfo] = useState<UserGoalsInfo | null>(null);
@@ -520,7 +650,7 @@ export default function GoalsPage() {
         const fetchRes = await fetch(`/api/goals`, { cache: "no-store" });
         if (fetchRes.ok) {
           const data = await fetchRes.json();
-          setGoals(Array.isArray(data.results) ? data.results : []);
+          setGoals(extractGoalsFromResponse(data));
         }
       }
     } catch (error: unknown) {
@@ -608,7 +738,7 @@ export default function GoalsPage() {
         });
         if (res.ok) {
           const data = await res.json();
-          setGoals(Array.isArray(data.results) ? data.results : []);
+          setGoals(extractGoalsFromResponse(data));
         }
       }
     } finally {
@@ -652,6 +782,7 @@ export default function GoalsPage() {
                   {ongoingGoals.map((goal) => (
                     <GoalCard
                       key={goal.id}
+                      onCardClick={() => router.push(`/goals/${goal.id}`)}
                       goal={{
                         id: goal.id,
                         emoji: goal.emoji || "🎯",
@@ -694,6 +825,7 @@ export default function GoalsPage() {
                   {plannedGoals.map((goal) => (
                     <GoalCard
                       key={goal.id}
+                      onCardClick={() => router.push(`/goals/${goal.id}`)}
                       goal={{
                         id: goal.id,
                         emoji: goal.emoji || "🎯",
@@ -701,7 +833,11 @@ export default function GoalsPage() {
                         description: goal.description || "",
                         status: goal.status,
                         metaRight:
-                          goal.status === "paused" ? "Paused" : "Abandoned",
+                          goal.status === "paused"
+                            ? "Paused"
+                            : goal.status === "abandoned"
+                              ? "Abandoned"
+                              : "Planned",
                       }}
                       primaryCta={{
                         label: "Start",
@@ -744,36 +880,37 @@ export default function GoalsPage() {
                 </>
               ) : (
                 <div className="space-y-4">
-                 {completedGoals.map((goal) => (
-                      <GoalCard
-                        key={goal.id}
-                        goal={{
-                          id: String(goal.id),
-                          emoji: goal.emoji || "🎯",
-                          title: goal.title,
-                          description: goal.content || "",
-                          status: goal.status,
+                  {completedGoals.map((goal) => (
+                    <GoalCard
+                      key={goal.id}
+                      onCardClick={() => router.push(`/goals/${goal.id}`)}
+                      goal={{
+                        id: String(goal.id),
+                        emoji: goal.emoji || "🎯",
+                        title: goal.title,
+                        description: goal.content || "",
+                        status: goal.status,
 
-                          timeSummary: goal.duration_display ?? "",
+                        timeSummary: goal.duration_display ?? "",
 
-                          xpReward: goal.total_xp ?? 0,
+                        xpReward: goal.total_xp ?? 0,
 
-                          aspectXP: goal.xp_distribution
-                            ? {
-                                physique: goal.xp_distribution.physique ?? 0,
-                                energy: goal.xp_distribution.energy ?? 0,
-                                social: goal.xp_distribution.social ?? 0,
-                                creativity: goal.xp_distribution.creativity ?? 0,
-                                logic: goal.xp_distribution.logic ?? 0,
-                              }
-                            : undefined,
-                        }}
-                        showAchievementCta={{
-                          label: "View Achievement",
-                          onClick: () => router.push(`/goals/${goal.id}`),
-                        }}
-                      />
-                    ))}
+                        aspectXP: goal.xp_distribution
+                          ? {
+                              physique: goal.xp_distribution.physique ?? 0,
+                              energy: goal.xp_distribution.energy ?? 0,
+                              social: goal.xp_distribution.social ?? 0,
+                              creativity: goal.xp_distribution.creativity ?? 0,
+                              logic: goal.xp_distribution.logic ?? 0,
+                            }
+                          : undefined,
+                      }}
+                      showAchievementCta={{
+                        label: "View Achievement",
+                        onClick: () => router.push(`/goals/${goal.id}`),
+                      }}
+                    />
+                  ))}
                 </div>
               )}
             </div>
