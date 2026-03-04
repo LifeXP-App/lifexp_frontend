@@ -12,13 +12,7 @@ import { FaBrain, FaHammer } from "react-icons/fa";
 
 type AspectKey = "physique" | "energy" | "social" | "creativity" | "logic";
 
-type GoalStatus =
-  | "active"
-  | "ongoing"
-  | "completed"
-  | "planned"
-  | "paused"
-  | "abandoned";
+type GoalStatus = "ongoing" | "planned" | "completed";
 
 type Goal = {
   id: string;
@@ -46,8 +40,8 @@ type UserGoalsInfo = {
   masteryTextColor: string;
   lifelevel: number;
   ongoing: number;
-  planned: number;
-  completed: number;
+  planned:number;
+  completed:number;
   followers: number;
   following: number;
   totalXp: number;
@@ -59,126 +53,16 @@ type UserGoalsInfo = {
 };
 
 type GoalPost = {
-  id: number;
+  id: string;
   uid: string;
   title: string;
   content: string;
-  emoji?: string | null;
   status: GoalStatus;
-  duration_display?: string;
-  xp_distribution?: {
-    physique: number;
-    energy: number;
-    social: number;
-    creativity: number;
-    logic: number;
-  };
+  emoji?: string | null;
+  duration_display?: string | null;
   total_xp?: number;
+  xp_distribution?: Record<AspectKey, number>;
 };
-
-function extractGoalsFromResponse(data: unknown): GoalPost[] {
-  const normalizeStatus = (status: unknown): GoalStatus => {
-    if (status === "ongoing") return "ongoing";
-    if (status === "planned") return "planned";
-    if (status === "completed") return "completed";
-    if (status === "paused") return "paused";
-    if (status === "abandoned") return "abandoned";
-    return "active";
-  };
-
-  const normalizeGoal = (item: unknown): GoalPost | null => {
-    if (!item || typeof item !== "object") return null;
-
-    const goal = item as Record<string, unknown>;
-    const rawId = goal.id;
-    const rawTitle =
-      typeof goal.title === "string"
-        ? goal.title
-        : typeof goal.content === "string"
-          ? goal.content
-          : null;
-
-    if ((typeof rawId !== "string" && typeof rawId !== "number") || !rawTitle) {
-      return null;
-    }
-
-    return {
-      id: String(rawId),
-      title: rawTitle,
-      description:
-        typeof goal.description === "string"
-          ? goal.description
-          : typeof goal.content === "string"
-            ? goal.content
-            : null,
-      status: normalizeStatus(goal.status),
-      emoji: typeof goal.emoji === "string" ? goal.emoji : null,
-      days_total: typeof goal.days_total === "number" ? goal.days_total : 0,
-      days_completed:
-        typeof goal.days_completed === "number"
-          ? goal.days_completed
-          : undefined,
-      created_at:
-        typeof goal.created_at === "string" ? goal.created_at : undefined,
-      updated_at:
-        typeof goal.updated_at === "string" ? goal.updated_at : undefined,
-    };
-  };
-
-  const normalizeList = (items: unknown[]): GoalPost[] => {
-    return items
-      .map((item) => normalizeGoal(item))
-      .filter((goal): goal is GoalPost => goal !== null);
-  };
-
-  if (Array.isArray(data)) {
-    return normalizeList(data);
-  }
-
-  if (data && typeof data === "object" && "data" in data) {
-    const nestedData = (data as { data: unknown }).data;
-    if (Array.isArray(nestedData)) {
-      return normalizeList(nestedData);
-    }
-    if (
-      nestedData &&
-      typeof nestedData === "object" &&
-      "results" in nestedData &&
-      Array.isArray((nestedData as { results: unknown }).results)
-    ) {
-      return normalizeList((nestedData as { results: unknown[] }).results);
-    }
-  }
-
-  if (
-    data &&
-    typeof data === "object" &&
-    "results" in data &&
-    Array.isArray((data as { results: unknown }).results)
-  ) {
-    return normalizeList((data as { results: unknown[] }).results);
-  }
-
-  if (
-    data &&
-    typeof data === "object" &&
-    "goals" in data &&
-    Array.isArray((data as { goals: unknown }).goals)
-  ) {
-    return normalizeList((data as { goals: unknown[] }).goals);
-  }
-
-  if (
-    data &&
-    typeof data === "object" &&
-    "items" in data &&
-    Array.isArray((data as { items: unknown }).items)
-  ) {
-    return normalizeList((data as { items: unknown[] }).items);
-  }
-
-  return [];
-}
 
 import { NudgesLikesSection } from "@/src/components/goals/NudgesLikesSection";
 
@@ -236,21 +120,16 @@ function GoalCard({
   primaryCta,
   secondaryCta,
   showAchievementCta,
-  onCardClick,
 }: {
   goal: Goal;
   primaryCta?: { label: string; onClick: () => void };
   secondaryCta?: { label: string; onClick: () => void };
   showAchievementCta?: { label: string; onClick: () => void };
-  onCardClick?: () => void;
 }) {
   const isCompleted = goal.status === "completed";
 
   return (
-    <div
-      className={`w-full rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-dark-2 p-4 ${onCardClick ? "cursor-pointer" : ""}`}
-      onClick={onCardClick}
-    >
+    <div className="w-full rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-dark-2  p-4">
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className=" w-full flex items-start gap-3">
@@ -343,10 +222,7 @@ function GoalCard({
       <div className="mt-6  flex gap-3">
         {primaryCta && (
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              primaryCta.onClick();
-            }}
+            onClick={primaryCta.onClick}
             style={{
               backgroundColor: "var(--rookie-primary)",
             }}
@@ -358,10 +234,7 @@ function GoalCard({
 
         {secondaryCta && (
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              secondaryCta.onClick();
-            }}
+            onClick={secondaryCta.onClick}
             className="flex-1 rounded-xl cursor-pointer bg-gray-700 dark:bg-gray-600 text-white font-semibold py-3 hover:bg-gray-800 dark:hover:bg-gray-700 transition"
           >
             {secondaryCta.label}
@@ -370,10 +243,7 @@ function GoalCard({
 
         {showAchievementCta && (
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              showAchievementCta.onClick();
-            }}
+            onClick={showAchievementCta.onClick}
             className="w-full rounded-xl bg-gray-700 dark:bg-gray-600 text-white font-semibold py-3 hover:bg-gray-800 dark:hover:bg-gray-700 transition"
           >
             {showAchievementCta.label}
@@ -516,7 +386,10 @@ function RightSidebarInfoSkeleton() {
         </div>
       </div>
 
-      <RecentInteractionsSkeleton />
+      <RecentInteractionsSkeleton/>
+
+     
+     
     </aside>
   );
 }
@@ -534,7 +407,9 @@ export default function GoalsPage() {
   const [goalsLoading, setGoalsLoading] = useState(false);
 
   useEffect(() => {
-    if (authLoading || !me) return;
+    if (authLoading || !me?.username) return;
+    console.log("AuthLoading",authLoading)
+    console.log("Me:",me)
 
     const fetchGoals = async () => {
       try {
@@ -547,7 +422,7 @@ export default function GoalsPage() {
         if (!res.ok) throw new Error("Failed to fetch goals");
 
         const data = await res.json();
-        setGoals(extractGoalsFromResponse(data));
+        setGoals(Array.isArray(data.results) ? data.results : []);
       } catch (e) {
         console.error(e);
       } finally {
@@ -558,15 +433,8 @@ export default function GoalsPage() {
     fetchGoals();
   }, [me, authLoading]);
 
-  const plannedGoals = goals.filter(
-    (p) =>
-      p.status === "planned" ||
-      p.status === "paused" ||
-      p.status === "abandoned",
-  );
-  const ongoingGoals = goals.filter(
-    (p) => p.status === "active" || p.status === "ongoing",
-  );
+  const plannedGoals = goals.filter((p) => p.status === "planned");
+  const ongoingGoals = goals.filter((p) => p.status === "ongoing");
   const completedGoals = goals.filter((p) => p.status === "completed");
 
   const [sidebarInfo, setSidebarInfo] = useState<UserGoalsInfo | null>(null);
@@ -580,12 +448,9 @@ export default function GoalsPage() {
         setSidebarLoading(true);
         const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-        const res = await fetch(
-          `${baseUrl}/api/v1/goals/info/${me.username}/`,
-          {
-            cache: "no-store",
-          },
-        );
+        const res = await fetch(`${baseUrl}/api/v1/goals/info/${me.username}/`, {
+          cache: "no-store",
+        });
 
         if (!res.ok) throw new Error("Failed to fetch sidebar info");
 
@@ -601,69 +466,14 @@ export default function GoalsPage() {
     fetchSidebarInfo();
   }, [me?.username]);
 
-  const handleCreateGoal = async (goal: {
+  const handleCreateGoal = (goal: {
     title: string;
     description: string;
     finishBy: string;
   }) => {
-    try {
-      setIsModalOpen(false);
-      setGoalsLoading(true);
-
-      const payload: {
-        title: string;
-        description?: string;
-        finish_by?: string;
-      } = { title: goal.title };
-      if (goal.description) payload.description = goal.description;
-      if (goal.finishBy) payload.finish_by = goal.finishBy;
-
-      const res = await fetch("/api/goals", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        if (res.status === 401) {
-          alert("Session expired. Please log in again.");
-          router.push("/users/login");
-          return;
-        }
-        // Try to parse detailed error if available
-        let errorMsg = "Failed to create goal";
-        try {
-          const errorData = await res.json();
-          if (errorData.detail) errorMsg = errorData.detail;
-          else if (typeof errorData === "object") {
-            // Might be a field-level error object
-            errorMsg = JSON.stringify(errorData);
-          }
-        } catch {
-          // ignore parsing error
-        }
-        throw new Error(errorMsg);
-      }
-
-      // Success, refresh list
-      if (me) {
-        const fetchRes = await fetch(`/api/goals`, { cache: "no-store" });
-        if (fetchRes.ok) {
-          const data = await fetchRes.json();
-          setGoals(extractGoalsFromResponse(data));
-        }
-      }
-    } catch (error: unknown) {
-      console.error("Error creating goal:", error);
-      const message =
-        error instanceof Error
-          ? error.message
-          : "An error occurred while creating the goal";
-      alert(message);
-      // Could consider reopening modal, or let user click it again
-    } finally {
-      setGoalsLoading(false);
-    }
+    console.log("New goal created:", goal);
+    // Add your logic here to save the goal
+    setIsModalOpen(false);
   };
 
   const handleOpenActivityModal = (goalId: string) => {
@@ -695,22 +505,22 @@ export default function GoalsPage() {
     }
   };
 
-  const handleDeleteGoal = async (goalId: string) => {
+  const handleDeleteGoal = async (goalUid: string) => {
     try {
-      setDeletingGoalId(goalId);
+      setDeletingGoalId(goalUid);
 
       // Optimistically remove from UI
-      const goalToDelete = goals.find((g) => g.id === goalId);
-      setGoals((prev) => prev.filter((g) => g.id !== goalId));
+      const goalToDelete = goals.find(g => g.uid === goalUid);
+      setGoals(prev => prev.filter(g => g.uid !== goalUid));
 
-      const res = await fetch(`/api/goals/${goalId}`, {
+      const res = await fetch(`/api/goals/${goalUid}`, {
         method: "DELETE",
       });
 
       if (!res.ok) {
         // Restore goal on error
         if (goalToDelete) {
-          setGoals((prev) => [...prev, goalToDelete]);
+          setGoals(prev => [...prev, goalToDelete]);
         }
 
         if (res.status === 401) {
@@ -719,9 +529,7 @@ export default function GoalsPage() {
           return;
         }
 
-        const errorData = await res
-          .json()
-          .catch(() => ({ detail: "Failed to delete goal" }));
+        const errorData = await res.json().catch(() => ({ detail: "Failed to delete goal" }));
         alert(errorData.detail || "Failed to delete goal");
         return;
       }
@@ -732,13 +540,13 @@ export default function GoalsPage() {
       alert("An error occurred while deleting the goal");
 
       // Refresh goals list on error
-      if (me) {
-        const res = await fetch(`/api/goals`, {
+      if (me?.username) {
+        const res = await fetch(`/api/goals/u/${me.username}`, {
           cache: "no-store",
         });
         if (res.ok) {
           const data = await res.json();
-          setGoals(extractGoalsFromResponse(data));
+          setGoals(Array.isArray(data.results) ? data.results : []);
         }
       }
     } finally {
@@ -782,25 +590,23 @@ export default function GoalsPage() {
                   {ongoingGoals.map((goal) => (
                     <GoalCard
                       key={goal.id}
-                      onCardClick={() => router.push(`/goals/${goal.id}`)}
                       goal={{
                         id: goal.id,
                         emoji: goal.emoji || "🎯",
                         title: goal.title,
-                        description: goal.description || "",
-                        status: goal.status,
-                        metaRight:
-                          typeof goal.days_completed === "number"
-                            ? `${goal.days_completed}/${goal.days_total} days`
-                            : `${goal.days_total} days target`,
+                        description: goal.content,
+                        status: "ongoing",
+                        metaRight: goal.duration_display
+                          ? `${goal.duration_display} spent`
+                          : undefined,
                       }}
                       primaryCta={{
                         label: "New Session",
-                        onClick: () => router.push(`/goals/${goal.id}`),
+                        onClick: () => router.push(`/goals/${goal.uid}`),
                       }}
                       secondaryCta={{
                         label: "View",
-                        onClick: () => router.push(`/goals/${goal.id}`),
+                        onClick: () => router.push(`/goals/${goal.uid}`),
                       }}
                     />
                   ))}
@@ -825,37 +631,24 @@ export default function GoalsPage() {
                   {plannedGoals.map((goal) => (
                     <GoalCard
                       key={goal.id}
-                      onCardClick={() => router.push(`/goals/${goal.id}`)}
                       goal={{
                         id: goal.id,
                         emoji: goal.emoji || "🎯",
                         title: goal.title,
-                        description: goal.description || "",
-                        status: goal.status,
-                        metaRight:
-                          goal.status === "paused"
-                            ? "Paused"
-                            : goal.status === "abandoned"
-                              ? "Abandoned"
-                              : "Planned",
+                        description: goal.content,
+                        status: "planned",
+                        metaRight: "Planned",
                       }}
                       primaryCta={{
                         label: "Start",
                         onClick: () => handleOpenActivityModal(goal.id),
                       }}
                       secondaryCta={{
-                        label:
-                          deletingGoalId === goal.id
-                            ? "Deleting..."
-                            : "Discard",
+                        label: deletingGoalId === goal.uid ? "Deleting..." : "Discard",
                         onClick: () => {
                           if (deletingGoalId) return; // Prevent multiple clicks
-                          if (
-                            window.confirm(
-                              `Are you sure you want to discard "${goal.title}"?`,
-                            )
-                          ) {
-                            handleDeleteGoal(goal.id);
+                          if (window.confirm(`Are you sure you want to discard "${goal.title}"?`)) {
+                            handleDeleteGoal(goal.uid);
                           }
                         },
                       }}
@@ -883,31 +676,21 @@ export default function GoalsPage() {
                   {completedGoals.map((goal) => (
                     <GoalCard
                       key={goal.id}
-                      onCardClick={() => router.push(`/goals/${goal.id}`)}
                       goal={{
-                        id: String(goal.id),
+                        id: goal.id,
                         emoji: goal.emoji || "🎯",
                         title: goal.title,
-                        description: goal.content || "",
-                        status: goal.status,
-
-                        timeSummary: goal.duration_display ?? "",
-
-                        xpReward: goal.total_xp ?? 0,
-
-                        aspectXP: goal.xp_distribution
-                          ? {
-                              physique: goal.xp_distribution.physique ?? 0,
-                              energy: goal.xp_distribution.energy ?? 0,
-                              social: goal.xp_distribution.social ?? 0,
-                              creativity: goal.xp_distribution.creativity ?? 0,
-                              logic: goal.xp_distribution.logic ?? 0,
-                            }
+                        description: goal.content,
+                        status: "completed",
+                        xpReward: goal.total_xp,
+                        timeSummary: goal.duration_display
+                          ? goal.duration_display
                           : undefined,
+                        aspectXP: goal.xp_distribution,
                       }}
                       showAchievementCta={{
                         label: "View Achievement",
-                        onClick: () => router.push(`/goals/${goal.id}`),
+                        onClick: () => router.push(`/goals/${goal.uid}`),
                       }}
                     />
                   ))}
@@ -951,9 +734,10 @@ export default function GoalsPage() {
    RIGHT SIDEBAR (APPENDED)
    =========================== */
 
-function RecentInteractionsSkeleton() {
+   function RecentInteractionsSkeleton() {
   return (
     <div className="bg-white dark:bg-dark-2 w-full p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-gray-800 animate-pulse">
+      
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <div className="h-4 w-40 rounded bg-gray-200 dark:bg-gray-800" />
@@ -962,12 +746,14 @@ function RecentInteractionsSkeleton() {
       {/* List */}
       <div className="max-h-80 overflow-y-auto">
         <ul className="flex flex-col gap-4">
+          
           {Array.from({ length: 3 }).map((_, i) => (
             <li key={i} className="flex gap-4">
+              
               {/* Avatar */}
-              <div className="relative w-12 h-12 shrink-0">
+              <div className="relative w-12 h-12 flex-shrink-0">
                 <div className="h-12 w-12 rounded-full bg-gray-200 dark:bg-gray-800" />
-
+                
                 {/* small interaction bubble */}
                 <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-gray-300 dark:bg-gray-700 border border-gray-200 dark:border-gray-800" />
               </div>
@@ -979,11 +765,15 @@ function RecentInteractionsSkeleton() {
               </div>
             </li>
           ))}
+
         </ul>
       </div>
     </div>
   );
 }
+
+
+
 
 function RightSidebar({ user }: { user: UserGoalsInfo }) {
   const { openMasteryPopup } = usePopup();

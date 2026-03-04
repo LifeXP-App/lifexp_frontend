@@ -24,6 +24,7 @@ interface Activity {
 
 // Separate component for SessionItem to avoid re-renders of the list
 const SessionItem: React.FC<any & { onClick?: () => void }> = ({
+  completion_picture,
   sessionNumber,
   activity,
   xpEarned,
@@ -53,7 +54,16 @@ const SessionItem: React.FC<any & { onClick?: () => void }> = ({
       style={{ borderColor: "var(--border)" }}
     >
       <div className="w-20 h-20 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden bg-gray-100 dark:bg-dark-3">
-        {emoji ? (
+        {completion_picture ? (
+        <img
+            src={completion_picture}
+            alt="Session thumbnail"
+            className="w-full h-full object-cover"
+          />
+        )
+        
+        :
+        emoji ? (
           <span className="text-3xl">{emoji}</span>
         ) : thumbnail ? (
           <img
@@ -155,6 +165,7 @@ export default function GoalDetailPage() {
   const goalId = params.goalId as string;
 
   const { goal, sessions, loading, error, refetch } = useGoal(goalId);
+  console.log("GoalDetailPage render", { goal, sessions, loading, error });
 
   // Helper to format duration seconds into HH:MM:SS
   const formatDuration = (seconds: number | null) => {
@@ -284,17 +295,124 @@ export default function GoalDetailPage() {
   const onBack = () => window.history.back();
 
   if (loading) {
-    return (
+  return (
+    <div
+      className="min-h-screen"
+      style={{ backgroundColor: "var(--background)" }}
+    >
+      {/* Header Skeleton */}
       <div
-        className="min-h-screen flex items-center justify-center"
-        style={{ backgroundColor: "var(--background)" }}
+        className="bg-white dark:bg-dark-2 sticky top-0 z-10 border-b px-6 py-4"
+        style={{ borderColor: "var(--border)" }}
       >
-        <p className="text-foreground dark:text-white">
-          Loading goal details...
-        </p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+             <div className="w-8 h-8 rounded-lg bg-gray-200 dark:bg-dark-3 animate-pulse" />
+          <div className="h-6 w-48 rounded bg-gray-200 dark:bg-dark-3 animate-pulse" />
+
+          </div>
+         
+          <div className="w-8 h-8 rounded-lg bg-gray-200 dark:bg-dark-3 animate-pulse" />
+        </div>
       </div>
-    );
-  }
+
+      {/* Mobile Layout Skeleton */}
+      <div className="block lg:hidden px-6 py-6 space-y-6 animate-pulse">
+        {/* Description */}
+        <div className="space-y-3">
+          <div className="h-4 w-40 bg-gray-200 dark:bg-dark-3 rounded" />
+          <div className="h-4 w-full bg-gray-200 dark:bg-dark-3 rounded" />
+          <div className="h-4 w-5/6 bg-gray-200 dark:bg-dark-3 rounded" />
+        </div>
+
+        {/* Stats */}
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex justify-between">
+              <div className="h-4 w-24 bg-gray-200 dark:bg-dark-3 rounded" />
+              <div className="h-5 w-16 bg-gray-200 dark:bg-dark-3 rounded" />
+            </div>
+          ))}
+        </div>
+
+        {/* Aspect Chips */}
+        <div className="flex justify-around">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div
+              key={i}
+              className="w-14 h-8 bg-gray-200 dark:bg-dark-3 rounded-full"
+            />
+          ))}
+        </div>
+
+        {/* Session Cards */}
+        {[1, 2, 3].map((i) => (
+          <div
+            key={i}
+            className="flex gap-4 p-4 bg-white dark:bg-dark-2 rounded-2xl border"
+            style={{ borderColor: "var(--border)" }}
+          >
+            <div className="w-20 h-20 rounded-xl bg-gray-200 dark:bg-dark-3" />
+            <div className="flex-1 space-y-3">
+              <div className="h-4 w-32 bg-gray-200 dark:bg-dark-3 rounded" />
+              <div className="h-3 w-24 bg-gray-200 dark:bg-dark-3 rounded" />
+              <div className="h-3 w-40 bg-gray-200 dark:bg-dark-3 rounded" />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop Layout Skeleton */}
+      <div className="hidden lg:flex gap-6 px-6 py-6 animate-pulse">
+        {/* Left Column */}
+        <div className="flex-1 space-y-6">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="flex gap-4 p-4 bg-white dark:bg-dark-2 rounded-2xl border"
+              style={{ borderColor: "var(--border)" }}
+            >
+              <div className="w-20 h-20 rounded-xl bg-gray-200 dark:bg-dark-3" />
+              <div className="flex-1 space-y-3">
+                <div className="h-4 w-32 bg-gray-200 dark:bg-dark-3 rounded" />
+                <div className="h-3 w-24 bg-gray-200 dark:bg-dark-3 rounded" />
+                <div className="h-3 w-40 bg-gray-200 dark:bg-dark-3 rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Right Sidebar */}
+        <div
+          style={{ width: "450px",borderColor: "var(--border)" }}
+          className="bg-white dark:bg-dark-2 rounded-2xl p-6 border space-y-6"
+        >
+          <div className="h-[220px] bg-gray-200 dark:bg-dark-3 rounded-xl" />
+          <div className="flex justify-around">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div
+                key={i}
+                className="w-14 h-8 bg-gray-200 dark:bg-dark-3 rounded-full"
+              />
+            ))}
+          </div>
+          <div className="space-y-3">
+            <div className="h-4 w-40 bg-gray-200 dark:bg-dark-3 rounded" />
+            <div className="h-4 w-full bg-gray-200 dark:bg-dark-3 rounded" />
+            <div className="h-4 w-5/6 bg-gray-200 dark:bg-dark-3 rounded" />
+            <div className="h-4 w-40 bg-gray-200 dark:bg-dark-3 rounded" />
+            <div className="h-4 w-24 bg-gray-200 dark:bg-dark-3 rounded" />
+          </div>
+           <div className="space-y-4">
+            <div className="h-8 w-full bg-gray-200 dark:bg-dark-3 rounded" />
+            <div className="h-8 w-full bg-gray-200 dark:bg-dark-3 rounded" />
+            <div className="h-8 w-full bg-gray-200 dark:bg-dark-3 rounded" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
   if (error || !goal) {
     return (
@@ -348,6 +466,14 @@ export default function GoalDetailPage() {
         };
 
   const maxAspectXp = Math.max(...Object.values(aspectXp), 1);
+
+  interface XPDistribution {
+  physique: number;
+  energy: number;
+  social: number;
+  creativity: number;
+  logic: number;
+}
 
   // Session number map: #1 = oldest, #N = most recent
   const sessionNumberMap = Object.fromEntries(
@@ -447,7 +573,15 @@ export default function GoalDetailPage() {
               ? formatDuration(selectedSession.total_duration_seconds)
               : ""
           }
-          xpEarned={selectedSession?.xp_total ?? 0}
+          coverImageUrl ={selectedSession?.completion_picture || undefined}    
+          xpDistribution={{
+            physique: selectedSession?.xp_physique || 0, 
+            energy: selectedSession?.xp_energy || 0,
+            logic: selectedSession?.xp_logic || 0,
+            creativity: selectedSession?.xp_creativity || 0,
+            social: selectedSession?.xp_social || 0,
+          }}
+          
           focusedDuration={
             selectedSession
               ? formatDuration(selectedSession.focused_duration_seconds)
@@ -699,6 +833,7 @@ export default function GoalDetailPage() {
           <div className="space-y-3">
             {todaySessions.map((session) => (
               <SessionItem
+                completion_picture={session.completion_picture}
                 key={session.id}
                 sessionNumber={sessionNumberMap[session.id] || 0}
                 activity={session.activity?.name || "Activity"}
@@ -722,6 +857,7 @@ export default function GoalDetailPage() {
             {otherSessions.map((session) => (
               <SessionItem
                 key={session.id}
+                completion_picture={session.completion_picture}
                 sessionNumber={sessionNumberMap[session.id] || 0}
                 activity={session.activity?.name || "Activity"}
                 xpEarned={session.xp_total}
@@ -789,7 +925,9 @@ export default function GoalDetailPage() {
             <div className="space-y-3">
               {todaySessions.map((session) => (
                 <SessionItem
+                  completion_picture={session.completion_picture}
                   key={session.id}
+                  
                   sessionNumber={sessionNumberMap[session.id] || 0}
                   activity={session.activity?.name || "Activity"}
                   xpEarned={session.xp_total}
@@ -811,6 +949,7 @@ export default function GoalDetailPage() {
             <div className="space-y-3">
               {otherSessions.map((session) => (
                 <SessionItem
+                  completion_picture={session.completion_picture}
                   key={session.id}
                   sessionNumber={sessionNumberMap[session.id] || 0}
                   activity={session.activity?.name || "Activity"}

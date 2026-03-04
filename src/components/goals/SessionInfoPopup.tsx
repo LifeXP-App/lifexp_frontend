@@ -18,6 +18,14 @@ interface AvatarType {
   color: string;
 }
 
+interface XPDistribution {
+  physique: number;
+  energy: number;
+  social: number;
+  creativity: number;
+  logic: number;
+}
+
 interface SessionInfoPopupProps {
   isOpen: boolean;
   onClose: () => void;
@@ -29,7 +37,9 @@ interface SessionInfoPopupProps {
 
   totalDuration?: string;
   xpEarned?: number;
+  xpDistribution?: XPDistribution;
   focusedDuration?: string;
+
 
   nudgeCount?: number;
   nudgeAvatars?: AvatarType[];
@@ -41,23 +51,20 @@ const SessionInfoPopup: React.FC<SessionInfoPopupProps> = ({
   isOpen,
   onClose,
 
-  sessionNumber = 8,
-  dateText = "10:20am, 23 January 2026",
+  sessionNumber,
+  dateText,
 
-  coverImageUrl = "https://res.cloudinary.com/dfohn9dcz/image/upload/f_auto,q_auto,w_800,c_fill/v1/posts/user_7/ske_20251115103836",
+  coverImageUrl ,
 
-  totalDuration = "1h 19m",
-  xpEarned = 1233,
-  focusedDuration = "59m",
+  totalDuration,
+  xpEarned ,
+  xpDistribution,
+  focusedDuration ,
 
   nudgeCount = 24,
-  nudgeAvatars = [{ color: "#c49352" }, { color: "#171717" }, { color: "#713599" }],
+  nudgeAvatars,
 
-  activity = {
-    name: "Drawing",
-    emoji: "🎨",
-    color: "#4187a2",
-  },
+  activity,
 }) => {
   const [isAnimating, setIsAnimating] = useState(true);
 
@@ -158,18 +165,23 @@ const SessionInfoPopup: React.FC<SessionInfoPopupProps> = ({
           </div>
 
           {/* Cover Image (smaller) */}
+          {coverImageUrl && (
           <div className="px-6 pb-5">
-            <Image
-              src={coverImageUrl}
-              alt="Session cover"
-              width={1200}
-              height={600}
+            
+              <Image
+                src={coverImageUrl}
+                alt="Session cover"
+                width={1200}
+                height={600}
+           
               className="w-full h-[180px] rounded-2xl object-cover"
               style={{
                 animation: isAnimating ? "slideUp 0.25s ease-out 0.08s both" : "none",
               }}
             />
+            
           </div>
+           )}
 
           {/* Activity Badge */}
           <div
@@ -185,9 +197,9 @@ const SessionInfoPopup: React.FC<SessionInfoPopupProps> = ({
                 boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
               }}
             >
-              <span className="text-2xl">{activity.emoji}</span>
-              <span className="font-semibold text-lg" style={{ color: activity.color }}>
-                {activity.name}
+              <span className="text-2xl">{activity?.emoji}</span>
+              <span className="font-semibold text-lg" style={{ color: activity?.color }}>
+                {activity?.name}
               </span>
             </div>
           </div>
@@ -199,16 +211,16 @@ const SessionInfoPopup: React.FC<SessionInfoPopupProps> = ({
               animation: isAnimating ? "slideUp 0.25s ease-out 0.12s both" : "none",
             }}
           >
-            <StatItem value={totalDuration} label="Total Duration" />
-            <StatItem value={xpEarned.toString()} label="Total XP Earned" />
-            <StatItem value={focusedDuration} label="Focused Duration" />
+            <StatItem value={totalDuration || "00:00:00"} label="Total Duration" />
+            <StatItem value={xpEarned?.toString() || "0"} label="Total XP Earned" />
+            <StatItem value={focusedDuration || "00:00:00"} label="Focused Duration" />
 
             <div className="text-center">
               <div className="flex items-center justify-center gap-1 mb-1">
                 {nudgeCount > 3 ? (
                   <>
                     <div className="flex -space-x-2">
-                      {nudgeAvatars.slice(0, 3).map((avatar, i) => (
+                      {nudgeAvatars?.slice(0, 3).map((avatar, i) => (
                         <div
                           key={i}
                           className="w-7 h-7 rounded-full border-2 border-white dark:border-dark-2"
@@ -220,7 +232,7 @@ const SessionInfoPopup: React.FC<SessionInfoPopupProps> = ({
                   </>
                 ) : nudgeCount > 0 ? (
                   <div className="flex -space-x-2">
-                    {nudgeAvatars.slice(0, 3).map((avatar, i) => (
+                    {nudgeAvatars?.slice(0, 3).map((avatar, i) => (
                       <div
                         key={i}
                         className="w-7 h-7 rounded-full border-2 border-white dark:border-dark-2"
@@ -247,11 +259,11 @@ const SessionInfoPopup: React.FC<SessionInfoPopupProps> = ({
             }}
           >
             <div className="flex justify-around gap-2">
-              <AspectChip icon={<BiDumbbell className="w-4 h-4" />} value={341} tint="physique" />
-              <AspectChip icon={<BoltIcon className="w-4 h-4" />} value={432} tint="energy" />
-              <AspectChip icon={<UsersIcon className="w-4 h-4" />} value={234} tint="social" />
-              <AspectChip icon={<FaBrain className="w-4 h-4" />} value={324} tint="creativity" />
-              <AspectChip icon={<FaHammer className="w-4 h-4" />} value={234} tint="logic" />
+              <AspectChip icon={<BiDumbbell className="w-4 h-4" />} value={xpDistribution?.physique || 0} tint="physique" />
+              <AspectChip icon={<BoltIcon className="w-4 h-4" />} value={xpDistribution?.energy || 0} tint="energy" />
+              <AspectChip icon={<UsersIcon className="w-4 h-4" />} value={xpDistribution?.social || 0} tint="social" />
+              <AspectChip icon={<FaBrain className="w-4 h-4" />} value={xpDistribution?.creativity || 0} tint="creativity" />
+              <AspectChip icon={<FaHammer className="w-4 h-4" />} value={xpDistribution?.logic || 0} tint="logic" />
             </div>
           </div>
         </div>

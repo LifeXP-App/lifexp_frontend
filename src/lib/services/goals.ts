@@ -31,6 +31,7 @@ export interface Goal {
 
 export interface Session {
   id: string;
+  completion_picture: string | null;
   started_at: string;
   ended_at: string | null;
   total_duration_seconds: number | null;
@@ -289,6 +290,7 @@ export const GoalsService = {
 
       return {
         id: String(session.id),
+        completion_picture: typeof session.completion_picture === "string" ? session.completion_picture : null,
         started_at:
           typeof session.started_at === "string" ? session.started_at : "",
         ended_at:

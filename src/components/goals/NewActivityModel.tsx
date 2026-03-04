@@ -1,7 +1,4 @@
-/* ===========================
-   NEW ACTIVITY MODAL
-   =========================== */
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { ActivityType } from "@/src/lib/types/activityMeta";
 import ActivitySelectButton from "@/src/components/goals/ActivityResult";
 
@@ -9,6 +6,12 @@ interface Activity {
   id: string;
   name: string;
   type: ActivityType;
+}
+
+interface ApiActivity {
+  id: number;
+  name: string;
+  activity_type: ActivityType;
 }
 
 interface NewActivityModalProps {
@@ -19,20 +22,7 @@ interface NewActivityModalProps {
   onStartDrawing: () => void;
 }
 
-const relevantActivities: Activity[] = [
-  { id: "r1", name: "Workout", type: "physique" },
-  { id: "r2", name: "Cardio", type: "energy" },
-  { id: "r3", name: "Deep Work", type: "logic" },
-];
-
-const otherActivities: Activity[] = [
-  { id: "o1", name: "Drawing", type: "creativity" },
-  { id: "o2", name: "Networking", type: "social" },
-  { id: "o3", name: "Studying", type: "logic" },
-  { id: "o4", name: "Drawing", type: "creativity" },
-  { id: "o5", name: "Networking", type: "social" },
-  { id: "o6", name: "Studying", type: "logic" },
-];
+const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
 
 export default function NewActivityModal({
   isOpen,
@@ -42,22 +32,91 @@ export default function NewActivityModal({
   onStartDrawing,
 }: NewActivityModalProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(false);
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const fetchActivities = useCallback(
+    async (pageNumber: number) => {
+      if (loading) return;
+      if (pageNumber > totalPages) return;
+
+      setLoading(true);
+
+      try {
+        const res = await fetch(
+          `${baseUrl}/api/v1/activities/?page=${pageNumber}`
+        );
+
+        const data = await res.json();
+
+        const mapped: Activity[] = data.results.map(
+          (a: ApiActivity): Activity => ({
+            id: String(a.id),
+            name: a.name,
+            type: a.activity_type,
+          })
+        );
+
+        setActivities((prev) =>
+          pageNumber === 1 ? mapped : [...prev, ...mapped]
+        );
+
+        setTotalPages(data.total_pages);
+        setPage(pageNumber);
+      } catch (err) {
+        console.error("Failed to fetch activities", err);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [loading, totalPages]
+  );
+
+  // Initial fetch
+  useEffect(() => {
+    if (!isOpen) return;
+    fetchActivities(1);
+  }, [isOpen]);
+
+  // Infinite scroll
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const handleScroll = () => {
+      if (loading) return;
+
+      const nearBottom =
+        el.scrollTop + el.clientHeight >= el.scrollHeight - 50;
+
+      if (nearBottom && page < totalPages) {
+        fetchActivities(page + 1);
+      }
+    };
+
+    el.addEventListener("scroll", handleScroll);
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, [page, totalPages, loading, fetchActivities]);
 
   if (!isOpen) return null;
 
+  const filteredActivities = activities.filter((a) =>
+    a.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <>
-      {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4"
         onClick={onClose}
       >
-        {/* Modal */}
-        {/* Modal */}
-<div
-  className="bg-gray-100 dark:bg-dark-3 dark:border dark:border-gray-800 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden"
-  onClick={(e) => e.stopPropagation()}
->
+        <div
+          className="bg-gray-100 dark:bg-dark-3 dark:border dark:border-gray-800 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden"
+          onClick={(e) => e.stopPropagation()}>
   {/* Header */}
   <div
     className="flex bg-white dark:bg-gray-900 items-center justify-between px-5 pt-5 pb-4 border-b"
@@ -118,41 +177,47 @@ export default function NewActivityModal({
 
 
 
-          {/* Content (scroll safe) */}
-          <div className="px-5 pb-4 max-h-[55vh] overflow-y-auto noscrollbar space-y-5">
-            {/* Recent Activity */}
-            <div>
-              <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 px-1">
-                Recent
-              </h3>
-
-              {/* vertical spacing added here */}
-              <div className="space-y-2">
-                {relevantActivities.map((activity) => (
-                  <ActivitySelectButton
-                    key={activity.id}
-                    activity={activity}
-                    onSelect={onSelectActivity}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Other Activities */}
+        {/* Content */}
+          <div
+            ref={scrollRef}
+            className="px-5 pb-4 max-h-[55vh] overflow-y-auto noscrollbar space-y-5"
+          >
             <div>
               <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 px-1">
                 Relevant
               </h3>
 
-              {/* vertical spacing added here */}
               <div className="space-y-2">
-                {otherActivities.map((activity) => (
+                {filteredActivities.map((activity) => (
                   <ActivitySelectButton
                     key={activity.id}
                     activity={activity}
                     onSelect={onSelectActivity}
                   />
                 ))}
+
+                {loading && (
+                      <div className="space-y-2 animate-pulse">
+                        {[1, 2, 3, 4].map((i) => (
+                          <div
+                            key={i}
+                            className="flex items-center gap-3 px-3 py-3 bg-white dark:bg-[#1a1a1a] rounded-xl border border-gray-200 dark:border-gray-700"
+                          >
+                            {/* Emoji circle */}
+                            <div className="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-700" />
+
+                            {/* Text area */}
+                            <div className="flex-1 space-y-2">
+                              <div className="h-4 w-40 bg-gray-300 dark:bg-gray-700 rounded" />
+                              <div className="h-3 w-24 bg-gray-200 dark:bg-gray-800 rounded" />
+                            </div>
+
+                            {/* XP badge placeholder */}
+                            <div className="w-12 h-6 bg-gray-300 dark:bg-gray-700 rounded-full" />
+                          </div>
+                        ))}
+                      </div>
+                    )}
               </div>
             </div>
           </div>
