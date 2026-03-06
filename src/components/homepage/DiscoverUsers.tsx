@@ -104,7 +104,11 @@ export function DiscoverUsers({ suggestedUsers }: DiscoverUsersProps) {
                   className="h-12 w-12 rounded-full object-cover"
                 />
                 <div className="flex flex-col">
-                  <p className="text-sm dark:text-white">{u.fullname}</p>
+                 <p className="text-sm dark:text-white">
+                      {(u.fullname || "").length > 15
+                        ? u.fullname.slice(0, 15) + "..."
+                        : u.fullname}
+                    </p>
                   <p className="text-xs text-black/40 dark:text-white/40">
                     Life Level {u.lifelevel}
                   </p>

@@ -47,6 +47,7 @@ export interface Session {
     id: string;
     name: string;
     emoji: string;
+    type: string;
   } | null;
 }
 
@@ -322,11 +323,12 @@ export const GoalsService = {
           (typeof activity.id === "string" ||
             typeof activity.id === "number") &&
           typeof activity.name === "string" &&
-          typeof activity.emoji === "string"
+          typeof activity.emoji === "string" && typeof activity.type === "string"
             ? {
                 id: String(activity.id),
                 name: activity.name,
                 emoji: activity.emoji,
+                type: activity.type,
               }
             : null,
       };

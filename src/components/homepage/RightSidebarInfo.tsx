@@ -86,7 +86,7 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
 
         {/* XP + STREAK */}
         <div className="mt-4 flex justify-between text-sm gap-4">
-          <div className="bg-gray-100 w-full flex flex-col rounded-md items-center justify-between p-4 dark:bg-gray-900 dark:bg-opacity-50">
+          <div className="bg-gray-100 w-full flex flex-col rounded-md items-center justify-center p-4 dark:bg-gray-900 dark:bg-opacity-50">
             <p
               className="text-lg font-bold"
               style={{
@@ -95,11 +95,7 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
             >
               {user.totalXp} XP
             </p>
-            <Link href={`/leaderboard/${user.mastery.toLowerCase()}`}>
-              <p className="text-xs text-gray-500">
-                Overall ranked <b>#{user.rank}</b>
-              </p>
-            </Link>
+            
           </div>
 
           <div className="bg-gray-100 w-full hidden md:flex flex-col rounded-md items-center justify-between p-4 dark:bg-gray-900 dark:bg-opacity-50">

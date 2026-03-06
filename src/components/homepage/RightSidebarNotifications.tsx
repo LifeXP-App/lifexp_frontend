@@ -45,28 +45,44 @@ export function RightSidebarNotifications({
 
         <div className="max-h-80 overflow-y-auto">
           <ul className="flex flex-col gap-3">
-            {notifications.map((n) => (
-              <Link key={n.id} href={n.href}>
-                <li>
-                  <div className="flex gap-4">
-                    <img
-                      src={n.image}
-                      className={`h-12 w-12 object-cover ${
-                        n.rounded ? "rounded-full" : "rounded-md"
-                      }`}
-                      loading="lazy"
-                    />
-                    <div className="flex flex-col">
-                      <p className="text-md font-medium text-gray-900 dark:text-white">
-                        <span className="font-bold">{n.sender}</span>{" "}
-                        <span className="font-medium">{n.text}</span>
-                      </p>
-                      <p className="text-gray-500 text-xs">{n.date}</p>
+            {notifications.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-2 text-gray-400 dark:text-gray-500">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  className="w-10 h-10 mb-2 opacity-70"
+                >
+                  <path d="M12 2a6 6 0 0 0-6 6v3.6l-1.8 3.6A1 1 0 0 0 5 17h14a1 1 0 0 0 .8-1.8L18 11.6V8a6 6 0 0 0-6-6zm0 20a3 3 0 0 0 2.83-2H9.17A3 3 0 0 0 12 22z"/>
+                </svg>
+
+                <p className="text-sm font-medium">No notifications</p>
+                <p className="text-xs opacity-70">You're all caught up</p>
+              </div>
+            ) : (
+              notifications.map((n) => (
+                <Link key={n.id} href={n.href}>
+                  <li>
+                    <div className="flex gap-4">
+                      <img
+                        src={n.image}
+                        className={`h-12 w-12 object-cover ${
+                          n.rounded ? "rounded-full" : "rounded-md"
+                        }`}
+                        loading="lazy"
+                      />
+                      <div className="flex flex-col">
+                        <p className="text-md font-medium text-gray-900 dark:text-white">
+                          <span className="font-bold">{n.sender}</span>{" "}
+                          <span className="font-medium">{n.text}</span>
+                        </p>
+                        <p className="text-gray-500 text-xs">{n.date}</p>
+                      </div>
                     </div>
-                  </div>
-                </li>
-              </Link>
-            ))}
+                  </li>
+                </Link>
+              ))
+            )}
           </ul>
         </div>
       </div>

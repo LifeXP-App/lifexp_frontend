@@ -20,10 +20,21 @@ interface Activity {
   id: string;
   name: string;
   type: ActivityType;
+
 }
 
+const aspectColors: Record<string, string> = {
+  physique: "#8d2e2e",
+  energy: "#c49352",
+  logic: "#713599",
+  creativity: "#4187a2",
+  social: "#31784e",
+};
+
+
+
 // Separate component for SessionItem to avoid re-renders of the list
-const SessionItem: React.FC<any & { onClick?: () => void }> = ({
+const SessionItem: React.FC<any & { onClick?: () => void, color?: string  }> = ({
   completion_picture,
   sessionNumber,
   activity,
@@ -32,7 +43,8 @@ const SessionItem: React.FC<any & { onClick?: () => void }> = ({
   duration,
   thumbnail,
   emoji,
-  onClick,
+  onClick, 
+  color
 }) => {
   const [open, setOpen] = React.useState(false);
   const menuRef = React.useRef<HTMLDivElement>(null);
@@ -86,7 +98,7 @@ const SessionItem: React.FC<any & { onClick?: () => void }> = ({
         </h3>
         <p
           className="text-sm font-bold"
-          style={{ color: "var(--alchemist-primary)" }}
+          style={{ color: color || "var(--muted)" }}
         >
           {activity}
         </p>
@@ -592,7 +604,7 @@ export default function GoalDetailPage() {
           activity={{
             name: selectedSession?.activity?.name ?? "Activity",
             emoji: selectedSession?.activity?.emoji ?? "🎯",
-            color: "var(--alchemist-primary)",
+            color: `var(--aspect-${selectedSession?.activity?.type || "muted"})`,
           }}
         />
 
@@ -842,6 +854,7 @@ export default function GoalDetailPage() {
                 duration={formatDuration(session.total_duration_seconds)}
                 emoji={session.activity?.emoji}
                 onClick={() => handleOpenSessionPopup(session)}
+                color={aspectColors[session?.activity?.type] || "#9ca3af"}
               />
             ))}
             {todaySessions.length === 0 && (
@@ -865,6 +878,7 @@ export default function GoalDetailPage() {
                 duration={formatDuration(session.total_duration_seconds)}
                 emoji={session.activity?.emoji}
                 onClick={() => handleOpenSessionPopup(session)}
+                color={aspectColors[session?.activity?.type] || "#9ca3af"}
               />
             ))}
             {otherSessions.length === 0 && (
@@ -935,6 +949,7 @@ export default function GoalDetailPage() {
                   duration={formatDuration(session.total_duration_seconds)}
                   emoji={session.activity?.emoji}
                   onClick={() => handleOpenSessionPopup(session)}
+                  color={aspectColors[session?.activity?.type] || "#9ca3af"}
                 />
               ))}
               {todaySessions.length === 0 && (
@@ -958,6 +973,7 @@ export default function GoalDetailPage() {
                   duration={formatDuration(session.total_duration_seconds)}
                   emoji={session.activity?.emoji}
                   onClick={() => handleOpenSessionPopup(session)}
+                  color={aspectColors[session?.activity?.type] || "#9ca3af"}
                 />
               ))}
               {otherSessions.length === 0 && (

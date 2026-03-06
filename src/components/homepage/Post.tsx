@@ -343,7 +343,7 @@ export function Post({ post }: { post: PostType }) {
             style={{ borderColor: "var(--border)" }}
           >
             <a
-              href={`/post/?v=${post.uid}`}
+              href={`/goals/${post.uid}`}
               target="_blank"
               rel="noopener noreferrer"
               className="block cursor-pointer w-full text-left font-medium py-3 px-4 text-sm
@@ -388,7 +388,7 @@ export function Post({ post }: { post: PostType }) {
       </div>
 
       {/* IMAGE */}
-      <a href={`/post/?v=${post.uid}`} className="block">
+      <a href={`/goals/${post.uid}`} className="block">
         <div className="w-full my-4">
           <img
             className="w-[100vw] max-w-none md:w-full cursor-pointer md:rounded-lg"

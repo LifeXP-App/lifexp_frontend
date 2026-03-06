@@ -489,6 +489,19 @@ export default function Home() {
   };
   like_count: number;
   comment_count: number;
+  session: {
+    number: number;
+    total_sessions: number;
+    session_post_image_url: string | null;
+    activity: {
+      name: string;
+      type: string;
+      emoji: string;
+    };
+    duration: string;
+    xp_gained: number;
+    dateTime: string;
+  } | null;
   comments: {
     id: number;
     content: string;
@@ -533,7 +546,7 @@ const loadPosts = async (pageToLoad: number) => {
     // ✅ map backend -> your Post component props shape
     const mapped = list.map((p) => ({
   id: p.id,
-  uid: p.user.username,
+  uid: p.uid,
   username: p.user.username,
   fullname: p.user.fullname,
   profile_picture: p.user.profile_picture,
@@ -557,7 +570,7 @@ const loadPosts = async (pageToLoad: number) => {
     logic: 0,
   },
 
-  session: postsData[0]?.session,
+  session: p?.session,
 
   // ✅ REAL COMMENTS FROM BACKEND
   comments: (p.comments || []).map((c) => ({

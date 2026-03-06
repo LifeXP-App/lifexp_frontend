@@ -1,5 +1,6 @@
 import { MASTERY_TYPES } from "@/src/lib/mock/goalLeaderboardData";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 // Mastery icon SVGs
 function MasteryIcon({
@@ -65,14 +66,49 @@ interface LeaderboardSwitcherProps {
   currentLeaderboard?: string; // e.g., "warrior", "rookie", etc.
 }
 
+const API = process.env.NEXT_PUBLIC_API_BASE_URL + "/api/v1/xp/leaderboard/switcher";
+
+interface LeaderboardSwitcherProps {
+  currentLeaderboard?: string;
+}
+
 export default function LeaderboardSwitcher({
   currentLeaderboard,
 }: LeaderboardSwitcherProps) {
+  const [counts, setCounts] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    async function fetchCounts() {
+      try {
+        const res = await fetch(API);
+        const data = await res.json();
+
+        // convert backend keys -> lowercase ids used in frontend
+        const mapped: Record<string, number> = {
+          rookie: data.Rookie ?? 0,
+          warrior: data.Warrior ?? 0,
+          alchemist: data.Alchemist ?? 0,
+          diplomat: data.Diplomat ?? 0,
+          protagonist: data.Protagonist ?? 0,
+          prodigy: data.Prodigy ?? 0,
+        };
+
+        setCounts(mapped);
+      } catch (err) {
+        console.error("Failed to load leaderboard counts", err);
+      }
+    }
+
+    fetchCounts();
+  }, []);
+
   return (
     <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border border-gray-200 dark:border-gray-800">
-      <h4 className="font-semibold text-lg mb-4 dark:text-white">Other Leaderboards</h4>
+      <h4 className="font-semibold text-lg mb-4 dark:text-white">
+        Other Leaderboards
+      </h4>
+
       <div className="space-y-2">
-        {/* Mastery Leaderboards */}
         {MASTERY_TYPES.filter((m) => m.id !== currentLeaderboard).map(
           (mastery) => (
             <Link key={mastery.id} href={`/leaderboard/goals/${mastery.id}`}>
@@ -87,24 +123,26 @@ export default function LeaderboardSwitcher({
                     style={{ color: mastery.color }}
                   />
                 </div>
+
                 <div className="flex-1">
                   <p className="font-medium text-gray-900 dark:text-white">
                     {mastery.name}
                   </p>
                   <p className="text-xs text-gray-500">{mastery.aspect}</p>
                 </div>
+
                 <span
                   className="text-xs font-medium"
                   style={{ color: mastery.color }}
                 >
-                  {mastery.playerCount}
+                  {counts[mastery.id] ?? 0}
                 </span>
               </div>
             </Link>
           )
         )}
 
-        {/* Rookie Leaderboard */}
+        {/* Rookie */}
         {currentLeaderboard !== "rookie" && (
           <Link href="/leaderboard/rookie">
             <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-dark-3 cursor-pointer transition-all group">
@@ -112,7 +150,7 @@ export default function LeaderboardSwitcher({
                 className="w-10 h-10 rounded-xl flex items-center justify-center transition-all group-hover:scale-105"
                 style={{ backgroundColor: "#64748b15" }}
               >
-                <svg
+                 <svg
                   viewBox="0 0 512 512"
                   fill="currentColor"
                   className="w-5 h-5"
@@ -120,12 +158,17 @@ export default function LeaderboardSwitcher({
                 >
                  <path d="M351.9 280l-190.9 0c2.9 64.5 17.2 123.9 37.5 167.4 11.4 24.5 23.7 41.8 35.1 52.4 11.2 10.5 18.9 12.2 22.9 12.2s11.7-1.7 22.9-12.2c11.4-10.6 23.7-28 35.1-52.4 20.3-43.5 34.6-102.9 37.5-167.4zM160.9 232l190.9 0C349 167.5 334.7 108.1 314.4 64.6 303 40.2 290.7 22.8 279.3 12.2 268.1 1.7 260.4 0 256.4 0s-11.7 1.7-22.9 12.2c-11.4 10.6-23.7 28-35.1 52.4-20.3 43.5-34.6 102.9-37.5 167.4zm-48 0C116.4 146.4 138.5 66.9 170.8 14.7 78.7 47.3 10.9 131.2 1.5 232l111.4 0zM1.5 280c9.4 100.8 77.2 184.7 169.3 217.3-32.3-52.2-54.4-131.7-57.9-217.3L1.5 280zm398.4 0c-3.5 85.6-25.6 165.1-57.9 217.3 92.1-32.7 159.9-116.5 169.3-217.3l-111.4 0zm111.4-48C501.9 131.2 434.1 47.3 342 14.7 374.3 66.9 396.4 146.4 399.9 232l111.4 0z"/></svg>
               </div>
+
               <div className="flex-1">
                 <p className="font-medium text-gray-900 dark:text-white">
                   Rookie
                 </p>
                 <p className="text-xs text-gray-500">All Aspects</p>
               </div>
+
+              <span className="text-xs font-medium text-gray-500">
+                {counts.rookie ?? 0}
+              </span>
             </div>
           </Link>
         )}
