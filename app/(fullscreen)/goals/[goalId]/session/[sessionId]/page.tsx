@@ -1,20 +1,20 @@
 "use client";
 
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
+import { useAuth } from "@/src/context/AuthContext";
 import {
   BoltIcon,
   ChevronUpIcon,
-  FireIcon,
   PauseIcon,
   PlayIcon,
   UsersIcon,
 } from "@heroicons/react/24/solid";
+import { useMutation, useQuery } from "convex/react";
+import { DumbbellIcon } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { FaBrain, FaHammer } from "react-icons/fa";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
-import { useAuth } from "@/src/context/AuthContext";
 
 interface SessionTimerProps {
   params: Promise<{
@@ -30,7 +30,8 @@ export default function SessionTimer({ params }: SessionTimerProps) {
   const { me } = useAuth();
 
   const isNew = sessionIdStr === "new";
-  const [createdSessionId, setCreatedSessionId] = useState<Id<"sessions"> | null>(null);
+  const [createdSessionId, setCreatedSessionId] =
+    useState<Id<"sessions"> | null>(null);
   const creatingRef = useRef(false);
 
   const sessionId = isNew ? createdSessionId : (sessionIdStr as Id<"sessions">);
@@ -41,7 +42,7 @@ export default function SessionTimer({ params }: SessionTimerProps) {
   // ── Convex subscription & mutations ──
   const session = useQuery(
     api.sessions.getSession,
-    sessionId ? { sessionId } : "skip"
+    sessionId ? { sessionId } : "skip",
   );
   const startMutation = useMutation(api.sessions.startSession);
   const heartbeatMutation = useMutation(api.sessions.heartbeat);
@@ -56,7 +57,7 @@ export default function SessionTimer({ params }: SessionTimerProps) {
   // ── Check for existing active session before creating ──
   const existingSession = useQuery(
     api.sessions.getActiveSession,
-    isNew && me ? { userId: String(me.id) } : "skip"
+    isNew && me ? { userId: String(me.id) } : "skip",
   );
 
   // ── Create session when sessionId is "new" ──
@@ -100,7 +101,16 @@ export default function SessionTimer({ params }: SessionTimerProps) {
         console.error("Failed to start session:", err);
         creatingRef.current = false;
       });
-  }, [isNew, createdSessionId, me, existingSession, goalId, searchParams, startMutation, router]);
+  }, [
+    isNew,
+    createdSessionId,
+    me,
+    existingSession,
+    goalId,
+    searchParams,
+    startMutation,
+    router,
+  ]);
 
   // TODO: Fetch goal data from Django REST API using goalId
   const goalData = {
@@ -114,7 +124,7 @@ export default function SessionTimer({ params }: SessionTimerProps) {
   useEffect(() => {
     if (session) {
       setDisplayTime((prev) =>
-        Math.max(prev, Math.floor(session.focusedDurationSeconds))
+        Math.max(prev, Math.floor(session.focusedDurationSeconds)),
       );
     }
   }, [session?.focusedDurationSeconds]);
@@ -156,7 +166,7 @@ export default function SessionTimer({ params }: SessionTimerProps) {
     },
     {
       name: "Physique",
-      icon: <FireIcon className="w-4 h-4" />,
+      icon: <DumbbellIcon className="w-4 h-4" />,
       xp: Math.floor(session?.xpBreakdown?.physique ?? 0),
       color: "#8d2e2e",
     },
@@ -200,14 +210,21 @@ export default function SessionTimer({ params }: SessionTimerProps) {
   const handleDiscard = useCallback(async () => {
     if (!sessionId || !isActive) return;
     if (confirm("Discard this session?")) {
-      await abandonMutation({ sessionId, interruptionReason: "user_discarded" });
+      await abandonMutation({
+        sessionId,
+        interruptionReason: "user_discarded",
+      });
     }
   }, [sessionId, isActive, abandonMutation]);
 
   // ── Keyboard shortcuts ──
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      )
+        return;
 
       switch (e.code) {
         case "Space":
@@ -265,18 +282,20 @@ export default function SessionTimer({ params }: SessionTimerProps) {
       <div className="relative z-10 h-full flex flex-col items-center justify-around py-20 px-6">
         {/* Goal info - compact */}
         <div className="flex items-center gap-3 mb-8">
-
           <div>
             <h1 className="text-5xl text-center text-white/40">
               {goalData.title}
             </h1>
-
           </div>
         </div>
         <div className="flex flex-col items-center gap-4 mb-12">
           <span className="text-7xl">{goalData.emoji}</span>
-          <p style={{color:goalData.categoryColor}} className="text-xl font-bold">{goalData.category}</p>
-
+          <p
+            style={{ color: goalData.categoryColor }}
+            className="text-xl font-bold"
+          >
+            {goalData.category}
+          </p>
         </div>
 
         {/* Timer */}
