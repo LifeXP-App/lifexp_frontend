@@ -285,6 +285,14 @@ export const completeSession = mutation({
       pauseIntervals: intervals,
       ...updates,
     });
+
+    return {
+      endedAt: now,
+      totalDurationSeconds: updates.totalDurationSeconds,
+      focusedDurationSeconds: updates.focusedDurationSeconds,
+      xpTotal: updates.xpTotal,
+      xpBreakdown: updates.xpBreakdown,
+    };
   },
 });
 
@@ -321,6 +329,14 @@ export const abandonSession = mutation({
       pauseIntervals: intervals,
       ...updates,
     });
+
+    return {
+      endedAt: now,
+      totalDurationSeconds: updates.totalDurationSeconds,
+      focusedDurationSeconds: updates.focusedDurationSeconds,
+      xpTotal: updates.xpTotal,
+      xpBreakdown: updates.xpBreakdown,
+    };
   },
 });
 
@@ -363,5 +379,15 @@ export const getSessionsByGoal = query({
       .withIndex("by_goal", (q) => q.eq("goalId", args.goalId))
       .order("desc")
       .collect();
+  },
+});
+
+export const markSyncedToDjango = mutation({
+  args: { sessionId: v.id("sessions") },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.sessionId, {
+      syncedToDjango: true,
+      lastSyncedAt: Date.now(),
+    });
   },
 });

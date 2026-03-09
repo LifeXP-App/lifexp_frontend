@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from "next/navigation";
@@ -339,9 +339,9 @@ const DayCompletePage = () => {
 
               <span
                 className="font-semibold text-lg"
-                style={{ color: activity.color }}
+                style={{ color: categoryColor }}
               >
-                {activity.name}
+                {categoryName}
               </span>
 
             </div>
