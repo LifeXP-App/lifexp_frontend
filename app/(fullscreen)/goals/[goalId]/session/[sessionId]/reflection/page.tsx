@@ -339,9 +339,9 @@ const DayCompletePage = () => {
 
               <span
                 className="font-semibold text-lg"
-                style={{ color: categoryColor }}
+                style={{ color: activity.color }}
               >
-                {categoryName}
+                {activity.name}
               </span>
 
             </div>

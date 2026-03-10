@@ -40,17 +40,17 @@ async function authedFetch(url: string, options: RequestInit = {}) {
 }
 export async function POST(
   req: Request,
-  context: { params: Promise<{ uid: string }> }
+  context: { params: Promise<{ sessionId: string }> }
 ) {
 
-  const { uid } = await context.params;
+  const { sessionId } = await context.params;
 
   const formData = await req.formData();
 
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
 
   const res = await authedFetch(
-    `${baseUrl}/api/v1/sessions/${uid}/image/`,
+    `${baseUrl}/api/v1/sessions/${sessionId}/image/`,
     {
       method: "POST",
       body: formData,

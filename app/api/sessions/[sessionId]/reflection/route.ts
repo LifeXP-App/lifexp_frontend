@@ -46,14 +46,14 @@ async function authedFetch(url: string, options: RequestInit = {}) {
 /* ---------------- GET SESSION REFLECTION ---------------- */
 export async function GET(
   req: Request,
-  context: { params: Promise<{ uid: string }> }
+  context: { params: Promise<{ sessionId: string }> }
 ) {
-  const { uid } = await context.params;
+  const { sessionId } = await context.params;
 
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
 
   const res = await authedFetch(
-    `${baseUrl}/api/v1/sessions/${uid}/reflection`
+    `${baseUrl}/api/v1/sessions/${sessionId}/reflection/`
   );
 
   if (res instanceof NextResponse) {
