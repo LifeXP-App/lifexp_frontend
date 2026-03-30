@@ -8,6 +8,7 @@ import { mockUser } from "@/src/lib/mock/userData";
 import SessionInfoPopup from "@/src/components/goals/SessionInfoPopup";
 import {BiDumbbell} from "react-icons/bi";
 import CompleteGoalPopup from '@/src/components/goals/CompleteGoalPopup';
+import { useEffect } from 'react';
 
 import {
 
@@ -61,7 +62,6 @@ interface ActivityDetailProps {
   goalCompleted?: boolean;
   title?: string;
   user?: typeof mockUser;
-  radarData?: { aspect: string; value: number; fullMark: number }[];
   createdDate?: string;
   description?: string;
   stats?: ActivityStats;
@@ -122,18 +122,12 @@ const STATUS_CONFIG = {
 
  const users: LeaderboardUser[] = [
     { rank: 1, id: "1", name: "Alex", totalXp: 5420 , avatar: "https://res.cloudinary.com/dfohn9dcz/image/upload/w_100,q_auto,f_auto/v1749738331/oydasgwd0mysponmm7xp.webp"},
-    { rank: 2, id: "2", name: "You", totalXp: 4980, isYou: true,  avatar: "https://res.cloudinary.com/dfohn9dcz/image/upload/w_100,q_auto,f_auto/v1749738331/oydasgwd0mysponmm7xp.webp" },
-    { rank: 3, id: "3", name: "Sam", totalXp: 4630, avatar: "https://res.cloudinary.com/dfohn9dcz/image/upload/w_100,q_auto,f_auto/v1749738331/oydasgwd0mysponmm7xp.webp" },
-   { rank: 4, id: "3", name: "Sam", totalXp: 4630, avatar: "https://res.cloudinary.com/dfohn9dcz/image/upload/w_100,q_auto,f_auto/v1749738331/oydasgwd0mysponmm7xp.webp" },
-    { rank:5, id: "3", name: "Sam", totalXp: 4630, avatar: "https://res.cloudinary.com/dfohn9dcz/image/upload/w_100,q_auto,f_auto/v1749738331/oydasgwd0mysponmm7xp.webp" },
-     { rank: 6, id: "3", name: "Sam", totalXp: 4630, avatar: "https://res.cloudinary.com/dfohn9dcz/image/upload/w_100,q_auto,f_auto/v1749738331/oydasgwd0mysponmm7xp.webp" },
- { rank: 7, id: "3", name: "Sam", totalXp: 4630, avatar: "https://res.cloudinary.com/dfohn9dcz/image/upload/w_100,q_auto,f_auto/v1749738331/oydasgwd0mysponmm7xp.webp" },
-  { rank: 8, id: "3", name: "Sam", totalXp: 4630, avatar: "https://res.cloudinary.com/dfohn9dcz/image/upload/w_100,q_auto,f_auto/v1749738331/oydasgwd0mysponmm7xp.webp" },
-   { rank: 9, id: "3", name: "Sam", totalXp: 4630, avatar: "https://res.cloudinary.com/dfohn9dcz/image/upload/w_100,q_auto,f_auto/v1749738331/oydasgwd0mysponmm7xp.webp" },
-    { rank: 10, id: "3", name: "Sam", totalXp: 4630, avatar: "https://res.cloudinary.com/dfohn9dcz/image/upload/w_100,q_auto,f_auto/v1749738331/oydasgwd0mysponmm7xp.webp" },
+
   ];
 
 const ActivityLeaderboard: React.FC<{ users: LeaderboardUser[] }> = ({ users }) => {
+
+  
 
   const RankBadge = ({ rank }: { rank: number }) => {
     if (rank === 1)
@@ -197,7 +191,7 @@ const ActivityLeaderboard: React.FC<{ users: LeaderboardUser[] }> = ({ users }) 
       <div className="divide-y" style={{ borderColor: "var(--border)" }}>
         {users.map((user, idx) => (
            <Link key={user.id} href={`/profile/${user.id}`}>
-                  <div className="flex hover:bg-gray-50 dark:hover:bg-dark-2 cursor-pointer justify-between items-center w-full px-5 py-4 rounded-xl transition-all  bg-white/50 dark:bg-dark-1 border border-transparent hover:border-gray-200 dark:hover:border-gray-700">
+                  <div className={`flex ${user.isYou ? 'bg-gray-50 dark:bg-dark-2  ' : 'dark:bg-dark-1'} hover:bg-gray-50 dark:hover:bg-dark-2 cursor-pointer justify-between items-center w-full px-5 py-4 rounded-xl transition-all    border border-transparent hover:border-gray-200 dark:hover:border-gray-700`}>
                     <div className="flex items-center gap-4">
                       <div className="w-5 flex justify-center">
                         <RankBadge rank={user.rank} />
@@ -210,7 +204,7 @@ const ActivityLeaderboard: React.FC<{ users: LeaderboardUser[] }> = ({ users }) 
                       />
 
                       <p className="text-base font-semibold dark:text-white">
-                        {user.name}
+                        {`${user.name} ${user.isYou ? "(You)" : ""}`} 
                       </p>
                     </div>
 
@@ -299,78 +293,6 @@ const LiveSessionItem: React.FC<LiveSession & { onClick?: () => void }> = ({
 
 
 
-const SessionItemSmall: React.FC<Session & { onClick?: () => void }> = ({
-  sessionNumber,
-  activity,
-  xpEarned,
-  dateTime,
-  duration,
-  thumbnail,
-  emoji,
-  onClick,
-}) => {
-
-  const [open, setOpen] = React.useState(false);
-  const menuRef = React.useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-
-  document.addEventListener("mousedown", handleClickOutside);
-  return () => document.removeEventListener("mousedown", handleClickOutside);
-}, []);
-  return (
-    <div
-        onClick={onClick}
-        className="flex items-center gap-4 p-4 bg-white dark:bg-dark-3 rounded-2xl border transition-shadow cursor-pointer"
-        style={{ borderColor: "var(--border)" }}
-      >
-
-      <div className="w-20 h-20 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden bg-gray-100 dark:bg-dark-3">
-        {emoji ? (
-          <span className="text-3xl">{emoji}</span>
-        ) : thumbnail ? (
-          <img src={thumbnail} alt="Session" className="w-full h-full object-cover" />
-        ) : (
-          <img
-            src="https://res.cloudinary.com/dfohn9dcz/image/upload/f_auto,q_auto,w_800,c_fill/v1/posts/user_7/ske_20251115103836"
-            alt="Session thumbnail"
-            className="w-full h-full object-cover"
-          />
-        )}
-      </div>
-
-      <div className="flex-1 min-w-0">
-       <h3 className="min-w-0 font-semibold text-md text-foreground dark:text-white truncate">
-        Drawing Mandalorian
-      </h3>
-        <p className="text-sm font-bold" style={{ color: "var(--alchemist-primary)" }}>
-          Session {sessionNumber}
-        </p>
-        <p className="text-xs mt-1 font-medium" style={{ color: "var(--muted)" }}>
-         2 days ago
-        </p>
-      </div>
-
-      {/* Right side: duration + menu */}
-      <div className="flex items-center gap-3">
-        <div className="text-right">
-          <div className="font-semibold text-lg text-foreground dark:text-white">
-            {duration}
-          </div>
-        </div>
-
-      </div>
-    </div>
-  );
-};
-
-
-
 
 
 const SessionItem: React.FC<Session & { onClick?: () => void }> = ({
@@ -444,21 +366,84 @@ const SessionItem: React.FC<Session & { onClick?: () => void }> = ({
 };
 
 
+
+const FriendSessionItem: React.FC<Session & { onClick?: () => void }> = ({
+  sessionNumber,
+  user,
+  xpEarned,
+  dateTime,
+  duration,
+  thumbnail,
+  emoji,
+  onClick,
+}) => {
+
+  const [open, setOpen] = React.useState(false);
+  const menuRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+
+  document.addEventListener("mousedown", handleClickOutside);
+  return () => document.removeEventListener("mousedown", handleClickOutside);
+}, []);
+  return (
+    <div
+        className="flex items-center gap-4 p-4 bg-white dark:bg-dark-3 rounded-2xl border transition-shadow cursor-pointer"
+        style={{ borderColor: "var(--border)" }}
+      >
+
+      <div className="w-20 h-20 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden bg-gray-100 dark:bg-dark-3">
+        {emoji ? (
+          <span className="text-3xl">{emoji}</span>
+        ) : thumbnail ? (
+          <img src={thumbnail} alt="Session" className="w-full h-full object-cover" />
+        ) : (
+          <img
+            src="https://res.cloudinary.com/dfohn9dcz/image/upload/f_auto,q_auto,w_800,c_fill/v1/posts/user_7/ske_20251115103836"
+            alt="Session thumbnail"
+            className="w-full h-full object-cover"
+          />
+        )}
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <h3 className="font-semibold text-lg text-foreground dark:text-white">
+          Drawing Mandalorian
+        </h3>
+        <Link href={`/u/${user.username}`} className="text-sm font-bold" style={{ color: "var(--alchemist-primary)" }}>
+        <p className="text-sm font-bold" style={{ color: "var(--alchemist-primary)" }}>
+          @{user.username}
+        </p>
+        </Link>
+        <p className="text-xs mt-1 font-medium" style={{ color: "var(--muted)" }}>
+          {xpEarned} XP Earned • {dateTime}
+        </p>
+      </div>
+
+      {/* Right side: duration + menu */}
+      <div className="flex items-center gap-3">
+        <div className="text-right">
+          <div className="font-semibold text-lg text-foreground dark:text-white">
+            {duration}
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+};
+
+
 export default function ActivityDetailPage({
   goalCompleted = false,
   title = "Drawing",
   user = mockUser,
-  radarData = [
-    { aspect: "Physique", value: user.aspects.physique.level, fullMark: 12 },
-    { aspect: "Energy", value: user.aspects.energy.level, fullMark: 12 },
-    { aspect: "Logic", value: user.aspects.logic.level, fullMark: 12 },
-    {
-      aspect: "Creativity",
-      value: user.aspects.creativity.level,
-      fullMark: 12,
-    },
-    { aspect: "Social", value: user.aspects.social.level, fullMark: 12 },
-  ],
+  
 
 
   createdDate = "1 Jan 2026",
@@ -508,7 +493,7 @@ export default function ActivityDetailPage({
 }: ActivityDetailProps) {
   const params = useParams();
   const router = useRouter();
-  const goalId = params.goalId as string;
+  const uid = params.activity as string;
 
   const handleStartActivity = () => {
     router.push(`/goals/${goalId}/session/new`);
@@ -538,6 +523,7 @@ export default function ActivityDetailPage({
     setIsNewSessionPopupOpen(false);
     setIsNewActivityModalOpen(true);
   };
+
 
 
   const [isSessionPopupOpen, setIsSessionPopupOpen] = useState(false);
@@ -575,6 +561,180 @@ export default function ActivityDetailPage({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+
+
+const [activityData, setActivityData] = useState<any>(null);
+const [loading, setLoading] = useState(true);
+
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+
+const [radarData, setRadarData] = useState([
+  { aspect: "Physique", value: user.aspects.physique.level, fullMark: 0 },
+  { aspect: "Energy", value: user.aspects.energy.level, fullMark: 0 },
+  { aspect: "Logic", value: user.aspects.logic.level, fullMark: 0 },
+  { aspect: "Creativity", value: user.aspects.creativity.level, fullMark: 0 },
+  { aspect: "Social", value: user.aspects.social.level, fullMark: 0 },
+]);
+
+const formatDuration = (seconds: number) => {
+  if (!seconds) return "00:00:00";
+
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+
+  const pad = (n: number) => String(n).padStart(2, "0");
+
+  return `${pad(h)}:${pad(m)}:${pad(s)}`;
+};
+
+useEffect(() => {
+  if (!uid) return;
+
+  const fetchActivity = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/activities/${uid}/`);
+      const data = await res.json();
+      
+      setActivityData(data);
+      setRadarData([
+          { aspect: "Physique", value: user.aspects.physique.level, fullMark: 0 },
+          { aspect: "Energy", value: user.aspects.energy.level, fullMark: 0 },
+          { aspect: "Logic", value: user.aspects.logic.level, fullMark: 0 },
+          {
+            aspect: "Creativity",
+            value: user.aspects.creativity.level,
+            fullMark: 0,
+          },
+          { aspect: "Social", value: user.aspects.social.level, fullMark: 0 },
+        ])
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+
+    }
+  };
+
+  fetchActivity();
+}, [uid]);
+
+
+const [friendsSessions, setFriendsSessions] = useState<any[]>([]);
+const [sessionsLoading, setSessionsLoading] = useState(true);
+
+
+useEffect(() => {
+  if (!uid) return;
+
+  const fetchFriendsSessions = async () => {
+    try {
+      const res = await fetch(`/api/a/${uid}/sessions/friends/`, {
+        credentials: "include",
+      });
+
+      const data = await res.json();
+
+      const mapped = (data.results || []).map((s: any) => ({
+        id: String(s.id),
+        sessionNumber: s.session_number,
+        user:s.user,
+        activity: s.activity?.name,
+        xpEarned: s.xp_total,
+        dateTime: new Date(s.started_at).toLocaleString(),
+        duration: formatDuration(s.total_duration_seconds),
+        emoji: s.activity?.emoji,
+      }));
+
+      setFriendsSessions(mapped);
+
+    } catch (e) {
+      console.error("Friends sessions error:", e);
+    } finally {
+      setSessionsLoading(false);
+    }
+  };
+
+  fetchFriendsSessions();
+}, [uid]);
+
+
+
+
+const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
+
+
+useEffect(() => {
+  if (!uid) return;
+
+  const fetchLeaderboard = async () => {
+    try {
+      const res = await fetch(`/api/a/${uid}/leaderboard/`);
+      const data = await res.json();
+
+      console.log("leaderboard raw:", data);
+      // 🔥 map API → UI format
+      const mapped = (data.leaderboard || []).map((item: any) => ({
+        rank: item.rank,
+        id: String(item.user.id),
+        name: item.user.fullname,
+        avatar: item.user.profile_picture,
+        totalXp: item.total_xp,
+        isYou: item.is_you,
+      }));
+
+      setLeaderboard(mapped);
+
+    } catch (e) {
+      console.error("Leaderboard error:", e);
+    }
+  };
+
+  fetchLeaderboard();
+}, [uid]);
+
+
+
+
+
+const [mySessions, setMySessions] = useState<any[]>([]);
+
+
+
+useEffect(() => {
+  if (!uid) return;
+
+  const fetchSessions = async () => {
+    try {
+      const res = await fetch(`/api/a/${uid}/sessions/mine/`, {
+        credentials: "include",
+      });
+
+      const data = await res.json();
+    const mapped = (data.results || []).map((s: any) => ({
+      id: String(s.id),
+      sessionNumber: s.session_number,
+      activity: s.activity?.name || "Activity",
+      xpEarned: s.xp_total,
+      dateTime: new Date(s.started_at).toLocaleString(),
+      duration: formatDuration(s.total_duration_seconds),
+      emoji: s.activity?.emoji,
+    }));
+
+      setMySessions(mapped);
+      console.log("sessions raw:", data);
+
+    } catch (e) {
+      console.error("Sessions error:", e);
+    }
+  };
+
+  fetchSessions();
+}, [uid]);
+
+
 
 
 const [isModalOpen, setIsModalOpen] = useState(false);
@@ -682,7 +842,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
               </svg>
             </button>
             
-            <h1 className="text-xl font-bold flex-1 ml-2 text-foreground dark:text-white">{title}</h1>
+            <h1 className="text-xl font-bold flex-1 ml-2 text-foreground dark:text-white">{activityData?.name || 'Activity'}</h1>
             
             <div ref={moreMenuRef} className="relative">
             <button
@@ -692,7 +852,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                 }}
                 onClick={handleOpenCompleteGoal}
               >
-                Start Activity
+                Start {activityData?.name || 'Activity'}
                 <PlayIcon className="w-4 h-4 inline-block ml-4" />
 
               </button>
@@ -846,7 +1006,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
               ))}
             </div>
 
-
+{!sessionsLoading && friendsSessions.length > 0 && (
+            <>
             <div className="flex justify-between">
             <h2 className="text-xl font-bold my-6 text-foreground dark:text-white">Friends' Drawing Sessions</h2>
             <button className='bg-transparent font-medium text-sm cursor-pointer active:opacity-80 hover:opacity-90' style={{color:"var(--rookie-primary)"}}>
@@ -854,16 +1015,25 @@ const [isModalOpen, setIsModalOpen] = useState(false);
             </button>
             </div>
             <div className="space-y-3">
-            {todaySessions.map((session) => (
-                <SessionItem
-                  key={session.id}
-                  {...session}
-                  onClick={() => handleOpenSessionPopup(session)}
-                />
-              ))}
+            
+                <div className="space-y-3">
+                  {friendsSessions.map((session) => (
+                    <FriendSessionItem
+                      key={session.id}
+                      {...session}
+                      onClick={() => handleOpenSessionPopup(session)}
+                    />
+                  ))}
+                </div>
+              
             </div>
+            </>
+            )}
 
+{!sessionsLoading && mySessions.length > 0 && (
+ 
 
+  <>
             <div className="flex justify-between">
             <h2 className="text-xl font-bold my-6 text-foreground dark:text-white">Your Sessions</h2>
             <button className='bg-transparent font-medium text-sm cursor-pointer active:opacity-80 hover:opacity-90' style={{color:"var(--rookie-primary)"}}>
@@ -871,17 +1041,22 @@ const [isModalOpen, setIsModalOpen] = useState(false);
             </button>
             </div>
             <div className="space-y-3">
-            {todaySessions.map((session) => (
+            {mySessions.map((session) => (
                 <SessionItem
                   key={session.id}
                   {...session}
                   onClick={() => handleOpenSessionPopup(session)}
                 />
-              ))}
+                  ))}
+             
             </div>
 
 
-          </div>
+         
+          </>
+ )}
+         
+            </div>
 
           {/* Right Sidebar - Desktop Only */}
           <div style={{width:"450px"}} className="flex-shrink-0">
@@ -899,22 +1074,24 @@ const [isModalOpen, setIsModalOpen] = useState(false);
               <div>
                
                 <div className="flex  justify-around gap-2">
-                  <AspectChip icon={<BiDumbbell className="w-4 h-4" />} value={341} tint="physique" />
-                  <AspectChip icon={<BoltIcon className="w-4 h-4" />} value={432} tint="energy" />
-                  <AspectChip icon={<UsersIcon className="w-4 h-4" />} value={234} tint="social" />
-                  <AspectChip icon={<FaBrain className="w-4 h-4" />} value={324} tint="creativity" />
-                  <AspectChip icon={<FaHammer className="w-4 h-4" />} value={234} tint="logic" />
+                  <AspectChip icon={<BiDumbbell className="w-4 h-4" />} value={activityData?.xp_distribution.physique} tint="physique" />
+                  <AspectChip icon={<BoltIcon className="w-4 h-4" />} value={activityData?.xp_distribution.energy} tint="energy" />
+                  <AspectChip icon={<UsersIcon className="w-4 h-4" />} value={activityData?.xp_distribution.social} tint="social" />
+                  <AspectChip icon={<FaBrain className="w-4 h-4" />} value={activityData?.xp_distribution.creativity} tint="creativity" />
+                  <AspectChip icon={<FaHammer className="w-4 h-4" />} value={activityData?.xp_distribution.logic} tint="logic" />
                 </div>
               </div>
               
-              {/* Creation Date */}
+
+
+
 
               
 
               {/* Description */}
 
                 <p className="text-md text-foreground dark:text-white">
-                  {description}
+                  {activityData?.description}
                 </p>
 
 
@@ -925,7 +1102,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
              
 
             </div>
-           <ActivityLeaderboard users={users} />
+           <ActivityLeaderboard users={leaderboard} />
           </div>
           
         </div>

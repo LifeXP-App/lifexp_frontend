@@ -766,14 +766,26 @@ export default function GoalDetailPage() {
               <span className="text-sm" style={{ color: "var(--muted)" }}>
                 Likes
               </span>
-              <div className="flex items-center gap-2">
-                <div className="flex -space-x-2">
-                  <div className="w-6 h-6 rounded-full border-2 border-white dark:border-dark-2 bg-gray-400" />
-                </div>
-                <span className="text-md font-semibold text-foreground dark:text-white">
-                  +0
-                </span>
-              </div>
+<div className="flex items-center gap-1">
+
+  <div className="flex -space-x-2">
+    {goal.top_likes?.slice(0, 3).map((user) => (
+      <a key={user.username} href={`/u/${user.username}`}>
+        <img
+          src={user.profile_picture ?? "/default-avatar.png"}
+          className="w-7 h-7 rounded-full border-2 border-white object-cover"
+        />
+      </a>
+    ))}
+  </div>
+
+  {goal.likes_count && goal.likes_count > 3 && (
+    <span className="text-sm text-gray-500">
+      +{goal.likes_count - 3}
+    </span>
+  )}
+</div>
+
             </div>
           </div>
 
@@ -824,7 +836,7 @@ export default function GoalDetailPage() {
                 }}
                 onClick={handleStartActivity}
               >
-                Start {goal.category?.name || "Session"}
+                Start {goal.last_activity.name}
               </button>
 
               <button
@@ -917,7 +929,7 @@ export default function GoalDetailPage() {
                   }}
                   onClick={handleStartActivity}
                 >
-                  Start {goal.category?.name || "Session"}
+                  Start {goal.last_activity?.name || "Activity"}
                 </button>
 
                 <button
@@ -1106,15 +1118,28 @@ export default function GoalDetailPage() {
                   <span className="text-sm" style={{ color: "var(--muted)" }}>
                     Likes
                   </span>
-                  <div className="flex items-center gap-2">
-                    <div className="flex -space-x-2">
-                      <div className="w-6 h-6 rounded-full border-2 border-white dark:border-dark-2 bg-gray-400" />
-                    </div>
-                    <span className="text-md font-semibold text-foreground dark:text-white">
-                      +0
-                    </span>
-                  </div>
-                </div>
+<div className="flex items-center gap-1">
+
+  <div className="flex -space-x-2">
+    {goal.top_likes?.slice(0, 3).map((user) => (
+      <a key={user.username} href={`/u/${user.username}`}>
+        <img
+          src={user.profile_picture ?? "/default-avatar.png"}
+          className="w-7 h-7 rounded-full border-2 border-white object-cover"
+        />
+      </a>
+    ))}
+  </div>
+
+  {goal.likes_count && goal.likes_count > 3 && (
+    <span className="text-sm text-gray-500">
+      +{goal.likes_count - 3}
+    </span>
+  )}
+
+</div>
+
+</div>
               </div>
 
               {/* Complete Goal Button */}

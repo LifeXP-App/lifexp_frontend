@@ -4,10 +4,12 @@ export interface Goal {
   emoji: string;
   description: string | null;
   finish_by: string | null;
+
   category: {
     name: string;
     color: string;
   } | null;
+
   status:
     | "active"
     | "ongoing"
@@ -15,9 +17,12 @@ export interface Goal {
     | "completed"
     | "paused"
     | "abandoned";
+
   days_total: number;
   days_completed: number;
+
   total_xp?: number;
+
   xp_distribution?: {
     physique?: number;
     energy?: number;
@@ -25,6 +30,20 @@ export interface Goal {
     creativity?: number;
     social?: number;
   } | null;
+
+  /* NEW */
+
+  likes_count?: number;
+  last_activity? : {
+    name: string;
+    uid: string;
+  }| null;
+
+  top_likes?: {
+    username: string;
+    profile_picture: string | null;
+  }[];
+
   created_at: string;
   updated_at: string;
 }
@@ -126,17 +145,40 @@ function normalizeGoal(item: unknown): Goal | null {
       ? (goal.xp_distribution as Record<string, unknown>)
       : null;
 
+  const topLikes =
+    Array.isArray(goal.top_likes)
+      ? goal.top_likes
+          .filter(
+            (u) =>
+              u &&
+              typeof u === "object" &&
+              typeof (u as any).username === "string"
+          )
+          .map((u) => ({
+            username: (u as any).username,
+            profile_picture:
+              typeof (u as any).profile_picture === "string"
+                ? (u as any).profile_picture
+                : null,
+          }))
+      : [];
+
   return {
     id: String(rawId),
+
     title,
+
     emoji: typeof goal.emoji === "string" ? goal.emoji : "🎯",
+
     description:
       typeof goal.description === "string"
         ? goal.description
         : typeof goal.content === "string"
           ? goal.content
           : null,
+
     finish_by: typeof goal.finish_by === "string" ? goal.finish_by : null,
+
     category:
       category &&
       typeof category.name === "string" &&
@@ -146,11 +188,16 @@ function normalizeGoal(item: unknown): Goal | null {
             color: category.color,
           }
         : null,
+
     status: normalizeGoalStatus(goal.status),
+
     days_total: typeof goal.days_total === "number" ? goal.days_total : 0,
+
     days_completed:
       typeof goal.days_completed === "number" ? goal.days_completed : 0,
+
     total_xp: typeof goal.total_xp === "number" ? goal.total_xp : undefined,
+
     xp_distribution: xpDistribution
       ? {
           physique:
@@ -162,7 +209,9 @@ function normalizeGoal(item: unknown): Goal | null {
               ? xpDistribution.energy
               : 0,
           logic:
-            typeof xpDistribution.logic === "number" ? xpDistribution.logic : 0,
+            typeof xpDistribution.logic === "number"
+              ? xpDistribution.logic
+              : 0,
           creativity:
             typeof xpDistribution.creativity === "number"
               ? xpDistribution.creativity
@@ -173,10 +222,25 @@ function normalizeGoal(item: unknown): Goal | null {
               : 0,
         }
       : null,
+
+    /* NEW */
+
+    likes_count: typeof goal.likes_count === "number" ? goal.likes_count : 0,
+
+    top_likes: topLikes,
+
+    last_activity: goal.last_activity && typeof goal.last_activity === "object"
+      ? {
+           name: typeof goal.last_activity.name === "string" ? goal.last_activity.name : "Activity",
+           uid: typeof goal.last_activity.uid === "string" ? goal.last_activity.uid : "",
+        }
+      : null,
+
     created_at:
       typeof goal.created_at === "string"
         ? goal.created_at
         : new Date().toISOString(),
+
     updated_at:
       typeof goal.updated_at === "string"
         ? goal.updated_at
@@ -190,27 +254,21 @@ export const GoalsService = {
   ): Promise<PaginatedResponse<Goal>> {
     const params = new URLSearchParams();
 
-    if (options?.status) {
-      params.set("status", options.status);
-    }
-    if (typeof options?.page === "number") {
-      params.set("page", String(options.page));
-    }
-    if (typeof options?.page_size === "number") {
-      params.set("page_size", String(options.page_size));
-    }
+    if (options?.status) params.set("status", options.status);
+    if (typeof options?.page === "number") params.set("page", String(options.page));
+    if (typeof options?.page_size === "number") params.set("page_size", String(options.page_size));
 
     const query = params.toString();
+
     const res = await fetch(`/api/goals${query ? `?${query}` : ""}`);
     if (!res.ok) throw new Error("Failed to fetch goals");
 
     const data = await res.json();
 
-    const normalizeGoals = (items: unknown[]): Goal[] => {
-      return items
+    const normalizeGoals = (items: unknown[]): Goal[] =>
+      items
         .map((item) => normalizeGoal(item))
         .filter((item): item is Goal => item !== null);
-    };
 
     const goals = Array.isArray(data)
       ? normalizeGoals(data)
@@ -229,30 +287,46 @@ export const GoalsService = {
         typeof (data as { count?: unknown }).count === "number"
           ? (data as { count: number }).count
           : goals.length,
+
       next:
         data && typeof data === "object" && "next" in data
           ? ((data as { next?: string | null }).next ?? null)
           : null,
+
       previous:
         data && typeof data === "object" && "previous" in data
           ? ((data as { previous?: string | null }).previous ?? null)
           : null,
+
       results: goals,
     };
   },
 
   async getGoal(id: string): Promise<Goal> {
-    goalsDebugLog("getGoal:request", { id, url: `/api/goals/${id}` });
+    goalsDebugLog("getGoal:request", { id });
+
     const res = await fetch(`/api/goals/${id}`);
-    goalsDebugLog("getGoal:responseStatus", { id, status: res.status });
+
     if (!res.ok) throw new Error("Failed to fetch goal");
+
     const data = await res.json();
-    goalsDebugLog("getGoal:rawPayload", data);
+
     const normalized = normalizeGoal(data);
-    goalsDebugLog("getGoal:normalized", normalized);
+
     if (!normalized) throw new Error("Invalid goal payload");
+
     return normalized;
   },
+
+  async deleteGoal(id: string): Promise<void> {
+    const res = await fetch(`/api/goals/${id}`, {
+      method: "DELETE",
+    });
+
+    if (!res.ok) throw new Error("Failed to delete goal");
+  },
+
+
 
   async getGoalSessions(
     id: string,
