@@ -44,25 +44,37 @@ type SessionFinalStats = {
 
 // ── Module-level helpers (no component state closures) ──
 
-async function fetchXpRates(
+type ActivityMetadata = {
+  id: number;
+  name: string;
+  emoji: string;
+  type: string;
+};
+
+type RatesResponse = {
+  rates: XpRates;
+  activity?: ActivityMetadata;
+};
+
+async function fetchXpRatesWithActivity(
   activityId: number,
   goalIntId: number,
   retries = 1,
-): Promise<XpRates> {
+): Promise<RatesResponse> {
   const res = await fetch("/api/sessions/calculate-rates", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ activity_id: activityId, goal_id: goalIntId }),
   });
   if (!res.ok) {
-    if (retries > 0) return fetchXpRates(activityId, goalIntId, retries - 1);
+    if (retries > 0) return fetchXpRatesWithActivity(activityId, goalIntId, retries - 1);
     const err = await res.json().catch(() => ({}));
     throw new Error(
       (err as { detail?: string }).detail ?? "Failed to calculate XP rates",
     );
   }
   const data = await res.json();
-  return data.rates as XpRates;
+  return data as RatesResponse;
 }
 
 async function syncSessionToDjango(
@@ -214,15 +226,18 @@ export default function SessionTimer({ params }: SessionTimerProps) {
             "Invalid activity — please go back and select a valid activity.",
           );
         }
-        return fetchXpRates(aid, goalIntId);
+        return fetchXpRatesWithActivity(aid, goalIntId);
       })
-      .then(async (rates) => {
+      .then(async (response) => {
         const startedAt = new Date().toISOString();
         const id = await startMutation({
           userId: String(me.id),
           goalId,
           activityId: activityIdStr,
-          rates,
+          rates: response.rates,
+          activityName: response.activity?.name,
+          activityEmoji: response.activity?.emoji,
+          activityType: response.activity?.type,
           deviceContext: { platform: "web" },
         });
 

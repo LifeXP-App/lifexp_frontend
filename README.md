@@ -1,3 +1,17 @@
+# LifeXP Frontend
+
+## Developer Documentation
+
+Start here when working on the codebase:
+
+- [Developer guide](docs/developer-guide.md) - architecture, routing, auth, API proxy pattern, Convex sessions, testing, and deployment notes.
+- [Linear summary](docs/linear-summary.md) - short surface-level summary for issue tracking and handoff.
+- [Convex + Django integration](CONVEX_DJANGO_INTEGRATION.md) - detailed session source-of-truth architecture.
+- [Convex integration testing](TESTING_CONVEX_INTEGRATION.md) - manual validation checklist.
+- [Django endpoints needed](docs/django-endpoints-needed.md) - backend contracts expected by the frontend.
+
+## Product Overview
+
 # **1. Introduction**
 
 **1.1. Overview**

@@ -16,6 +16,11 @@ export default defineSchema({
     goalId: v.string(), // Django goal UUID
     activityId: v.string(), // primary activity UUID (denormalized from rateSegments[0])
 
+    // ── Activity Metadata (denormalized for performance) ──
+    activityName: v.optional(v.string()), // e.g., "Drawing", "Running"
+    activityEmoji: v.optional(v.string()), // e.g., "🎨", "🏃"
+    activityType: v.optional(v.string()), // e.g., "creativity", "physique"
+
     // ── Lifecycle ──
     status: v.union(
       v.literal("live"),
@@ -83,6 +88,7 @@ export default defineSchema({
       )
     ),
     interruptionReason: v.optional(v.string()),
+    completionPicture: v.optional(v.string()), // URL to completion/reflection image
 
     // ── Django Sync ──
     syncedToDjango: v.boolean(),

@@ -110,6 +110,9 @@ export const startSession = mutation({
     goalId: v.string(),
     activityId: v.string(),
     rates: xpRates,
+    activityName: v.optional(v.string()),
+    activityEmoji: v.optional(v.string()),
+    activityType: v.optional(v.string()),
     deviceContext: v.optional(
       v.object({
         platform: v.union(
@@ -150,6 +153,9 @@ export const startSession = mutation({
       userId: args.userId,
       goalId: args.goalId,
       activityId: args.activityId,
+      activityName: args.activityName,
+      activityEmoji: args.activityEmoji,
+      activityType: args.activityType,
       status: "live",
       startedAt: now,
       lastHeartbeatAt: now,

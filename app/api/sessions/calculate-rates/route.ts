@@ -45,18 +45,53 @@ export async function POST(req: Request) {
   const body = await req.json();
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
 
-  const res = await authedFetch(
+  // Fetch XP rates
+  const ratesRes = await authedFetch(
     `${baseUrl}/api/v1/sessions/calculate-rates/`,
     { method: "POST", body: JSON.stringify(body) },
   );
 
-  if (res instanceof NextResponse) return res;
+  if (ratesRes instanceof NextResponse) return ratesRes;
 
-  const text = await res.text();
+  const ratesText = await ratesRes.text();
+  let ratesData;
   try {
-    const data = JSON.parse(text);
-    return NextResponse.json(data, { status: res.status });
+    ratesData = JSON.parse(ratesText);
   } catch {
-    return NextResponse.json({ detail: text }, { status: res.status });
+    return NextResponse.json({ detail: ratesText }, { status: ratesRes.status });
   }
+
+  // Also fetch activity metadata if activity_id is provided
+  if (body.activity_id) {
+    const activityRes = await authedFetch(
+      `${baseUrl}/api/v1/activities/${body.activity_id}/`,
+      { method: "GET" },
+    );
+
+    if (activityRes instanceof NextResponse) {
+      // If activity fetch fails, still return rates without metadata
+      return NextResponse.json(ratesData, { status: ratesRes.status });
+    }
+
+    try {
+      const activityText = await activityRes.text();
+      const activityData = JSON.parse(activityText);
+
+      // Combine rates with activity metadata
+      return NextResponse.json({
+        ...ratesData,
+        activity: {
+          id: activityData.id,
+          name: activityData.name,
+          emoji: activityData.emoji,
+          type: activityData.type,
+        },
+      }, { status: ratesRes.status });
+    } catch {
+      // If activity parsing fails, still return rates
+      return NextResponse.json(ratesData, { status: ratesRes.status });
+    }
+  }
+
+  return NextResponse.json(ratesData, { status: ratesRes.status });
 }
