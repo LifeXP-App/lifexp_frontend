@@ -77,6 +77,7 @@ interface ActivityDetailProps {
 
 import { ACTIVITY_META, ActivityType } from "@/src/lib/types/activityMeta";
 import Link from "next/link";
+import { GoalsService } from "@/src/lib/services/goals";
 
 
 interface Activity {
@@ -738,14 +739,25 @@ useEffect(() => {
 
 
 const [isModalOpen, setIsModalOpen] = useState(false);
-    const handleCreateGoal = (goal: {
+    const handleCreateGoal = async (goal: {
     title: string;
     description: string;
     finishBy: string;
   }) => {
-    console.log("New goal created:", goal);
-    // Add your logic here to save the goal
-    setIsModalOpen(false);
+    try {
+      await GoalsService.createGoal({
+        title: goal.title,
+        description: goal.description,
+        finish_by: goal.finishBy,
+      });
+
+      setIsModalOpen(false);
+      // Optionally redirect to goals page or refresh
+      router.push('/goals');
+    } catch (error) {
+      console.error("Failed to create goal:", error);
+      alert("Failed to create goal. Please try again.");
+    }
   };
 
  

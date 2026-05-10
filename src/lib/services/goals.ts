@@ -480,7 +480,7 @@ export const GoalsService = {
 
   async updateGoal(
     id: string,
-    data: { title?: string; description?: string; finish_by?: string },
+    data: { title?: string; description?: string; finish_by?: string; status?: string },
   ): Promise<Goal> {
     const res = await fetch(`/api/goals/${id}`, {
       method: "PATCH",
