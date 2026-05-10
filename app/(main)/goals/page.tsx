@@ -1,6 +1,9 @@
 "use client";
 
 import NewActivityModal from "@/src/components/goals/NewActivityModel";
+import StatusBadge from "@/src/components/goals/StatusBadge";
+import GoalStatusMenu from "@/src/components/goals/GoalStatusMenu";
+import StatusChangeConfirmationModal from "@/src/components/goals/StatusChangeConfirmationModal";
 import { useAuth } from "@/src/context/AuthContext";
 import { usePopup } from "@/src/context/PopupContext";
 import { ActivityType } from "@/src/lib/types/activityMeta";
@@ -12,7 +15,7 @@ import { FaBrain, FaHammer } from "react-icons/fa";
 
 type AspectKey = "physique" | "energy" | "social" | "creativity" | "logic";
 
-type GoalStatus = "ongoing" | "planned" | "completed";
+type GoalStatus = "ongoing" | "planned" | "completed" | "paused" | "abandoned";
 
 type Goal = {
   id: string;
@@ -120,11 +123,13 @@ function GoalCard({
   primaryCta,
   secondaryCta,
   showAchievementCta,
+  onStatusChange,
 }: {
   goal: Goal;
   primaryCta?: { label: string; onClick: () => void };
   secondaryCta?: { label: string; onClick: () => void };
   showAchievementCta?: { label: string; onClick: () => void };
+  onStatusChange?: (goalId: string, newStatus: string) => void;
 }) {
   const isCompleted = goal.status === "completed";
 
@@ -136,27 +141,40 @@ function GoalCard({
           <div className="text-xl leading-none mt-1">{goal.emoji}</div>
 
           <div className="w-full">
-            <div className="flex w-full items-center justify-between ">
+            <div className="flex w-full items-center justify-between gap-2">
               <p className="font-semibold text-lg text-black dark:text-white truncate">
                 {goal.title}
               </p>
 
-              {isCompleted && typeof goal.xpReward === "number" && (
-                <span
-                  style={{
-                    backgroundColor: "var(--rookie-primary)",
-                  }}
-                  className="ml-2 shrink-0 rounded-full  px-3 py-1 text-xs font-semibold text-white"
-                >
-                  {goal.xpReward}XP
-                </span>
-              )}
+              <div className="flex items-center gap-2 shrink-0">
+                <StatusBadge status={goal.status} />
+
+                {isCompleted && typeof goal.xpReward === "number" && (
+                  <span
+                    style={{
+                      backgroundColor: "var(--rookie-primary)",
+                    }}
+                    className="rounded-full px-3 py-1 text-xs font-semibold text-white"
+                  >
+                    {goal.xpReward}XP
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
+        {/* 3-dot Status Menu (only for non-completed goals) */}
+        {onStatusChange && (
+          <GoalStatusMenu
+            goalId={goal.id}
+            currentStatus={goal.status}
+            onStatusChange={onStatusChange}
+          />
+        )}
+
         {/* Right meta */}
-        {!isCompleted && goal.metaRight && (
+        {!isCompleted && goal.metaRight && !onStatusChange && (
           <p className="text-xs text-gray-400 dark:text-gray-500 italic whitespace-nowrap mt-1">
             {goal.metaRight}
           </p>
@@ -324,6 +342,7 @@ function AspectChip({
 
 import NewGoalModal from "@/src/components/goals/NewGoalModal";
 import { BiDumbbell } from "react-icons/bi";
+import { GoalsService } from "@/src/lib/services/goals";
 
 interface Activity {
   id: string;
@@ -406,6 +425,14 @@ export default function GoalsPage() {
   const [goals, setGoals] = useState<GoalPost[]>([]);
   const [goalsLoading, setGoalsLoading] = useState(false);
 
+  const [isStatusConfirmOpen, setIsStatusConfirmOpen] = useState(false);
+  const [pendingStatusChange, setPendingStatusChange] = useState<{
+    goalId: string;
+    currentStatus: string;
+    newStatus: string;
+    goalTitle: string;
+  } | null>(null);
+
   useEffect(() => {
     if (authLoading || !me?.username) return;
     console.log("AuthLoading",authLoading)
@@ -435,7 +462,9 @@ export default function GoalsPage() {
 
   const plannedGoals = goals.filter((p) => p.status === "planned");
   const ongoingGoals = goals.filter((p) => p.status === "ongoing");
+  const pausedGoals = goals.filter((p) => p.status === "paused");
   const completedGoals = goals.filter((p) => p.status === "completed");
+  const abandonedGoals = goals.filter((p) => p.status === "abandoned");
 
   const [sidebarInfo, setSidebarInfo] = useState<UserGoalsInfo | null>(null);
   const [sidebarLoading, setSidebarLoading] = useState(false);
@@ -466,14 +495,33 @@ export default function GoalsPage() {
     fetchSidebarInfo();
   }, [me?.username]);
 
-  const handleCreateGoal = (goal: {
+  const handleCreateGoal = async (goal: {
     title: string;
     description: string;
     finishBy: string;
   }) => {
-    console.log("New goal created:", goal);
-    // Add your logic here to save the goal
-    setIsModalOpen(false);
+    try {
+      await GoalsService.createGoal({
+        title: goal.title,
+        description: goal.description,
+        finish_by: goal.finishBy,
+      });
+
+      // Refetch goals to show the new goal
+      const res = await fetch(`/api/goals`, {
+        cache: "no-store",
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setGoals(Array.isArray(data.results) ? data.results : []);
+      }
+
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error("Failed to create goal:", error);
+      alert("Failed to create goal. Please try again.");
+    }
   };
 
   const handleOpenActivityModal = (goalId: string) => {
@@ -554,6 +602,59 @@ export default function GoalsPage() {
     }
   };
 
+  const handleStatusChangeRequest = (goalId: string, newStatus: string) => {
+    const goal = goals.find((g) => g.uid === goalId);
+    if (!goal) return;
+
+    setPendingStatusChange({
+      goalId,
+      currentStatus: goal.status,
+      newStatus,
+      goalTitle: goal.title,
+    });
+    setIsStatusConfirmOpen(true);
+  };
+
+  const handleStatusChangeConfirm = async () => {
+    if (!pendingStatusChange) return;
+
+    try {
+      // Optimistic update
+      setGoals((prev) =>
+        prev.map((g) =>
+          g.uid === pendingStatusChange.goalId
+            ? { ...g, status: pendingStatusChange.newStatus as GoalStatus }
+            : g
+        )
+      );
+
+      // API call
+      await GoalsService.updateGoal(pendingStatusChange.goalId, {
+        status: pendingStatusChange.newStatus,
+      });
+
+      // Refetch to ensure consistency
+      const res = await fetch(`/api/goals`, { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        setGoals(Array.isArray(data.results) ? data.results : []);
+      }
+    } catch (error) {
+      console.error("Failed to update goal status:", error);
+      alert("Failed to update goal status. Please try again.");
+
+      // Revert optimistic update on error
+      const res = await fetch(`/api/goals`, { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        setGoals(Array.isArray(data.results) ? data.results : []);
+      }
+    } finally {
+      setPendingStatusChange(null);
+      setIsStatusConfirmOpen(false);
+    }
+  };
+
   return (
     <main className="h-screen w-full bg-gray-100 dark:bg-dark-1 overflow-hidden">
       <div className="mx-auto w-full  px-4 py-6">
@@ -591,7 +692,7 @@ export default function GoalsPage() {
                     <GoalCard
                       key={goal.id}
                       goal={{
-                        id: goal.id,
+                        id: goal.uid,
                         emoji: goal.emoji || "🎯",
                         title: goal.title,
                         description: goal.content,
@@ -608,6 +709,7 @@ export default function GoalsPage() {
                         label: "View",
                         onClick: () => router.push(`/goals/${goal.uid}`),
                       }}
+                      onStatusChange={handleStatusChangeRequest}
                     />
                   ))}
                 </div>
@@ -632,7 +734,7 @@ export default function GoalsPage() {
                     <GoalCard
                       key={goal.id}
                       goal={{
-                        id: goal.id,
+                        id: goal.uid,
                         emoji: goal.emoji || "🎯",
                         title: goal.title,
                         description: goal.content,
@@ -652,6 +754,7 @@ export default function GoalsPage() {
                           }
                         },
                       }}
+                      onStatusChange={handleStatusChangeRequest}
                     />
                   ))}
                 </div>
@@ -677,7 +780,7 @@ export default function GoalsPage() {
                     <GoalCard
                       key={goal.id}
                       goal={{
-                        id: goal.id,
+                        id: goal.uid,
                         emoji: goal.emoji || "🎯",
                         title: goal.title,
                         description: goal.content,
@@ -692,6 +795,85 @@ export default function GoalsPage() {
                         label: "View Achievement",
                         onClick: () => router.push(`/goals/${goal.uid}`),
                       }}
+                      onStatusChange={handleStatusChangeRequest}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Paused */}
+            <div className="mt-6">
+              {(pausedGoals.length > 0 || goalsLoading) && (
+                <>
+                  <SectionTitle>Paused ({pausedGoals.length})</SectionTitle>
+                </>
+              )}
+              {goalsLoading ? (
+                <>
+                  <GoalsSectionSkeleton count={1} />
+                </>
+              ) : (
+                <div className="space-y-4">
+                  {pausedGoals.map((goal) => (
+                    <GoalCard
+                      key={goal.id}
+                      goal={{
+                        id: goal.uid,
+                        emoji: goal.emoji || "🎯",
+                        title: goal.title,
+                        description: goal.content,
+                        status: "paused",
+                        metaRight: goal.duration_display
+                          ? `${goal.duration_display} spent`
+                          : undefined,
+                      }}
+                      primaryCta={{
+                        label: "Resume",
+                        onClick: () => handleStatusChangeRequest(goal.uid, 'ongoing'),
+                      }}
+                      secondaryCta={{
+                        label: "View",
+                        onClick: () => router.push(`/goals/${goal.uid}`),
+                      }}
+                      onStatusChange={handleStatusChangeRequest}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Abandoned */}
+            <div className="mt-6">
+              {(abandonedGoals.length > 0 || goalsLoading) && (
+                <>
+                  <SectionTitle>Abandoned ({abandonedGoals.length})</SectionTitle>
+                </>
+              )}
+              {goalsLoading ? (
+                <>
+                  <GoalsSectionSkeleton count={1} />
+                </>
+              ) : (
+                <div className="space-y-4">
+                  {abandonedGoals.map((goal) => (
+                    <GoalCard
+                      key={goal.id}
+                      goal={{
+                        id: goal.uid,
+                        emoji: goal.emoji || "🎯",
+                        title: goal.title,
+                        description: goal.content,
+                        status: "abandoned",
+                        metaRight: goal.duration_display
+                          ? `${goal.duration_display} spent`
+                          : undefined,
+                      }}
+                      showAchievementCta={{
+                        label: "View",
+                        onClick: () => router.push(`/goals/${goal.uid}`),
+                      }}
+                      onStatusChange={handleStatusChangeRequest}
                     />
                   ))}
                 </div>
@@ -725,6 +907,19 @@ export default function GoalsPage() {
         onSelectActivity={handleSelectActivity}
         onGenerateNew={handleGenerateNewActivity}
         onStartDrawing={handleStartDrawing}
+      />
+
+      {/* Status Change Confirmation Modal */}
+      <StatusChangeConfirmationModal
+        isOpen={isStatusConfirmOpen}
+        onClose={() => {
+          setIsStatusConfirmOpen(false);
+          setPendingStatusChange(null);
+        }}
+        onConfirm={handleStatusChangeConfirm}
+        currentStatus={pendingStatusChange?.currentStatus || ''}
+        newStatus={pendingStatusChange?.newStatus || ''}
+        goalTitle={pendingStatusChange?.goalTitle || ''}
       />
     </main>
   );

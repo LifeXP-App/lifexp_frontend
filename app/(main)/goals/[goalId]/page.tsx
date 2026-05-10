@@ -829,20 +829,22 @@ export default function GoalDetailPage() {
           {/* Action Buttons */}
           {!goalCompleted && (
             <div className="grid grid-cols-2 gap-3 mb-8">
-              <button
-                className="py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80  cursor-pointer"
-                style={{
-                  backgroundColor: "var(--rookie-primary)",
-                }}
-                onClick={handleStartActivity}
-              >
-                Start {goal.last_activity.name}
-              </button>
+              {goal.last_activity && (
+                <button
+                  className="py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80  cursor-pointer"
+                  style={{
+                    backgroundColor: "var(--rookie-primary)",
+                  }}
+                  onClick={handleStartActivity}
+                >
+                  Start {goal.last_activity.name}
+                </button>
+              )}
 
               <button
-                className="py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80  cursor-pointer"
+                className={`py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80 cursor-pointer ${!goal.last_activity ? 'col-span-2' : ''}`}
                 style={{
-                  backgroundColor: "#4a4a4a",
+                  backgroundColor: goal.last_activity ? "#4a4a4a" : "var(--rookie-primary)",
                 }}
                 onClick={() => handleOpenNewActivity()}
               >
