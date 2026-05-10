@@ -13,13 +13,19 @@ export default defineSchema({
   sessions: defineTable({
     // ── Ownership ──
     userId: v.string(), // Django user UUID
+    username: v.optional(v.string()),
+  
     goalId: v.string(), // Django goal UUID
+    goalTitle: v.optional(v.string()),
     activityId: v.string(), // primary activity UUID (denormalized from rateSegments[0])
 
     // ── Activity Metadata (denormalized for performance) ──
     activityName: v.optional(v.string()), // e.g., "Drawing", "Running"
     activityEmoji: v.optional(v.string()), // e.g., "🎨", "🏃"
     activityType: v.optional(v.string()), // e.g., "creativity", "physique"
+    
+    
+
 
     // ── Lifecycle ──
     status: v.union(
@@ -98,5 +104,6 @@ export default defineSchema({
     .index("by_user_status", ["userId", "status"])
     .index("by_goal", ["goalId"])
     .index("by_sync", ["syncedToDjango"])
-    .index("by_heartbeat", ["status", "lastHeartbeatAt"]),
+    .index("by_heartbeat", ["status", "lastHeartbeatAt"])
+    .index("by_activity_status", ["activityId", "status"]),
 });

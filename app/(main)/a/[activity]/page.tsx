@@ -9,6 +9,8 @@ import SessionInfoPopup from "@/src/components/goals/SessionInfoPopup";
 import {BiDumbbell} from "react-icons/bi";
 import CompleteGoalPopup from '@/src/components/goals/CompleteGoalPopup';
 import { useEffect } from 'react';
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 import {
 
@@ -23,7 +25,10 @@ import NewGoalModal from '@/src/components/goals/NewGoalModal';
 
 interface LiveSession {
   id: string;
-  status: "live"|"break"|"paused";
+  username?: string;
+  activityType?: string;
+  status: "live"|"completed"|"paused";
+  goalTitle:string;
   sessionNumber: number;
   activity: string;
   xpEarned: number;
@@ -34,6 +39,11 @@ interface LiveSession {
 }
 interface Session {
   id: string;
+  user?:{
+    id: string;
+    username: string;
+  }| undefined;
+  goalTitle:string;
   sessionNumber: number;
   activity: string;
   xpEarned: number;
@@ -93,8 +103,8 @@ const STATUS_CONFIG = {
     bg: "bg-green-500/10",
     pulse: true,
   },
-  break: {
-    label: "Break",
+  completed: {
+    label: "Completed",
     dot: "bg-yellow-400",
     text: "text-yellow-600",
     bg: "bg-yellow-400/10",
@@ -170,6 +180,7 @@ const ActivityLeaderboard: React.FC<{ users: LeaderboardUser[] }> = ({ users }) 
     );
   };
 
+ 
 
   return (
     <div
@@ -222,7 +233,10 @@ const ActivityLeaderboard: React.FC<{ users: LeaderboardUser[] }> = ({ users }) 
 
 
 const LiveSessionItem: React.FC<LiveSession & { onClick?: () => void }> = ({
+  username,
+  activityType,
   status,
+  goalTitle,
   sessionNumber,
   activity,
   dateTime,
@@ -230,6 +244,7 @@ const LiveSessionItem: React.FC<LiveSession & { onClick?: () => void }> = ({
   onClick,
 }) => {
   const s = STATUS_CONFIG[status];
+  const accentColor = `var(--${activityType || "alchemist"}-primary)`;
 
   return (
     <div
@@ -263,15 +278,15 @@ const LiveSessionItem: React.FC<LiveSession & { onClick?: () => void }> = ({
       <div className="flex flex-col min-w-0 gap-1 pr-8">
         {/* Title */}
         <h3 className="font-semibold text-lg text-foreground dark:text-white truncate">
-          Drawing Mandalorian
+          {goalTitle}
         </h3>
 
         {/* Session label */}
         <p
           className="text-sm font-bold truncate"
-          style={{ color: "var(--alchemist-primary)" }}
+          style={{ color: accentColor }}
         >
-          @yucejuice
+          {username ? `@${username}` : ""}
         </p>
 
         {/* Date */}
@@ -298,6 +313,7 @@ const LiveSessionItem: React.FC<LiveSession & { onClick?: () => void }> = ({
 const SessionItem: React.FC<Session & { onClick?: () => void }> = ({
   sessionNumber,
   activity,
+  goalTitle,
   xpEarned,
   dateTime,
   duration,
@@ -342,7 +358,7 @@ const SessionItem: React.FC<Session & { onClick?: () => void }> = ({
 
       <div className="flex-1 min-w-0">
         <h3 className="font-semibold text-lg text-foreground dark:text-white">
-          Drawing Mandalorian
+          {goalTitle}
         </h3>
         <p className="text-sm font-bold" style={{ color: "var(--alchemist-primary)" }}>
           Session {sessionNumber}
@@ -369,6 +385,7 @@ const SessionItem: React.FC<Session & { onClick?: () => void }> = ({
 
 const FriendSessionItem: React.FC<Session & { onClick?: () => void }> = ({
   sessionNumber,
+  goalTitle,
   user,
   xpEarned,
   dateTime,
@@ -413,11 +430,11 @@ const FriendSessionItem: React.FC<Session & { onClick?: () => void }> = ({
 
       <div className="flex-1 min-w-0">
         <h3 className="font-semibold text-lg text-foreground dark:text-white">
-          Drawing Mandalorian
+          {goalTitle}
         </h3>
-        <Link href={`/u/${user.username}`} className="text-sm font-bold" style={{ color: "var(--alchemist-primary)" }}>
+        <Link href={`/u/${user?.username}`} className="text-sm font-bold" style={{ color: "var(--alchemist-primary)" }}>
         <p className="text-sm font-bold" style={{ color: "var(--alchemist-primary)" }}>
-          @{user.username}
+          @{user?.username}
         </p>
         </Link>
         <p className="text-xs mt-1 font-medium" style={{ color: "var(--muted)" }}>
@@ -465,27 +482,13 @@ export default function ActivityDetailPage({
     {
       id: '1',
       sessionNumber: 8,
+      goalTitle:"Drawing mandalorian",
       activity: 'Drawing',
       xpEarned: 232,
       dateTime: '10:23 AM, 23 Nov 2024',
       duration: '1:12:02'
-    },
-    {
-      id: '2',
-      sessionNumber: 7,
-      activity: 'Drawing',
-      xpEarned: 180,
-      dateTime: '10:23 AM, 22 Nov 2024',
-      duration: '1:05:30'
-    },
-    {
-      id: '3',
-      sessionNumber: 6,
-      activity: 'Drawing',
-      xpEarned: 232,
-      dateTime: '10:23 AM, 21 Nov 2024',
-      duration: '1:12:02'
     }
+   
   ],
   
   onBack = () => window.history.back(),
@@ -496,7 +499,7 @@ export default function ActivityDetailPage({
   const uid = params.activity as string;
 
   const handleStartActivity = () => {
-    router.push(`/goals/${goalId}/session/new`);
+    router.push(`/goals/${uid}/session/new`);
   };
 
   const [isNewActivityModalOpen, setIsNewActivityModalOpen] = useState(false);
@@ -506,7 +509,7 @@ export default function ActivityDetailPage({
     setIsNewActivityModalOpen(false);
     setIsNewSessionPopupOpen(false);
     // Navigate to session page with new session
-    router.push(`/goals/${goalId}/session/new?activity=${activity.id}`);
+    router.push(`/goals/${uid}/session/new?activity=${activity.id}`);
   };
 
   const handleGenerateNew = () => {
@@ -516,7 +519,7 @@ export default function ActivityDetailPage({
 
   const handleStartDrawing = () => {
     setIsNewActivityModalOpen(false);
-    router.push(`/goals/${goalId}/session/new?activity=drawing`);
+    router.push(`/goals/${uid}/session/new?activity=drawing`);
   };
 
   const handleOpenNewActivity = () => {
@@ -590,6 +593,19 @@ const formatDuration = (seconds: number) => {
   return `${pad(h)}:${pad(m)}:${pad(s)}`;
 };
 
+const parseDuration = (dur: string): number => {
+  const parts = dur.split(':').map(Number);
+  return (parts[0] || 0) * 3600 + (parts[1] || 0) * 60 + (parts[2] || 0);
+};
+
+const formatTimeSpent = (totalSeconds: number): string => {
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
+};
+
 useEffect(() => {
   if (!uid) return;
 
@@ -640,6 +656,7 @@ useEffect(() => {
       const mapped = (data.results || []).map((s: any) => ({
         id: String(s.id),
         sessionNumber: s.session_number,
+        goalTitle: s.goal_title,
         user:s.user,
         activity: s.activity?.name,
         xpEarned: s.xp_total,
@@ -716,6 +733,7 @@ useEffect(() => {
     const mapped = (data.results || []).map((s: any) => ({
       id: String(s.id),
       sessionNumber: s.session_number,
+      goalTitle: s.goal_title,
       activity: s.activity?.name || "Activity",
       xpEarned: s.xp_total,
       dateTime: new Date(s.started_at).toLocaleString(),
@@ -734,6 +752,15 @@ useEffect(() => {
   fetchSessions();
 }, [uid]);
 
+ const liveSessions = useQuery(
+  api.sessions.getLiveSessionsForActivity,
+  uid
+    ? {
+        activityId: uid,
+      }
+    : "skip"
+);
+
 
 
 
@@ -748,7 +775,12 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     setIsModalOpen(false);
   };
 
- 
+  const totalSessions = mySessions.length;
+  const totalXP = mySessions.reduce((sum, s) => sum + s.xpEarned, 0);
+  const totalTimeSpent = formatTimeSpent(
+    mySessions.reduce((sum, s) => sum + parseDuration(s.duration), 0)
+  );
+
   return (
     <>
       <style jsx global>{`
@@ -868,14 +900,14 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 <div className="mb-6 flex justify-around bg-white dark:bg-dark-2 rounded-2xl p-4 border" style={{ borderColor: 'var(--border)' }}>
             <div className="flex flex-col items-center justify-between">
               <span className="text-sm" style={{ color: 'var(--muted)' }}>Time Spent</span>
-              <span className="text-lg font-bold text-foreground dark:text-white">{stats.timeSpent}</span>
+              <span className="text-lg font-bold text-foreground dark:text-white">{totalTimeSpent}</span>
             </div>
 
             <div className="h-px" style={{ backgroundColor: 'var(--border)' }} />
 
             <div className="flex flex-col items-center justify-between">
               <span className="text-sm" style={{ color: 'var(--muted)' }}>XP gained</span>
-              <span className="text-lg font-bold text-foreground dark:text-white">{stats.leaderboard}</span>
+              <span className="text-lg font-bold text-foreground dark:text-white">{totalXP}</span>
             </div>
 
             <div className="h-px" style={{ backgroundColor: 'var(--border)' }} />
@@ -957,34 +989,28 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
             <div className="mb-6 flex justify-around bg-white dark:bg-dark-2 rounded-2xl px-4 py-6 border" style={{ borderColor: 'var(--border)' }}>
             <div className="flex flex-col items-center justify-between">
-              <span className="text-lg font-bold text-foreground dark:text-white">{stats.timeSpent}</span>
+              <span className="text-lg font-bold text-foreground dark:text-white">{totalTimeSpent}</span>
               <span className="text-sm" style={{ color: 'var(--muted)' }}>Time Spent</span>
             </div>
 
             <div className="w-px" style={{ backgroundColor: 'var(--border)' }} />
 
             <div className="flex flex-col items-center justify-between">
-              
-              <span className="text-lg font-bold text-foreground dark:text-white">{stats.leaderboard}</span>
+
+              <span className="text-lg font-bold text-foreground dark:text-white">{totalXP}</span>
               <span className="text-sm" style={{ color: 'var(--muted)' }}>XP gained</span>
             </div>
 
             <div className="w-px" style={{ backgroundColor: 'var(--border)' }} />
 
 <div className="flex flex-col items-center justify-between">
-              
-              <span className="text-lg font-bold text-foreground dark:text-white">23</span>
+
+              <span className="text-lg font-bold text-foreground dark:text-white">{totalSessions}</span>
               <span className="text-sm" style={{ color: 'var(--muted)' }}>Sessions</span>
             </div>
           
             
-            <div className="w-px" style={{ backgroundColor: 'var(--border)' }} />
-
-<div className="flex flex-col items-center justify-between">
-              
-              <span className="text-lg font-bold text-foreground dark:text-white">#{stats.leaderboard}</span>
-              <span className="text-sm" style={{ color: 'var(--muted)' }}>Ranked</span>
-            </div>
+         
           </div>
          
 
@@ -996,15 +1022,22 @@ const [isModalOpen, setIsModalOpen] = useState(false);
             </button>
             </div>
             <div className="grid grid-cols-2 mb-2 gap-3">
-            {todaySessions.map((session) => (
-                <LiveSessionItem
-                  key={session.id}
-                  status="paused"
-                  {...session}
-                  onClick={() => handleOpenSessionPopup(session)}
-                />
-              ))}
-            </div>
+                {liveSessions?.map((session) => (
+                  <LiveSessionItem
+                    key={session._id}
+                    status={session.status}
+                    sessionNumber={1}
+                    activity={session.activityName || "Activity"}
+                    activityType={session.activityType}
+                    username={session.username}
+                    dateTime={new Date(session.startedAt).toLocaleString()}
+                    duration={formatDuration(
+                      Math.floor((Date.now() - session.startedAt) / 1000)
+                    )}
+                    onClick={() => console.log(session)}
+                  />
+                ))}
+              </div>
 
 {!sessionsLoading && friendsSessions.length > 0 && (
             <>

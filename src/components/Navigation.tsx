@@ -13,6 +13,7 @@ export function Navigation({ accentColor }: NavigationProps) {
 const { me, loading, logout } = useAuth();
 console.log(me)
 
+
 const NAV_ITEMS = [
   { label: "Feed", href: "/", active: ["/"], icon: "home" },
   { label: "Search", href: "/search", active: ["/search"], icon: "search" },
@@ -20,7 +21,8 @@ const NAV_ITEMS = [
     "/goals",
     "/a"
   ], icon: "squares" },
-  {
+
+  ...(process.env.NEXT_PUBLIC_USER_TYPE === "admin" ? [{
     label: "Leaderboard",
     href: "/leaderboard/rookie",
     active: [
@@ -33,7 +35,7 @@ const NAV_ITEMS = [
       "/leaderboard/goals",
     ],
     icon: "trophy",
-  },
+  }] : []),
   { label: "Profile", href: `/u/${me?.username}`, active: ["/u"], icon: "user" },
   { label: "Settings", href: "/settings", active: ["/settings"], icon: "settings" },
 ];

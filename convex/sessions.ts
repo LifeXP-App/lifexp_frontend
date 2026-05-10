@@ -107,7 +107,9 @@ function recalculate(
 export const startSession = mutation({
   args: {
     userId: v.string(),
+    username: v.optional(v.string()),
     goalId: v.string(),
+    goalTitle: v.optional(v.string()),
     activityId: v.string(),
     rates: xpRates,
     activityName: v.optional(v.string()),
@@ -151,7 +153,9 @@ export const startSession = mutation({
     const now = Date.now();
     const sessionId = await ctx.db.insert("sessions", {
       userId: args.userId,
+      username: args.username,
       goalId: args.goalId,
+      goalTitle: args.goalTitle,
       activityId: args.activityId,
       activityName: args.activityName,
       activityEmoji: args.activityEmoji,
@@ -395,5 +399,30 @@ export const markSyncedToDjango = mutation({
       syncedToDjango: true,
       lastSyncedAt: Date.now(),
     });
+  },
+});
+
+
+export const getLiveSessionsForActivity = query({
+  args: {
+    activityId: v.string(),
+  },
+
+  handler: async (ctx, args) => {
+    const [live, paused] = await Promise.all([
+      ctx.db
+        .query("sessions")
+        .withIndex("by_activity_status", (q) =>
+          q.eq("activityId", args.activityId).eq("status", "live")
+        )
+        .collect(),
+      ctx.db
+        .query("sessions")
+        .withIndex("by_activity_status", (q) =>
+          q.eq("activityId", args.activityId).eq("status", "paused")
+        )
+        .collect(),
+    ]);
+    return [...live, ...paused];
   },
 });
