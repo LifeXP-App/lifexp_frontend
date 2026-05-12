@@ -59,6 +59,7 @@ type GoalPost = {
   id: string;
   uid: string;
   title: string;
+  description?: string | null;
   content: string;
   status: GoalStatus;
   emoji?: string | null;
@@ -465,6 +466,8 @@ export default function GoalsPage() {
   const pausedGoals = goals.filter((p) => p.status === "paused");
   const completedGoals = goals.filter((p) => p.status === "completed");
   const abandonedGoals = goals.filter((p) => p.status === "abandoned");
+  const getGoalDescription = (goal: GoalPost) =>
+    goal.description || goal.content || "";
 
   const [sidebarInfo, setSidebarInfo] = useState<UserGoalsInfo | null>(null);
   const [sidebarLoading, setSidebarLoading] = useState(false);
@@ -500,14 +503,111 @@ export default function GoalsPage() {
     description: string;
     finishBy: string;
   }) => {
+    const tempId = `pending-${Date.now()}`;
+    const optimisticGoal: GoalPost = {
+      id: tempId,
+      uid: tempId,
+      title: goal.title,
+      description: goal.description,
+      content: goal.description,
+      status: "planned",
+      emoji: "🎯",
+    };
+
+    setGoals((currentGoals) => [optimisticGoal, ...currentGoals]);
+    setIsModalOpen(false);
+
     try {
-      await GoalsService.createGoal({
-        title: goal.title,
-        description: goal.description,
-        finish_by: goal.finishBy,
+      const res = await fetch("/api/goals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: goal.title,
+          description: goal.description,
+          finish_by: goal.finishBy,
+        }),
       });
 
-      // Refetch goals to show the new goal
+      if (!res.ok) {
+        throw new Error("Failed to create goal");
+      }
+
+      const payload = await res.json().catch(() => null);
+      const rawGoal =
+        payload && typeof payload === "object" && "data" in payload
+          ? payload.data
+          : payload && typeof payload === "object" && "goal" in payload
+            ? payload.goal
+            : payload;
+
+      const createdGoal =
+        rawGoal && typeof rawGoal === "object"
+          ? (rawGoal as Record<string, unknown>)
+          : null;
+      const createdId =
+        typeof createdGoal?.uid === "string" || typeof createdGoal?.uid === "number"
+          ? String(createdGoal.uid)
+          : typeof createdGoal?.id === "string" || typeof createdGoal?.id === "number"
+            ? String(createdGoal.id)
+            : tempId;
+      const createdDescription =
+        typeof createdGoal?.description === "string"
+          ? createdGoal.description
+          : typeof createdGoal?.content === "string"
+            ? createdGoal.content
+            : goal.description;
+      const createdStatus =
+        createdGoal?.status === "ongoing" ||
+        createdGoal?.status === "planned" ||
+        createdGoal?.status === "completed" ||
+        createdGoal?.status === "paused" ||
+        createdGoal?.status === "abandoned"
+          ? createdGoal.status
+          : createdGoal?.status === "active"
+            ? "ongoing"
+            : "planned";
+
+      setGoals((currentGoals) =>
+        currentGoals.map((existingGoal) =>
+          existingGoal.id === tempId
+            ? {
+                ...optimisticGoal,
+                id: createdId,
+                uid: createdId,
+                title:
+                  typeof createdGoal?.title === "string"
+                    ? createdGoal.title
+                    : goal.title,
+                description: createdDescription,
+                content: createdDescription,
+                status: createdStatus,
+                emoji:
+                  typeof createdGoal?.emoji === "string"
+                    ? createdGoal.emoji
+                    : optimisticGoal.emoji,
+                total_xp:
+                  typeof createdGoal?.total_xp === "number"
+                    ? createdGoal.total_xp
+                    : undefined,
+                xp_distribution:
+                  createdGoal?.xp_distribution &&
+                  typeof createdGoal.xp_distribution === "object"
+                    ? (createdGoal.xp_distribution as Record<AspectKey, number>)
+                    : undefined,
+              }
+            : existingGoal,
+        ),
+      );
+    } catch (error) {
+      setGoals((currentGoals) =>
+        currentGoals.filter((existingGoal) => existingGoal.id !== tempId),
+      );
+      console.error("Failed to create goal:", error);
+      alert("Failed to create goal. Please try again.");
+      return;
+    }
+
+    try {
       const res = await fetch(`/api/goals`, {
         cache: "no-store",
       });
@@ -516,11 +616,8 @@ export default function GoalsPage() {
         const data = await res.json();
         setGoals(Array.isArray(data.results) ? data.results : []);
       }
-
-      setIsModalOpen(false);
     } catch (error) {
-      console.error("Failed to create goal:", error);
-      alert("Failed to create goal. Please try again.");
+      console.error("Failed to refresh goals after create:", error);
     }
   };
 
@@ -695,7 +792,7 @@ export default function GoalsPage() {
                         id: goal.uid,
                         emoji: goal.emoji || "🎯",
                         title: goal.title,
-                        description: goal.content,
+                        description: getGoalDescription(goal),
                         status: "ongoing",
                         metaRight: goal.duration_display
                           ? `${goal.duration_display} spent`
@@ -703,7 +800,7 @@ export default function GoalsPage() {
                       }}
                       primaryCta={{
                         label: "New Session",
-                        onClick: () => router.push(`/goals/${goal.uid}`),
+                        onClick: () => handleOpenActivityModal(goal.uid),
                       }}
                       secondaryCta={{
                         label: "View",
@@ -737,7 +834,7 @@ export default function GoalsPage() {
                         id: goal.uid,
                         emoji: goal.emoji || "🎯",
                         title: goal.title,
-                        description: goal.content,
+                        description: getGoalDescription(goal),
                         status: "planned",
                         metaRight: "Planned",
                       }}
@@ -783,7 +880,7 @@ export default function GoalsPage() {
                         id: goal.uid,
                         emoji: goal.emoji || "🎯",
                         title: goal.title,
-                        description: goal.content,
+                        description: getGoalDescription(goal),
                         status: "completed",
                         xpReward: goal.total_xp,
                         timeSummary: goal.duration_display
@@ -822,7 +919,7 @@ export default function GoalsPage() {
                         id: goal.uid,
                         emoji: goal.emoji || "🎯",
                         title: goal.title,
-                        description: goal.content,
+                        description: getGoalDescription(goal),
                         status: "paused",
                         metaRight: goal.duration_display
                           ? `${goal.duration_display} spent`
@@ -863,7 +960,7 @@ export default function GoalsPage() {
                         id: goal.uid,
                         emoji: goal.emoji || "🎯",
                         title: goal.title,
-                        description: goal.content,
+                        description: getGoalDescription(goal),
                         status: "abandoned",
                         metaRight: goal.duration_display
                           ? `${goal.duration_display} spent`

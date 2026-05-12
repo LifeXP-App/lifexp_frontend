@@ -30,24 +30,16 @@ export default function GoalStatusMenu({
   const getActions = () => {
     const actions: Array<{ label: string; value: string; color: string }> = [];
 
-    if (currentStatus === 'planned') {
-      actions.push({
-        label: 'Mark as Ongoing',
-        value: 'ongoing',
-        color: 'text-blue-600 dark:text-blue-400'
-      });
-    }
-
     if (currentStatus === 'ongoing') {
       actions.push({
         label: 'Pause Goal',
         value: 'paused',
-        color: 'text-yellow-600 dark:text-yellow-400'
+        color: 'text-black dark:text-white'
       });
       actions.push({
         label: 'Mark as Completed',
         value: 'completed',
-        color: 'text-green-600 dark:text-green-400'
+        color: 'text-black dark:text-white'
       });
     }
 
@@ -55,12 +47,12 @@ export default function GoalStatusMenu({
       actions.push({
         label: 'Resume Goal',
         value: 'ongoing',
-        color: 'text-blue-600 dark:text-blue-400'
+        color: 'text-black dark:text-white'
       });
       actions.push({
         label: 'Mark as Completed',
         value: 'completed',
-        color: 'text-green-600 dark:text-green-400'
+        color: 'text-black dark:text-white'
       });
     }
 
@@ -69,7 +61,7 @@ export default function GoalStatusMenu({
       actions.push({
         label: 'Abandon Goal',
         value: 'abandoned',
-        color: 'text-red-600 dark:text-red-400'
+        color: 'text-red-700 dark:text-red-500'
       });
     }
 

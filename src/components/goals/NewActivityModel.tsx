@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { ActivityType } from "@/src/lib/types/activityMeta";
-import ActivitySelectButton from "@/src/components/goals/ActivityResult";
+import ActivitySelectButton, {
+  AiSuggestionButton,
+} from "@/src/components/goals/ActivityResult";
 
 interface Activity {
   id: string;
@@ -11,7 +13,30 @@ interface Activity {
 interface ApiActivity {
   id: number;
   name: string;
+  description?: string;
   activity_type: ActivityType;
+  emoji?: string;
+  total_xp?: number;
+  xp_distribution?: Record<string, number>;
+  created_by?: {
+    username: string;
+    fullname: string;
+    mastery_title: string;
+  } | null;
+  created_at?: string;
+  used_count?: number;
+  reasoning?: string;
+}
+
+interface ActivitiesPayload {
+  activities?: ApiActivity[];
+  results?: ApiActivity[];
+  total_pages?: number;
+  pagination?: {
+    page?: number;
+    total_pages?: number;
+    has_more?: boolean;
+  };
 }
 
 interface NewActivityModalProps {
@@ -24,6 +49,48 @@ interface NewActivityModalProps {
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
 
+const mapActivity = (activity: ApiActivity): Activity => ({
+  id: String(activity.id),
+  name: activity.name,
+  type: activity.activity_type,
+});
+
+const getActivitiesFromPayload = (payload: unknown): ApiActivity[] => {
+  if (Array.isArray(payload)) return payload as ApiActivity[];
+
+  if (!payload || typeof payload !== "object") return [];
+
+  const data = payload as ActivitiesPayload;
+
+  if (Array.isArray(data.activities)) return data.activities as ApiActivity[];
+  if (Array.isArray(data.results)) return data.results as ApiActivity[];
+
+  return [];
+};
+
+const getPaginationFromPayload = (
+  payload: unknown,
+  currentPage: number,
+): { totalPages: number; hasMore: boolean } => {
+  if (!payload || typeof payload !== "object") {
+    return { totalPages: currentPage, hasMore: false };
+  }
+
+  const data = payload as ActivitiesPayload;
+  const totalPages =
+    typeof data.pagination?.total_pages === "number"
+      ? data.pagination.total_pages
+      : typeof data.total_pages === "number"
+        ? data.total_pages
+        : currentPage;
+  const hasMore =
+    typeof data.pagination?.has_more === "boolean"
+      ? data.pagination.has_more
+      : currentPage < totalPages;
+
+  return { totalPages, hasMore };
+};
+
 export default function NewActivityModal({
   isOpen,
   onClose,
@@ -34,16 +101,21 @@ export default function NewActivityModal({
   const [searchQuery, setSearchQuery] = useState("");
   const [activities, setActivities] = useState<Activity[]>([]);
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [showAiSuggestion, setShowAiSuggestion] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const loadingRef = useRef(false);
+  const requestIdRef = useRef(0);
 
   const fetchActivities = useCallback(
-    async (pageNumber: number) => {
-      if (loading) return;
-      if (pageNumber > totalPages) return;
+    async (pageNumber: number, force = false) => {
+      if (!force && loadingRef.current) return;
 
+      const requestId = requestIdRef.current + 1;
+      requestIdRef.current = requestId;
+      loadingRef.current = true;
       setLoading(true);
 
       try {
@@ -53,34 +125,110 @@ export default function NewActivityModal({
 
         const data = await res.json();
 
-        const mapped: Activity[] = data.results.map(
-          (a: ApiActivity): Activity => ({
-            id: String(a.id),
-            name: a.name,
-            type: a.activity_type,
-          })
-        );
+        const mapped: Activity[] = getActivitiesFromPayload(data).map(mapActivity);
+        const pagination = getPaginationFromPayload(data, pageNumber);
 
-        setActivities((prev) =>
-          pageNumber === 1 ? mapped : [...prev, ...mapped]
-        );
+        if (requestId === requestIdRef.current) {
+          setActivities((prev) =>
+            pageNumber === 1 ? mapped : [...prev, ...mapped]
+          );
 
-        setTotalPages(data.total_pages);
-        setPage(pageNumber);
+          setHasMore(pagination.hasMore);
+          setPage(pageNumber);
+        }
       } catch (err) {
         console.error("Failed to fetch activities", err);
       } finally {
-        setLoading(false);
+        if (requestId === requestIdRef.current) {
+          loadingRef.current = false;
+          setLoading(false);
+        }
       }
     },
-    [loading, totalPages]
+    []
   );
 
-  // Initial fetch
+  const searchActivities = useCallback(async (query: string, pageNumber: number) => {
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+    loadingRef.current = true;
+    setLoading(true);
+
+    try {
+      const params = new URLSearchParams({
+        q: query,
+        page: String(pageNumber),
+      });
+      const res = await fetch(
+        `${baseUrl}/api/v1/search/activities/?${params.toString()}`
+      );
+
+      if (!res.ok) {
+        throw new Error("Failed to search activities");
+      }
+
+      const data = await res.json();
+      const results = getActivitiesFromPayload(data);
+      const pagination = getPaginationFromPayload(data, pageNumber);
+
+      if (requestId === requestIdRef.current) {
+        const mapped = results.map(mapActivity);
+        setActivities((prev) =>
+          pageNumber === 1 ? mapped : [...prev, ...mapped]
+        );
+        setPage(pageNumber);
+        setHasMore(pagination.hasMore);
+      }
+    } catch (err) {
+      console.error("Failed to search activities", err);
+      if (requestId === requestIdRef.current) {
+        setActivities([]);
+      }
+    } finally {
+      if (requestId === requestIdRef.current) {
+        loadingRef.current = false;
+        setLoading(false);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     if (!isOpen) return;
-    fetchActivities(1);
-  }, [isOpen]);
+
+    const query = searchQuery.trim();
+    setShowAiSuggestion(false);
+
+    const timeout = window.setTimeout(() => {
+      if (query) {
+        setPage(1);
+        setHasMore(true);
+        searchActivities(query, 1);
+      } else {
+        setPage(1);
+        setHasMore(true);
+        fetchActivities(1, true);
+      }
+    }, 250);
+
+    return () => window.clearTimeout(timeout);
+  }, [searchQuery, isOpen, searchActivities, fetchActivities]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const query = searchQuery.trim();
+    if (!query) {
+      setShowAiSuggestion(false);
+      return;
+    }
+
+    setShowAiSuggestion(false);
+    const timeout = window.setTimeout(() => {
+      setShowAiSuggestion(true);
+    }, 3000);
+
+    return () => window.clearTimeout(timeout);
+  }, [searchQuery, isOpen]);
 
   // Infinite scroll
   useEffect(() => {
@@ -93,20 +241,32 @@ export default function NewActivityModal({
       const nearBottom =
         el.scrollTop + el.clientHeight >= el.scrollHeight - 50;
 
-      if (nearBottom && page < totalPages) {
-        fetchActivities(page + 1);
+      if (nearBottom && hasMore) {
+        const query = searchQuery.trim();
+        if (query) {
+          searchActivities(query, page + 1);
+        } else {
+          fetchActivities(page + 1);
+        }
       }
     };
 
     el.addEventListener("scroll", handleScroll);
     return () => el.removeEventListener("scroll", handleScroll);
-  }, [page, totalPages, loading, fetchActivities]);
+  }, [page, hasMore, searchQuery, loading, fetchActivities, searchActivities]);
 
   if (!isOpen) return null;
 
-  const filteredActivities = activities.filter((a) =>
-    a.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredActivities = activities;
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+  const hasExactSearchMatch =
+    normalizedSearchQuery.length > 0 &&
+    filteredActivities.some(
+      (activity) => activity.name.trim().toLowerCase() === normalizedSearchQuery,
+    );
+  const shouldShowAiSuggestion =
+    showAiSuggestion && normalizedSearchQuery.length > 0 && !hasExactSearchMatch;
+  const sectionTitle = normalizedSearchQuery ? "Search results" : "Relevant";
 
   return (
     <>
@@ -115,33 +275,18 @@ export default function NewActivityModal({
         onClick={onClose}
       >
         <div
-          className="bg-gray-100 dark:bg-dark-3 dark:border dark:border-gray-800 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden"
+          className="bg-gray-100 dark:bg-dark-3 dark:border dark:border-gray-800 rounded-3xl shadow-2xl w-full max-w-lg h-[78vh] max-h-[720px] overflow-hidden flex flex-col"
           onClick={(e) => e.stopPropagation()}>
   {/* Header */}
   <div
-    className="flex bg-white dark:bg-gray-900 items-center justify-between px-5 pt-5 pb-4 border-b"
+    className="flex bg-white dark:bg-gray-900 items-center  px-5 pt-5 pb-4 border-b"
     style={{ borderColor: "var(--border)" }}
   >
     <h2 className="text-xl font-bold text-foreground dark:text-white">
       Pick Activity
     </h2>
 
-    <button
-      type="button"
-      onClick={onClose}
-      className="w-9 h-9 flex items-center justify-center rounded-full  transition-all cursor-pointer"
-      aria-label="Close"
-    >
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-        <path
-          d="M18 6L6 18M6 6l12 12"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    </button>
+ 
   </div>
 
   {/* Search */}
@@ -180,11 +325,11 @@ export default function NewActivityModal({
         {/* Content */}
           <div
             ref={scrollRef}
-            className="px-5 pb-4 max-h-[55vh] overflow-y-auto noscrollbar space-y-5"
+            className="px-5 pb-4 flex-1 overflow-y-auto noscrollbar space-y-5"
           >
             <div>
               <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 px-1">
-                Relevant
+                {sectionTitle}
               </h3>
 
               <div className="space-y-2">
@@ -196,7 +341,14 @@ export default function NewActivityModal({
                   />
                 ))}
 
-                {loading && (
+                {shouldShowAiSuggestion && (
+                  <AiSuggestionButton
+                    query={searchQuery}
+                    onSelect={onGenerateNew}
+                  />
+                )}
+
+                {loading && (hasMore || page === 1) && (
                       <div className="space-y-2 animate-pulse">
                         {[1, 2, 3, 4].map((i) => (
                           <div
@@ -225,10 +377,10 @@ export default function NewActivityModal({
           {/* Bottom Buttons */}
           <div className="p-5 pt-3 grid grid-cols-2 gap-3 border-t bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
             <button
-              onClick={onGenerateNew}
+              onClick={onClose}
               className="py-3 px-4 rounded-xl font-medium active:opacity-80  text-white bg-gray-600 dark:bg-gray-700 hover:bg-gray-700 dark:hover:bg-gray-600 transition-all cursor-pointer "
             >
-              Generate New
+              Close
             </button>
 
             <button
