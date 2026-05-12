@@ -118,10 +118,18 @@ export interface SearchHistoryResponse {
 /**
  * Global search across posts, users, and activities
  */
-export async function globalSearch(query: string, limit: number = 10): Promise<SearchResults> {
-  const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=${limit}`, {
-    cache: "no-store",
-  });
+export async function globalSearch(
+  query: string,
+  limit: number = 10,
+  signal?: AbortSignal,
+): Promise<SearchResults> {
+  const response = await fetch(
+    `/api/search?q=${encodeURIComponent(query)}&limit=${limit}`,
+    {
+      cache: "no-store",
+      signal,
+    },
+  );
 
   if (!response.ok) {
     const error = await response.json();
@@ -137,13 +145,15 @@ export async function globalSearch(query: string, limit: number = 10): Promise<S
 export async function searchPosts(
   query: string,
   page: number = 1,
-  limit: number = 20
+  limit: number = 20,
+  signal?: AbortSignal,
 ): Promise<PostsSearchResult> {
   const response = await fetch(
     `/api/search/posts?q=${encodeURIComponent(query)}&page=${page}&limit=${limit}`,
     {
       cache: "no-store",
-    }
+      signal,
+    },
   );
 
   if (!response.ok) {
@@ -160,13 +170,15 @@ export async function searchPosts(
 export async function searchUsers(
   query: string,
   page: number = 1,
-  limit: number = 20
+  limit: number = 20,
+  signal?: AbortSignal,
 ): Promise<UsersSearchResult> {
   const response = await fetch(
     `/api/search/users?q=${encodeURIComponent(query)}&page=${page}&limit=${limit}`,
     {
       cache: "no-store",
-    }
+      signal,
+    },
   );
 
   if (!response.ok) {
@@ -184,7 +196,8 @@ export async function searchActivities(
   query: string,
   type?: string,
   page: number = 1,
-  limit: number = 20
+  limit: number = 20,
+  signal?: AbortSignal,
 ): Promise<ActivitiesSearchResult> {
   let url = `/api/search/activities?q=${encodeURIComponent(query)}&page=${page}&limit=${limit}`;
   if (type) {
@@ -193,6 +206,7 @@ export async function searchActivities(
 
   const response = await fetch(url, {
     cache: "no-store",
+    signal,
   });
 
   if (!response.ok) {
@@ -208,8 +222,12 @@ export async function searchActivities(
  */
 export async function saveSearchHistory(
   searchQuery: string,
-  searchType: "global" | "posts" | "users" | "activities"
-): Promise<{ success: boolean; search_history: SearchHistoryItem; message: string }> {
+  searchType: "global" | "posts" | "users" | "activities",
+): Promise<{
+  success: boolean;
+  search_history: SearchHistoryItem;
+  message: string;
+}> {
   const response = await fetch("/api/search/history", {
     method: "POST",
     headers: {
@@ -224,7 +242,9 @@ export async function saveSearchHistory(
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || error.detail || "Failed to save search history");
+    throw new Error(
+      error.error || error.detail || "Failed to save search history",
+    );
   }
 
   return response.json();
@@ -235,7 +255,7 @@ export async function saveSearchHistory(
  */
 export async function getSearchHistory(
   limit: number = 20,
-  type?: string
+  type?: string,
 ): Promise<SearchHistoryResponse> {
   let url = `/api/search/history?limit=${limit}`;
   if (type) {
@@ -248,7 +268,9 @@ export async function getSearchHistory(
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || error.detail || "Failed to fetch search history");
+    throw new Error(
+      error.error || error.detail || "Failed to fetch search history",
+    );
   }
 
   return response.json();
@@ -257,7 +279,9 @@ export async function getSearchHistory(
 /**
  * Delete a specific search history item
  */
-export async function deleteSearchHistoryItem(id: number): Promise<{ success: boolean; message: string }> {
+export async function deleteSearchHistoryItem(
+  id: number,
+): Promise<{ success: boolean; message: string }> {
   const response = await fetch(`/api/search/history/${id}`, {
     method: "DELETE",
     cache: "no-store",
@@ -265,7 +289,9 @@ export async function deleteSearchHistoryItem(id: number): Promise<{ success: bo
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || error.detail || "Failed to delete search history item");
+    throw new Error(
+      error.error || error.detail || "Failed to delete search history item",
+    );
   }
 
   return response.json();
@@ -274,7 +300,9 @@ export async function deleteSearchHistoryItem(id: number): Promise<{ success: bo
 /**
  * Clear all search history
  */
-export async function clearSearchHistory(type?: string): Promise<{ success: boolean; message: string; deleted_count: number }> {
+export async function clearSearchHistory(
+  type?: string,
+): Promise<{ success: boolean; message: string; deleted_count: number }> {
   let url = "/api/search/history/clear";
   if (type) {
     url += `?type=${type}`;
@@ -287,7 +315,9 @@ export async function clearSearchHistory(type?: string): Promise<{ success: bool
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || error.detail || "Failed to clear search history");
+    throw new Error(
+      error.error || error.detail || "Failed to clear search history",
+    );
   }
 
   return response.json();
