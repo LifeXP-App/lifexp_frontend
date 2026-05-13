@@ -140,22 +140,83 @@ export default function RegisterPage() {
     return "border-gray-700";
   }
 
-  // --- Submit ---
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
 
-    if (!canSubmit) {
-      alert("Please fill all fields correctly before submitting.");
+  
+
+
+
+  // --- Submit ---
+async function onSubmit(e: React.FormEvent) {
+  e.preventDefault();
+
+  if (!canSubmit) {
+    alert("Please fill all fields correctly before submitting.");
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/auth/register/`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: values.username,
+          email: values.email,
+          password: values.password1,
+          fullname: values.displayname,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error(data);
+
+      // backend validation support
+      if (data.username) {
+        setFieldError("username", Array.isArray(data.username) ? data.username : [data.username]);
+      }
+
+      if (data.email) {
+        setFieldError("email", Array.isArray(data.email) ? data.email : [data.email]);
+      }
+
+      if (data.password) {
+        setFieldError("password1", Array.isArray(data.password) ? data.password : [data.password]);
+      }
+
+      alert(data.detail || "Registration failed.");
       return;
     }
 
-    // Replace with your real endpoint
-    // Example: POST to /api/register or your backend
-    console.log("Register payload:", values);
+    // Save JWT tokens
+    localStorage.setItem("access", data.access);
+    localStorage.setItem("refresh", data.refresh);
 
-    // fetch("/api/register", { method: "POST", body: JSON.stringify(values) })
+    // Optional user cache
+    localStorage.setItem(
+      "user",
+      JSON.stringify({
+        id: data.id,
+        username: data.username,
+        email: data.email,
+        fullname: data.fullname,
+      })
+    );
+
+    // redirect
+    window.location.href = "/";
+
+  } catch (err) {
+    console.error(err);
+    alert("Something went wrong.");
   }
-
+}
+  
   return (
     <div className="relative min-h-screen bg-black text-white">
       {/* Background GIF */}
