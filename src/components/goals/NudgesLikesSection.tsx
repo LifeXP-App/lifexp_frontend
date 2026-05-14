@@ -39,23 +39,25 @@ export function NudgesLikesSection() {
 
         console.log("Fetched interactions:", data);
 
-        const mapped: Interactions[] = (data.results ?? []).map((item: any) => ({
-          id: String(item.id),
+        const mapped: Interactions[] = (data.results ?? []).map(
+          (item: any) => ({
+            id: String(item.id),
 
-          image: item.actor?.profile_picture ?? "",
-          username: item.actor?.username ?? "Unknown",
+            image: item.actor?.profile_picture ?? "",
+            username: item.actor?.username ?? "Unknown",
 
-          type: item.interaction_type as InteractionType,
+            type: item.interaction_type as InteractionType,
 
-          goalTitle: item.goal ? item.goal.title : undefined,
-          activityName: undefined,
+            goalTitle: item.goal ? item.goal.title : undefined,
+            activityName: undefined,
 
-          date: formatTimeAgo(item.created_at),
+            date: formatTimeAgo(item.created_at),
 
-          href: item.goal ? `/goals/${item.goal.uid}` : "#",
+            href: item.goal ? `/goals/${item.goal.uid}` : "#",
 
-          rounded: true,
-        }));
+            rounded: true,
+          }),
+        );
 
         setInteractions(mapped);
       } catch (e) {
@@ -78,7 +80,7 @@ export function NudgesLikesSection() {
           </p>
         </div>
 
-        <div className="max-h-80 overflow-y-auto">
+        <div className="max-h-80 overflow-y-auto scrollbar-hide">
           <ul className="flex flex-col gap-4">
             {interactions.map((i) => (
               <Link key={i.id} href={i.href}>
@@ -115,7 +117,7 @@ export function NudgesLikesSection() {
                           </>
                         ) : (
                           <>
-                            liked {" "}
+                            liked{" "}
                             <span className="font-semibold">
                               {i.goalTitle ?? ""}
                             </span>{" "}
@@ -130,14 +132,10 @@ export function NudgesLikesSection() {
               </Link>
             ))}
 
-            {loading && (
-              <li className="text-sm text-gray-400">Loading...</li>
-            )}
+            {loading && <li className="text-sm text-gray-400">Loading...</li>}
 
             {!loading && interactions.length === 0 && (
-              <li className="text-sm text-gray-400">
-                No recent interactions
-              </li>
+              <li className="text-sm text-gray-400">No recent interactions</li>
             )}
           </ul>
         </div>

@@ -43,7 +43,7 @@ interface NewActivityModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectActivity: (activity: Activity) => void;
-  onGenerateNew: () => void;
+  onGenerateNew: (query: string) => void;
   onStartDrawing: () => void;
 }
 
@@ -344,7 +344,7 @@ export default function NewActivityModal({
                 {shouldShowAiSuggestion && (
                   <AiSuggestionButton
                     query={searchQuery}
-                    onSelect={onGenerateNew}
+                    onSelect={() => onGenerateNew(searchQuery.trim())}
                   />
                 )}
 

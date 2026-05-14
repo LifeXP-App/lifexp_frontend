@@ -215,9 +215,32 @@ export default function GoalDetailPage() {
     router.push(`/goals/${goalId}/session/new?activity=${activity.id}`);
   };
 
-  const handleGenerateNew = () => {
-    console.log("Generate new activity");
+  const handleGenerateNew = async (query: string) => {
     setIsNewActivityModalOpen(false);
+
+    try {
+      // Create AI-generated activity
+      const response = await fetch("/api/activities", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: query,
+          ai_generated: true,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create activity");
+      }
+
+      const activity = await response.json();
+
+      // Navigate to session with the new activity ID
+      router.push(`/goals/${goalId}/session/new?activity=${activity.id}`);
+    } catch (error) {
+      console.error("Failed to generate activity:", error);
+      alert("Failed to create activity. Please try again.");
+    }
   };
 
   const handleStartDrawing = () => {

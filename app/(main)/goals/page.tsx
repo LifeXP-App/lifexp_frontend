@@ -635,11 +635,11 @@ export default function GoalsPage() {
     }
   };
 
-  const handleGenerateNewActivity = () => {
+  const handleGenerateNewActivity = (query: string) => {
     setIsActivityModalOpen(false);
     if (selectedGoalId) {
-      // Navigate to goal page which has the full activity modal
-      router.push(`/goals/${selectedGoalId}`);
+      // Navigate to goal page which has the full activity modal with query for context
+      router.push(`/goals/${selectedGoalId}?q=${encodeURIComponent(query)}`);
     }
   };
 

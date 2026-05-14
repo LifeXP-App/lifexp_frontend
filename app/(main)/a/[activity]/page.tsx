@@ -513,9 +513,10 @@ export default function ActivityDetailPage({
     router.push(`/goals/${uid}/session/new?activity=${activity.id}`);
   };
 
-  const handleGenerateNew = () => {
-    console.log('Generate new activity');
+  const handleGenerateNew = (query: string) => {
+    console.log('Generate new activity:', query);
     setIsNewActivityModalOpen(false);
+    // TODO: This page needs a goal ID to properly start a session with AI-generated activity
   };
 
   const handleStartDrawing = () => {
