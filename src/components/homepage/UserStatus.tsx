@@ -40,21 +40,21 @@ export function UserStatus({ player }: UserStatusProps) {
             unoptimized
           />
 
-          <div className="flex flex-col justify-between">
-            <h1 className="text-md font-semibold">{player.fullname}</h1>
+          <div className="flex flex-col justify-between flex-1 min-w-0">
+            <h1 className="text-md font-semibold truncate">{player.fullname}</h1>
 
             <p className="text-xs font-medium text-black/40 dark:text-white/40">
               Life Level {player.lifelevel}
             </p>
 
             <div className="flex items-center">
-              <p className="font-semibold text-xs ml-1">
+              <p className="font-semibold text-xs ml-1 truncate">
                 {activityText} · {player.streak_count}
               </p>
               {player.streak_active ? (
-                <FireIcon className="w-4 h-4 text-yellow-500 ml-1" />
+                <FireIcon className="w-4 h-4 text-yellow-500 ml-1 flex-shrink-0" />
               ) : (
-                <FireIcon className="w-4 h-4 text-gray-400 ml-1" />
+                <FireIcon className="w-4 h-4 text-gray-400 ml-1 flex-shrink-0" />
               )}
             </div>
           </div>
