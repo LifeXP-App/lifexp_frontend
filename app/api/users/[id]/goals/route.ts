@@ -1,0 +1,65 @@
+import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { refreshTokens } from "@/src/lib/auth/refreshTokens";
+import { sharedRefresh } from "@/src/lib/auth/refreshLock";
+
+async function safeJson(res: Response) {
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { detail: text };
+  }
+}
+
+async function authedFetch(url: string, options: RequestInit = {}) {
+  const cookieStore = await cookies();
+  let access = cookieStore.get("access")?.value;
+
+  if (!access) {
+    return new Response("Not authenticated", { status: 401 });
+  }
+
+  let res = await fetch(url, {
+    ...options,
+    headers: {
+      ...(options.headers || {}),
+      Authorization: `Bearer ${access}`,
+    },
+    cache: "no-store",
+  });
+
+  if (res.status !== 401) return res;
+
+  const tokens = await sharedRefresh(refreshTokens);
+  if (!tokens?.access) {
+    return new Response("SESSION_EXPIRED", { status: 401 });
+  }
+
+  return fetch(url, {
+    ...options,
+    headers: {
+      ...(options.headers || {}),
+      Authorization: `Bearer ${tokens.access}`,
+    },
+    cache: "no-store",
+  });
+}
+
+export async function GET(
+  req: Request,
+  context: { params: Promise<{ username: string }> }
+) {
+  const { username } = await context.params;
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
+  const { searchParams } = new URL(req.url);
+  const status = searchParams.get("status");
+
+  let url = `${baseUrl}/api/v1/users/${encodeURIComponent(username)}/goals/`;
+  if (status) {
+    url += `?status=${encodeURIComponent(status)}`;
+  }
+
+  const res = await authedFetch(url);
+  return NextResponse.json(await safeJson(res), { status: res.status });
+}

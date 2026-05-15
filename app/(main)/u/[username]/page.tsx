@@ -7,15 +7,8 @@ import getAccentColors, {
 import XPChart from "@/src/components/XPChart";
 import PrivateProfileNotice from "@/src/components/profile/PrivateProfileNotice";
 import { useAuth } from "@/src/context/AuthContext";
-import { ASPECT_COLORS } from "@/src/lib/constants/aspects";
-import {
-  mockActivities,
-  mockGoals,
-  mockProfileStats,
-  mockSessions,
-  mockWeeklyXP,
-} from "@/src/lib/mock/profileData";
-import { AspectType, UserProfile } from "@/src/lib/types";
+// Mock data removed - using real API data now
+import { UserProfile } from "@/src/lib/types";
 import { FireIcon, LockClosedIcon } from "@heroicons/react/24/solid";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -75,6 +68,44 @@ export default function ProfilePage({ params }: PageProps) {
   const [userPosts, setUserPosts] = useState<UserPost[]>([]);
   const [postsLoading, setPostsLoading] = useState(false);
   const [isFollowingLoading, setIsFollowingLoading] = useState(false);
+
+  // Dynamic data state
+  type Activity = {
+    activity__id: string;
+    activity__name: string;
+    activity__emoji?: string;
+    activity__activity_type: string;
+    count: number;
+    total_xp: number;
+    total_duration?: number;
+  };
+
+  type Session = {
+    id: string;
+    uid: string;
+    activity?: {
+      id: string;
+      name: string;
+      emoji?: string;
+      type?: string;
+    };
+    total_duration_seconds: number;
+    started_at: string;
+    ended_at?: string;
+  };
+
+  type Goal = {
+    id: number;
+    uid: string;
+    title: string;
+    emoji?: string;
+    status: string;
+  };
+
+  const [weeklyXP, setWeeklyXP] = useState<{ date: string; xp: number }[]>([]);
+  const [topActivities, setTopActivities] = useState<Activity[]>([]);
+  const [recentSessions, setRecentSessions] = useState<Session[]>([]);
+  const [ongoingGoals, setOngoingGoals] = useState<Goal[]>([]);
 
   const [showShare, setShowShare] = useState(false);
   const [showFollowersPopup, setShowFollowersPopup] = useState(false);
@@ -189,7 +220,84 @@ export default function ProfilePage({ params }: PageProps) {
     }
   }, [username]);
 
-  const stats = mockProfileStats;
+  // Fetch weekly XP, top activities, recent sessions, and ongoing goals
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      if (!username) return;
+
+      setDataLoading(true);
+
+      try {
+        const [weeklyRes, topActivitiesRes, sessionsRes, goalsRes] =
+          await Promise.all([
+            fetch(`/api/stats/weekly?username=${username}`),
+            fetch(`/api/stats/activities/top?username=${username}&limit=5`),
+            fetch(`/api/users/${username}/sessions?limit=5`),
+            fetch(`/api/users/${username}/goals?status=ongoing`),
+          ]);
+
+        // Process weekly XP
+        if (weeklyRes.ok) {
+          const weeklyData = await weeklyRes.json();
+          // Transform the daily_breakdown into array format for the chart
+          const dailyBreakdown = weeklyData.daily_breakdown || {};
+          const dates = Object.keys(dailyBreakdown).sort();
+          const chartData = dates.map((date) => {
+            const dateObj = new Date(date);
+            const today = new Date();
+            const isToday = dateObj.toDateString() === today.toDateString();
+
+            return {
+              date: isToday
+                ? "Today"
+                : dateObj.toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                  }),
+              xp: dailyBreakdown[date].xp || 0,
+            };
+          });
+          setWeeklyXP(chartData);
+        }
+
+        // Process top activities
+        if (topActivitiesRes.ok) {
+          const activitiesData = await topActivitiesRes.json();
+          // The backend returns an object with top_by_count array
+          const activities = activitiesData.top_by_count || [];
+          setTopActivities(activities);
+        }
+
+        // Process recent sessions
+        if (sessionsRes.ok) {
+          const sessionsData = await sessionsRes.json();
+          setRecentSessions(Array.isArray(sessionsData) ? sessionsData : []);
+        }
+
+        // Process ongoing goals
+        if (goalsRes.ok) {
+          const goalsData = await goalsRes.json();
+          setOngoingGoals(Array.isArray(goalsData) ? goalsData : []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch profile data:", err);
+      } finally {
+        setDataLoading(false);
+      }
+    };
+
+    fetchProfileData();
+  }, [username]);
+
+  // Format member since date
+  const formatMemberSince = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
 
   const handleFollow = async () => {
     if (!profileUser) return;
@@ -505,68 +613,59 @@ export default function ProfilePage({ params }: PageProps) {
   const canViewContent = profileUser.visibility === "public" || isFollowing;
 
   // Calculate radar chart points with comparison data
+  // Find the maximum XP across all aspects for both users to set the scale
+  const allAspectXP = [
+    currentUser.aspects.physique.currentXP,
+    currentUser.aspects.energy.currentXP,
+    currentUser.aspects.logic.currentXP,
+    currentUser.aspects.creativity.currentXP,
+    currentUser.aspects.social.currentXP,
+    profileUser.aspects.physique.currentXP,
+    profileUser.aspects.energy.currentXP,
+    profileUser.aspects.logic.currentXP,
+    profileUser.aspects.creativity.currentXP,
+    profileUser.aspects.social.currentXP,
+  ];
+  const maxAspectXP = Math.max(...allAspectXP, 100); // Minimum of 100 for visibility
+
   const radarData: RadarDataPoint[] = [
     {
       aspect: "Physique",
       value: currentUser.aspects.physique.currentXP,
       comparisonValue: profileUser.aspects.physique.currentXP,
-      fullMark: Math.max(
-        currentUser.aspects.physique.currentXP,
-        profileUser.aspects.physique.currentXP,
-        1200,
-      ),
+      fullMark: maxAspectXP,
     },
     {
       aspect: "Energy",
       value: currentUser.aspects.energy.currentXP,
       comparisonValue: profileUser.aspects.energy.currentXP,
-      fullMark: Math.max(
-        currentUser.aspects.energy.currentXP,
-        profileUser.aspects.energy.currentXP,
-        1200,
-      ),
+      fullMark: maxAspectXP,
     },
     {
       aspect: "Logic",
       value: currentUser.aspects.logic.currentXP,
       comparisonValue: profileUser.aspects.logic.currentXP,
-      fullMark: Math.max(
-        currentUser.aspects.logic.currentXP,
-        profileUser.aspects.logic.currentXP,
-        1200,
-      ),
+      fullMark: maxAspectXP,
     },
     {
       aspect: "Creativity",
       value: currentUser.aspects.creativity.currentXP,
       comparisonValue: profileUser.aspects.creativity.currentXP,
-      fullMark: Math.max(
-        currentUser.aspects.creativity.currentXP,
-        profileUser.aspects.creativity.currentXP,
-        1200,
-      ),
+      fullMark: maxAspectXP,
     },
     {
       aspect: "Social",
       value: currentUser.aspects.social.currentXP,
       comparisonValue: profileUser.aspects.social.currentXP,
-      fullMark: Math.max(
-        currentUser.aspects.social.currentXP,
-        profileUser.aspects.social.currentXP,
-        1200,
-      ),
+      fullMark: maxAspectXP,
     },
   ];
 
   // Calculate total XP for the week
-  const totalWeeklyXP = mockWeeklyXP.reduce((sum, day) => sum + day.xp, 0);
+  const totalWeeklyXP = weeklyXP.reduce((sum, day) => sum + day.xp, 0);
 
   const accent = getAccentColors(profileUser.masteryTitle);
   const hexToRgba = hexToRgbaUtil;
-
-  const getAspectColor = (category: AspectType) => {
-    return ASPECT_COLORS[category].primary;
-  };
 
   // Helper function to get time ago text
   const getTimeAgo = (dateString: string): string => {
@@ -823,23 +922,26 @@ export default function ProfilePage({ params }: PageProps) {
                     Ongoing Goals
                   </h3>
                   <div className="flex gap-2 flex-wrap">
-                    {mockGoals.map((goal) => (
-                      <span
-                        key={goal.id}
-                        className="px-3 py-1.5 rounded-full text-xs font-medium flex gap-2 items-center"
-                        style={{
-                          backgroundColor: hexToRgba(
-                            getAspectColor(goal.category),
-                            0.15,
-                          ),
-                          border: `1px solid ${getAspectColor(goal.category)}`,
-                          color: getAspectColor(goal.category),
-                        }}
-                      >
-                        <p className="text-md">{goal.emoji}</p>
-                        {goal.name}
-                      </span>
-                    ))}
+                    {ongoingGoals.length > 0 ? (
+                      ongoingGoals.map((goal) => (
+                        <span
+                          key={goal.id || goal.uid}
+                          className="px-3 py-1.5 rounded-full text-xs font-medium flex gap-2 items-center"
+                          style={{
+                            backgroundColor: hexToRgba(accent.primary, 0.15),
+                            border: `1px solid ${accent.primary}`,
+                            color: accent.primary,
+                          }}
+                        >
+                          <p className="text-md">{goal.emoji || "🎯"}</p>
+                          {goal.title}
+                        </span>
+                      ))
+                    ) : (
+                      <p className="text-gray-500 dark:text-gray-400 text-sm">
+                        No ongoing goals
+                      </p>
+                    )}
                   </div>
                 </div>
               </>
@@ -933,10 +1035,10 @@ export default function ProfilePage({ params }: PageProps) {
                 <div className="flex gap-2 items-center">
                   <FireIcon
                     className="size-6 text-gray-400 dark:text-gray-500"
-                    fill="#BBBBBB"
+                    fill={profileUser.streak_active ? "#FFA500" : "#BBBBBB"}
                   />
-                  <p className="text-lg font-bold text-gray-400 dark:text-gray-600">
-                    {stats.streakCount}
+                  <p className={`text-lg font-bold ${profileUser.streak_active ? "text-orange-500" : "text-gray-400 dark:text-gray-600"}`}>
+                    {profileUser.streak_count || 0}
                   </p>
                 </div>
               </div>
@@ -953,7 +1055,10 @@ export default function ProfilePage({ params }: PageProps) {
                     style={{ fontSize: "11px" }}
                     className="text-gray-500 dark:text-gray-400"
                   >
-                    Member since {stats.memberSince}
+                    Member since{" "}
+                    {profileUser.joined_date
+                      ? formatMemberSince(profileUser.joined_date)
+                      : "Unknown"}
                   </p>
                 </span>
               </div>
@@ -985,7 +1090,9 @@ export default function ProfilePage({ params }: PageProps) {
                     style={{ fontSize: "11px" }}
                     className="text-gray-400 dark:text-gray-500"
                   >
-                    Mastery unlocks at {stats.xpToMastery.toLocaleString()}
+                    {profileUser.xp_to_next_master_level
+                      ? `${profileUser.xp_to_next_master_level.toLocaleString()} XP to next mastery`
+                      : "Mastery progress"}
                   </p>
                 </span>
               </div>
@@ -1023,7 +1130,7 @@ export default function ProfilePage({ params }: PageProps) {
 
               <div className="relative h-48 sm:h-64">
                 <XPChart
-                  data={mockWeeklyXP}
+                  data={weeklyXP}
                   username={profileUser.username}
                   totalXP={totalWeeklyXP}
                   accentColor={accent.primary}
@@ -1043,26 +1150,43 @@ export default function ProfilePage({ params }: PageProps) {
                   <span className="text-gray-500 dark:text-gray-400 text-sm"></span>
                 </div>
 
-                {mockActivities.map((activity, index) => (
-                  <div key={activity.id} className="space-y-4 mb-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2 sm:space-x-4">
-                        <span className="text-gray-400 dark:text-gray-500 font-semibold w-5">
-                          {index + 1}
-                        </span>
-                        <div className="flex items-center space-x-2 sm:space-x-4">
-                          <p className="text-2xl">{activity.icon}</p>
-                          <span className="font-medium text-sm sm:text-base truncate dark:text-gray-200">
-                            {activity.name}
+                {topActivities.length > 0 ? (
+                  topActivities.map((activity, index) => {
+                    // Format duration in hours
+                    const hours = Math.round(
+                      (activity.total_duration || 0) / 3600
+                    );
+                    return (
+                      <div
+                        key={activity.activity__id || `activity-${index}`}
+                        className="space-y-4 mb-6"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2 sm:space-x-4">
+                            <span className="text-gray-400 dark:text-gray-500 font-semibold w-5">
+                              {index + 1}
+                            </span>
+                            <div className="flex items-center space-x-2 sm:space-x-4">
+                              <p className="text-2xl">
+                                {activity.activity__emoji || "📊"}
+                              </p>
+                              <span className="font-medium text-sm sm:text-base truncate dark:text-gray-200">
+                                {activity.activity__name || "Unknown Activity"}
+                              </span>
+                            </div>
+                          </div>
+                          <span className="font-semibold text-sm sm:text-md dark:text-gray-300">
+                            {hours}h
                           </span>
                         </div>
                       </div>
-                      <span className="font-semibold text-sm sm:text-md dark:text-gray-300">
-                        {activity.duration}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                    );
+                  })
+                ) : (
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">
+                    No activity data yet
+                  </p>
+                )}
               </div>
 
               {/* Recent Sessions */}
@@ -1074,31 +1198,51 @@ export default function ProfilePage({ params }: PageProps) {
                   <span className="text-gray-500 dark:text-gray-400 text-sm"></span>
                 </div>
 
-                {mockSessions.map((session) => (
-                  <div
-                    key={session.id}
-                    className="p-3 hover:bg-gray-100 dark:hover:bg-dark-3 rounded-lg transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2 sm:space-x-4">
-                        <div className="flex items-center space-x-2 sm:space-x-4">
-                          <p className="text-2xl">{session.icon}</p>
-                          <div className="flex flex-col">
-                            <span className="font-medium text-sm sm:text-base truncate dark:text-gray-200">
-                              {session.activity}
-                            </span>
-                            <span className="text-xs text-gray-500 dark:text-gray-400">
-                              {session.timestamp}
-                            </span>
+                {recentSessions.length > 0 ? (
+                  recentSessions.map((session) => {
+                    // Format duration
+                    const totalSeconds = session.total_duration_seconds || 0;
+                    const hours = Math.floor(totalSeconds / 3600);
+                    const minutes = Math.floor((totalSeconds % 3600) / 60);
+                    const duration =
+                      hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+
+                    // Format timestamp
+                    const timestamp = getTimeAgo(session.ended_at || session.started_at);
+
+                    return (
+                      <div
+                        key={session.id || session.uid}
+                        className="p-3 hover:bg-gray-100 dark:hover:bg-dark-3 rounded-lg transition-colors cursor-pointer"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2 sm:space-x-4">
+                            <div className="flex items-center space-x-2 sm:space-x-4">
+                              <p className="text-2xl">
+                                {session.activity?.emoji || "📝"}
+                              </p>
+                              <div className="flex flex-col">
+                                <span className="font-medium text-sm sm:text-base truncate dark:text-gray-200">
+                                  {session.activity?.name || "Session"}
+                                </span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                  {timestamp}
+                                </span>
+                              </div>
+                            </div>
                           </div>
+                          <span className="text-gray-600 dark:text-gray-400 font-semibold text-sm">
+                            {duration}
+                          </span>
                         </div>
                       </div>
-                      <span className="text-gray-600 dark:text-gray-400 font-semibold text-sm">
-                        {session.duration}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                    );
+                  })
+                ) : (
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">
+                    No recent sessions
+                  </p>
+                )}
               </div>
             </div>
 
