@@ -52,6 +52,7 @@ export default function LoginPage() {
         alt="Login background"
         fill
         priority
+        unoptimized
         className="object-cover"
       />
 
