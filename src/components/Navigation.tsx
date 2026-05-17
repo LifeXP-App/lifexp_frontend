@@ -1,5 +1,6 @@
 "use client";
 
+import { LEADERBOARD_ENABLED } from "@/src/lib/constants/featureFlags";
 import { NavigationItem } from "./NavigationItem";
 import { useAuth } from "../context/AuthContext";
 
@@ -10,8 +11,24 @@ interface NavigationProps {
 
 export function Navigation({ accentColor }: NavigationProps) {
 
-const { me, loading, logout } = useAuth();
+const { me } = useAuth();
 console.log(me)
+
+
+const leaderboardNavItem = {
+  label: "Leaderboard",
+  href: "/leaderboard/rookie",
+  active: [
+    "/leaderboard/rookie",
+    "/leaderboard/warrior",
+    "/leaderboard/protagonist",
+    "/leaderboard/diplomat",
+    "/leaderboard/alchemist",
+    "/leaderboard/prodigy",
+    "/leaderboard/goals",
+  ],
+  icon: "trophy",
+} as const;
 
 
 const NAV_ITEMS = [
@@ -22,20 +39,9 @@ const NAV_ITEMS = [
     "/a"
   ], icon: "squares" },
 
-  ...(process.env.NEXT_PUBLIC_USER_TYPE === "admin" ? [{
-    label: "Leaderboard",
-    href: "/leaderboard/rookie",
-    active: [
-      "/leaderboard/rookie",
-      "/leaderboard/warrior",
-      "/leaderboard/protagonist",
-      "/leaderboard/diplomat",
-      "/leaderboard/alchemist",
-      "/leaderboard/prodigy",
-      "/leaderboard/goals",
-    ],
-    icon: "trophy",
-  }] : []),
+  ...(process.env.NEXT_PUBLIC_USER_TYPE === "admin" && LEADERBOARD_ENABLED
+    ? [leaderboardNavItem]
+    : []),
   { label: "Profile", href: `/u/${me?.username}`, active: ["/u"], icon: "user" },
   { label: "Settings", href: "/settings", active: ["/settings"], icon: "settings" },
 ];
