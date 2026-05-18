@@ -381,7 +381,7 @@ function getTimeAgo(dateString: string): string {
 
 export default function Home() {
 
-  const { me, loading } = useAuth();
+  const { me, loading, session } = useAuth();
 
   const [userData, setUserData] = useState<UserApiResponse | null>(null);
   const [userLoading, setUserLoading] = useState(false);
@@ -417,11 +417,18 @@ export default function Home() {
 
   useEffect(() => {
     const fetchNotifications = async () => {
+      if (!session?.access_token) {
+        return;
+      }
+
       setNotificationsLoading(true);
 
       try {
         const res = await fetch("/api/notifications", {
           method: "GET",
+          headers: {
+            "Authorization": `Bearer ${session.access_token}`,
+          },
           cache: "no-store",
         });
 
@@ -464,7 +471,7 @@ export default function Home() {
     };
 
     fetchNotifications();
-  }, []);
+  }, [session]);
 
   // Posts (your existing behavior)
   type ApiDiscoverPost = {
@@ -528,8 +535,16 @@ const loadPosts = async (pageToLoad: number) => {
   setPostsLoading(true);
 
   try {
+    if (!session?.access_token) {
+      console.error("❌ No access token available");
+      return;
+    }
+
     const res = await fetch(`/api/feed?page=${pageToLoad}&limit=10`, {
       method: "GET",
+      headers: {
+        "Authorization": `Bearer ${session.access_token}`,
+      },
       cache: "no-store",
     });
 
@@ -715,6 +730,11 @@ useEffect(() => {
   console.log("[DiscoverUsers] useEffect mounted/triggered");
 
   const fetchDiscoverUsers = async () => {
+    if (!session?.access_token) {
+      console.log("[DiscoverUsers] No session token available");
+      return;
+    }
+
     console.log("[DiscoverUsers] Starting fetch...");
     setDiscoverLoading(true);
 
@@ -730,6 +750,9 @@ useEffect(() => {
       const startTime = performance.now();
       const res = await fetch(fetchUrl, {
         method: "GET",
+        headers: {
+          "Authorization": `Bearer ${session.access_token}`,
+        },
         cache: "no-store",
       });
       const endTime = performance.now();
@@ -788,7 +811,7 @@ useEffect(() => {
   };
 
   fetchDiscoverUsers();
-}, []);
+}, [session]);
 
 
   return (

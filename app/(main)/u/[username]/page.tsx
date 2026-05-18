@@ -14,7 +14,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useRef, useState } from "react";
 import { FaLinkedin, FaSquareWhatsapp } from "react-icons/fa6";
-import { toggleFollow } from "@/src/lib/api/users";
+import { toggleFollow } from "@/lib/api/users";
 
 interface PageProps {
   params: Promise<{ username: string }>;

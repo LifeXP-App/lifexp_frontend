@@ -4,7 +4,7 @@ import {
   deleteSearchHistoryItem,
   clearSearchHistory,
   type SearchHistoryItem,
-} from "@/src/lib/api/search";
+} from "@/lib/api/search";
 
 type SearchType = "global" | "posts" | "users" | "activities";
 

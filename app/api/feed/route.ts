@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { getAuthToken } from "@/src/lib/auth/getAuthToken";
 import { refreshTokens } from "@/src/lib/auth/refreshTokens";
 import { sharedRefresh } from "@/src/lib/auth/refreshLock";
 
@@ -26,8 +26,8 @@ export async function GET(req: Request) {
     const page = searchParams.get("page") || "1";
     const limit = searchParams.get("limit") || "6";
 
-    const cookieStore = await cookies();
-    let access = cookieStore.get("access")?.value;
+    // Get auth token from either Authorization header or cookies
+    let access = await getAuthToken(req);
 
     if (!access) {
       return NextResponse.json({ detail: "Not authenticated" }, { status: 401 });

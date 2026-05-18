@@ -8,7 +8,7 @@ import {
   type Pagination,
   type Post,
   type User,
-} from "@/src/lib/api/search";
+} from "@/lib/api/search";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 type SearchType = "global" | "posts" | "users" | "activities";

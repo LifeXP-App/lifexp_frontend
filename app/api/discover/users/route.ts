@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { getAuthToken } from "@/src/lib/auth/getAuthToken";
 import { refreshTokens } from "@/src/lib/auth/refreshTokens";
 import { sharedRefresh } from "@/src/lib/auth/refreshLock";
 
@@ -23,8 +23,7 @@ export async function GET(request: Request) {
     console.log("[API /discover/users] Base URL:", baseUrl);
     console.log("[API /discover/users] Base URL exists:", !!baseUrl);
 
-    const cookieStore = await cookies();
-    let access = cookieStore.get("access")?.value;
+    let access = await getAuthToken(request);
     console.log("[API /discover/users] Access token exists:", !!access);
     console.log("[API /discover/users] Access token (first 20 chars):", access?.substring(0, 20) + "...");
 

@@ -31,9 +31,8 @@ function LoginForm() {
         return;
       }
 
-      // Successfully logged in
+      // Successfully logged in - AuthGuard will handle redirect
       router.push("/");
-      router.refresh();
     } catch (err: any) {
       console.error("LOGIN ERROR:", err);
       setError(String(err?.message || err));

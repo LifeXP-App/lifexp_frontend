@@ -1,0 +1,40 @@
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+
+export async function middleware(req: NextRequest) {
+  const path = req.nextUrl.pathname;
+  console.log("[Middleware] Checking path:", path);
+
+  // Check for Supabase session cookies
+  // Supabase stores session in cookies with pattern: sb-<project-ref>-auth-token
+  const cookies = req.cookies;
+
+  // Look for Supabase auth token cookies (they start with 'sb-' and end with '-auth-token')
+  let hasAuthToken = false;
+  const allCookies: string[] = [];
+
+  for (const [name] of cookies) {
+    allCookies.push(name);
+    if (name.startsWith('sb-') && name.includes('-auth-token')) {
+      hasAuthToken = true;
+    }
+  }
+
+  console.log("[Middleware] All cookies:", allCookies);
+  console.log("[Middleware] Has auth token:", hasAuthToken);
+
+  // If no auth token found, redirect to login
+  if (!hasAuthToken) {
+    console.log("[Middleware] No auth token, redirecting to /users/login");
+    return NextResponse.redirect(new URL("/users/login", req.url));
+  }
+
+  console.log("[Middleware] Auth token found, allowing access");
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: [
+    "/((?!users/login|users/register|api|_next|favicon.ico|auth).*)",
+  ],
+};
