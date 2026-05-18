@@ -5,7 +5,7 @@ import Image from "next/image";
 
 import AspectChip from "../goals/AspectChip";
 
-import { FireIcon, BoltIcon, UsersIcon } from "@heroicons/react/24/solid";
+import { BoltIcon, UsersIcon } from "@heroicons/react/24/solid";
 import { BiDumbbell } from "react-icons/bi";
 import { FaBrain, FaHammer } from "react-icons/fa";
 
@@ -22,6 +22,8 @@ type AspectXP = {
   logic: number;
 };
 
+type AspectTint = keyof AspectXP;
+
 
 type AchievementProps = {
   emoji?: string;
@@ -31,7 +33,7 @@ type AchievementProps = {
   xp: number | string;
   xpLabel?: string; // default "XP"
 
-  coverImage: string;
+  coverImage?: string | null;
 
   timeText?: string; // e.g. "12h 30m over 3 months"
 
@@ -66,13 +68,22 @@ export default function Achievement({
       <div className="flex flex-col sm:flex-row">
         {/* Left Cover */}
         <div className="relative w-full sm:w-[300px] h-[160px] sm:h-auto">
-          <Image
-            src={coverImage}
-            alt="Cover"
-            fill
-            className="object-cover"
-            priority={false}
-          />
+          {coverImage ? (
+            <Image
+              src={coverImage}
+              alt="Cover"
+              fill
+              className="object-cover"
+              priority={false}
+            />
+          ) : (
+            <div
+              className="h-full w-full"
+              style={{
+                background: `linear-gradient(135deg, ${accent.primary}, ${secondary})`,
+              }}
+            />
+          )}
 
           {/* overlay */}
           <div className="absolute inset-0 bg-gradient-to-tr from-black/70 via-black/20 to-transparent" />
@@ -141,27 +152,27 @@ export default function Achievement({
   {
     icon: <BiDumbbell className="w-4 h-4" />,
     value: stats.physique,
-    tint: "physique",
+    tint: "physique" as AspectTint,
   },
   {
     icon: <BoltIcon className="w-4 h-4" />,
     value: stats.energy,
-    tint: "energy",
+    tint: "energy" as AspectTint,
   },
   {
     icon: <UsersIcon className="w-4 h-4" />,
     value: stats.social,
-    tint: "social",
+    tint: "social" as AspectTint,
   },
   {
     icon: <FaBrain className="w-4 h-4" />,
     value: stats.creativity,
-    tint: "creativity",
+    tint: "creativity" as AspectTint,
   },
   {
     icon: <FaHammer className="w-4 h-4" />,
     value: stats.logic,
-    tint: "logic",
+    tint: "logic" as AspectTint,
   },
 ]
   .sort((a, b) => b.value - a.value)
@@ -174,7 +185,7 @@ export default function Achievement({
         key={chip.tint}
         icon={chip.icon}
         value={chip.value}
-        tint={chip.tint as any}
+        tint={chip.tint}
         
       />
       </span>
