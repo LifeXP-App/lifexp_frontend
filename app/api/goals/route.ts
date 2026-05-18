@@ -1,11 +1,10 @@
 import { sharedRefresh } from "@/src/lib/auth/refreshLock";
 import { refreshTokens } from "@/src/lib/auth/refreshTokens";
-import { cookies } from "next/headers";
+import { getAuthToken } from "@/src/lib/auth/getAuthToken";
 import { NextResponse } from "next/server";
 
-async function authedFetch(url: string, options: RequestInit = {}) {
-  const cookieStore = await cookies();
-  let access = cookieStore.get("access")?.value;
+async function authedFetch(req: Request, url: string, options: RequestInit = {}) {
+  let access = await getAuthToken(req);
 
   if (!access) {
     return NextResponse.json({ detail: "Not authenticated" }, { status: 401 });
@@ -65,7 +64,7 @@ export async function GET(req: Request) {
   const query = params.toString();
   const url = `${baseUrl}/api/v1/goals/${query ? `?${query}` : ""}`;
 
-  const res = await authedFetch(url);
+  const res = await authedFetch(req, url);
 
   // If authedFetch returned a NextResponse (auth error), return it directly
   if (res instanceof NextResponse) {
@@ -84,7 +83,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const body = await req.json();
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
-  const res = await authedFetch(`${baseUrl}/api/v1/goals/`, {
+  const res = await authedFetch(req, `${baseUrl}/api/v1/goals/`, {
     method: "POST",
     body: JSON.stringify(body),
   });

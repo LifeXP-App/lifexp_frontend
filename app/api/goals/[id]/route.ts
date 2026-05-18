@@ -1,17 +1,16 @@
 import { sharedRefresh } from "@/src/lib/auth/refreshLock";
 import { refreshTokens } from "@/src/lib/auth/refreshTokens";
-import { cookies } from "next/headers";
+import { getAuthToken } from "@/src/lib/auth/getAuthToken";
 import { NextResponse } from "next/server";
 
-async function authedFetch(url: string, options: RequestInit = {}) {
-  const cookieStore = await cookies();
-  let access = cookieStore.get("access")?.value;
+async function authedFetch(req: Request, url: string, options: RequestInit = {}) {
+  let access = await getAuthToken(req);
 
   if (!access) {
     return NextResponse.json({ detail: "Not authenticated" }, { status: 401 });
   }
 
-  let res = await fetch(url, {
+  const res = await fetch(url, {
     ...options,
     headers: {
       ...(options.headers || {}),
@@ -51,7 +50,7 @@ export async function GET(
   const { id } = await context.params;
 
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
-  const res = await authedFetch(`${baseUrl}/api/v1/goals/${id}/`);
+  const res = await authedFetch(req, `${baseUrl}/api/v1/goals/${id}/`);
 
   // If authedFetch returned a NextResponse (auth error), return it directly
   if (res instanceof NextResponse) {
@@ -76,7 +75,7 @@ export async function PATCH(
   const body = await req.json();
 
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
-  const res = await authedFetch(`${baseUrl}/api/v1/goals/${id}/`, {
+  const res = await authedFetch(req, `${baseUrl}/api/v1/goals/${id}/`, {
     method: "PATCH",
     body: JSON.stringify(body),
   });
@@ -102,7 +101,7 @@ export async function DELETE(
   const { id } = await context.params;
 
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
-  const res = await authedFetch(`${baseUrl}/api/v1/goals/${id}/`, {
+  const res = await authedFetch(req, `${baseUrl}/api/v1/goals/${id}/`, {
     method: "DELETE",
   });
 

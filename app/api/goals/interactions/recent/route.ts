@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { getAuthToken } from "@/src/lib/auth/getAuthToken";
+import { refreshTokens } from "@/src/lib/auth/refreshTokens";
+import { sharedRefresh } from "@/src/lib/auth/refreshLock";
 
 async function safeJson(res: Response) {
   const text = await res.text();
@@ -10,14 +12,7 @@ async function safeJson(res: Response) {
   }
 }
 
-async function refreshAccess() {
-  return fetch("http://localhost:3000/api/auth/refresh", {
-    method: "POST",
-    cache: "no-store",
-  });
-}
-
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -28,9 +23,7 @@ export async function GET() {
       );
     }
 
-    // ✅ MUST await in Next 15
-    const cookieStore = await cookies();
-    let access = cookieStore.get("access")?.value;
+    let access = await getAuthToken(request);
 
     if (!access) {
       return NextResponse.json(
@@ -50,9 +43,9 @@ export async function GET() {
     });
 
     if (res.status === 401) {
-      const refreshRes = await refreshAccess();
+      const tokens = await sharedRefresh(refreshTokens);
 
-      if (!refreshRes.ok) {
+      if (!tokens?.access) {
         const out = NextResponse.json(
           { detail: "Session expired" },
           { status: 401 }
@@ -62,19 +55,7 @@ export async function GET() {
         return out;
       }
 
-      // ✅ MUST await again
-      const updatedStore = await cookies();
-      access = updatedStore.get("access")?.value;
-
-      if (!access) {
-        const out = NextResponse.json(
-          { detail: "Session expired" },
-          { status: 401 }
-        );
-        out.cookies.set("access", "", { path: "/", maxAge: 0 });
-        out.cookies.set("refresh", "", { path: "/", maxAge: 0 });
-        return out;
-      }
+      access = tokens.access;
 
       res = await fetch(target, {
         method: "GET",
@@ -91,11 +72,11 @@ export async function GET() {
       status: res.status,
     });
 
-  } catch (err: any) {
+  } catch (err: unknown) {
     return NextResponse.json(
       {
         detail: "Failed to load interactions",
-        error: String(err?.message || err),
+        error: err instanceof Error ? err.message : String(err),
       },
       { status: 500 }
     );

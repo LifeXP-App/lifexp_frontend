@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { supabase } from "@/src/lib/supabase";
 
 type InteractionType = "nudge" | "like";
 
@@ -20,6 +21,14 @@ type Interactions = {
   rounded?: boolean;
 };
 
+type InteractionResponse = {
+  id?: unknown;
+  actor?: unknown;
+  interaction_type?: unknown;
+  goal?: unknown;
+  created_at?: unknown;
+};
+
 export function NudgesLikesSection() {
   const [interactions, setInteractions] = useState<Interactions[]>([]);
   const [loading, setLoading] = useState(false);
@@ -28,8 +37,14 @@ export function NudgesLikesSection() {
     const fetchInteractions = async () => {
       try {
         setLoading(true);
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
 
         const res = await fetch("/api/goals/interactions/recent", {
+          headers: session?.access_token
+            ? { Authorization: `Bearer ${session.access_token}` }
+            : undefined,
           cache: "no-store",
         });
 
@@ -39,25 +54,38 @@ export function NudgesLikesSection() {
 
         console.log("Fetched interactions:", data);
 
-        const mapped: Interactions[] = (data.results ?? []).map(
-          (item: any) => ({
-            id: String(item.id),
+        const results = Array.isArray(data.results) ? data.results : [];
+        const mapped: Interactions[] = results.map((raw: InteractionResponse) => {
+          const actor =
+            raw.actor && typeof raw.actor === "object"
+              ? (raw.actor as Record<string, unknown>)
+              : null;
+          const goal =
+            raw.goal && typeof raw.goal === "object"
+              ? (raw.goal as Record<string, unknown>)
+              : null;
+          const type: InteractionType =
+            raw.interaction_type === "nudge" ? "nudge" : "like";
 
-            image: item.actor?.profile_picture ?? "",
-            username: item.actor?.username ?? "Unknown",
-
-            type: item.interaction_type as InteractionType,
-
-            goalTitle: item.goal ? item.goal.title : undefined,
+          return {
+            id: String(raw.id),
+            image:
+              typeof actor?.profile_picture === "string"
+                ? actor.profile_picture
+                : "",
+            username:
+              typeof actor?.username === "string" ? actor.username : "Unknown",
+            type,
+            goalTitle: typeof goal?.title === "string" ? goal.title : undefined,
             activityName: undefined,
-
-            date: formatTimeAgo(item.created_at),
-
-            href: item.goal ? `/goals/${item.goal.uid}` : "#",
-
+            date:
+              typeof raw.created_at === "string"
+                ? formatTimeAgo(raw.created_at)
+                : "",
+            href: typeof goal?.uid === "string" ? `/goals/${goal.uid}` : "#",
             rounded: true,
-          }),
-        );
+          };
+        });
 
         setInteractions(mapped);
       } catch (e) {
