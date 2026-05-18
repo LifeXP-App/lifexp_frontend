@@ -113,6 +113,22 @@ export interface SearchHistoryResponse {
   filter_type?: string;
 }
 
+function withAuth(
+  accessToken?: string | null,
+  init: RequestInit = {},
+): RequestInit {
+  const headers = new Headers(init.headers);
+
+  if (accessToken) {
+    headers.set("Authorization", `Bearer ${accessToken}`);
+  }
+
+  return {
+    ...init,
+    headers,
+  };
+}
+
 // Search API Functions
 
 /**
@@ -122,13 +138,14 @@ export async function globalSearch(
   query: string,
   limit: number = 10,
   signal?: AbortSignal,
+  accessToken?: string | null,
 ): Promise<SearchResults> {
   const response = await fetch(
     `/api/search?q=${encodeURIComponent(query)}&limit=${limit}`,
-    {
+    withAuth(accessToken, {
       cache: "no-store",
       signal,
-    },
+    }),
   );
 
   if (!response.ok) {
@@ -147,13 +164,14 @@ export async function searchPosts(
   page: number = 1,
   limit: number = 20,
   signal?: AbortSignal,
+  accessToken?: string | null,
 ): Promise<PostsSearchResult> {
   const response = await fetch(
     `/api/search/posts?q=${encodeURIComponent(query)}&page=${page}&limit=${limit}`,
-    {
+    withAuth(accessToken, {
       cache: "no-store",
       signal,
-    },
+    }),
   );
 
   if (!response.ok) {
@@ -172,13 +190,14 @@ export async function searchUsers(
   page: number = 1,
   limit: number = 20,
   signal?: AbortSignal,
+  accessToken?: string | null,
 ): Promise<UsersSearchResult> {
   const response = await fetch(
     `/api/search/users?q=${encodeURIComponent(query)}&page=${page}&limit=${limit}`,
-    {
+    withAuth(accessToken, {
       cache: "no-store",
       signal,
-    },
+    }),
   );
 
   if (!response.ok) {
@@ -198,16 +217,20 @@ export async function searchActivities(
   page: number = 1,
   limit: number = 20,
   signal?: AbortSignal,
+  accessToken?: string | null,
 ): Promise<ActivitiesSearchResult> {
   let url = `/api/search/activities?q=${encodeURIComponent(query)}&page=${page}&limit=${limit}`;
   if (type) {
     url += `&type=${type}`;
   }
 
-  const response = await fetch(url, {
-    cache: "no-store",
-    signal,
-  });
+  const response = await fetch(
+    url,
+    withAuth(accessToken, {
+      cache: "no-store",
+      signal,
+    }),
+  );
 
   if (!response.ok) {
     const error = await response.json();
@@ -223,22 +246,26 @@ export async function searchActivities(
 export async function saveSearchHistory(
   searchQuery: string,
   searchType: "global" | "posts" | "users" | "activities",
+  accessToken?: string | null,
 ): Promise<{
   success: boolean;
   search_history: SearchHistoryItem;
   message: string;
 }> {
-  const response = await fetch("/api/search/history", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      search_query: searchQuery,
-      search_type: searchType,
+  const response = await fetch(
+    "/api/search/history",
+    withAuth(accessToken, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        search_query: searchQuery,
+        search_type: searchType,
+      }),
+      cache: "no-store",
     }),
-    cache: "no-store",
-  });
+  );
 
   if (!response.ok) {
     const error = await response.json();
@@ -256,15 +283,19 @@ export async function saveSearchHistory(
 export async function getSearchHistory(
   limit: number = 20,
   type?: string,
+  accessToken?: string | null,
 ): Promise<SearchHistoryResponse> {
   let url = `/api/search/history?limit=${limit}`;
   if (type) {
     url += `&type=${type}`;
   }
 
-  const response = await fetch(url, {
-    cache: "no-store",
-  });
+  const response = await fetch(
+    url,
+    withAuth(accessToken, {
+      cache: "no-store",
+    }),
+  );
 
   if (!response.ok) {
     const error = await response.json();
@@ -281,11 +312,15 @@ export async function getSearchHistory(
  */
 export async function deleteSearchHistoryItem(
   id: number,
+  accessToken?: string | null,
 ): Promise<{ success: boolean; message: string }> {
-  const response = await fetch(`/api/search/history/${id}`, {
-    method: "DELETE",
-    cache: "no-store",
-  });
+  const response = await fetch(
+    `/api/search/history/${id}`,
+    withAuth(accessToken, {
+      method: "DELETE",
+      cache: "no-store",
+    }),
+  );
 
   if (!response.ok) {
     const error = await response.json();
@@ -302,16 +337,20 @@ export async function deleteSearchHistoryItem(
  */
 export async function clearSearchHistory(
   type?: string,
+  accessToken?: string | null,
 ): Promise<{ success: boolean; message: string; deleted_count: number }> {
   let url = "/api/search/history/clear";
   if (type) {
     url += `?type=${type}`;
   }
 
-  const response = await fetch(url, {
-    method: "DELETE",
-    cache: "no-store",
-  });
+  const response = await fetch(
+    url,
+    withAuth(accessToken, {
+      method: "DELETE",
+      cache: "no-store",
+    }),
+  );
 
   if (!response.ok) {
     const error = await response.json();

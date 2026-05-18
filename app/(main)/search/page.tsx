@@ -1,4 +1,5 @@
 "use client";
+import { useAuth } from "@/src/context/AuthContext";
 import { useSearch } from "@/src/lib/hooks/useSearch";
 import { useSearchHistory } from "@/src/lib/hooks/useSearchHistory";
 import Link from "next/link";
@@ -45,6 +46,7 @@ type DiscoverActivity = {
 };
 
 export default function SearchPage() {
+  const { session, loading: authLoading } = useAuth();
   const [activeFilters, setActiveFilters] = useState<FilterType[]>([
     "posts",
     "users",
@@ -79,63 +81,78 @@ export default function SearchPage() {
       limit: searchType === "global" ? 10 : 20,
       debounceMs: 500,
       autoSaveHistory: true,
+      accessToken: session?.access_token ?? null,
     },
   );
 
   // Search history hook
-  const { history, deleteItem, clearAll } = useSearchHistory({
+  const { history, deleteItem } = useSearchHistory({
     limit: 10,
-    autoFetch: true,
+    autoFetch: Boolean(session?.access_token),
+    accessToken: session?.access_token ?? null,
   });
 
   // Load recent content when component mounts
   useEffect(() => {
-    console.log("[SearchPage] useEffect mounted");
+    if (authLoading) {
+      return;
+    }
+
+    if (!session?.access_token) {
+      setRecentPosts([]);
+      setRecentUsers([]);
+      setRecentActivities([]);
+      setLoadingRecent(false);
+      return;
+    }
+
+    let cancelled = false;
 
     const loadRecentContent = async () => {
+      setLoadingRecent(true);
+
       try {
-        console.log("[SearchPage] Fetching recent content...");
+        const headers = {
+          Authorization: `Bearer ${session.access_token}`,
+        };
 
         const [p, u, a] = await Promise.all([
-          fetch("/api/discover/posts", { cache: "no-store" }),
-          fetch("/api/discover/users", { cache: "no-store" }),
-          fetch("/api/discover/activities", { cache: "no-store" }),
+          fetch("/api/discover/posts", { cache: "no-store", headers }),
+          fetch("/api/discover/users", { cache: "no-store", headers }),
+          fetch("/api/discover/activities", { cache: "no-store", headers }),
         ]);
-
-        console.log("[SearchPage] Fetch complete. Statuses:", {
-          posts: p.status,
-          users: u.status,
-          activities: a.status,
-        });
 
         const postsData = await p.json();
         const usersData = await u.json();
         const activitiesData = await a.json();
 
-        console.log("[SearchPage] Data received:", {
-          postsCount: postsData.results?.length || postsData.posts?.length || 0,
-          usersCount: usersData.results?.length || usersData.users?.length || 0,
-          activitiesCount:
-            activitiesData.results?.length ||
-            activitiesData.activities?.length ||
-            0,
-        });
+        if (cancelled) {
+          return;
+        }
 
         // Handle paginated response format
-        setRecentPosts(postsData.results || postsData.posts || []);
-        setRecentUsers(usersData.results || usersData.users || []);
+        setRecentPosts(p.ok ? postsData.results || postsData.posts || [] : []);
+        setRecentUsers(u.ok ? usersData.results || usersData.users || [] : []);
         setRecentActivities(
-          activitiesData.results || activitiesData.activities || [],
+          a.ok ? activitiesData.results || activitiesData.activities || [] : [],
         );
       } catch (e) {
-        console.error("[SearchPage] Error loading recent content:", e);
+        if (!cancelled) {
+          console.error("[SearchPage] Error loading recent content:", e);
+        }
       } finally {
-        setLoadingRecent(false);
+        if (!cancelled) {
+          setLoadingRecent(false);
+        }
       }
     };
 
     loadRecentContent();
-  }, []);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, session?.access_token]);
 
   // Filter results based on active filters
   const filteredResults = useMemo(() => {
@@ -194,14 +211,6 @@ export default function SearchPage() {
       await deleteItem(id);
     } catch (error) {
       console.error("Failed to delete history item:", error);
-    }
-  };
-
-  const handleClearHistory = async () => {
-    try {
-      await clearAll();
-    } catch (error) {
-      console.error("Failed to clear history:", error);
     }
   };
 

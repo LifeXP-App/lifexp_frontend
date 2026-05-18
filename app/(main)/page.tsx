@@ -458,7 +458,6 @@ export default function Home() {
           rounded: n.notification_type === "follow",
         }));
 
-        console.log("Fetched notifications:", mapped);
         setNotificationsData(mapped);
         setUnreadCount(list.filter((n: ApiNotification) => !n.is_read).length);
       } catch (err) {
@@ -727,54 +726,28 @@ const [discoverUsers, setDiscoverUsers] = useState<SuggestedUser[]>([]);
 const [discoverLoading, setDiscoverLoading] = useState(false);
 
 useEffect(() => {
-  console.log("[DiscoverUsers] useEffect mounted/triggered");
-
   const fetchDiscoverUsers = async () => {
     if (!session?.access_token) {
-      console.log("[DiscoverUsers] No session token available");
       return;
     }
 
-    console.log("[DiscoverUsers] Starting fetch...");
     setDiscoverLoading(true);
 
     try {
-      const fetchUrl = "/api/discover/users";
-      console.log("[DiscoverUsers] Calling:", fetchUrl);
-      console.log("[DiscoverUsers] Fetch config:", {
-        method: "GET",
-        cache: "no-store",
-        url: window.location.origin + fetchUrl,
-      });
-
-      const startTime = performance.now();
-      const res = await fetch(fetchUrl, {
+      const res = await fetch("/api/discover/users", {
         method: "GET",
         headers: {
           "Authorization": `Bearer ${session.access_token}`,
         },
         cache: "no-store",
       });
-      const endTime = performance.now();
-
-      console.log("[DiscoverUsers] Response received in:", (endTime - startTime).toFixed(2), "ms");
-      console.log("[DiscoverUsers] Response status:", res.status);
-      console.log("[DiscoverUsers] Response ok:", res.ok);
-      console.log("[DiscoverUsers] Response headers:", Object.fromEntries(res.headers.entries()));
 
       if (!res.ok) {
-        const errorText = await res.text();
-        console.error("[DiscoverUsers] Request failed:", {
-          status: res.status,
-          statusText: res.statusText,
-          body: errorText,
-        });
         setDiscoverUsers([]);
         return;
       }
 
       const data = await res.json();
-      console.log("[DiscoverUsers] Response data:", data);
 
       // Handle both paginated (results) and non-paginated (users) response formats
       const list = Array.isArray(data?.results)
@@ -782,7 +755,6 @@ useEffect(() => {
         : Array.isArray(data?.users)
           ? data.users
           : [];
-      console.log("[DiscoverUsers] Parsed users list:", list);
 
       const mapped = list.map((u: any) => ({
         id: u.id,
@@ -795,18 +767,12 @@ useEffect(() => {
         is_following: u.is_following ?? false,
       }));
 
-      console.log("[DiscoverUsers] Mapped users:", mapped);
       setDiscoverUsers(mapped);
     } catch (err) {
-      console.error("[DiscoverUsers] Exception caught:", err);
-      console.error("[DiscoverUsers] Error details:", {
-        message: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      });
+      console.error("Failed to fetch discover users:", err);
       setDiscoverUsers([]);
     } finally {
       setDiscoverLoading(false);
-      console.log("[DiscoverUsers] Fetch complete");
     }
   };
 

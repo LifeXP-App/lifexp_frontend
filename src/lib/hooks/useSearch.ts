@@ -13,12 +13,26 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 type SearchType = "global" | "posts" | "users" | "activities";
 
+type SearchPostWithImageFallback = Post & {
+  post_image_url?: string | null;
+};
+
+type SearchUserWithImageFallback = User & {
+  profile_pic?: string | null;
+  profile_picture_url?: string | null;
+};
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
 interface UseSearchOptions {
   query: string;
   searchType?: SearchType;
   limit?: number;
   debounceMs?: number;
   autoSaveHistory?: boolean;
+  accessToken?: string | null;
 }
 
 export function useSearch(options: UseSearchOptions) {
@@ -28,6 +42,7 @@ export function useSearch(options: UseSearchOptions) {
     limit = 20,
     debounceMs = 500,
     autoSaveHistory = true,
+    accessToken = null,
   } = options;
   const [results, setResults] = useState<{
     posts: Post[];
@@ -67,6 +82,15 @@ export function useSearch(options: UseSearchOptions) {
         return;
       }
 
+      if (!accessToken) {
+        activeSearchIdRef.current += 1;
+        abortControllerRef.current?.abort();
+        clearSearchResults();
+        setError(null);
+        setIsLoading(false);
+        return;
+      }
+
       const searchId = ++activeSearchIdRef.current;
 
       // Cancel previous request
@@ -83,43 +107,36 @@ export function useSearch(options: UseSearchOptions) {
             trimmedQuery,
             limit,
             abortController.signal,
+            accessToken,
           );
 
           if (searchId !== activeSearchIdRef.current) {
             return;
           }
 
-          // Log the raw data to debug image loading
-          console.log("Global search raw data:", data);
-
           // Normalize post images and user profile pictures for global search
           const normalizedResults = {
             ...data.results,
-            posts: data.results.posts.map((post: any) => {
-              console.log("Post image data:", {
-                id: post.id,
-                post_image: post.post_image,
-                post_image_url: post.post_image_url,
-              });
+            posts: data.results.posts.map((post) => {
+              const normalizedPost = post as SearchPostWithImageFallback;
+
               return {
-                ...post,
-                post_image: post.post_image ?? post.post_image_url ?? null,
+                ...normalizedPost,
+                post_image:
+                  normalizedPost.post_image ??
+                  normalizedPost.post_image_url ??
+                  null,
               };
             }),
-            users: data.results.users.map((user: any) => {
-              console.log("User profile picture data:", {
-                id: user.id,
-                username: user.username,
-                profile_picture: user.profile_picture,
-                profile_pic: user.profile_pic,
-                profile_picture_url: user.profile_picture_url,
-              });
+            users: data.results.users.map((user) => {
+              const normalizedUser = user as SearchUserWithImageFallback;
+
               return {
-                ...user,
+                ...normalizedUser,
                 profile_picture:
-                  user.profile_picture ??
-                  user.profile_pic ??
-                  user.profile_picture_url ??
+                  normalizedUser.profile_picture ??
+                  normalizedUser.profile_pic ??
+                  normalizedUser.profile_picture_url ??
                   null,
               };
             }),
@@ -134,16 +151,24 @@ export function useSearch(options: UseSearchOptions) {
             pageNum,
             limit,
             abortController.signal,
+            accessToken,
           );
 
           if (searchId !== activeSearchIdRef.current) {
             return;
           }
 
-          const normalizedPosts = data.posts.map((post: any) => ({
-            ...post,
-            post_image: post.post_image ?? post.post_image_url ?? null,
-          }));
+          const normalizedPosts = data.posts.map((post) => {
+            const normalizedPost = post as SearchPostWithImageFallback;
+
+            return {
+              ...normalizedPost,
+              post_image:
+                normalizedPost.post_image ??
+                normalizedPost.post_image_url ??
+                null,
+            };
+          });
 
           setResults((prev) => ({
             posts:
@@ -160,20 +185,25 @@ export function useSearch(options: UseSearchOptions) {
             pageNum,
             limit,
             abortController.signal,
+            accessToken,
           );
 
           if (searchId !== activeSearchIdRef.current) {
             return;
           }
 
-          const normalizedUsers = data.users.map((user: any) => ({
-            ...user,
-            profile_picture:
-              user.profile_picture ??
-              user.profile_pic ??
-              user.profile_picture_url ??
-              null,
-          }));
+          const normalizedUsers = data.users.map((user) => {
+            const normalizedUser = user as SearchUserWithImageFallback;
+
+            return {
+              ...normalizedUser,
+              profile_picture:
+                normalizedUser.profile_picture ??
+                normalizedUser.profile_pic ??
+                normalizedUser.profile_picture_url ??
+                null,
+            };
+          });
 
           setResults((prev) => ({
             posts: [],
@@ -191,6 +221,7 @@ export function useSearch(options: UseSearchOptions) {
             pageNum,
             limit,
             abortController.signal,
+            accessToken,
           );
 
           if (searchId !== activeSearchIdRef.current) {
@@ -210,16 +241,16 @@ export function useSearch(options: UseSearchOptions) {
 
         // Save to search history (only on first page)
         if (autoSaveHistory && pageNum === 1) {
-          saveSearchHistory(trimmedQuery, searchType).catch(() => {
+          saveSearchHistory(trimmedQuery, searchType, accessToken).catch(() => {
             // Silently fail if history save fails
           });
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (
           searchId === activeSearchIdRef.current &&
-          err.name !== "AbortError"
+          !(err instanceof Error && err.name === "AbortError")
         ) {
-          setError(err.message || "Search failed");
+          setError(getErrorMessage(err, "Search failed"));
         }
       } finally {
         if (searchId === activeSearchIdRef.current) {
@@ -227,13 +258,22 @@ export function useSearch(options: UseSearchOptions) {
         }
       }
     },
-    [searchType, limit, autoSaveHistory, clearSearchResults],
+    [searchType, limit, autoSaveHistory, clearSearchResults, accessToken],
   );
 
   const debouncedSearch = useCallback(
     (searchQuery: string) => {
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
+      }
+
+      if (!accessToken) {
+        activeSearchIdRef.current += 1;
+        abortControllerRef.current?.abort();
+        clearSearchResults();
+        setError(null);
+        setIsLoading(false);
+        return;
       }
 
       if (!searchQuery.trim()) {
@@ -248,7 +288,7 @@ export function useSearch(options: UseSearchOptions) {
         void performSearch(searchQuery, 1);
       }, debounceMs);
     },
-    [performSearch, debounceMs],
+    [performSearch, debounceMs, accessToken, clearSearchResults],
   );
 
   useEffect(() => {
@@ -269,13 +309,13 @@ export function useSearch(options: UseSearchOptions) {
     if (query) {
       void performSearch(query, 1);
     }
-  }, [searchType]);
+  }, [searchType, query, performSearch, clearSearchResults]);
 
   const loadMore = useCallback(() => {
     if (pagination?.has_more && !isLoading) {
       const nextPage = page + 1;
       setPage(nextPage);
-      performSearch(query, nextPage);
+      void performSearch(query, nextPage);
     }
   }, [pagination, isLoading, page, query, performSearch]);
 
