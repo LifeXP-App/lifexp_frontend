@@ -1,5 +1,6 @@
 "use client";
 
+import { api } from "@/convex/_generated/api";
 import RadarChart from "@/src/components/RadarChart";
 import AspectChip from "@/src/components/goals/AspectChip";
 import CompleteGoalPopup from "@/src/components/goals/CompleteGoalPopup";
@@ -7,17 +8,20 @@ import NewActivityModal from "@/src/components/goals/NewActivityModel";
 import NewGoalModal from "@/src/components/goals/NewGoalModal";
 import NewSessionPopup from "@/src/components/goals/NewSessionPopup";
 import SessionInfoPopup from "@/src/components/goals/SessionInfoPopup";
+import { useAuth } from "@/src/context/AuthContext";
 import { useGoal } from "@/src/lib/hooks/useGoals";
 import { GoalsService, Session } from "@/src/lib/services/goals";
 import { ActivityType } from "@/src/lib/types/activityMeta";
 import { BoltIcon, UsersIcon } from "@heroicons/react/24/solid";
+import { useMutation } from "convex/react";
 import { useParams, useRouter } from "next/navigation";
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { BiDumbbell } from "react-icons/bi";
 import { FaBrain, FaHammer } from "react-icons/fa";
 
 interface Activity {
   id: string;
+  uid?: string;
   name: string;
   type: ActivityType;
 
@@ -176,6 +180,10 @@ export default function GoalDetailPage() {
   const router = useRouter();
   const goalId = params.goalId as string;
 
+  const { me } = useAuth();
+  const startSessionMutation = useMutation(api.sessions.startSession);
+  const updateInitialRatesMutation = useMutation(api.sessions.updateInitialRates);
+
   const { goal, sessions, loading, error, refetch } = useGoal(goalId);
   console.log("GoalDetailPage render", { goal, sessions, loading, error });
 
@@ -200,53 +208,153 @@ export default function GoalDetailPage() {
     });
   };
 
-  const handleStartActivity = () => {
-    const activityId = goal?.category ? "Drawing" : "drawing"; // Fallback
-    router.push(`/goals/${goalId}/session/new`);
-  };
-
   const [isNewActivityModalOpen, setIsNewActivityModalOpen] = useState(false);
   const [isNewSessionPopupOpen, setIsNewSessionPopupOpen] = useState(false);
 
-  const handleSelectActivity = (activity: Activity) => {
-    setIsNewActivityModalOpen(false);
-    setIsNewSessionPopupOpen(false);
-    // Navigate to session page with new session
-    router.push(`/goals/${goalId}/session/new?activity=${activity.id}`);
-  };
-
-  const handleGenerateNew = async (query: string) => {
-    setIsNewActivityModalOpen(false);
+  const createAndNavigate = useCallback(async (activityId: string, activityName: string) => {
+    if (!me) {
+      alert("You must be logged in to start a session");
+      return;
+    }
 
     try {
-      // Create AI-generated activity
-      const response = await fetch("/api/activities", {
+      // 1. Get XP rates from Django
+      const ratesRes = await fetch("/api/sessions/calculate-rates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ activity_id: activityId, goal_id: goalId }),
+      });
+
+      let rates = { physique: 0, energy: 0, logic: 0, creativity: 0, social: 0 };
+
+      if (ratesRes.ok) {
+        const data = await ratesRes.json();
+        const ratesObj = data?.rates;
+        if (typeof ratesObj.physique === "number") {
+          rates = ratesObj;
+        }
+      }
+
+      // 2. Create Convex session (source of truth for live timer state)
+      const convexId = await startSessionMutation({
+        userId: String(me.id),
+        username: me.username,
+        goalId,
+        goalTitle: goal?.title,
+        activityId,
+        activity_uid: activityId,
+        rates,
+        activityName,
+        deviceContext: {
+          platform: "web",
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          locale: navigator.language,
+        },
+      });
+
+      // 3. Register the session with Django and save the authoritative rates back to Convex
+      const djangoRes = await fetch("/api/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: query,
-          ai_generated: true,
+          session_id: convexId,
+          user_id: me.id,
+          goal: goalId,
+          activity: activityId,
+          status: "live",
+          started_at: new Date().toISOString(),
+          device_platform: "web",
         }),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to create activity");
+      if (djangoRes.ok) {
+        const djangoData = await djangoRes.json();
+        const r = djangoData.xp_increase_rate_per_second;
+        const djangoActivityUid =
+          djangoData.activity_uid === undefined
+            ? undefined
+            : String(djangoData.activity_uid);
+        if (
+          r &&
+          typeof r.physique === "number" &&
+          typeof r.energy === "number" &&
+          typeof r.logic === "number" &&
+          typeof r.creativity === "number" &&
+          typeof r.social === "number"
+        ) {
+          await updateInitialRatesMutation({
+            sessionId: convexId,
+            rates: {
+              physique: r.physique,
+              energy: r.energy,
+              logic: r.logic,
+              creativity: r.creativity,
+              social: r.social,
+            },
+            activityId: djangoActivityUid,
+            activity_uid: djangoActivityUid,
+            activityName: djangoData.activityName,
+            activityEmoji: djangoData.activityEmoji,
+            activityType: djangoData.activityType,
+          });
+        } else {
+          await updateInitialRatesMutation({
+            sessionId: convexId,
+            activityId: djangoActivityUid,
+            activity_uid: djangoActivityUid,
+            activityName: djangoData.activityName,
+            activityEmoji: djangoData.activityEmoji,
+            activityType: djangoData.activityType,
+          });
+        }
       }
 
-      const activity = await response.json();
+      router.push(`/goals/${goalId}/session/${convexId}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("already has a live") || msg.includes("already has a paused")) {
+        alert("You already have an active session. Please finish it first.");
+      } else {
+        console.error("Failed to start session:", err);
+        alert("Failed to start session. Please try again.");
+      }
+    }
+  }, [me, startSessionMutation, updateInitialRatesMutation, goalId, goal?.title, router]);
 
-      // Navigate to session with the new activity ID
-      router.push(`/goals/${goalId}/session/new?activity=${activity.id}`);
+  const handleStartSession = useCallback(async () => {
+    if (!goal?.last_activity?.uid) return;
+    await createAndNavigate(goal.last_activity.uid, goal.last_activity.name);
+  }, [goal?.last_activity, createAndNavigate]);
+
+  const handleSelectActivity = useCallback(async (activity: Activity) => {
+    setIsNewActivityModalOpen(false);
+    setIsNewSessionPopupOpen(false);
+    await createAndNavigate(activity.uid ?? activity.id, activity.name);
+  }, [createAndNavigate]);
+
+  const handleGenerateNew = useCallback(async (query: string) => {
+    setIsNewActivityModalOpen(false);
+
+    try {
+      const response = await fetch("/api/activities", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: query, ai_generated: true }),
+      });
+
+      if (!response.ok) throw new Error("Failed to create activity");
+
+      const activity = await response.json();
+      await createAndNavigate(activity.uid ?? activity.id, query);
     } catch (error) {
       console.error("Failed to generate activity:", error);
       alert("Failed to create activity. Please try again.");
     }
-  };
+  }, [createAndNavigate]);
 
-  const handleStartDrawing = () => {
-    setIsNewActivityModalOpen(false);
-    router.push(`/goals/${goalId}/session/new?activity=drawing`);
-  };
+  const handleStartDrawing = useCallback(() => {
+    setIsNewActivityModalOpen(true);
+  }, []);
 
   const handleOpenNewActivity = () => {
     setIsNewSessionPopupOpen(false);
@@ -858,7 +966,7 @@ export default function GoalDetailPage() {
                   style={{
                     backgroundColor: "var(--rookie-primary)",
                   }}
-                  onClick={handleStartActivity}
+                  onClick={handleStartSession}
                 >
                   Start {goal.last_activity.name}
                 </button>
@@ -952,7 +1060,7 @@ export default function GoalDetailPage() {
                   style={{
                     backgroundColor: "var(--rookie-primary)",
                   }}
-                  onClick={handleStartActivity}
+                  onClick={handleStartSession}
                 >
                   Start {goal.last_activity?.name || "Activity"}
                 </button>

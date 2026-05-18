@@ -106,28 +106,36 @@ function recalculate(
 
 export const startSession = mutation({
   args: {
-    userId: v.string(),
-    username: v.optional(v.string()),
-    goalId: v.string(),
-    goalTitle: v.optional(v.string()),
-    activityId: v.string(),
-    rates: xpRates,
-    activityName: v.optional(v.string()),
-    activityEmoji: v.optional(v.string()),
-    activityType: v.optional(v.string()),
-    deviceContext: v.optional(
-      v.object({
-        platform: v.union(
-          v.literal("ios"),
-          v.literal("android"),
-          v.literal("web")
-        ),
-        appVersion: v.optional(v.string()),
-        timezone: v.optional(v.string()),
-        locale: v.optional(v.string()),
-      })
-    ),
-  },
+  userId: v.string(),
+
+  username: v.optional(v.string()),
+
+  goalId: v.string(),
+  goalTitle: v.optional(v.string()),
+
+  activityId: v.string(),
+
+  activityName: v.optional(v.string()),
+  activityEmoji: v.optional(v.string()),
+  activityType: v.optional(v.string()),
+
+  activity_uid: v.string(),
+
+  rates: xpRates,
+
+  deviceContext: v.optional(
+    v.object({
+      platform: v.union(
+        v.literal("ios"),
+        v.literal("android"),
+        v.literal("web")
+      ),
+      appVersion: v.optional(v.string()),
+      timezone: v.optional(v.string()),
+      locale: v.optional(v.string()),
+    })
+  ),
+},
   handler: async (ctx, args) => {
     // Check no existing live or paused session for this user
     const existingLive = await ctx.db
@@ -149,38 +157,71 @@ export const startSession = mutation({
     if (existingPaused) {
       throw new Error("User already has a paused session");
     }
+const now = Date.now();
 
-    const now = Date.now();
-    const sessionId = await ctx.db.insert("sessions", {
-      userId: args.userId,
-      username: args.username,
-      goalId: args.goalId,
-      goalTitle: args.goalTitle,
+const sessionId = await ctx.db.insert("sessions", {
+  userId: args.userId,
+  username: args.username,
+
+  goalId: args.goalId,
+  goalTitle: args.goalTitle,
+
+  activityId: args.activityId,
+  activityName: args.activityName,
+  activityEmoji: args.activityEmoji,
+  activityType: args.activityType,
+
+  activity_uid: args.activity_uid,
+
+  status: "live",
+
+  startedAt: now,
+  lastResumedAt: now,
+  lastHeartbeatAt: now,
+
+  pauseIntervals: [],
+
+  totalDurationSeconds: 0,
+  focusedDurationSeconds: 0,
+
+  sessionMode: "focus",
+
+  rateSegments: [
+    {
+      atSecond: 0,
       activityId: args.activityId,
-      activityName: args.activityName,
-      activityEmoji: args.activityEmoji,
-      activityType: args.activityType,
-      status: "live",
-      startedAt: now,
-      lastHeartbeatAt: now,
-      pauseIntervals: [],
-      totalDurationSeconds: 0,
-      focusedDurationSeconds: 0,
-      rateSegments: [{ atSecond: 0, activityId: args.activityId, rates: args.rates }],
-      xpTotal: 0,
-      xpBreakdown: { physique: 0, energy: 0, logic: 0, creativity: 0, social: 0 },
-      nudgeCount: 0,
-      syncedToDjango: false,
-      deviceContext: args.deviceContext,
-    });
+      rates: args.rates,
+    },
+  ],
 
+  xpTotal: 0,
+
+  xpBreakdown: {
+    physique: 0,
+    energy: 0,
+    logic: 0,
+    creativity: 0,
+    social: 0,
+  },
+
+  nudgeCount: 0,
+
+  syncedToDjango: false,
+
+  deviceContext: args.deviceContext,
+});
     return sessionId;
   },
 });
 
+
+
 export const heartbeat = mutation({
   args: {
     sessionId: v.id("sessions"),
+    elapsedSeconds: v.number(),
+
+    xpDelta: xpRates,
   },
   handler: async (ctx, args) => {
     const session = await ctx.db.get(args.sessionId);
@@ -190,12 +231,46 @@ export const heartbeat = mutation({
     }
 
     const now = Date.now();
-    const updates = recalculate(session, now);
 
-    await ctx.db.patch(args.sessionId, {
-      lastHeartbeatAt: now,
-      ...updates,
-    });
+   await ctx.db.patch(args.sessionId, {
+  lastHeartbeatAt: now,
+
+  totalDurationSeconds:
+    session.totalDurationSeconds + args.elapsedSeconds,
+
+  focusedDurationSeconds:
+    session.focusedDurationSeconds + args.elapsedSeconds,
+
+  xpTotal:
+    session.xpTotal +
+    args.xpDelta.physique +
+    args.xpDelta.energy +
+    args.xpDelta.logic +
+    args.xpDelta.creativity +
+    args.xpDelta.social,
+
+  xpBreakdown: {
+    physique:
+      session.xpBreakdown.physique +
+      args.xpDelta.physique,
+
+    energy:
+      session.xpBreakdown.energy +
+      args.xpDelta.energy,
+
+    logic:
+      session.xpBreakdown.logic +
+      args.xpDelta.logic,
+
+    creativity:
+      session.xpBreakdown.creativity +
+      args.xpDelta.creativity,
+
+    social:
+      session.xpBreakdown.social +
+      args.xpDelta.social,
+  },
+});
   },
 });
 
@@ -232,22 +307,31 @@ export const resumeSession = mutation({
   args: {
     sessionId: v.id("sessions"),
   },
+
   handler: async (ctx, args) => {
     const session = await ctx.db.get(args.sessionId);
-    if (!session) throw new Error("Session not found");
+
+    if (!session) {
+      throw new Error("Session not found");
+    }
+
     if (session.status !== "paused") {
       throw new Error(`Cannot resume a ${session.status} session`);
     }
 
     const now = Date.now();
-    const intervals = [...session.pauseIntervals];
-    const lastInterval = intervals[intervals.length - 1];
-    if (!lastInterval || lastInterval.resumedAt !== undefined) {
-      throw new Error("No open pause interval to resume");
-    }
 
-    // Close the open pause interval
-    intervals[intervals.length - 1] = { ...lastInterval, resumedAt: now };
+    const intervals = [...session.pauseIntervals];
+
+    const lastInterval = intervals[intervals.length - 1];
+
+    // only close interval if one exists
+    if (lastInterval && !lastInterval.resumedAt) {
+      intervals[intervals.length - 1] = {
+        ...lastInterval,
+        resumedAt: now,
+      };
+    }
 
     await ctx.db.patch(args.sessionId, {
       status: "live",
@@ -389,6 +473,40 @@ export const getSessionsByGoal = query({
       .withIndex("by_goal", (q) => q.eq("goalId", args.goalId))
       .order("desc")
       .collect();
+  },
+});
+
+export const updateInitialRates = mutation({
+  args: {
+    sessionId: v.id("sessions"),
+    rates: v.optional(xpRates),
+    activityId: v.optional(v.string()),
+    activity_uid: v.optional(v.string()),
+    activityName: v.optional(v.string()),
+    activityEmoji: v.optional(v.string()),
+    activityType: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const session = await ctx.db.get(args.sessionId);
+    if (!session) throw new Error("Session not found");
+
+    const updatedSegments = session.rateSegments.map((seg, i) => {
+      if (i !== 0) return seg;
+      return {
+        ...seg,
+        activityId: args.activityId ?? seg.activityId,
+        rates: args.rates ?? seg.rates,
+      };
+    });
+
+    await ctx.db.patch(args.sessionId, {
+      activityId: args.activityId ?? session.activityId,
+      activity_uid: args.activity_uid ?? session.activity_uid,
+      activityName: args.activityName ?? session.activityName,
+      activityEmoji: args.activityEmoji ?? session.activityEmoji,
+      activityType: args.activityType ?? session.activityType,
+      rateSegments: updatedSegments,
+    });
   },
 });
 

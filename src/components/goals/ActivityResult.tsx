@@ -4,6 +4,7 @@ import { ACTIVITY_META, ActivityType } from "@/src/lib/types/activityMeta";
 
 interface Activity {
   id: string;
+  uid?: string;
   name: string;
   type: ActivityType;
 }

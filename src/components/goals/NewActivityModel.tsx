@@ -6,12 +6,14 @@ import ActivitySelectButton, {
 
 interface Activity {
   id: string;
+  uid?: string;
   name: string;
   type: ActivityType;
 }
 
 interface ApiActivity {
   id: number;
+  uid?: string;
   name: string;
   description?: string;
   activity_type: ActivityType;
@@ -50,7 +52,8 @@ interface NewActivityModalProps {
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
 
 const mapActivity = (activity: ApiActivity): Activity => ({
-  id: String(activity.id),
+  id: String(activity.uid ?? activity.id),
+  uid: activity.uid ? String(activity.uid) : undefined,
   name: activity.name,
   type: activity.activity_type,
 });

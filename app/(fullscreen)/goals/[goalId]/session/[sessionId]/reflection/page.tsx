@@ -384,6 +384,11 @@ const DayCompletePage = () => {
                       +{reflection.nudge_users.length - 4}
                     </span>
                   )}
+                  {reflection.nudge_users.length == 0 && (
+                    <div className="text-2xl font-bold mb-1">
+                      0
+                    </div>
+                  )}
                
 
               </div>

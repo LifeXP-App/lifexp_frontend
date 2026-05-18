@@ -20,12 +20,12 @@ export default defineSchema({
     activityId: v.string(), // primary activity UUID (denormalized from rateSegments[0])
 
     // ── Activity Metadata (denormalized for performance) ──
+
     activityName: v.optional(v.string()), // e.g., "Drawing", "Running"
     activityEmoji: v.optional(v.string()), // e.g., "🎨", "🏃"
     activityType: v.optional(v.string()), // e.g., "creativity", "physique"
-    
-    
 
+    activity_uid: v.optional(v.string()),
 
     // ── Lifecycle ──
     status: v.union(
@@ -52,6 +52,14 @@ export default defineSchema({
     // ── Time Tracking ──
     totalDurationSeconds: v.number(),
     focusedDurationSeconds: v.number(),
+
+    // ── Pomodoro ──
+    sessionMode: v.optional(
+      v.union(
+        v.literal("focus"),
+        v.literal("break")
+      )
+    ),
 
     // ── XP Rates ──
     rateSegments: v.array(

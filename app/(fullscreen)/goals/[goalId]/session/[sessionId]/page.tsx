@@ -42,18 +42,20 @@ type SessionFinalStats = {
   xpBreakdown: XpRates;
 };
 
-// ── Module-level helpers (no component state closures) ──
-
-type ActivityMetadata = {
-  id: number;
-  name: string;
-  emoji: string;
-  type: string;
-};
-
 type RatesResponse = {
   rates: XpRates;
-  activity?: ActivityMetadata;
+};
+
+const FOCUS_SECONDS = 25 * 60;
+const BREAK_SECONDS = 5 * 60;
+const HEARTBEAT_SECONDS = 5;
+
+const activityTypeColors: Record<string, string> = {
+  physique: "#8d2e2e",
+  energy: "#c49352",
+  logic: "#713599",
+  creativity: "#4187a2",
+  social: "#31784e",
 };
 
 async function fetchXpRatesWithActivity(
@@ -74,7 +76,7 @@ async function fetchXpRatesWithActivity(
     );
   }
   const data = await res.json();
-  return data as RatesResponse;
+  return { rates: data.rates ?? data };
 }
 
 async function syncSessionToDjango(
@@ -104,6 +106,32 @@ async function syncSessionToDjango(
     const err = await res.json().catch(() => ({}));
     throw new Error(
       (err as { detail?: string }).detail ?? "Failed to sync session to Django",
+    );
+  }
+}
+
+async function endSessionInDjango(
+  sessionId: string,
+  body: {
+    startedAt: number;
+    lastHeartbeatAt: number;
+    totalDurationSeconds: number;
+    focusedDurationSeconds: number;
+    nudgeCount: number;
+    xpTotal: number;
+    xpBreakdown: XpRates;
+  },
+) {
+  const res = await fetch(`/api/sessions/${sessionId}/end`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(
+      (err as { detail?: string }).detail ?? "Failed to end session in Django",
     );
   }
 }
@@ -171,6 +199,7 @@ export default function SessionTimer({ params }: SessionTimerProps) {
   const resumeMutation = useMutation(api.sessions.resumeSession);
   const completeMutation = useMutation(api.sessions.completeSession);
   const abandonMutation = useMutation(api.sessions.abandonSession);
+  const updateInitialRatesMutation = useMutation(api.sessions.updateInitialRates);
   const markSyncedMutation = useMutation(api.sessions.markSyncedToDjango);
 
   const isRunning = session?.status === "live";
@@ -178,16 +207,6 @@ export default function SessionTimer({ params }: SessionTimerProps) {
   const isActive = isRunning || isPaused;
   // Flat primitive so React Compiler can track it without inferring the whole session object
   const sessionSynced = session?.syncedToDjango ?? false;
-
-  // ── Display time ──
-  // localTick counts up inside the interval callback (not sync in effect body).
-  // displayTime = max(localTick, convexTime) always shows at least the server
-  // value, staying smooth between heartbeats without setState-in-effect.
-  const sessionRef = useRef(session);
-  useEffect(() => {
-    sessionRef.current = session;
-  }); // no deps — keeps ref current after every render
-  const [localTick, setLocalTick] = useState(0);
 
   // ── Check for existing active session before creating ──
   const existingSession = useQuery(
@@ -232,13 +251,17 @@ export default function SessionTimer({ params }: SessionTimerProps) {
         const startedAt = new Date().toISOString();
         const id = await startMutation({
           userId: String(me.id),
+          username: me.username,
           goalId,
+          goalTitle: goalData.title,
           activityId: activityIdStr,
+          activity_uid: activityIdStr,
           rates: response.rates,
-          activityName: response.activity?.name,
-          activityEmoji: response.activity?.emoji,
-          activityType: response.activity?.type,
-          deviceContext: { platform: "web" },
+          deviceContext: {
+            platform: "web",
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            locale: navigator.language,
+          },
         });
 
         // Register session start with Django (fire-and-forget — don't block the timer)
@@ -254,9 +277,41 @@ export default function SessionTimer({ params }: SessionTimerProps) {
             started_at: startedAt,
             device_platform: "web",
           }),
-        }).catch((err) =>
-          console.error("Failed to register session start with Django:", err),
-        );
+        })
+          .then(async (res) => {
+            if (!res.ok) return;
+            const data = await res.json();
+            const rates = data.xp_increase_rate_per_second;
+            const activityUid =
+              data.activity_uid === undefined ? undefined : String(data.activity_uid);
+
+            await updateInitialRatesMutation({
+              sessionId: id,
+              rates:
+                rates &&
+                typeof rates.physique === "number" &&
+                typeof rates.energy === "number" &&
+                typeof rates.logic === "number" &&
+                typeof rates.creativity === "number" &&
+                typeof rates.social === "number"
+                  ? {
+                      physique: rates.physique,
+                      energy: rates.energy,
+                      logic: rates.logic,
+                      creativity: rates.creativity,
+                      social: rates.social,
+                    }
+                  : undefined,
+              activityId: activityUid,
+              activity_uid: activityUid,
+              activityName: data.activityName,
+              activityEmoji: data.activityEmoji,
+              activityType: data.activityType,
+            });
+          })
+          .catch((err) =>
+            console.error("Failed to register session start with Django:", err),
+          );
 
         setCreatedSessionId(id);
         router.replace(`/goals/${goalId}/session/${id}`);
@@ -275,38 +330,99 @@ export default function SessionTimer({ params }: SessionTimerProps) {
     goalId,
     searchParams,
     startMutation,
+    updateInitialRatesMutation,
     router,
   ]);
 
-  // Tick effect: increments localTick inside the interval callback (never sync in effect body).
-  // startTime is captured once per run so the counter is relative to when isRunning became true.
+  // ── Pomodoro timer ──
+  // During focus: countdown ticks only while the Convex session is live.
+  // During break: countdown always ticks (Convex session is auto-paused so
+  // focused duration doesn't accumulate during break time).
+  const [pomodoroPhase, setPomodoroPhase] = useState<"focus" | "break">("focus");
+  const [phaseSecondsLeft, setPhaseSecondsLeft] = useState(FOCUS_SECONDS);
+
   useEffect(() => {
-    if (!isRunning) return;
-    const startTime = Math.floor(sessionRef.current?.focusedDurationSeconds ?? 0);
-    let ticks = 0;
+    if (pomodoroPhase === "focus" && !isRunning) return;
     const id = setInterval(() => {
-      ticks += 1;
-      const convex = Math.floor(sessionRef.current?.focusedDurationSeconds ?? 0);
-      setLocalTick(Math.max(startTime + ticks, convex));
+      setPhaseSecondsLeft((prev) => Math.max(0, prev - 1));
     }, 1000);
     return () => clearInterval(id);
-  }, [isRunning]);
+  }, [isRunning, pomodoroPhase]);
 
-  // displayTime = max(localTick, convexTime) — always shows at least the server value,
-  // stays smooth between heartbeats, and never requires Date.now() in render.
-  const convexTime = Math.floor(session?.focusedDurationSeconds ?? 0);
-  const displayTime = Math.max(localTick, convexTime);
+  // When a phase countdown hits zero, transition to the next phase.
+  // The dependency array intentionally omits sessionId/mutations to avoid
+  // stale-closure re-fires; sessionId is read via ref instead.
+  const sessionIdRef = useRef(sessionId);
+  useEffect(() => {
+    sessionIdRef.current = sessionId;
+  });
+
+useEffect(() => {
+  if (phaseSecondsLeft > 0) return;
+
+  const sid = sessionIdRef.current;
+
+  if (pomodoroPhase === "focus") {
+    // pause when focus ends
+    if (sid) {
+      pauseMutation({
+        sessionId: sid,
+        reason: "break_started",
+      }).catch(console.error);
+    }
+
+    setPomodoroPhase("break");
+    setPhaseSecondsLeft(BREAK_SECONDS);
+
+  } else {
+    // switch back to focus
+    // DO NOT auto resume
+    setPomodoroPhase("focus");
+    setPhaseSecondsLeft(FOCUS_SECONDS);
+  }
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [phaseSecondsLeft]);
+
+  const currentRates = session?.rateSegments?.[0]?.rates;
+  const ratePhysique = currentRates?.physique ?? 0;
+  const rateEnergy = currentRates?.energy ?? 0;
+  const rateLogic = currentRates?.logic ?? 0;
+  const rateCreativity = currentRates?.creativity ?? 0;
+  const rateSocial = currentRates?.social ?? 0;
 
   // ── Heartbeat every 5s when live ──
   useEffect(() => {
-    if (!isRunning || !sessionId) return;
-    const interval = setInterval(() => {
-      heartbeatMutation({ sessionId }).catch(console.error);
-    }, 5000);
-    heartbeatMutation({ sessionId }).catch(console.error);
-    return () => clearInterval(interval);
-  }, [isRunning, sessionId, heartbeatMutation]);
+    if (!isRunning) return;
+    if (!sessionId) return;
+    if (pomodoroPhase !== "focus") return;
 
+    const interval = setInterval(() => {
+      heartbeatMutation({
+        sessionId,
+        elapsedSeconds: HEARTBEAT_SECONDS,
+        xpDelta: {
+          physique: ratePhysique * HEARTBEAT_SECONDS,
+          energy: rateEnergy * HEARTBEAT_SECONDS,
+          logic: rateLogic * HEARTBEAT_SECONDS,
+          creativity: rateCreativity * HEARTBEAT_SECONDS,
+          social: rateSocial * HEARTBEAT_SECONDS,
+        },
+      }).catch(console.error);
+    }, HEARTBEAT_SECONDS * 1000);
+
+    return () => clearInterval(interval);
+  }, [
+    isRunning,
+    sessionId,
+    pomodoroPhase,
+    ratePhysique,
+    rateEnergy,
+    rateLogic,
+    rateCreativity,
+    rateSocial,
+    heartbeatMutation,
+  ]);
   // ── Auto-redirect for already-completed+synced sessions (e.g. page refresh) ──
   const sessionStatus = session?.status;
   useEffect(() => {
@@ -315,37 +431,93 @@ export default function SessionTimer({ params }: SessionTimerProps) {
     }
   }, [sessionStatus, sessionSynced, sessionId, goalId, isSyncing, router]);
 
-  // ── XP data from Convex ──
-  const xpGained = session?.xpTotal ?? 0;
+  // ── Local XP projection (ticks every second, grounded in Convex session data) ──
+  // Convex heartbeats keep server state accurate every 5s; this mirrors the same
+  // formula client-side so the display increments smoothly every second.
+  const [localXpTotal, setLocalXpTotal] = useState(0);
+  const [localXpBreakdown, setLocalXpBreakdown] = useState<XpRates>({
+    physique: 0,
+    energy: 0,
+    logic: 0,
+    creativity: 0,
+    social: 0,
+  });
+
+  useEffect(() => {
+    if (!session) return;
+
+    const DIMS = ["physique", "energy", "logic", "creativity", "social"] as const;
+
+    function recalcLocal() {
+      if (!session) return;
+      const now = Date.now();
+
+      // Mirror Convex's getTotalPauseDurationMs: unclosed interval uses `now`
+      let pausedMs = 0;
+      for (const interval of session.pauseIntervals) {
+        pausedMs += (interval.resumedAt ?? now) - interval.pausedAt;
+      }
+      const focusedSeconds = Math.max(
+        0,
+        (now - session.startedAt) / 1000 - pausedMs / 1000,
+      );
+
+      // Mirror Convex's calculateXP
+      const breakdown: XpRates = { physique: 0, energy: 0, logic: 0, creativity: 0, social: 0 };
+      for (let i = 0; i < session.rateSegments.length; i++) {
+        const seg = session.rateSegments[i];
+        if (seg.atSecond >= focusedSeconds) break;
+        const segEnd =
+          i + 1 < session.rateSegments.length
+            ? session.rateSegments[i + 1].atSecond
+            : focusedSeconds;
+        const duration = Math.min(segEnd, focusedSeconds) - seg.atSecond;
+        for (const dim of DIMS) {
+          breakdown[dim] += seg.rates[dim] * duration;
+        }
+      }
+      const total = Math.floor(DIMS.reduce((sum, dim) => sum + breakdown[dim], 0));
+
+      setLocalXpTotal(total);
+      setLocalXpBreakdown({ ...breakdown });
+    }
+
+    recalcLocal();
+    const id = setInterval(recalcLocal, 1000);
+    return () => clearInterval(id);
+  }, [session]); // re-subscribes whenever Convex session data changes
+
+  // ── XP display ──
+  const xpGained = localXpTotal;
   const aspects = [
     {
       name: "Creativity",
       icon: <FaBrain className="w-4 h-4" />,
-      xp: Math.floor(session?.xpBreakdown?.creativity ?? 0),
+      xp: Math.floor(localXpBreakdown.creativity),
       color: "#4187a2",
     },
     {
       name: "Physique",
       icon: <DumbbellIcon className="w-4 h-4" />,
-      xp: Math.floor(session?.xpBreakdown?.physique ?? 0),
+      xp: Math.floor(localXpBreakdown.physique),
       color: "#8d2e2e",
     },
     {
       name: "Energy",
       icon: <BoltIcon className="w-4 h-4" />,
-      xp: Math.floor(session?.xpBreakdown?.energy ?? 0),
+      xp: Math.floor(localXpBreakdown.energy),
       color: "#c49352",
     },
     {
       name: "Logic",
       icon: <FaHammer className="w-4 h-4" />,
-      xp: Math.floor(session?.xpBreakdown?.logic ?? 0),
+      xp: Math.floor(localXpBreakdown.logic),
       color: "#713599",
     },
     {
       name: "Social",
       icon: <UsersIcon className="w-4 h-4" />,
-      xp: Math.floor(session?.xpBreakdown?.social ?? 0),
+      xp: Math.floor(localXpBreakdown.social),
       color: "#31784e",
     },
   ];
@@ -358,6 +530,11 @@ export default function SessionTimer({ params }: SessionTimerProps) {
       await pauseMutation({ sessionId, reason: "user_initiated" });
     } else if (isPaused) {
       await resumeMutation({ sessionId });
+
+      if (pomodoroPhase === "break") {
+        setPomodoroPhase("focus");
+        setPhaseSecondsLeft(FOCUS_SECONDS);
+      }
     }
   }, [isRunning, isPaused, isActive, sessionId, pauseMutation, resumeMutation]);
 
@@ -370,7 +547,16 @@ export default function SessionTimer({ params }: SessionTimerProps) {
 
       if (!sessionSynced) {
         try {
-          await syncSessionToDjango(sessionId, finalStats, "manual");
+          // await syncSessionToDjango(sessionId, finalStats, "manual");
+          await endSessionInDjango(sessionId, {
+            startedAt: session?.startedAt ?? finalStats.endedAt,
+            lastHeartbeatAt: session?.lastHeartbeatAt ?? finalStats.endedAt,
+            totalDurationSeconds: finalStats.totalDurationSeconds,
+            focusedDurationSeconds: finalStats.focusedDurationSeconds,
+            nudgeCount: session?.nudgeCount ?? 0,
+            xpTotal: finalStats.xpTotal,
+            xpBreakdown: finalStats.xpBreakdown,
+          });
           await markSyncedMutation({ sessionId });
         } catch (err) {
           console.error("Failed to sync completed session to Django:", err);
@@ -388,6 +574,9 @@ export default function SessionTimer({ params }: SessionTimerProps) {
     isActive,
     isSyncing,
     sessionSynced,
+    session?.startedAt,
+    session?.lastHeartbeatAt,
+    session?.nudgeCount,
     completeMutation,
     markSyncedMutation,
     router,
@@ -430,6 +619,17 @@ export default function SessionTimer({ params }: SessionTimerProps) {
     goalId,
   ]);
 
+  const handleSkipBreak = useCallback(async () => {
+    if (!sessionId) return;
+    try {
+      await resumeMutation({ sessionId });
+    } catch (err) {
+      console.error("Failed to skip break:", err);
+    }
+    setPomodoroPhase("focus");
+    setPhaseSecondsLeft(FOCUS_SECONDS);
+  }, [sessionId, resumeMutation]);
+
   // ── Keyboard shortcuts ──
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -442,7 +642,11 @@ export default function SessionTimer({ params }: SessionTimerProps) {
       switch (e.code) {
         case "Space":
           e.preventDefault();
-          handleToggle();
+          if (pomodoroPhase === "break") {
+            handleSkipBreak();
+          } else {
+            handleToggle();
+          }
           break;
         case "Escape":
           handleFinish();
@@ -452,18 +656,18 @@ export default function SessionTimer({ params }: SessionTimerProps) {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleToggle, handleFinish]);
+  }, [pomodoroPhase, handleToggle, handleSkipBreak, handleFinish]);
 
   // ── Update browser tab title with timer ──
   useEffect(() => {
-    const timeStr = formatTime(displayTime);
-    const status = isRunning ? "▶" : "⏸";
-    const title = goalData?.title ?? "Session";
+    const timeStr = formatTime(phaseSecondsLeft);
+    const status = pomodoroPhase === "break" ? "☕" : (isRunning ? "▶" : "⏸");
+    const title = pomodoroPhase === "break" ? "Break" : (goalData?.title ?? "Session");
     document.title = `${status} ${timeStr} - ${title}`;
     return () => {
       document.title = "LifeXP";
     };
-  }, [displayTime, isRunning, goalData?.title]);
+  }, [phaseSecondsLeft, isRunning, pomodoroPhase, goalData?.title]);
 
   // ── Error state ──
   if (ratesError || goalError) {
@@ -491,7 +695,14 @@ export default function SessionTimer({ params }: SessionTimerProps) {
     );
   }
 
-  const { categoryColor } = goalData;
+  const activityType = session?.activityType;
+  const categoryColor =
+    activityType && activityTypeColors[activityType]
+      ? activityTypeColors[activityType]
+      : goalData.categoryColor;
+  const activityEmoji = session?.activityEmoji ?? goalData.emoji;
+  const activityLabel = session?.activityName ?? activityType ?? goalData.category;
+  const isBreak = pomodoroPhase === "break";
 
   return (
     <div className="h-screen w-full bg-black relative overflow-hidden select-none">
@@ -506,13 +717,13 @@ export default function SessionTimer({ params }: SessionTimerProps) {
         {/* Goal info */}
         <div className="flex items-center gap-3 mb-8">
           <h1 className="text-5xl text-center text-white/40">
-            {goalData.title}
+            {pomodoroPhase === "break" ? "Break" : goalData.title}
           </h1>
         </div>
         <div className="flex flex-col items-center gap-4 mb-12">
-          <span className="text-7xl">{goalData.emoji}</span>
+          <span className="text-7xl">{activityEmoji}</span>
           <p style={{ color: categoryColor }} className="text-xl font-bold">
-            {goalData.category}
+            {activityLabel}
           </p>
         </div>
 
@@ -528,7 +739,7 @@ export default function SessionTimer({ params }: SessionTimerProps) {
             className="text-[100px] md:text-[100px] opacity-80 font-semibold text-white tracking-tighter tabular-nums"
             style={{ fontVariantNumeric: "tabular-nums" }}
           >
-            {formatTime(displayTime)}
+            {formatTime(phaseSecondsLeft)}
           </div>
         </div>
 
@@ -566,37 +777,57 @@ export default function SessionTimer({ params }: SessionTimerProps) {
         )}
 
         {/* Controls */}
-        <div className="flex items-center gap-4">
-          <button
-            onClick={handleDiscard}
-            disabled={isSyncing}
-            className="h-14 w-24 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-medium transition-colors cursor-pointer disabled:opacity-40"
-          >
-            Discard
-          </button>
+        {isBreak ? (
+          <div className="flex items-center gap-4">
+            <button
+              onClick={handleSkipBreak}
+              disabled={isSyncing}
+              className="h-14 w-24 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-medium transition-colors cursor-pointer disabled:opacity-40"
+            >
+              Skip
+            </button>
 
-          <button
-            onClick={handleToggle}
-            disabled={isSyncing}
-            className="w-20 h-20 rounded-full flex items-center justify-center transition-all cursor-pointer hover:scale-105 disabled:opacity-40"
-            style={{ backgroundColor: categoryColor }}
-            title={isRunning ? "Pause" : "Resume"}
-          >
-            {isRunning ? (
-              <PauseIcon className="w-8 h-8 text-white" />
-            ) : (
-              <PlayIcon className="w-8 h-8 text-white ml-1" />
-            )}
-          </button>
+            <button
+              onClick={handleFinish}
+              disabled={isSyncing}
+              className="px-6 h-14 w-24 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-medium transition-colors cursor-pointer disabled:opacity-40"
+            >
+              {isSyncing ? "Saving…" : "Finish"}
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-4">
+            <button
+              onClick={handleDiscard}
+              disabled={isSyncing}
+              className="h-14 w-24 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-medium transition-colors cursor-pointer disabled:opacity-40"
+            >
+              Discard
+            </button>
 
-          <button
-            onClick={handleFinish}
-            disabled={isSyncing}
-            className="px-6 h-14 w-24 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-medium transition-colors cursor-pointer disabled:opacity-40"
-          >
-            {isSyncing ? "Saving…" : "Finish"}
-          </button>
-        </div>
+            <button
+              onClick={handleToggle}
+              disabled={isSyncing}
+              className="w-20 h-20 rounded-full flex items-center justify-center transition-all cursor-pointer hover:scale-105 disabled:opacity-40"
+              style={{ backgroundColor: categoryColor }}
+              title={isRunning ? "Pause" : "Resume"}
+            >
+              {isRunning ? (
+                <PauseIcon className="w-8 h-8 text-white" />
+              ) : (
+                <PlayIcon className="w-8 h-8 text-white ml-1" />
+              )}
+            </button>
+
+            <button
+              onClick={handleFinish}
+              disabled={isSyncing}
+              className="px-6 h-14 w-24 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-medium transition-colors cursor-pointer disabled:opacity-40"
+            >
+              {isSyncing ? "Saving…" : "Finish"}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Keyboard hints */}
@@ -605,7 +836,7 @@ export default function SessionTimer({ params }: SessionTimerProps) {
           <kbd className="px-1.5 py-0.5 bg-gray-800 rounded text-gray-500 mr-1">
             Space
           </kbd>
-          {isRunning ? "Pause" : "Resume"}
+          {isBreak ? "Skip break" : (isRunning ? "Pause" : "Resume")}
         </span>
         <span>
           <kbd className="px-1.5 py-0.5 bg-gray-800 rounded text-gray-500 mr-1">

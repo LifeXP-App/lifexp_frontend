@@ -5,6 +5,7 @@ import { PlayIcon } from "@heroicons/react/24/solid";
 
 interface Activity {
   id: string;
+  uid?: string;
   name: string;
   type: ActivityType;
 }

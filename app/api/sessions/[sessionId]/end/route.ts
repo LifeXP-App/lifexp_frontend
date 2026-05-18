@@ -41,12 +41,15 @@ async function authedFetch(url: string, options: RequestInit = {}) {
   });
 }
 
-// Register a new session start with Django
-export async function POST(req: Request) {
-  const body = await req.json();
+export async function POST(
+  req: Request,
+  context: { params: Promise<{ sessionId: string }> },
+) {
+  const { sessionId } = await context.params;
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
+  const body = await req.json().catch(() => ({}));
 
-  const res = await authedFetch(`${baseUrl}/api/v1/sessions/new/`, {
+  const res = await authedFetch(`${baseUrl}/api/v1/sessions/${sessionId}/end/`, {
     method: "POST",
     body: JSON.stringify(body),
   });

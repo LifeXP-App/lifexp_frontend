@@ -61,37 +61,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ detail: ratesText }, { status: ratesRes.status });
   }
 
-  // Also fetch activity metadata if activity_id is provided
-  if (body.activity_id) {
-    const activityRes = await authedFetch(
-      `${baseUrl}/api/v1/activities/${body.activity_id}/`,
-      { method: "GET" },
-    );
-
-    if (activityRes instanceof NextResponse) {
-      // If activity fetch fails, still return rates without metadata
-      return NextResponse.json(ratesData, { status: ratesRes.status });
-    }
-
-    try {
-      const activityText = await activityRes.text();
-      const activityData = JSON.parse(activityText);
-
-      // Combine rates with activity metadata
-      return NextResponse.json({
-        ...ratesData,
-        activity: {
-          id: activityData.id,
-          name: activityData.name,
-          emoji: activityData.emoji,
-          type: activityData.type,
-        },
-      }, { status: ratesRes.status });
-    } catch {
-      // If activity parsing fails, still return rates
-      return NextResponse.json(ratesData, { status: ratesRes.status });
-    }
-  }
-
   return NextResponse.json(ratesData, { status: ratesRes.status });
 }
