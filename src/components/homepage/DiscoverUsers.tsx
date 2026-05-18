@@ -1,5 +1,5 @@
 "use client";
-import { toggleFollow } from "@/lib/api/users";
+import { toggleFollow } from "@/src/lib/api/users";
 import Link from "next/link";
 import { useRef, useState } from "react";
 

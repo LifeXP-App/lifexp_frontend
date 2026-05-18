@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, Suspense } from "react";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/src/context/AuthContext";
 
 function LoginForm() {
   const router = useRouter();

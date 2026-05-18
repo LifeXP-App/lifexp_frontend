@@ -4,7 +4,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/src/context/AuthContext";
 
 type FieldName = "displayname" | "username" | "email" | "password1" | "password2";
 
