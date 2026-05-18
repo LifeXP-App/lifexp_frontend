@@ -225,6 +225,7 @@ async function onSubmit(e: React.FormEvent) {
         alt="Register background"
         fill
         priority
+        unoptimized
         className="object-cover"
       />
 

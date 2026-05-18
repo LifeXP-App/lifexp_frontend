@@ -30,6 +30,7 @@ export function SidebarHeader() {
               alt="LifeXP"
               width={100}
               height={100}
+              unoptimized
               priority
               className="w-16 h-16"
             />
