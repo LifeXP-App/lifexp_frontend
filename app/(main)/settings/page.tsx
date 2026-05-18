@@ -2,8 +2,8 @@
 
 import { useTheme } from "next-themes";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/src/context/AuthContext";
 
 type AccountType = "Private" | "Public";
 type Notifications = "On" | "Off";
@@ -35,6 +35,24 @@ function isSameSettings(a: SettingsFormState, b: SettingsFormState) {
   );
 }
 
+// ✅ convert backend -> UI form
+function backendToForm(data: BackendSettings): SettingsFormState {
+  return {
+    account_type: data.account_type === "Public" ? "Public" : "Private",
+    notifications: data.notifications ? "On" : "Off",
+    appearance: data.appearance === "Dark" ? "Dark" : "Light",
+  };
+}
+
+// ✅ convert UI form -> backend payload
+function formToBackend(payload: SettingsFormState) {
+  return {
+    account_type: payload.account_type === "Private" ? "Private" : "Public",
+    notifications: payload.notifications === "On",
+    appearance: payload.appearance === "Dark" ? "Dark" : "Light",
+  };
+}
+
 function SkeletonRow() {
   return (
     <div className="flex justify-between w-full mb-4 animate-pulse">
@@ -63,7 +81,7 @@ function SkeletonPanel() {
 }
 
 export default function SettingsPage() {
-  const router = useRouter();
+  const { session, loading: authLoading } = useAuth();
 
   const [form, setForm] = useState<SettingsFormState | null>(null);
 
@@ -84,38 +102,26 @@ export default function SettingsPage() {
   }
 
   const { setTheme } = useTheme();
+  const appearance = form?.appearance;
 
   useEffect(() => {
-    if (!form) return;
+    if (!appearance) return;
 
-    const nextTheme = form.appearance === "Dark" ? "dark" : "light";
+    const nextTheme = appearance === "Dark" ? "dark" : "light";
     setTheme(nextTheme);
-  }, [form?.appearance, setTheme]);
+  }, [appearance, setTheme]);
 
-  // ✅ convert backend -> UI form
-  function backendToForm(data: BackendSettings): SettingsFormState {
-    return {
-      account_type: data.account_type === "Public" ? "Public" : "Private",
-      notifications: data.notifications ? "On" : "Off",
-      appearance: data.appearance === "Dark" ? "Dark" : "Light",
-    };
-  }
+  const loadSettings = useCallback(async () => {
+    if (!session?.access_token) return;
 
-  // ✅ convert UI form -> backend payload
-  function formToBackend(payload: SettingsFormState) {
-    return {
-      account_type: payload.account_type === "Private" ? "Private" : "Public",
-      notifications: payload.notifications === "On",
-      appearance: payload.appearance === "Dark" ? "Dark" : "Light",
-    };
-  }
-
-  async function loadSettings() {
     setLoadingSettings(true);
 
     try {
       const res = await fetch("/api/users/settings", {
         method: "GET",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
         cache: "no-store",
       });
 
@@ -134,9 +140,9 @@ export default function SettingsPage() {
     } finally {
       setLoadingSettings(false);
     }
-  }
+  }, [session?.access_token]);
 
-  async function saveSettings(payload: SettingsFormState) {
+  const saveSettings = useCallback(async (payload: SettingsFormState) => {
     try {
       if (!initialForm) return;
       if (isSameSettings(payload, initialForm)) return;
@@ -147,7 +153,10 @@ export default function SettingsPage() {
 
       const res = await fetch("/api/users/settings", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          Authorization: `Bearer ${session?.access_token ?? ""}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(backendPayload),
       });
 
@@ -168,12 +177,13 @@ export default function SettingsPage() {
     } finally {
       setSaving(false);
     }
-  }
+  }, [initialForm, loadSettings, session?.access_token]);
 
   // ✅ initial load ONCE
   useEffect(() => {
+    if (authLoading || !session?.access_token) return;
     loadSettings();
-  }, []);
+  }, [authLoading, session?.access_token, loadSettings]);
 
   // ✅ unchanged check
   const isUnchanged = useMemo(() => {
