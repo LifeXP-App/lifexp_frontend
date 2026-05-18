@@ -4,10 +4,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/context/AuthContext";
 
 type FieldName = "displayname" | "username" | "email" | "password1" | "password2";
 
 export default function RegisterPage() {
+  const { signUp } = useAuth();
   const [values, setValues] = useState({
     displayname: "",
     username: "",
@@ -16,6 +18,7 @@ export default function RegisterPage() {
     password2: "",
     timezone: "",
   });
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
 
   const [fieldValid, setFieldValid] = useState<Record<FieldName, boolean>>({
     displayname: false,
@@ -155,61 +158,35 @@ async function onSubmit(e: React.FormEvent) {
   }
 
   try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/auth/register/`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          username: values.username,
-          email: values.email,
-          password: values.password1,
-          fullname: values.displayname,
-        }),
-      }
+    const { error } = await signUp(
+      values.email,
+      values.password1,
+      values.username,
+      values.displayname
     );
 
-    const data = await response.json();
+    if (error) {
+      console.error(error);
 
-    if (!response.ok) {
-      console.error(data);
-
-      // backend validation support
-      if (data.username) {
-        setFieldError("username", Array.isArray(data.username) ? data.username : [data.username]);
+      // Backend validation support
+      if (error.username) {
+        setFieldError("username", Array.isArray(error.username) ? error.username : [error.username]);
       }
 
-      if (data.email) {
-        setFieldError("email", Array.isArray(data.email) ? data.email : [data.email]);
+      if (error.email) {
+        setFieldError("email", Array.isArray(error.email) ? error.email : [error.email]);
       }
 
-      if (data.password) {
-        setFieldError("password1", Array.isArray(data.password) ? data.password : [data.password]);
+      if (error.password) {
+        setFieldError("password1", Array.isArray(error.password) ? error.password : [error.password]);
       }
 
-      alert(data.detail || "Registration failed.");
+      alert(error.message || error.detail || "Registration failed.");
       return;
     }
 
-    // Save JWT tokens
-    localStorage.setItem("access", data.access);
-    localStorage.setItem("refresh", data.refresh);
-
-    // Optional user cache
-    localStorage.setItem(
-      "user",
-      JSON.stringify({
-        id: data.id,
-        username: data.username,
-        email: data.email,
-        fullname: data.fullname,
-      })
-    );
-
-    // redirect
-    window.location.href = "/";
+    // Registration successful - show confirmation message
+    setRegistrationSuccess(true);
 
   } catch (err) {
     console.error(err);
@@ -237,7 +214,23 @@ async function onSubmit(e: React.FormEvent) {
         <div className="w-full max-w-md rounded-2xl bg-black/50 p-8 shadow-lg backdrop-blur-lg">
           <h2 className="mb-6 text-center text-3xl font-bold">Create an Account</h2>
 
-          <form onSubmit={onSubmit} className="space-y-4">
+          {registrationSuccess ? (
+            <div className="space-y-4">
+              <div className="rounded-lg border border-green-500/30 bg-green-500/10 p-4 text-center">
+                <p className="text-lg font-semibold text-green-200">Registration Successful!</p>
+                <p className="mt-2 text-sm text-gray-300">
+                  Please check your email <span className="font-semibold">{values.email}</span> to confirm your account.
+                </p>
+              </div>
+              <Link
+                href="/users/login"
+                className="block w-full rounded-lg bg-white py-3 text-center font-bold text-black transition hover:bg-gray-300"
+              >
+                Go to Login
+              </Link>
+            </div>
+          ) : (
+            <form onSubmit={onSubmit} className="space-y-4">
             {/* Display Name */}
             <div>
               <label className="block text-gray-400">Display Name</label>
@@ -366,13 +359,16 @@ async function onSubmit(e: React.FormEvent) {
               Register
             </button>
           </form>
+          )}
 
-          <p className="mt-4 text-center text-gray-500">
-            Already have an account?{" "}
-            <Link href="/users/login" className="text-white underline hover:text-gray-300">
-              Login
-            </Link>
-          </p>
+          {!registrationSuccess && (
+            <p className="mt-4 text-center text-gray-500">
+              Already have an account?{" "}
+              <Link href="/users/login" className="text-white underline hover:text-gray-300">
+                Login
+              </Link>
+            </p>
+          )}
         </div>
       </div>
     </div>
