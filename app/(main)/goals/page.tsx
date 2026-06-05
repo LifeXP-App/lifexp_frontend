@@ -70,47 +70,6 @@ type GoalPost = {
 
 import { NudgesLikesSection } from "@/src/components/goals/NudgesLikesSection";
 
-type InteractionType = "nudge" | "like";
-type Interactions = {
-  id: string;
-  image: string;
-  username: string;
-
-  type: InteractionType; // ✅ moved here
-
-  goalTitle?: string;
-  activityName?: string;
-
-  date: string;
-  href: string;
-  rounded?: boolean;
-};
-
-const interactions: Interactions[] = [
-  {
-    id: "1",
-    image:
-      "https://res.cloudinary.com/dfohn9dcz/image/upload/f_auto,q_auto,w_800,c_fill/v1755709015/ysyanmka88fuxudiuqhg.jpg",
-    username: "alex",
-    type: "nudge",
-    activityName: "drawing session",
-    date: "2m ago",
-    href: "/goal/1",
-    rounded: true,
-  },
-  {
-    id: "2",
-    image:
-      "https://res.cloudinary.com/dfohn9dcz/image/upload/f_auto,q_auto,w_800,c_fill/v1755709015/ysyanmka88fuxudiuqhg.jpg",
-    username: "maria",
-    type: "like",
-    goalTitle: "Drawing Mandalorian...",
-    date: "10m ago",
-    href: "/goal/1",
-    rounded: true,
-  },
-];
-
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
     <h2 className="text-xl font-bold text-black dark:text-white mb-3">
@@ -421,7 +380,7 @@ export default function GoalsPage() {
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
   const [deletingGoalId, setDeletingGoalId] = useState<string | null>(null);
 
-  const { me, loading: authLoading } = useAuth();
+  const { me, session, loading: authLoading } = useAuth();
 
   const [goals, setGoals] = useState<GoalPost[]>([]);
   const [goalsLoading, setGoalsLoading] = useState(false);
@@ -435,7 +394,7 @@ export default function GoalsPage() {
   } | null>(null);
 
   useEffect(() => {
-    if (authLoading || !me?.username) return;
+    if (authLoading || !me?.username || !session?.access_token) return;
     console.log("AuthLoading",authLoading)
     console.log("Me:",me)
 
@@ -444,6 +403,9 @@ export default function GoalsPage() {
         setGoalsLoading(true);
 
         const res = await fetch(`/api/goals`, {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
           cache: "no-store",
         });
 
@@ -459,7 +421,7 @@ export default function GoalsPage() {
     };
 
     fetchGoals();
-  }, [me, authLoading]);
+  }, [me, authLoading, session?.access_token]);
 
   const plannedGoals = goals.filter((p) => p.status === "planned");
   const ongoingGoals = goals.filter((p) => p.status === "ongoing");
@@ -473,7 +435,7 @@ export default function GoalsPage() {
   const [sidebarLoading, setSidebarLoading] = useState(false);
 
   useEffect(() => {
-    if (!me?.username) return;
+    if (!me?.username || !session?.access_token) return;
 
     const fetchSidebarInfo = async () => {
       try {
@@ -481,6 +443,9 @@ export default function GoalsPage() {
         const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
         const res = await fetch(`${baseUrl}/api/v1/goals/info/${me.username}/`, {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
           cache: "no-store",
         });
 
@@ -496,7 +461,7 @@ export default function GoalsPage() {
     };
 
     fetchSidebarInfo();
-  }, [me?.username]);
+  }, [me?.username, session?.access_token]);
 
   const handleCreateGoal = async (goal: {
     title: string;
@@ -520,7 +485,10 @@ export default function GoalsPage() {
     try {
       const res = await fetch("/api/goals", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          Authorization: `Bearer ${session?.access_token ?? ""}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           title: goal.title,
           description: goal.description,
@@ -609,6 +577,9 @@ export default function GoalsPage() {
 
     try {
       const res = await fetch(`/api/goals`, {
+        headers: {
+          Authorization: `Bearer ${session?.access_token ?? ""}`,
+        },
         cache: "no-store",
       });
 
@@ -660,6 +631,9 @@ export default function GoalsPage() {
 
       const res = await fetch(`/api/goals/${goalUid}`, {
         method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${session?.access_token ?? ""}`,
+        },
       });
 
       if (!res.ok) {
@@ -687,6 +661,9 @@ export default function GoalsPage() {
       // Refresh goals list on error
       if (me?.username) {
         const res = await fetch(`/api/goals/u/${me.username}`, {
+          headers: {
+            Authorization: `Bearer ${session?.access_token ?? ""}`,
+          },
           cache: "no-store",
         });
         if (res.ok) {
@@ -731,7 +708,12 @@ export default function GoalsPage() {
       });
 
       // Refetch to ensure consistency
-      const res = await fetch(`/api/goals`, { cache: "no-store" });
+      const res = await fetch(`/api/goals`, {
+        headers: {
+          Authorization: `Bearer ${session?.access_token ?? ""}`,
+        },
+        cache: "no-store",
+      });
       if (res.ok) {
         const data = await res.json();
         setGoals(Array.isArray(data.results) ? data.results : []);
@@ -741,7 +723,12 @@ export default function GoalsPage() {
       alert("Failed to update goal status. Please try again.");
 
       // Revert optimistic update on error
-      const res = await fetch(`/api/goals`, { cache: "no-store" });
+      const res = await fetch(`/api/goals`, {
+        headers: {
+          Authorization: `Bearer ${session?.access_token ?? ""}`,
+        },
+        cache: "no-store",
+      });
       if (res.ok) {
         const data = await res.json();
         setGoals(Array.isArray(data.results) ? data.results : []);
@@ -1153,7 +1140,7 @@ function RightSidebar({ user }: { user: UserGoalsInfo }) {
           </div>
         </div>
       </div>
-      <NudgesLikesSection interactions={interactions} />
+      <NudgesLikesSection />
     </aside>
   );
 }

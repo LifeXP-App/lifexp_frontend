@@ -36,6 +36,10 @@ export interface UserProfile {
   avatar?: string;
   totalXP: number;
   lifeLevel: number;
+  streak_active?: boolean;
+  streak_count?: number;
+  joined_date?: string | null;
+  xp_to_next_master_level?: number | null;
   masteryTitle: MasteryTitle;
   masteryLevel: number;
   aspects: Record<AspectType, LifeAspect>;

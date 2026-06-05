@@ -57,7 +57,7 @@ type UserPost = {
 export default function ProfilePage({ params }: PageProps) {
   const { username } = use(params);
   const router = useRouter();
-  const { me } = useAuth();
+  const { me, session, loading: authLoading } = useAuth();
 
   const [profileUser, setProfileUser] = useState<UserProfile | null>(null);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
@@ -106,6 +106,8 @@ export default function ProfilePage({ params }: PageProps) {
   const [topActivities, setTopActivities] = useState<Activity[]>([]);
   const [recentSessions, setRecentSessions] = useState<Session[]>([]);
   const [ongoingGoals, setOngoingGoals] = useState<Goal[]>([]);
+  const [dataLoading, setDataLoading] = useState(false);
+  const [isXlViewport, setIsXlViewport] = useState(false);
 
   const [showShare, setShowShare] = useState(false);
   const [showFollowersPopup, setShowFollowersPopup] = useState(false);
@@ -220,20 +222,49 @@ export default function ProfilePage({ params }: PageProps) {
     }
   }, [username]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const mediaQuery = window.matchMedia("(min-width: 1280px)");
+    const updateViewport = () => setIsXlViewport(mediaQuery.matches);
+
+    updateViewport();
+    mediaQuery.addEventListener("change", updateViewport);
+
+    return () => {
+      mediaQuery.removeEventListener("change", updateViewport);
+    };
+  }, []);
+
   // Fetch weekly XP, top activities, recent sessions, and ongoing goals
   useEffect(() => {
     const fetchProfileData = async () => {
-      if (!username) return;
+      if (!username || authLoading || !session?.access_token) return;
 
       setDataLoading(true);
 
       try {
+        const authHeaders = {
+          Authorization: `Bearer ${session.access_token}`,
+        };
         const [weeklyRes, topActivitiesRes, sessionsRes, goalsRes] =
           await Promise.all([
-            fetch(`/api/stats/weekly?username=${username}`),
-            fetch(`/api/stats/activities/top?username=${username}&limit=5`),
-            fetch(`/api/users/${username}/sessions?limit=5`),
-            fetch(`/api/users/${username}/goals?status=ongoing`),
+            fetch(`/api/stats/weekly?username=${username}`, {
+              headers: authHeaders,
+              cache: "no-store",
+            }),
+            fetch(`/api/stats/activities/top?username=${username}&limit=5`, {
+              headers: authHeaders,
+              cache: "no-store",
+            }),
+            fetch(`/api/users/${username}/sessions?limit=5`, {
+              headers: authHeaders,
+              cache: "no-store",
+            }),
+            fetch(`/api/users/${username}/goals?status=ongoing`, {
+              headers: authHeaders,
+              cache: "no-store",
+            }),
           ]);
 
         // Process weekly XP
@@ -271,13 +302,25 @@ export default function ProfilePage({ params }: PageProps) {
         // Process recent sessions
         if (sessionsRes.ok) {
           const sessionsData = await sessionsRes.json();
-          setRecentSessions(Array.isArray(sessionsData) ? sessionsData : []);
+          setRecentSessions(
+            Array.isArray(sessionsData)
+              ? sessionsData
+              : Array.isArray(sessionsData.results)
+                ? sessionsData.results
+                : [],
+          );
         }
 
         // Process ongoing goals
         if (goalsRes.ok) {
           const goalsData = await goalsRes.json();
-          setOngoingGoals(Array.isArray(goalsData) ? goalsData : []);
+          setOngoingGoals(
+            Array.isArray(goalsData)
+              ? goalsData
+              : Array.isArray(goalsData.results)
+                ? goalsData.results
+                : [],
+          );
         }
       } catch (err) {
         console.error("Failed to fetch profile data:", err);
@@ -287,7 +330,7 @@ export default function ProfilePage({ params }: PageProps) {
     };
 
     fetchProfileData();
-  }, [username]);
+  }, [username, authLoading, session?.access_token]);
 
   // Format member since date
   const formatMemberSince = (dateString: string) => {
@@ -989,8 +1032,8 @@ export default function ProfilePage({ params }: PageProps) {
           </div>
 
           {/* Desktop Chart - Comparison Mode */}
-          {canViewContent && (
-            <div className="hidden xl:flex w-full focus:outline-none justify-end p-4 sm:p-6 overflow-visible">
+          {canViewContent && isXlViewport && (
+            <div className="flex w-full focus:outline-none justify-end p-4 sm:p-6 overflow-visible">
               <div className="w-full max-w-[360px] h-[320px] overflow-visible py-6">
                 <RadarChart
                   data={radarData}
@@ -1013,7 +1056,7 @@ export default function ProfilePage({ params }: PageProps) {
         {canViewContent && (
           <>
             {/* Mobile Chart - Comparison Mode */}
-            <div className="xl:hidden my-4 flex justify-center w-full">
+            {!isXlViewport && <div className="my-4 flex justify-center w-full">
               <div className="w-full bg-white dark:bg-dark-2 rounded-xl border-2 border-gray-200 dark:border-gray-900 p-6">
                 <div className="mx-auto w-full max-w-[280px] h-72">
                   <RadarChart
@@ -1025,7 +1068,7 @@ export default function ProfilePage({ params }: PageProps) {
                   />
                 </div>
               </div>
-            </div>
+            </div>}
 
             {/* STREAK, LIFE LEVEL, XP CARDS */}
             <div className="my-4 flex flex-col sm:flex-row justify-between text-sm gap-4">
@@ -1150,7 +1193,11 @@ export default function ProfilePage({ params }: PageProps) {
                   <span className="text-gray-500 dark:text-gray-400 text-sm"></span>
                 </div>
 
-                {topActivities.length > 0 ? (
+                {dataLoading ? (
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">
+                    Loading activities...
+                  </p>
+                ) : topActivities.length > 0 ? (
                   topActivities.map((activity, index) => {
                     // Format duration in hours
                     const hours = Math.round(
@@ -1198,7 +1245,11 @@ export default function ProfilePage({ params }: PageProps) {
                   <span className="text-gray-500 dark:text-gray-400 text-sm"></span>
                 </div>
 
-                {recentSessions.length > 0 ? (
+                {dataLoading ? (
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">
+                    Loading sessions...
+                  </p>
+                ) : recentSessions.length > 0 ? (
                   recentSessions.map((session) => {
                     // Format duration
                     const totalSeconds = session.total_duration_seconds || 0;
@@ -1270,7 +1321,7 @@ export default function ProfilePage({ params }: PageProps) {
                         title={post.title}
                         description={post.content}
                         xp={post.total_xp}
-                        coverImage={post.post_image_url}
+                        coverImage={post.post_image_url || null}
                         timeText={getTimeAgo(post.created_at)}
                         accent={{
                           primary: accent.primary,

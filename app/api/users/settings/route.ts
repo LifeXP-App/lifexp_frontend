@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { getAuthToken } from "@/src/lib/auth/getAuthToken";
+import { refreshTokens } from "@/src/lib/auth/refreshTokens";
+import { sharedRefresh } from "@/src/lib/auth/refreshLock";
 
 async function safeJson(res: Response) {
   const text = await res.text();
@@ -10,15 +12,36 @@ async function safeJson(res: Response) {
   }
 }
 
-async function refreshAccess() {
-  // shared refresh route
-  return fetch("http://localhost:3000/api/auth/refresh", {
-    method: "POST",
-    cache: "no-store",
-  });
+async function clearSessionResponse(detail = "Session expired") {
+  const out = NextResponse.json({ detail }, { status: 401 });
+  out.cookies.set("access", "", { path: "/", maxAge: 0 });
+  out.cookies.set("refresh", "", { path: "/", maxAge: 0 });
+  return out;
 }
 
-export async function GET() {
+async function getCurrentUserId(baseUrl: string, access: string) {
+  const res = await fetch(`${baseUrl}/api/v1/auth/me/`, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${access}` },
+    cache: "no-store",
+  });
+  const data = await safeJson(res);
+
+  if (!res.ok) {
+    return { error: NextResponse.json(data, { status: res.status }) };
+  }
+
+  const id = data?.id;
+  if (!id) {
+    return {
+      error: NextResponse.json({ detail: "Missing user id" }, { status: 500 }),
+    };
+  }
+
+  return { id };
+}
+
+export async function GET(req: Request) {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
     if (!baseUrl) {
@@ -28,56 +51,21 @@ export async function GET() {
       );
     }
 
-    const cookieStore = await cookies();
-    let access = cookieStore.get("access")?.value;
+    let access = await getAuthToken(req);
 
     if (!access) {
       return NextResponse.json({ detail: "Not authenticated" }, { status: 401 });
     }
 
-    // ✅ 1) get logged-in user first (needs auth)
-    let meRes = await fetch(`${baseUrl}/api/v1/auth/me/`, {
-      method: "GET",
-      headers: { Authorization: `Bearer ${access}` },
-      cache: "no-store",
-    });
-
-    if (meRes.status === 401) {
-      const refreshRes = await refreshAccess();
-      if (!refreshRes.ok) {
-        const out = NextResponse.json({ detail: "Session expired" }, { status: 401 });
-        out.cookies.set("access", "", { path: "/", maxAge: 0 });
-        out.cookies.set("refresh", "", { path: "/", maxAge: 0 });
-        return out;
-      }
-
-      const updatedStore = await cookies();
-      access = updatedStore.get("access")?.value;
-
-      if (!access) {
-        const out = NextResponse.json({ detail: "Session expired" }, { status: 401 });
-        out.cookies.set("access", "", { path: "/", maxAge: 0 });
-        out.cookies.set("refresh", "", { path: "/", maxAge: 0 });
-        return out;
-      }
-
-      meRes = await fetch(`${baseUrl}/api/v1/auth/me/`, {
-        method: "GET",
-        headers: { Authorization: `Bearer ${access}` },
-        cache: "no-store",
-      });
+    let userResult = await getCurrentUserId(baseUrl, access);
+    if (userResult.error?.status === 401) {
+      const tokens = await sharedRefresh(refreshTokens);
+      if (!tokens?.access) return clearSessionResponse();
+      access = tokens.access;
+      userResult = await getCurrentUserId(baseUrl, access);
     }
-
-    const me = await safeJson(meRes);
-
-    if (!meRes.ok) {
-      return NextResponse.json(me, { status: meRes.status });
-    }
-
-    const id = me?.id;
-    if (!id) {
-      return NextResponse.json({ detail: "Missing user id" }, { status: 500 });
-    }
+    if (userResult.error) return userResult.error;
+    const id = userResult.id;
 
     // ✅ 2) fetch settings
     let settingsRes = await fetch(`${baseUrl}/api/v1/users/${id}/settings/`, {
@@ -88,23 +76,9 @@ export async function GET() {
 
     // if expired between calls -> refresh once -> retry
     if (settingsRes.status === 401) {
-      const refreshRes = await refreshAccess();
-      if (!refreshRes.ok) {
-        const out = NextResponse.json({ detail: "Session expired" }, { status: 401 });
-        out.cookies.set("access", "", { path: "/", maxAge: 0 });
-        out.cookies.set("refresh", "", { path: "/", maxAge: 0 });
-        return out;
-      }
-
-      const updatedStore = await cookies();
-      access = updatedStore.get("access")?.value;
-
-      if (!access) {
-        const out = NextResponse.json({ detail: "Session expired" }, { status: 401 });
-        out.cookies.set("access", "", { path: "/", maxAge: 0 });
-        out.cookies.set("refresh", "", { path: "/", maxAge: 0 });
-        return out;
-      }
+      const tokens = await sharedRefresh(refreshTokens);
+      if (!tokens?.access) return clearSessionResponse();
+      access = tokens.access;
 
       settingsRes = await fetch(`${baseUrl}/api/v1/users/${id}/settings/`, {
         method: "GET",
@@ -115,9 +89,12 @@ export async function GET() {
 
     const settings = await safeJson(settingsRes);
     return NextResponse.json(settings, { status: settingsRes.status });
-  } catch (err: any) {
+  } catch (err: unknown) {
     return NextResponse.json(
-      { detail: "Failed to load settings", error: String(err?.message || err) },
+      {
+        detail: "Failed to load settings",
+        error: err instanceof Error ? err.message : String(err),
+      },
       { status: 500 }
     );
   }
@@ -135,56 +112,21 @@ export async function PATCH(req: Request) {
 
     const payload = await req.json();
 
-    const cookieStore = await cookies();
-    let access = cookieStore.get("access")?.value;
+    let access = await getAuthToken(req);
 
     if (!access) {
       return NextResponse.json({ detail: "Not authenticated" }, { status: 401 });
     }
 
-    // ✅ get current user id
-    let meRes = await fetch(`${baseUrl}/api/v1/auth/me/`, {
-      method: "GET",
-      headers: { Authorization: `Bearer ${access}` },
-      cache: "no-store",
-    });
-
-    if (meRes.status === 401) {
-      const refreshRes = await refreshAccess();
-      if (!refreshRes.ok) {
-        const out = NextResponse.json({ detail: "Session expired" }, { status: 401 });
-        out.cookies.set("access", "", { path: "/", maxAge: 0 });
-        out.cookies.set("refresh", "", { path: "/", maxAge: 0 });
-        return out;
-      }
-
-      const updatedStore = await cookies();
-      access = updatedStore.get("access")?.value;
-
-      if (!access) {
-        const out = NextResponse.json({ detail: "Session expired" }, { status: 401 });
-        out.cookies.set("access", "", { path: "/", maxAge: 0 });
-        out.cookies.set("refresh", "", { path: "/", maxAge: 0 });
-        return out;
-      }
-
-      meRes = await fetch(`${baseUrl}/api/v1/auth/me/`, {
-        method: "GET",
-        headers: { Authorization: `Bearer ${access}` },
-        cache: "no-store",
-      });
+    let userResult = await getCurrentUserId(baseUrl, access);
+    if (userResult.error?.status === 401) {
+      const tokens = await sharedRefresh(refreshTokens);
+      if (!tokens?.access) return clearSessionResponse();
+      access = tokens.access;
+      userResult = await getCurrentUserId(baseUrl, access);
     }
-
-    const me = await safeJson(meRes);
-
-    if (!meRes.ok) {
-      return NextResponse.json(me, { status: meRes.status });
-    }
-
-    const id = me?.id;
-    if (!id) {
-      return NextResponse.json({ detail: "Missing user id" }, { status: 500 });
-    }
+    if (userResult.error) return userResult.error;
+    const id = userResult.id;
 
     // ✅ PATCH settings
     let settingsRes = await fetch(`${baseUrl}/api/v1/users/${id}/settings/`, {
@@ -198,23 +140,9 @@ export async function PATCH(req: Request) {
     });
 
     if (settingsRes.status === 401) {
-      const refreshRes = await refreshAccess();
-      if (!refreshRes.ok) {
-        const out = NextResponse.json({ detail: "Session expired" }, { status: 401 });
-        out.cookies.set("access", "", { path: "/", maxAge: 0 });
-        out.cookies.set("refresh", "", { path: "/", maxAge: 0 });
-        return out;
-      }
-
-      const updatedStore = await cookies();
-      access = updatedStore.get("access")?.value;
-
-      if (!access) {
-        const out = NextResponse.json({ detail: "Session expired" }, { status: 401 });
-        out.cookies.set("access", "", { path: "/", maxAge: 0 });
-        out.cookies.set("refresh", "", { path: "/", maxAge: 0 });
-        return out;
-      }
+      const tokens = await sharedRefresh(refreshTokens);
+      if (!tokens?.access) return clearSessionResponse();
+      access = tokens.access;
 
       settingsRes = await fetch(`${baseUrl}/api/v1/users/${id}/settings/`, {
         method: "PATCH",
@@ -229,9 +157,12 @@ export async function PATCH(req: Request) {
 
     const data = await safeJson(settingsRes);
     return NextResponse.json(data, { status: settingsRes.status });
-  } catch (err: any) {
+  } catch (err: unknown) {
     return NextResponse.json(
-      { detail: "Failed to update settings", error: String(err?.message || err) },
+      {
+        detail: "Failed to update settings",
+        error: err instanceof Error ? err.message : String(err),
+      },
       { status: 500 }
     );
   }

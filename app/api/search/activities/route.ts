@@ -1,7 +1,7 @@
-import { NextResponse, NextRequest } from "next/server";
-import { cookies } from "next/headers";
-import { refreshTokens } from "@/src/lib/auth/refreshTokens";
+import { getAuthToken } from "@/src/lib/auth/getAuthToken";
 import { sharedRefresh } from "@/src/lib/auth/refreshLock";
+import { refreshTokens } from "@/src/lib/auth/refreshTokens";
+import { NextRequest, NextResponse } from "next/server";
 
 async function safeJson(res: Response) {
   const text = await res.text();
@@ -15,11 +15,13 @@ async function safeJson(res: Response) {
 export async function GET(request: NextRequest) {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
-    const cookieStore = await cookies();
-    let access = cookieStore.get("access")?.value;
+    let access = await getAuthToken(request);
 
     if (!access) {
-      return NextResponse.json({ detail: "Not authenticated" }, { status: 401 });
+      return NextResponse.json(
+        { detail: "Not authenticated" },
+        { status: 401 },
+      );
     }
 
     const searchParams = request.nextUrl.searchParams;
@@ -29,7 +31,10 @@ export async function GET(request: NextRequest) {
     const limit = searchParams.get("limit") || "20";
 
     if (!query) {
-      return NextResponse.json({ error: "Search query is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Search query is required" },
+        { status: 400 },
+      );
     }
 
     let target = `${baseUrl}/api/v1/search/activities/?q=${encodeURIComponent(query)}&page=${page}&limit=${limit}`;
@@ -45,7 +50,10 @@ export async function GET(request: NextRequest) {
     if (res.status === 401) {
       const tokens = await sharedRefresh(refreshTokens);
       if (!tokens?.access) {
-        return NextResponse.json({ detail: "SESSION_EXPIRED" }, { status: 401 });
+        return NextResponse.json(
+          { detail: "SESSION_EXPIRED" },
+          { status: 401 },
+        );
       }
 
       access = tokens.access;
@@ -57,7 +65,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json(await safeJson(res), { status: res.status });
-  } catch (e: any) {
+  } catch (e: unknown) {
     return NextResponse.json({ detail: String(e) }, { status: 500 });
   }
 }

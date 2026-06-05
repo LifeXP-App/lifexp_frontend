@@ -1,3 +1,5 @@
+import { supabase } from "@/src/lib/supabase";
+
 export interface Goal {
   id: string;
   title: string;
@@ -111,6 +113,23 @@ function goalsDebugLog(label: string, payload?: unknown) {
   console.log(`[GoalsService] ${label}`, payload);
 }
 
+async function goalsFetch(input: RequestInfo | URL, init: RequestInit = {}) {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const headers = new Headers(init.headers);
+
+  if (session?.access_token && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${session.access_token}`);
+  }
+
+  return fetch(input, {
+    ...init,
+    headers,
+    cache: init.cache ?? "no-store",
+  });
+}
+
 function normalizeGoalStatus(status: unknown): GoalStatus {
   if (status === "active") return "active";
   if (status === "ongoing") return "ongoing";
@@ -149,19 +168,25 @@ function normalizeGoal(item: unknown): Goal | null {
     Array.isArray(goal.top_likes)
       ? goal.top_likes
           .filter(
-            (u) =>
-              u &&
-              typeof u === "object" &&
-              typeof (u as any).username === "string"
+            (
+              u,
+            ): u is { username: string; profile_picture?: unknown } => {
+              if (!u || typeof u !== "object") return false;
+              return typeof (u as Record<string, unknown>).username === "string";
+            },
           )
           .map((u) => ({
-            username: (u as any).username,
+            username: u.username,
             profile_picture:
-              typeof (u as any).profile_picture === "string"
-                ? (u as any).profile_picture
+              typeof u.profile_picture === "string"
+                ? u.profile_picture
                 : null,
           }))
       : [];
+  const lastActivity =
+    goal.last_activity && typeof goal.last_activity === "object"
+      ? (goal.last_activity as Record<string, unknown>)
+      : null;
 
   return {
     id: String(rawId),
@@ -229,10 +254,10 @@ function normalizeGoal(item: unknown): Goal | null {
 
     top_likes: topLikes,
 
-    last_activity: goal.last_activity && typeof goal.last_activity === "object"
+    last_activity: lastActivity
       ? {
-           name: typeof goal.last_activity.name === "string" ? goal.last_activity.name : "Activity",
-           uid: typeof goal.last_activity.uid === "string" ? goal.last_activity.uid : "",
+           name: typeof lastActivity.name === "string" ? lastActivity.name : "Activity",
+           uid: typeof lastActivity.uid === "string" ? lastActivity.uid : "",
         }
       : null,
 
@@ -260,7 +285,7 @@ export const GoalsService = {
 
     const query = params.toString();
 
-    const res = await fetch(`/api/goals${query ? `?${query}` : ""}`);
+    const res = await goalsFetch(`/api/goals${query ? `?${query}` : ""}`);
     if (!res.ok) throw new Error("Failed to fetch goals");
 
     const data = await res.json();
@@ -305,7 +330,7 @@ export const GoalsService = {
   async getGoal(id: string): Promise<Goal> {
     goalsDebugLog("getGoal:request", { id });
 
-    const res = await fetch(`/api/goals/${id}`);
+    const res = await goalsFetch(`/api/goals/${id}`);
 
     if (!res.ok) throw new Error("Failed to fetch goal");
 
@@ -317,16 +342,6 @@ export const GoalsService = {
 
     return normalized;
   },
-
-  async deleteGoal(id: string): Promise<void> {
-    const res = await fetch(`/api/goals/${id}`, {
-      method: "DELETE",
-    });
-
-    if (!res.ok) throw new Error("Failed to delete goal");
-  },
-
-
 
   async getGoalSessions(
     id: string,
@@ -343,7 +358,7 @@ export const GoalsService = {
     const query = params.toString();
     const requestUrl = `/api/goals/${id}/sessions${query ? `?${query}` : ""}`;
     goalsDebugLog("getGoalSessions:request", { id, requestUrl, options });
-    const res = await fetch(requestUrl);
+    const res = await goalsFetch(requestUrl);
     goalsDebugLog("getGoalSessions:responseStatus", { id, status: res.status });
     if (!res.ok) throw new Error("Failed to fetch goal sessions");
 
@@ -466,7 +481,7 @@ export const GoalsService = {
   },
 
   async createGoal(data: CreateGoalPayload): Promise<Goal> {
-    const res = await fetch("/api/goals", {
+    const res = await goalsFetch("/api/goals", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -482,7 +497,7 @@ export const GoalsService = {
     id: string,
     data: { title?: string; description?: string; finish_by?: string; status?: string },
   ): Promise<Goal> {
-    const res = await fetch(`/api/goals/${id}`, {
+    const res = await goalsFetch(`/api/goals/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -495,7 +510,7 @@ export const GoalsService = {
   },
 
   async deleteGoal(id: string): Promise<void> {
-    const res = await fetch(`/api/goals/${id}`, {
+    const res = await goalsFetch(`/api/goals/${id}`, {
       method: "DELETE",
     });
     if (!res.ok) throw new Error("Failed to delete goal");

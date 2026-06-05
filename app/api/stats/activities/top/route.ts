@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { refreshTokens } from "@/src/lib/auth/refreshTokens";
 import { sharedRefresh } from "@/src/lib/auth/refreshLock";
+import { getAuthToken } from "@/src/lib/auth/getAuthToken";
 
 async function safeJson(res: Response) {
   const text = await res.text();
@@ -12,15 +12,14 @@ async function safeJson(res: Response) {
   }
 }
 
-async function authedFetch(url: string, options: RequestInit = {}) {
-  const cookieStore = await cookies();
-  let access = cookieStore.get("access")?.value;
+async function authedFetch(req: Request, url: string, options: RequestInit = {}) {
+  let access = await getAuthToken(req);
 
   if (!access) {
     return new Response("Not authenticated", { status: 401 });
   }
 
-  let res = await fetch(url, {
+  const res = await fetch(url, {
     ...options,
     headers: {
       ...(options.headers || {}),
@@ -36,11 +35,13 @@ async function authedFetch(url: string, options: RequestInit = {}) {
     return new Response("SESSION_EXPIRED", { status: 401 });
   }
 
+  access = tokens.access;
+
   return fetch(url, {
     ...options,
     headers: {
       ...(options.headers || {}),
-      Authorization: `Bearer ${tokens.access}`,
+      Authorization: `Bearer ${access}`,
     },
     cache: "no-store",
   });
@@ -57,6 +58,7 @@ export async function GET(req: Request) {
   params.append("limit", limit);
 
   const res = await authedFetch(
+    req,
     `${baseUrl}/api/v1/stats/activities/top/?${params.toString()}`
   );
   return NextResponse.json(await safeJson(res), { status: res.status });

@@ -5,11 +5,13 @@ import { Providers } from "../providers";
 import { Sidebar } from "../../src/components/Sidebar";
 import MasteryPopupWrapper from "../../src/components/MasteryPopupWrapper";
 import { PopupProvider } from "../../src/context/PopupContext";
+import { AuthProvider } from "@/src/context/AuthContext";
+import { AuthGuard } from "@/src/components/AuthGuard";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
 });
-import { AuthProvider } from "@/src/context/AuthContext";
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -34,15 +36,17 @@ export default function RootLayout({
       >
         <Providers>
           <AuthProvider>
-          <PopupProvider>
-          <div className="flex h-screen overflow-hidden">
-            {/* ✅ Client wrapper handles state */}
-            <MasteryPopupWrapper />
+            <AuthGuard>
+              <PopupProvider>
+                <div className="flex h-screen overflow-hidden">
+                  {/* ✅ Client wrapper handles state */}
+                  <MasteryPopupWrapper />
 
-            <Sidebar />
-            <main className="flex-1 overflow-y-auto">{children}</main>
-          </div>
-          </PopupProvider>
+                  <Sidebar />
+                  <main className="flex-1 overflow-y-auto">{children}</main>
+                </div>
+              </PopupProvider>
+            </AuthGuard>
           </AuthProvider>
         </Providers>
       </body>

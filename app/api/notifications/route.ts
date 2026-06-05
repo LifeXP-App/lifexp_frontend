@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { getAuthToken } from "@/src/lib/auth/getAuthToken";
 
 async function safeJson(res: Response) {
   const text = await res.text();
@@ -21,8 +21,7 @@ export async function GET(req: Request) {
       );
     }
 
-    const cookieStore = await cookies();
-    let access = cookieStore.get("access")?.value;
+    let access = await getAuthToken(req);
 
     if (!access) {
       return NextResponse.json({ detail: "Not authenticated" }, { status: 401 });

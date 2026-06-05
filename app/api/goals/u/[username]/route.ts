@@ -1,7 +1,7 @@
 import { NextResponse, NextRequest } from "next/server";
-import { cookies } from "next/headers";
 import { refreshTokens } from "@/src/lib/auth/refreshTokens";
 import { sharedRefresh } from "@/src/lib/auth/refreshLock";
+import { getAuthToken } from "@/src/lib/auth/getAuthToken";
 
 async function safeJson(res: Response) {
   const text = await res.text();
@@ -18,8 +18,7 @@ export async function GET(
 ) {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
-    const cookieStore = await cookies();
-    let access = cookieStore.get("access")?.value;
+    let access = await getAuthToken(request);
 
     if (!access) {
       return NextResponse.json(
@@ -69,7 +68,7 @@ export async function GET(
     return NextResponse.json(await safeJson(res), {
       status: res.status,
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     return NextResponse.json(
       { detail: String(e) },
       { status: 500 }
