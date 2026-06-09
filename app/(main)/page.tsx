@@ -483,6 +483,7 @@ export default function Home() {
   duration: string | null;
   tags: any;
   xp_distribution: any;
+  user_liked: boolean;
   user: {
     username: string;
     profile_picture: string;
@@ -574,7 +575,7 @@ const loadPosts = async (pageToLoad: number) => {
   masterytitle: (p.user.mastery_title || "").trim(),
   primary: p.user.primary_color || "#4168e2",
   own_post: false,
-  user_liked: false,
+  user_liked: p.user_liked,
 
   xp_data: p.xp_distribution || {
     physique: 0,
