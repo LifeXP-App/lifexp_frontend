@@ -251,6 +251,7 @@ export function Post({ post }: { post: PostType }) {
       }
 
       const data = await res.json();
+      console.log(data)
 
       // Sync with server response (only if component is still mounted)
       if (isMountedRef.current) {
