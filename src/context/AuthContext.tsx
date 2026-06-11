@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/src/lib/supabase";
 import type { Session, User } from "@supabase/supabase-js";
+import posthog from "posthog-js";
 
 type Me = {
   id: number;
@@ -92,6 +93,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!error && data.session) {
       // Supabase session established, fetch player data
       await refreshMe();
+      const email = data.session.user.email ?? "";
+      posthog.identify(email, { email });
+      posthog.capture("user_signed_in", { email, method: "email" });
     }
 
     return { error };
@@ -123,9 +127,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Registration successful, but user needs to confirm email
+      posthog.capture("user_registered", { email, username, fullname: fullname || username });
       return { error: null };
     } catch (err) {
       console.error("Sign up error:", err);
+      posthog.captureException(err);
       return { error: { message: "Registration failed" } };
     }
   };
@@ -141,6 +147,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
     });
 
+    if (!error) {
+      posthog.capture("user_signed_in_with_google", { method: "google" });
+    }
+
     return { error };
   };
 
@@ -148,6 +158,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * Logout user
    */
   const logout = async () => {
+    posthog.capture("user_logged_out");
+    posthog.reset();
     await supabase.auth.signOut();
     setMe(null);
     setSession(null);

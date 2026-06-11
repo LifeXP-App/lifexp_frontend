@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from "next/navigation";
 import confetti from "canvas-confetti";
 import { Link } from 'lucide-react';
+import posthog from "posthog-js";
 
 interface ReflectionResponse {
   id: string
@@ -106,9 +107,18 @@ const DayCompletePage = () => {
         if (reflection?.completion_picture) {
           setImagePreview(reflection.completion_picture)
         }
+        posthog.capture("reflection_viewed", {
+          session_id: uid,
+          goal_id: goalId,
+          xp_total: data.xp_total,
+          day: data.day,
+          activity_name: data.activity?.name,
+          activity_type: data.activity?.type,
+        });
 
       } catch (err) {
         console.error("Failed to fetch reflection", err)
+        posthog.captureException(err);
       } finally {
         setLoading(false)
       }

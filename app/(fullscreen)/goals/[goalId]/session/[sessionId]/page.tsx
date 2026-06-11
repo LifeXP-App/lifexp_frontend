@@ -16,6 +16,7 @@ import { DumbbellIcon } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { FaBrain, FaHammer } from "react-icons/fa";
+import posthog from "posthog-js";
 
 // ── Types ──
 
@@ -313,6 +314,11 @@ export default function SessionTimer({ params }: SessionTimerProps) {
             console.error("Failed to register session start with Django:", err),
           );
 
+        posthog.capture("session_started", {
+          session_id: id,
+          goal_id: goalId,
+          activity_id: activityIdStr,
+        });
         setCreatedSessionId(id);
         router.replace(`/goals/${goalId}/session/${id}`);
       })
@@ -528,15 +534,17 @@ useEffect(() => {
     if (!sessionId || !isActive) return;
     if (isRunning) {
       await pauseMutation({ sessionId, reason: "user_initiated" });
+      posthog.capture("session_paused", { session_id: sessionId, goal_id: goalId });
     } else if (isPaused) {
       await resumeMutation({ sessionId });
+      posthog.capture("session_resumed", { session_id: sessionId, goal_id: goalId });
 
       if (pomodoroPhase === "break") {
         setPomodoroPhase("focus");
         setPhaseSecondsLeft(FOCUS_SECONDS);
       }
     }
-  }, [isRunning, isPaused, isActive, sessionId, pauseMutation, resumeMutation]);
+  }, [isRunning, isPaused, isActive, sessionId, goalId, pauseMutation, resumeMutation]);
 
   const handleFinish = useCallback(async () => {
     if (!sessionId || !isActive || isSyncing) return;
@@ -564,9 +572,17 @@ useEffect(() => {
         }
       }
 
+      posthog.capture("session_completed", {
+        session_id: sessionId,
+        goal_id: goalId,
+        xp_total: finalStats.xpTotal,
+        duration_seconds: finalStats.totalDurationSeconds,
+        focused_seconds: finalStats.focusedDurationSeconds,
+      });
       router.push(`/goals/${goalId}/session/${sessionId}/reflection`);
     } catch (err) {
       console.error("Failed to complete session:", err);
+      posthog.captureException(err);
       setIsSyncing(false);
     }
   }, [
@@ -603,9 +619,16 @@ useEffect(() => {
         }
       }
 
+      posthog.capture("session_abandoned", {
+        session_id: sessionId,
+        goal_id: goalId,
+        xp_total: finalStats.xpTotal,
+        duration_seconds: finalStats.totalDurationSeconds,
+      });
       router.push(`/goals/${goalId}`);
     } catch (err) {
       console.error("Failed to abandon session:", err);
+      posthog.captureException(err);
       setIsSyncing(false);
     }
   }, [

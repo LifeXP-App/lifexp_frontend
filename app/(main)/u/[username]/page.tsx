@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation";
 import { use, useEffect, useRef, useState } from "react";
 import { FaLinkedin, FaSquareWhatsapp } from "react-icons/fa6";
 import { toggleFollow } from "@/lib/api/users";
+import posthog from "posthog-js";
 
 interface PageProps {
   params: Promise<{ username: string }>;
@@ -379,6 +380,7 @@ export default function ProfilePage({ params }: PageProps) {
         setIsFollowing(data.following);
         setFollowersCount(data.followers_count);
         setFollowingCount(data.following_count);
+        posthog.capture("user_followed", { target_user: profileUser.username, action: "follow" });
       }
     } catch (error) {
       // Don't show error if request was aborted intentionally
@@ -436,6 +438,7 @@ export default function ProfilePage({ params }: PageProps) {
         setIsFollowing(data.following);
         setFollowersCount(data.followers_count);
         setFollowingCount(data.following_count);
+        posthog.capture("user_followed", { target_user: profileUser.username, action: "unfollow" });
       }
     } catch (error) {
       // Don't show error if request was aborted intentionally

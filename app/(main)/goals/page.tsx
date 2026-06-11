@@ -303,6 +303,7 @@ function AspectChip({
 import NewGoalModal from "@/src/components/goals/NewGoalModal";
 import { BiDumbbell } from "react-icons/bi";
 import { GoalsService } from "@/src/lib/services/goals";
+import posthog from "posthog-js";
 
 interface Activity {
   id: string;
@@ -566,6 +567,7 @@ export default function GoalsPage() {
             : existingGoal,
         ),
       );
+      posthog.capture("goal_created", { goal_id: createdId, goal_title: goal.title, status: createdStatus });
     } catch (error) {
       setGoals((currentGoals) =>
         currentGoals.filter((existingGoal) => existingGoal.id !== tempId),
@@ -654,8 +656,10 @@ export default function GoalsPage() {
       }
 
       // Success - goal already removed from UI
+      posthog.capture("goal_deleted", { goal_id: goalUid });
     } catch (error) {
       console.error("Error deleting goal:", error);
+      posthog.captureException(error);
       alert("An error occurred while deleting the goal");
 
       // Refresh goals list on error
@@ -705,6 +709,12 @@ export default function GoalsPage() {
       // API call
       await GoalsService.updateGoal(pendingStatusChange.goalId, {
         status: pendingStatusChange.newStatus,
+      });
+
+      posthog.capture("goal_status_changed", {
+        goal_id: pendingStatusChange.goalId,
+        from_status: pendingStatusChange.currentStatus,
+        to_status: pendingStatusChange.newStatus,
       });
 
       // Refetch to ensure consistency

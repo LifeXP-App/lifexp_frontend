@@ -2,6 +2,7 @@ import { sharedRefresh } from "@/src/lib/auth/refreshLock";
 import { refreshTokens } from "@/src/lib/auth/refreshTokens";
 import { getAuthToken } from "@/src/lib/auth/getAuthToken";
 import { NextResponse } from "next/server";
+import { getPostHogClient } from "@/src/lib/posthog-server";
 
 async function authedFetch(req: Request, url: string, options: RequestInit = {}) {
   let access = await getAuthToken(req);
@@ -95,6 +96,18 @@ export async function POST(req: Request) {
   const text = await res.text();
   try {
     const data = JSON.parse(text);
+    if (res.ok) {
+      const distinctId = data?.user?.username ?? data?.uid ?? "unknown";
+      getPostHogClient().capture({
+        distinctId,
+        event: "goal_created_server",
+        properties: {
+          goal_id: data?.uid ?? data?.id,
+          goal_title: data?.title,
+          status: data?.status,
+        },
+      });
+    }
     return NextResponse.json(data, { status: res.status });
   } catch {
     return NextResponse.json({ detail: text }, { status: res.status });

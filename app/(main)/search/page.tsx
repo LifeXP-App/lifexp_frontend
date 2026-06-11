@@ -3,7 +3,8 @@ import { useAuth } from "@/src/context/AuthContext";
 import { useSearch } from "@/src/lib/hooks/useSearch";
 import { useSearchHistory } from "@/src/lib/hooks/useSearchHistory";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import posthog from "posthog-js";
 
 type FilterType = "posts" | "users" | "activities";
 
@@ -53,6 +54,7 @@ export default function SearchPage() {
     "activities",
   ]);
   const [query, setQuery] = useState("");
+  const searchCaptureTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Recent content state
   const [recentPosts, setRecentPosts] = useState<DiscoverPost[]>([]);
@@ -199,6 +201,12 @@ export default function SearchPage() {
 
   const handleSearchQueryChange = (value: string) => {
     setQuery(value);
+    if (searchCaptureTimer.current) clearTimeout(searchCaptureTimer.current);
+    if (value.trim().length >= 2) {
+      searchCaptureTimer.current = setTimeout(() => {
+        posthog.capture("search_performed", { query: value.trim(), filter_type: activeFilters.join(",") });
+      }, 600);
+    }
   };
 
   const handleHistoryItemClick = (searchQuery: string) => {

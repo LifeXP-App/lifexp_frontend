@@ -2,6 +2,7 @@ import { sharedRefresh } from "@/src/lib/auth/refreshLock";
 import { refreshTokens } from "@/src/lib/auth/refreshTokens";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { getPostHogClient } from "@/src/lib/posthog-server";
 
 async function authedFetch(url: string, options: RequestInit = {}) {
   const cookieStore = await cookies();
@@ -81,6 +82,20 @@ export async function PUT(
   const text = await res.text();
   try {
     const data = JSON.parse(text);
+    if (res.ok && body?.status === "completed") {
+      const distinctId = data?.user?.username ?? data?.user ?? "unknown";
+      getPostHogClient().capture({
+        distinctId,
+        event: "session_synced_server",
+        properties: {
+          session_id: sessionId,
+          goal_id: data?.goal ?? body?.goal,
+          xp_total: body?.xp_total,
+          duration_seconds: body?.total_duration_seconds,
+          focused_seconds: body?.focused_duration_seconds,
+        },
+      });
+    }
     return NextResponse.json(data, { status: res.status });
   } catch {
     return NextResponse.json({ detail: text }, { status: res.status });
