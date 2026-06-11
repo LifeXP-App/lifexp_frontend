@@ -50,7 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!currentSession) {
         setMe(null);
         return;
-      }
+      } 
 
       // Call Django backend with Supabase JWT token
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/auth/me/`, {
@@ -85,20 +85,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * Sign in with email and password
    */
   const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
+    // Call the server-side route handler so it can set the httpOnly sb-access-token cookie.
+    // The browser SDK alone only puts the token in localStorage, which server route handlers can't read.
+    const res = await fetch("/api/auth/login/supabase", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      return { error: { message: data.error || "Login failed" } };
+    }
+
+    // Also initialize the browser SDK session so onAuthStateChange fires
+    // and any client-side Supabase queries work.
+    const { error: sessionError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    if (!error && data.session) {
-      // Supabase session established, fetch player data
+    if (!sessionError) {
       await refreshMe();
-      const email = data.session.user.email ?? "";
       posthog.identify(email, { email });
       posthog.capture("user_signed_in", { email, method: "email" });
     }
 
-    return { error };
+    return { error: sessionError ?? null };
   };
 
   /**

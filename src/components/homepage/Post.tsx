@@ -247,6 +247,7 @@ export function Post({ post }: { post: PostType }) {
           setLikeError("Failed to update like");
         }
         console.error("Failed to like post");
+        console.error(await res.text());
         return;
       }
 

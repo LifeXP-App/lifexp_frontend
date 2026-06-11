@@ -17,7 +17,7 @@ export async function POST(req: Request) {
         { error: "Email and password required" },
         { status: 400 }
       );
-    }
+    } 
 
     const supabase = await createSupabaseServerClient();
 

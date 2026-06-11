@@ -3,6 +3,7 @@
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { PaperAirplaneIcon } from "@heroicons/react/24/solid";
 import { useEffect, useState } from "react";
+import { supabase } from "@/src/lib/supabase";
 
 type Comment = {
   id: number;
@@ -56,7 +57,13 @@ export function CommentSection({ postId, comments: initialComments, onClose }: C
   useEffect(() => {
     const loadComments = async () => {
       try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const authHeaders: HeadersInit = session?.access_token
+          ? { Authorization: `Bearer ${session.access_token}` }
+          : {};
+
         const res = await fetch(`/api/posts/${postId}/comments`, {
+          headers: authHeaders,
           cache: "no-store",
         });
 
@@ -97,8 +104,15 @@ export function CommentSection({ postId, comments: initialComments, onClose }: C
     setSubmitting(true);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const authHeaders: HeadersInit = {
+        "Content-Type": "application/json",
+        ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+      };
+
       const res = await fetch(`/api/posts/${postId}/comments`, {
         method: "POST",
+        headers: authHeaders,
         body: JSON.stringify({ content: commentText }),
       });
 

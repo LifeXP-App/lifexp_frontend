@@ -10,7 +10,7 @@ import { ActivityType } from "@/src/lib/types/activityMeta";
 import { BoltIcon, UsersIcon } from "@heroicons/react/24/solid";
 import FireIcon from "@heroicons/react/24/solid/FireIcon";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { FaBrain, FaHammer } from "react-icons/fa";
 
 type AspectKey = "physique" | "energy" | "social" | "creativity" | "logic";
@@ -107,7 +107,7 @@ function GoalCard({
               </p>
 
               <div className="flex items-center gap-2 shrink-0">
-                <StatusBadge status={goal.status} />
+
 
                 {isCompleted && typeof goal.xpReward === "number" && (
                   <span
@@ -382,9 +382,12 @@ export default function GoalsPage() {
   const [deletingGoalId, setDeletingGoalId] = useState<string | null>(null);
 
   const { me, session, loading: authLoading } = useAuth();
+  const username = me?.username;
+  const accessToken = session?.access_token;
 
   const [goals, setGoals] = useState<GoalPost[]>([]);
   const [goalsLoading, setGoalsLoading] = useState(false);
+  const fetchedGoalsForUsername = useRef<string | null>(null);
 
   const [isStatusConfirmOpen, setIsStatusConfirmOpen] = useState(false);
   const [pendingStatusChange, setPendingStatusChange] = useState<{
@@ -395,9 +398,8 @@ export default function GoalsPage() {
   } | null>(null);
 
   useEffect(() => {
-    if (authLoading || !me?.username || !session?.access_token) return;
-    console.log("AuthLoading",authLoading)
-    console.log("Me:",me)
+    if (authLoading || !username || !accessToken) return;
+    if (fetchedGoalsForUsername.current === username) return;
 
     const fetchGoals = async () => {
       try {
@@ -405,7 +407,7 @@ export default function GoalsPage() {
 
         const res = await fetch(`/api/goals`, {
           headers: {
-            Authorization: `Bearer ${session.access_token}`,
+            Authorization: `Bearer ${accessToken}`,
           },
           cache: "no-store",
         });
@@ -414,6 +416,7 @@ export default function GoalsPage() {
 
         const data = await res.json();
         setGoals(Array.isArray(data.results) ? data.results : []);
+        fetchedGoalsForUsername.current = username;
       } catch (e) {
         console.error(e);
       } finally {
@@ -422,7 +425,7 @@ export default function GoalsPage() {
     };
 
     fetchGoals();
-  }, [me, authLoading, session?.access_token]);
+  }, [authLoading, username, accessToken]);
 
   const plannedGoals = goals.filter((p) => p.status === "planned");
   const ongoingGoals = goals.filter((p) => p.status === "ongoing");
@@ -434,18 +437,22 @@ export default function GoalsPage() {
 
   const [sidebarInfo, setSidebarInfo] = useState<UserGoalsInfo | null>(null);
   const [sidebarLoading, setSidebarLoading] = useState(false);
+  const fetchedSidebarForUsername = useRef<string | null>(null);
+  const showGoalsSkeleton = goalsLoading && goals.length === 0;
+  const showSidebarSkeleton = sidebarLoading && !sidebarInfo;
 
   useEffect(() => {
-    if (!me?.username || !session?.access_token) return;
+    if (!username || !accessToken) return;
+    if (fetchedSidebarForUsername.current === username) return;
 
     const fetchSidebarInfo = async () => {
       try {
         setSidebarLoading(true);
         const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-        const res = await fetch(`${baseUrl}/api/v1/goals/info/${me.username}/`, {
+        const res = await fetch(`${baseUrl}/api/v1/goals/info/${username}/`, {
           headers: {
-            Authorization: `Bearer ${session.access_token}`,
+            Authorization: `Bearer ${accessToken}`,
           },
           cache: "no-store",
         });
@@ -454,6 +461,7 @@ export default function GoalsPage() {
 
         const data = await res.json();
         setSidebarInfo(data);
+        fetchedSidebarForUsername.current = username;
       } catch (e) {
         console.error(e);
       } finally {
@@ -462,7 +470,7 @@ export default function GoalsPage() {
     };
 
     fetchSidebarInfo();
-  }, [me?.username, session?.access_token]);
+  }, [username, accessToken]);
 
   const handleCreateGoal = async (goal: {
     title: string;
@@ -771,12 +779,12 @@ export default function GoalsPage() {
 
             {/* Ongoing */}
             <div className="mt-6">
-              {(ongoingGoals.length > 0 || goalsLoading) && (
+              {(ongoingGoals.length > 0 || showGoalsSkeleton) && (
                 <>
                   <SectionTitle>Ongoing ({ongoingGoals.length})</SectionTitle>
                 </>
               )}
-              {goalsLoading ? (
+              {showGoalsSkeleton ? (
                 <>
                   <GoalsSectionSkeleton count={2} />
                 </>
@@ -812,13 +820,13 @@ export default function GoalsPage() {
 
             {/* Planned */}
             <div className="mt-6">
-              {(plannedGoals.length > 0 || goalsLoading) && (
+              {(plannedGoals.length > 0 || showGoalsSkeleton) && (
                 <>
                   <SectionTitle>Planned ({plannedGoals.length})</SectionTitle>
                 </>
               )}
 
-              {goalsLoading ? (
+              {showGoalsSkeleton ? (
                 <>
                   <GoalsSectionSkeleton count={2} />
                 </>
@@ -857,14 +865,14 @@ export default function GoalsPage() {
 
             {/* Completed */}
             <div className="mt-6">
-              {(completedGoals.length > 0 || goalsLoading) && (
+              {(completedGoals.length > 0 || showGoalsSkeleton) && (
                 <>
                   <SectionTitle>
                     Completed ({completedGoals.length})
                   </SectionTitle>
                 </>
               )}
-              {goalsLoading ? (
+              {showGoalsSkeleton ? (
                 <>
                   <GoalsSectionSkeleton count={2} />
                 </>
@@ -898,12 +906,12 @@ export default function GoalsPage() {
 
             {/* Paused */}
             <div className="mt-6">
-              {(pausedGoals.length > 0 || goalsLoading) && (
+              {(pausedGoals.length > 0 || showGoalsSkeleton) && (
                 <>
                   <SectionTitle>Paused ({pausedGoals.length})</SectionTitle>
                 </>
               )}
-              {goalsLoading ? (
+              {showGoalsSkeleton ? (
                 <>
                   <GoalsSectionSkeleton count={1} />
                 </>
@@ -939,12 +947,12 @@ export default function GoalsPage() {
 
             {/* Abandoned */}
             <div className="mt-6">
-              {(abandonedGoals.length > 0 || goalsLoading) && (
+              {(abandonedGoals.length > 0 || showGoalsSkeleton) && (
                 <>
                   <SectionTitle>Abandoned ({abandonedGoals.length})</SectionTitle>
                 </>
               )}
-              {goalsLoading ? (
+              {showGoalsSkeleton ? (
                 <>
                   <GoalsSectionSkeleton count={1} />
                 </>
@@ -978,7 +986,7 @@ export default function GoalsPage() {
           </div>
 
           {/* RIGHT SIDEBAR (DESKTOP ONLY) */}
-          {sidebarLoading || !sidebarInfo ? (
+          {showSidebarSkeleton || !sidebarInfo ? (
             <RightSidebarInfoSkeleton />
           ) : (
             <RightSidebar user={sidebarInfo} />

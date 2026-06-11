@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { getAuthToken } from "@/src/lib/auth/getAuthToken";
 import { refreshTokens } from "@/src/lib/auth/refreshTokens";
 import { sharedRefresh } from "@/src/lib/auth/refreshLock";
 
@@ -12,15 +12,7 @@ async function safeJson(res: Response) {
   }
 }
 
-async function authedFetch(url: string, options: RequestInit = {}) {
-  // ✅ cookies() IS ASYNC
-  const cookieStore = await cookies();
-  let access = cookieStore.get("access")?.value;
-
-  if (!access) {
-    return new Response("Not authenticated", { status: 401 });
-  }
-
+async function authedFetch(access: string, url: string, options: RequestInit = {}) {
   let res = await fetch(url, {
     ...options,
     headers: {
@@ -33,20 +25,16 @@ async function authedFetch(url: string, options: RequestInit = {}) {
 
   if (res.status !== 401) return res;
 
-  // 🔄 refresh
   const tokens = await sharedRefresh(refreshTokens);
   if (!tokens?.access) {
-    return new Response("SESSION_EXPIRED", { status: 401 });
+    return NextResponse.json({ detail: "Session expired" }, { status: 401 });
   }
 
-  access = tokens.access;
-
-  // retry with new access
   return fetch(url, {
     ...options,
     headers: {
       ...(options.headers || {}),
-      Authorization: `Bearer ${access}`,
+      Authorization: `Bearer ${tokens.access}`,
       "Content-Type": "application/json",
     },
     cache: "no-store",
@@ -60,11 +48,15 @@ export async function GET(
 ) {
   const { id } = await context.params;
 
-  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
-  const res = await authedFetch(
-    `${baseUrl}/api/v1/posts/${id}/comments/`
-  );
+  const access = await getAuthToken(req);
+  if (!access) {
+    return NextResponse.json({ detail: "Not authenticated" }, { status: 401 });
+  }
 
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
+  const res = await authedFetch(access, `${baseUrl}/api/v1/posts/${id}/comments/`);
+
+  if (res instanceof NextResponse) return res;
   return NextResponse.json(await safeJson(res), { status: res.status });
 }
 
@@ -76,14 +68,17 @@ export async function POST(
   const { id } = await context.params;
   const body = await req.json();
 
-  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
-  const res = await authedFetch(
-    `${baseUrl}/api/v1/posts/${id}/comments/`,
-    {
-      method: "POST",
-      body: JSON.stringify(body),
-    }
-  );
+  const access = await getAuthToken(req);
+  if (!access) {
+    return NextResponse.json({ detail: "Not authenticated" }, { status: 401 });
+  }
 
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
+  const res = await authedFetch(access, `${baseUrl}/api/v1/posts/${id}/comments/`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+  if (res instanceof NextResponse) return res;
   return NextResponse.json(await safeJson(res), { status: res.status });
 }

@@ -16,12 +16,16 @@ export async function getAuthToken(request: Request): Promise<string | null> {
     }
   }
 
-  // Fallback: Check legacy cookies
   const cookieStore = await cookies();
-  const accessCookie = cookieStore.get("access")?.value;
-  if (accessCookie) {
-    return accessCookie;
-  }
+
+  // Supabase session cookie — set by /api/auth/login/supabase
+  const sbToken = cookieStore.get("sb-access-token")?.value;
+  if (sbToken) return sbToken;
+
+  // Legacy Django JWT cookie — backwards compatibility
+  const legacyToken = cookieStore.get("access")?.value;
+  if (legacyToken) return legacyToken;
 
   return null;
 }
+ 
