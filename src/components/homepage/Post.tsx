@@ -231,7 +231,7 @@ export function Post({ post }: { post: PostType }) {
         10000,
       );
 
-      const res = await fetch(`/api/posts/${post.id}/like`, {
+      const res = await fetch(`/api/goals/${post.id}/like`, {
         method: "POST",
         cache: "no-store",
         signal: abortControllerRef.current.signal,
