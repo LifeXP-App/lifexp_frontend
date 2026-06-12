@@ -6,7 +6,7 @@ import { getPostHogClient } from "@/src/lib/posthog-server";
 
 async function authedFetch(url: string, options: RequestInit = {}) {
   const cookieStore = await cookies();
-  let access = cookieStore.get("access")?.value;
+  let access = cookieStore.get("sb-access-token")?.value;
 
   if (!access) {
     return NextResponse.json({ detail: "Not authenticated" }, { status: 401 });

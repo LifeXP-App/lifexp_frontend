@@ -21,7 +21,7 @@ export async function POST() {
   }
 
   const cookieStore = await cookies();
-  const refresh = cookieStore.get("refresh")?.value;
+  const refresh = cookieStore.get("sb-refresh-token")?.value;
 
   if (!refresh) {
     return NextResponse.json({ detail: "No refresh token" }, { status: 401 });

@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 
 export async function serverAuthFetch(url: string, init?: RequestInit) {
   const cookieStore = await cookies();
-  const access = cookieStore.get("access")?.value;
+  const access = cookieStore.get("sb-access-token")?.value;
 
   if (!access) {
     return new Response(JSON.stringify({ detail: "Unauthorized" }), {

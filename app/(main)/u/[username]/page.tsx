@@ -130,14 +130,14 @@ export default function ProfilePage({ params }: PageProps) {
         const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1`;
 
         const [profileResponse, currentResponse] = await Promise.all([
-          fetch(`${apiUrl}/users/${username}/`, {
+          fetch(`/api/users/profile/${username}`, {
             method: "GET",
             headers: {
               "Content-Type": "application/json",
             },
             cache: "no-store",
           }),
-          fetch(`${apiUrl}/users/${me.username}/`, {
+          fetch(`/api/users/profile/${me.username}`, {
             method: "GET",
             headers: {
               "Content-Type": "application/json",
@@ -148,9 +148,8 @@ export default function ProfilePage({ params }: PageProps) {
 
         if (profileResponse.ok) {
           const profileData = await profileResponse.json();
-
           setProfileUser(profileData as UserProfile);
-          setIsFollowing(profileData.is_following ?? false);
+          setIsFollowing(profileData.isFollowing ?? false);
           setFollowersCount(profileData.followers_count ?? 0);
           setFollowingCount(profileData.following_count ?? 0);
         } else {

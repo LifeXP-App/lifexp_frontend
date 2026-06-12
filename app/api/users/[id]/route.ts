@@ -14,7 +14,7 @@ async function safeJson(res: Response) {
 
 async function authedFetch(url: string, options: RequestInit = {}) {
   const cookieStore = await cookies();
-  let access = cookieStore.get("access")?.value;
+  let access = cookieStore.get("sb-access-token")?.value;
 
   if (!access) {
     return new Response("Not authenticated", { status: 401 });

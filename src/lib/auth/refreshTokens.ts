@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 
 export async function refreshTokens() {
   const cookieStore = await cookies();
-  const refresh = cookieStore.get("refresh")?.value;
+  const refresh = cookieStore.get("sb-refresh-token")?.value;
 
   if (!refresh) return null;
 
