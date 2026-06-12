@@ -148,8 +148,9 @@ export default function ProfilePage({ params }: PageProps) {
 
         if (profileResponse.ok) {
           const profileData = await profileResponse.json();
+
           setProfileUser(profileData as UserProfile);
-          setIsFollowing(profileData.isFollowing ?? false);
+          setIsFollowing(profileData.is_following ?? false);
           setFollowersCount(profileData.followers_count ?? 0);
           setFollowingCount(profileData.following_count ?? 0);
         } else {
