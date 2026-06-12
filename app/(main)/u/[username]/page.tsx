@@ -369,8 +369,12 @@ export default function ProfilePage({ params }: PageProps) {
     const previousFollowing = isFollowing;
     const previousFollowersCount = followersCount;
 
-    setIsFollowing(true);
-    setFollowersCount(followersCount + 1);
+    setIsFollowing(!isFollowing);
+    setFollowersCount(
+      isFollowing
+        ? followersCount - 1
+        : followersCount + 1
+    );
     setIsFollowingLoading(true);
 
     try {
