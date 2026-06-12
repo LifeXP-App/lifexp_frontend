@@ -1,5 +1,7 @@
+import { sharedRefresh } from "@/src/lib/auth/refreshLock";
+import { refreshTokens } from "@/src/lib/auth/refreshTokens";
+import { getAuthToken } from "@/src/lib/auth/getAuthToken";
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 
 async function safeJson(res: Response) {
   const text = await res.text();
@@ -10,13 +12,6 @@ async function safeJson(res: Response) {
   }
 }
 
-async function refreshAccess() {
-  return fetch("http://localhost:3000/api/auth/refresh", {
-    method: "POST",
-    cache: "no-store",
-  });
-}
-
 export async function GET(
   req: Request,
   context: { params: Promise<{ uid: string }> }
@@ -25,8 +20,7 @@ export async function GET(
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
     const { uid } = await context.params;
 
-    const cookieStore = await cookies();
-    let access = cookieStore.get("access")?.value;
+    let access = await getAuthToken(req);
 
     if (!access) {
       return NextResponse.json({ detail: "Not authenticated" }, { status: 401 });
@@ -39,10 +33,19 @@ export async function GET(
       cache: "no-store",
     });
 
+    let refreshed = false;
+    let refreshedTokens: { access: string; refresh?: string } | null = null;
+
     if (res.status === 401) {
-      await refreshAccess();
-      const updatedStore = await cookies();
-      access = updatedStore.get("access")?.value;
+      const tokens = await sharedRefresh(refreshTokens);
+
+      if (!tokens?.access) {
+        return NextResponse.json({ detail: "Session expired" }, { status: 401 });
+      }
+
+      access = tokens.access;
+        refreshedTokens = tokens as { access: string; refresh?: string };
+      refreshed = true;
 
       res = await fetch(target, {
         headers: { Authorization: `Bearer ${access}` },
@@ -51,11 +54,34 @@ export async function GET(
     }
 
     const data = await safeJson(res);
-    return NextResponse.json(data, { status: res.status });
+    const out = NextResponse.json(data, { status: res.status });
 
-  } catch (err: any) {
+    if (refreshed) {
+      out.cookies.set("access", access, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+      });
+
+      if (refreshedTokens?.refresh) {
+        out.cookies.set("refresh", refreshedTokens.refresh, {
+          httpOnly: true,
+          sameSite: "lax",
+          secure: process.env.NODE_ENV === "production",
+          path: "/",
+        });
+      }
+    }
+
+    return out;
+
+  } catch (err: unknown) {
     return NextResponse.json(
-      { detail: "Failed to load friends sessions", error: String(err) },
+      {
+        detail: "Failed to load friends sessions",
+        error: String(err instanceof Error ? err.message : err),
+      },
       { status: 500 }
     );
   }

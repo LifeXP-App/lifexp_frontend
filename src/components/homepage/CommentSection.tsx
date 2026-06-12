@@ -62,7 +62,7 @@ export function CommentSection({ postId, comments: initialComments, onClose }: C
           ? { Authorization: `Bearer ${session.access_token}` }
           : {};
 
-        const res = await fetch(`/api/posts/${postId}/comments`, {
+        const res = await fetch(`/api/goals/${postId}/comments`, {
           headers: authHeaders,
           cache: "no-store",
         });
@@ -110,7 +110,7 @@ export function CommentSection({ postId, comments: initialComments, onClose }: C
         ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
       };
 
-      const res = await fetch(`/api/posts/${postId}/comments`, {
+      const res = await fetch(`/api/goals/${postId}/comments`, {
         method: "POST",
         headers: authHeaders,
         body: JSON.stringify({ content: commentText }),

@@ -54,7 +54,7 @@ export async function GET(
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
-  const res = await authedFetch(access, `${baseUrl}/api/v1/posts/${id}/comments/`);
+  const res = await authedFetch(access, `${baseUrl}/api/v1/goals/${id}/comments/`);
 
   if (res instanceof NextResponse) return res;
   return NextResponse.json(await safeJson(res), { status: res.status });
@@ -74,7 +74,7 @@ export async function POST(
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
-  const res = await authedFetch(access, `${baseUrl}/api/v1/posts/${id}/comments/`, {
+  const res = await authedFetch(access, `${baseUrl}/api/v1/goals/${id}/comments/`, {
     method: "POST",
     body: JSON.stringify(body),
   });

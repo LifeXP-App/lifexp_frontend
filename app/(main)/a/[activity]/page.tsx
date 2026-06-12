@@ -9,6 +9,7 @@ import SessionInfoPopup from "@/src/components/goals/SessionInfoPopup";
 import {BiDumbbell} from "react-icons/bi";
 import CompleteGoalPopup from '@/src/components/goals/CompleteGoalPopup';
 import { useEffect } from 'react';
+import { supabase } from "@/src/lib/supabase";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 
@@ -649,7 +650,10 @@ useEffect(() => {
 
   const fetchFriendsSessions = async () => {
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const authHeader = session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
       const res = await fetch(`/api/a/${uid}/sessions/friends/`, {
+        headers: authHeader,
         credentials: "include",
       });
 
@@ -690,7 +694,9 @@ useEffect(() => {
 
   const fetchLeaderboard = async () => {
     try {
-      const res = await fetch(`/api/a/${uid}/leaderboard/`);
+      const { data: { session } } = await supabase.auth.getSession();
+      const authHeader = session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
+      const res = await fetch(`/api/a/${uid}/leaderboard/`, { headers: authHeader });
       const data = await res.json();
 
       console.log("leaderboard raw:", data);
@@ -727,7 +733,10 @@ useEffect(() => {
 
   const fetchSessions = async () => {
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const authHeader = session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
       const res = await fetch(`/api/a/${uid}/sessions/mine/`, {
+        headers: authHeader,
         credentials: "include",
       });
 
