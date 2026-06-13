@@ -9,6 +9,7 @@ import NewGoalModal from "@/src/components/goals/NewGoalModal";
 import NewSessionPopup from "@/src/components/goals/NewSessionPopup";
 import SessionInfoPopup from "@/src/components/goals/SessionInfoPopup";
 import { useAuth } from "@/src/context/AuthContext";
+import { supabase } from "@/src/lib/supabase";
 import { useGoal } from "@/src/lib/hooks/useGoals";
 import { GoalsService, Session } from "@/src/lib/services/goals";
 import { ActivityType } from "@/src/lib/types/activityMeta";
@@ -219,9 +220,13 @@ export default function GoalDetailPage() {
 
     try {
       // 1. Get XP rates from Django
+      const { data: { session: supaSessionRates } } = await supabase.auth.getSession();
       const ratesRes = await fetch("/api/sessions/calculate-rates", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(supaSessionRates?.access_token ? { Authorization: `Bearer ${supaSessionRates.access_token}` } : {}),
+        },
         body: JSON.stringify({ activity_id: activityId, goal_id: goalId }),
       });
 
@@ -242,7 +247,6 @@ export default function GoalDetailPage() {
         goalId,
         goalTitle: goal?.title,
         activityId,
-        activity_uid: activityId,
         rates,
         activityName,
         deviceContext: {
@@ -253,9 +257,13 @@ export default function GoalDetailPage() {
       });
 
       // 3. Register the session with Django and save the authoritative rates back to Convex
+      const { data: { session: supaSession } } = await supabase.auth.getSession();
       const djangoRes = await fetch("/api/sessions", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(supaSession?.access_token ? { Authorization: `Bearer ${supaSession.access_token}` } : {}),
+        },
         body: JSON.stringify({
           session_id: convexId,
           user_id: me.id,
