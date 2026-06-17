@@ -661,8 +661,8 @@ useEffect(() => {
       username: userData.username,
       fullname: userData.fullname,
       lifelevel: userData.lifeLevel,
-      streak_count: 0,
-      streak_active: false,
+      streak_count: userData.streak_count,
+      streak_active: userData.streak_active,
       masterytitle: userData.masteryTitle,
       primary_accent_color: "#4168e2",
       profile_picture:
