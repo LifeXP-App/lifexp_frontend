@@ -120,7 +120,7 @@ export const startSession = mutation({
   activityEmoji: v.optional(v.string()),
   activityType: v.optional(v.string()),
 
-  activity_uid: v.string(),
+  activity_uid: v.optional(v.string()),
 
   rates: xpRates,
 
