@@ -244,6 +244,7 @@ export default function GoalDetailPage() {
       const convexId = await startSessionMutation({
         userId: String(me.id),
         username: me.username,
+        userProfile: me.profile_picture ?? undefined,
         goalId,
         goalTitle: goal?.title,
         activityId,

@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "convex:dev": "convex dev --url https://mellow-jackal-323.convex.cloud"
+
   },
   "dependencies": {
     "@fortawesome/free-regular-svg-icons": "^7.1.0",
