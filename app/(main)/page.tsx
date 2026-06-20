@@ -18,7 +18,7 @@ type SuggestedUser = {
   fullname: string;
   profile_picture: string;
   lifelevel: number;
-  is_following?: boolean;
+  isFollowing?: boolean;
 };
 const postsData = [
   {
@@ -492,7 +492,7 @@ export default function Home() {
     life_level: number;
     primary_color: string;
     secondary_color: string;
-    is_following: boolean;
+    isFollowing: boolean;
   };
   like_count: number;
   comment_count: number;
@@ -661,8 +661,8 @@ useEffect(() => {
       username: userData.username,
       fullname: userData.fullname,
       lifelevel: userData.lifeLevel,
-      streak_count: 0,
-      streak_active: false,
+      streak_count: userData.streak_count,
+      streak_active: userData.streak_active,
       masterytitle: userData.masteryTitle,
       primary_accent_color: "#4168e2",
       profile_picture:
@@ -720,7 +720,7 @@ useEffect(() => {
   secondary_color: string;
   post_count: number;
   follower_count: number;
-  is_following: boolean;
+  isFollowing: boolean;
 };
 
 const [discoverUsers, setDiscoverUsers] = useState<SuggestedUser[]>([]);
@@ -765,7 +765,7 @@ useEffect(() => {
           u.profile_picture ||
           "https://res.cloudinary.com/dfohn9dcz/image/upload/Screenshot_2025-03-25_at_10.40.01_PM_vugdxk",
         lifelevel: u.lifelevel || u.life_level, // Handle both field names
-        is_following: u.is_following ?? false,
+        isFollowing: u.isFollowing ?? false,
       }));
 
       setDiscoverUsers(mapped);

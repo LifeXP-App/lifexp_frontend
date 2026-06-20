@@ -537,13 +537,15 @@ export default function SearchPage() {
                       </h3>
                       <div className="space-y-3">
                         {filteredResults.activities.map((activity) => (
-                          <div
+                          <Link
                             key={activity.id}
+                            href={`/a/${activity.uid}`}
                             className="flex items-center gap-4 p-3 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-lg transition-colors"
                           >
                             <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center text-2xl">
                               {activity.emoji}
                             </div>
+
                             <div className="flex-1">
                               <p className="font-semibold text-gray-900 dark:text-white">
                                 {activity.name}
@@ -552,7 +554,7 @@ export default function SearchPage() {
                                 {activity.activity_type}
                               </p>
                             </div>
-                          </div>
+                          </Link>
                         ))}
                       </div>
                     </div>

@@ -23,7 +23,7 @@ export async function GET() {
     }
 
     const cookieStore = await cookies();
-    let access = cookieStore.get("access")?.value;
+    let access = cookieStore.get("sb-access-token")?.value;
 
     if (!access) {
       return NextResponse.json(

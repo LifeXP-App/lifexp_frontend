@@ -13,7 +13,7 @@ export interface User {
   follower_count?: number;
   post_count?: number;
   streak_count?: number;
-  is_following?: boolean;
+  isFollowing?: boolean;
   is_current_user?: boolean;
   profile_picture?: string;
 }
