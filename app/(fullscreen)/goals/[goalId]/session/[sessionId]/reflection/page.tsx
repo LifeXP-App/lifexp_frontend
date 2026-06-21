@@ -31,6 +31,8 @@ interface ReflectionResponse {
   }
 }
 
+
+
 const DayCompletePage = () => {
 
   const params = useParams();
