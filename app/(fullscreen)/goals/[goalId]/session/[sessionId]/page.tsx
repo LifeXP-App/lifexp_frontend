@@ -3,6 +3,7 @@
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useAuth } from "@/src/context/AuthContext";
+import { authedFetch } from "@/src/lib/api/authedFetch";
 import { GoalsService } from "@/src/lib/services/goals";
 import {
   BoltIcon,
@@ -76,7 +77,7 @@ async function syncSessionToDjango(
   stats: SessionFinalStats,
   completedReason: "manual" | "abandoned",
 ) {
-  const res = await fetch(`/api/sessions/${sessionId}`, {
+  const res = await authedFetch(`/api/sessions/${sessionId}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -114,7 +115,7 @@ async function endSessionInDjango(
     xpBreakdown: XpRates;
   },
 ) {
-  const res = await fetch(`/api/sessions/${sessionId}/end`, {
+  const res = await authedFetch(`/api/sessions/${sessionId}/end`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -260,7 +261,7 @@ export default function SessionTimer({ params }: SessionTimerProps) {
         });
 
         // Register session start with Django (fire-and-forget — don't block the timer)
-        fetch("/api/sessions", {
+        authedFetch("/api/sessions", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

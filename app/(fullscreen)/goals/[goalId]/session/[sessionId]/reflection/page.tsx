@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import confetti from "canvas-confetti";
 import { Link } from 'lucide-react';
 import posthog from "posthog-js";
+import { authedFetch } from "@/src/lib/api/authedFetch";
 
 interface ReflectionResponse {
   id: string
@@ -81,7 +82,7 @@ const DayCompletePage = () => {
       return
     }
 
-    await fetch(`/api/sessions/${uid}/image`, {
+    await authedFetch(`/api/sessions/${uid}/image`, {
     method: "POST",
     body: formData,
   })
@@ -99,9 +100,11 @@ const DayCompletePage = () => {
     const fetchReflection = async () => {
       try {
 
-        const res = await fetch(`/api/sessions/${uid}/reflection`, {
-          credentials: "include"
-        })
+        const res = await authedFetch(`/api/sessions/${uid}/reflection`)
+
+        if (!res.ok) {
+          throw new Error(`Failed to load reflection (${res.status})`)
+        }
 
         const data = await res.json()
 
@@ -206,7 +209,7 @@ const DayCompletePage = () => {
     )
   }
 
-  if (!reflection) return null
+  if (!reflection || !reflection.activity) return null
 
   const activity = {
     name: reflection.activity.name,
