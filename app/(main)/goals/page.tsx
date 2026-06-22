@@ -307,8 +307,11 @@ import posthog from "posthog-js";
 
 interface Activity {
   id: string;
+  uid?: string;
   name: string;
   type: ActivityType;
+  total_xp?: number;
+  xp_distribution?: Record<string, number>;
 }
 
 function RightSidebarInfoSkeleton() {
@@ -610,8 +613,21 @@ export default function GoalsPage() {
   const handleSelectActivity = (activity: Activity) => {
     setIsActivityModalOpen(false);
     if (selectedGoalId) {
+      const dist = activity.xp_distribution ?? {};
+      const SECONDS_PER_HOUR = 3600;
+      const aspects = ['physique', 'energy', 'logic', 'creativity', 'social'] as const;
+      const totalXp = aspects.reduce((s, k) => s + (dist[k] ?? 0), 0);
+      const rates = totalXp > 0
+        ? aspects.reduce((acc, k) => {
+            acc[k] = Math.round((dist[k] ?? 0) / SECONDS_PER_HOUR * 10000) / 10000;
+            return acc;
+          }, {} as Record<string, number>)
+        : {};
+      const ratesParam = Object.keys(rates).length > 0
+        ? `&rates=${encodeURIComponent(JSON.stringify(rates))}`
+        : '';
       router.push(
-        `/goals/${selectedGoalId}/session/new?activity=${activity.id}`,
+        `/goals/${selectedGoalId}/session/new?activity=${activity.uid ?? activity.id}${ratesParam}`,
       );
     }
   };
@@ -845,7 +861,7 @@ export default function GoalsPage() {
                       }}
                       primaryCta={{
                         label: "Start",
-                        onClick: () => handleOpenActivityModal(goal.id),
+                        onClick: () => handleOpenActivityModal(goal.uid),
                       }}
                       secondaryCta={{
                         label: deletingGoalId === goal.uid ? "Deleting..." : "Discard",

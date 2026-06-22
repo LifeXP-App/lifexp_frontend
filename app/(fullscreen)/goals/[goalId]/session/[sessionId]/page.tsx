@@ -43,10 +43,6 @@ type SessionFinalStats = {
   xpBreakdown: XpRates;
 };
 
-type RatesResponse = {
-  rates: XpRates;
-};
-
 const FOCUS_SECONDS = 25 * 60;
 const BREAK_SECONDS = 5 * 60;
 const HEARTBEAT_SECONDS = 5;
@@ -59,25 +55,20 @@ const activityTypeColors: Record<string, string> = {
   social: "#31784e",
 };
 
-async function fetchXpRatesWithActivity(
-  activityId: number,
-  goalIntId: number,
-  retries = 1,
-): Promise<RatesResponse> {
-  const res = await fetch("/api/sessions/calculate-rates", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ activity_id: activityId, goal_id: goalIntId }),
-  });
-  if (!res.ok) {
-    if (retries > 0) return fetchXpRatesWithActivity(activityId, goalIntId, retries - 1);
-    const err = await res.json().catch(() => ({}));
-    throw new Error(
-      (err as { detail?: string }).detail ?? "Failed to calculate XP rates",
-    );
-  }
-  const data = await res.json();
-  return { rates: data.rates ?? data };
+const ASPECTS = ['physique', 'energy', 'logic', 'creativity', 'social'] as const;
+const SECONDS_PER_HOUR = 3600;
+
+function computeXpRates(xpDistribution: Record<string, number> | undefined | null): XpRates {
+  const dist = xpDistribution ?? {};
+  const totalXp = ASPECTS.reduce((sum, cat) => sum + (dist[cat] ?? 0), 0);
+  if (totalXp === 0) return { physique: 0, energy: 0, logic: 0, creativity: 0, social: 0 };
+  return {
+    physique: Math.round((dist.physique ?? 0) / SECONDS_PER_HOUR * 10000) / 10000,
+    energy: Math.round((dist.energy ?? 0) / SECONDS_PER_HOUR * 10000) / 10000,
+    logic: Math.round((dist.logic ?? 0) / SECONDS_PER_HOUR * 10000) / 10000,
+    creativity: Math.round((dist.creativity ?? 0) / SECONDS_PER_HOUR * 10000) / 10000,
+    social: Math.round((dist.social ?? 0) / SECONDS_PER_HOUR * 10000) / 10000,
+  };
 }
 
 async function syncSessionToDjango(
@@ -236,19 +227,22 @@ export default function SessionTimer({ params }: SessionTimerProps) {
     creatingRef.current = true;
 
     const activityIdStr = searchParams.get("activity") ?? "";
-    const activityId = parseInt(activityIdStr, 10);
 
-    // Validate then fetch — all setState calls live inside async callbacks
-    Promise.resolve(activityId)
-      .then((aid) => {
-        if (isNaN(aid)) {
-          throw new Error(
-            "Invalid activity — please go back and select a valid activity.",
-          );
-        }
-        return fetchXpRatesWithActivity(aid, goalIntId);
-      })
-      .then(async (response) => {
+    if (!activityIdStr.trim()) {
+      setRatesError("Invalid activity — please go back and select a valid activity.");
+      creatingRef.current = false;
+      return;
+    }
+
+    const ratesParam = searchParams.get("rates");
+    let parsedRates: Record<string, number> | null = null;
+    if (ratesParam) {
+      try { parsedRates = JSON.parse(decodeURIComponent(ratesParam)); } catch { /* ignore */ }
+    }
+    const rates = computeXpRates(parsedRates);
+
+    Promise.resolve()
+      .then(async () => {
         const startedAt = new Date().toISOString();
         const id = await startMutation({
           userId: String(me.id),
@@ -257,7 +251,7 @@ export default function SessionTimer({ params }: SessionTimerProps) {
           goalTitle: goalData.title,
           activityId: activityIdStr,
           activity_uid: activityIdStr,
-          rates: response.rates,
+          rates,
           deviceContext: {
             platform: "web",
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -273,7 +267,7 @@ export default function SessionTimer({ params }: SessionTimerProps) {
             session_id: id,
             user_id: me.id,
             goal: goalIntId,
-            activity: activityId,
+            activity: activityIdStr,
             status: "active",
             started_at: startedAt,
             device_platform: "web",
@@ -282,27 +276,10 @@ export default function SessionTimer({ params }: SessionTimerProps) {
           .then(async (res) => {
             if (!res.ok) return;
             const data = await res.json();
-            const rates = data.xp_increase_rate_per_second;
             const activityUid =
               data.activity_uid === undefined ? undefined : String(data.activity_uid);
-
             await updateInitialRatesMutation({
               sessionId: id,
-              rates:
-                rates &&
-                typeof rates.physique === "number" &&
-                typeof rates.energy === "number" &&
-                typeof rates.logic === "number" &&
-                typeof rates.creativity === "number" &&
-                typeof rates.social === "number"
-                  ? {
-                      physique: rates.physique,
-                      energy: rates.energy,
-                      logic: rates.logic,
-                      creativity: rates.creativity,
-                      social: rates.social,
-                    }
-                  : undefined,
               activityId: activityUid,
               activity_uid: activityUid,
               activityName: data.activityName,

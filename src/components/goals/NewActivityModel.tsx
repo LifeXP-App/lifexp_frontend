@@ -9,6 +9,8 @@ interface Activity {
   uid?: string;
   name: string;
   type: ActivityType;
+  total_xp?: number;
+  xp_distribution?: Record<string, number>;
 }
 
 interface ApiActivity {
@@ -56,6 +58,8 @@ const mapActivity = (activity: ApiActivity): Activity => ({
   uid: activity.uid ? String(activity.uid) : undefined,
   name: activity.name,
   type: activity.activity_type,
+  total_xp: activity.total_xp,
+  xp_distribution: activity.xp_distribution,
 });
 
 const getActivitiesFromPayload = (payload: unknown): ApiActivity[] => {
