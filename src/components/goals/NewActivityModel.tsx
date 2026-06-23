@@ -7,6 +7,7 @@ import ActivitySelectButton, {
 interface Activity {
   id: string;
   uid?: string;
+  pk?: number;
   name: string;
   type: ActivityType;
   total_xp?: number;
@@ -56,6 +57,7 @@ const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
 const mapActivity = (activity: ApiActivity): Activity => ({
   id: String(activity.uid ?? activity.id),
   uid: activity.uid ? String(activity.uid) : undefined,
+  pk: activity.id,
   name: activity.name,
   type: activity.activity_type,
   total_xp: activity.total_xp,

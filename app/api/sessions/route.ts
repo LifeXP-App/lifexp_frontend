@@ -45,7 +45,7 @@ export async function POST(req: Request) {
   const body = await req.json();
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
 
-  const res = await authedFetch(req, `${baseUrl}/api/v1/sessions/new/`, {
+  const res = await authedFetch(req, `${baseUrl}/api/v1/sessions/`, {
     method: "POST",
     body: JSON.stringify(body),
   });
