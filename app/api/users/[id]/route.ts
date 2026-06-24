@@ -14,34 +14,35 @@ async function safeJson(res: Response) {
 
 async function authedFetch(url: string, options: RequestInit = {}) {
   const cookieStore = await cookies();
-  let access = cookieStore.get("sb-access-token")?.value;
+  const incomingHeaders = new Headers(options.headers);
+  const access =
+    incomingHeaders.get("Authorization")?.replace("Bearer ", "").trim() ||
+    cookieStore.get("sb-access-token")?.value;
 
   if (!access) {
     return new Response("Not authenticated", { status: 401 });
   }
 
-  let res = await fetch(url, {
+  incomingHeaders.set("Authorization", `Bearer ${access}`);
+
+  const res = await fetch(url, {
     ...options,
-    headers: {
-      ...(options.headers || {}),
-      Authorization: `Bearer ${access}`,
-    },
+    headers: incomingHeaders,
     cache: "no-store",
   });
 
-  if (res.status !== 401) return res;
+  if (res.status !== 401 && res.status !== 403) return res;
 
   const tokens = await sharedRefresh(refreshTokens);
   if (!tokens?.access) {
     return new Response("SESSION_EXPIRED", { status: 401 });
   }
 
+  incomingHeaders.set("Authorization", `Bearer ${tokens.access}`);
+
   return fetch(url, {
     ...options,
-    headers: {
-      ...(options.headers || {}),
-      Authorization: `Bearer ${tokens.access}`,
-    },
+    headers: incomingHeaders,
     cache: "no-store",
   });
 }
@@ -53,7 +54,11 @@ export async function GET(
   const { id } = await context.params;
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
 
-  const res = await authedFetch(`${baseUrl}/api/v1/users/${id}/`);
+  const res = await authedFetch(`${baseUrl}/api/v1/users/${id}/`, {
+    headers: {
+      Authorization: req.headers.get("Authorization") ?? "",
+    },
+  });
   return NextResponse.json(await safeJson(res), { status: res.status });
 }
 
@@ -68,6 +73,9 @@ export async function PATCH(
 
   const res = await authedFetch(`${baseUrl}/api/v1/users/${id}/`, {
     method: "PATCH",
+    headers: {
+      Authorization: req.headers.get("Authorization") ?? "",
+    },
     body: formData, // DO NOT JSON.stringify
     // DO NOT set Content-Type
   });

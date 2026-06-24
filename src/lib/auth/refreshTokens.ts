@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 
 export async function refreshTokens() {
   const cookieStore = await cookies();
@@ -6,22 +7,30 @@ export async function refreshTokens() {
 
   if (!refresh) return null;
 
-  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-  if (!baseUrl) return null;
-
-  const res = await fetch(`${baseUrl}/api/v1/auth/refresh/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refresh }),
-    cache: "no-store",
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.auth.refreshSession({
+    refresh_token: refresh,
   });
 
-  const data = await res.json().catch(() => null);
+  if (error || !data.session) return null;
 
-  if (!res.ok) return null;
+  const { session } = data;
+  const cookieOptions = {
+    httpOnly: true,
+    sameSite: "lax" as const,
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 30,
+  };
+
+  cookieStore.set("sb-access-token", session.access_token, cookieOptions);
+
+  if (session.refresh_token) {
+    cookieStore.set("sb-refresh-token", session.refresh_token, cookieOptions);
+  }
 
   return {
-    access: data?.access as string,
-    refresh: data?.refresh as string | undefined, // ✅ rotation support
+    access: session.access_token,
+    refresh: session.refresh_token,
   };
 }

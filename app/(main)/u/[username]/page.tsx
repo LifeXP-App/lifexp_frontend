@@ -122,17 +122,24 @@ export default function ProfilePage({ params }: PageProps) {
 
   useEffect(() => {
     const fetchUsers = async () => {
-      if (!me?.username) return;
+      if (authLoading) return;
+      if (!me?.username) {
+        setIsLoading(false);
+        return;
+      }
 
       setIsLoading(true);
 
       try {
-        const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1`;
+        const authHeaders = session?.access_token
+          ? { Authorization: `Bearer ${session.access_token}` }
+          : undefined;
 
         const [profileResponse, currentResponse] = await Promise.all([
           fetch(`/api/users/profile/${username}`, {
             method: "GET",
             headers: {
+              ...authHeaders,
               "Content-Type": "application/json",
             },
             cache: "no-store",
@@ -140,6 +147,7 @@ export default function ProfilePage({ params }: PageProps) {
           fetch(`/api/users/profile/${me.username}`, {
             method: "GET",
             headers: {
+              ...authHeaders,
               "Content-Type": "application/json",
             },
             cache: "no-store",
@@ -172,7 +180,7 @@ export default function ProfilePage({ params }: PageProps) {
     };
 
     fetchUsers();
-  }, [username, me?.username]);
+  }, [authLoading, username, me?.username, session?.access_token]);
 
   useEffect(() => {
     const fetchUserPosts = async () => {
