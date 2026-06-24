@@ -9,6 +9,7 @@ import NewGoalModal from "@/src/components/goals/NewGoalModal";
 import NewSessionPopup from "@/src/components/goals/NewSessionPopup";
 import SessionInfoPopup from "@/src/components/goals/SessionInfoPopup";
 import { useAuth } from "@/src/context/AuthContext";
+import { supabase } from "@/src/lib/supabase";
 import { useGoal } from "@/src/lib/hooks/useGoals";
 import { GoalsService, Session } from "@/src/lib/services/goals";
 import { ActivityType } from "@/src/lib/types/activityMeta";
@@ -24,7 +25,8 @@ interface Activity {
   uid?: string;
   name: string;
   type: ActivityType;
-
+  total_xp?: number;
+  xp_distribution?: Record<string, number>;
 }
 
 const aspectColors: Record<string, string> = {
@@ -211,38 +213,40 @@ export default function GoalDetailPage() {
   const [isNewActivityModalOpen, setIsNewActivityModalOpen] = useState(false);
   const [isNewSessionPopupOpen, setIsNewSessionPopupOpen] = useState(false);
 
-  const createAndNavigate = useCallback(async (activityId: string, activityName: string) => {
+  const createAndNavigate = useCallback(async (
+    activityId: string,
+    activityName: string,
+    xpDistribution?: Record<string, number>,
+  ) => {
     if (!me) {
       alert("You must be logged in to start a session");
       return;
     }
 
     try {
-      // 1. Get XP rates from Django
-      const ratesRes = await fetch("/api/sessions/calculate-rates", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ activity_id: activityId, goal_id: goalId }),
-      });
-
-      let rates = { physique: 0, energy: 0, logic: 0, creativity: 0, social: 0 };
-
-      if (ratesRes.ok) {
-        const data = await ratesRes.json();
-        const ratesObj = data?.rates;
-        if (typeof ratesObj.physique === "number") {
-          rates = ratesObj;
-        }
-      }
+      // 1. Compute XP rates from activity distribution
+      const SECONDS_PER_HOUR = 3600;
+      const aspects = ['physique', 'energy', 'logic', 'creativity', 'social'] as const;
+      const dist = xpDistribution ?? {};
+      const totalXp = aspects.reduce((s, k) => s + (dist[k] ?? 0), 0);
+      const rates = totalXp > 0
+        ? {
+            physique: Math.round((dist.physique ?? 0) / SECONDS_PER_HOUR * 10000) / 10000,
+            energy: Math.round((dist.energy ?? 0) / SECONDS_PER_HOUR * 10000) / 10000,
+            logic: Math.round((dist.logic ?? 0) / SECONDS_PER_HOUR * 10000) / 10000,
+            creativity: Math.round((dist.creativity ?? 0) / SECONDS_PER_HOUR * 10000) / 10000,
+            social: Math.round((dist.social ?? 0) / SECONDS_PER_HOUR * 10000) / 10000,
+          }
+        : { physique: 0, energy: 0, logic: 0, creativity: 0, social: 0 };
 
       // 2. Create Convex session (source of truth for live timer state)
       const convexId = await startSessionMutation({
         userId: String(me.id),
         username: me.username,
+        userProfile: me.profile_picture ?? undefined,
         goalId,
         goalTitle: goal?.title,
         activityId,
-        activity_uid: activityId,
         rates,
         activityName,
         deviceContext: {
@@ -254,13 +258,17 @@ export default function GoalDetailPage() {
       console.log("Convex session created:", convexId);
       console.log("Sending Django session request...");
       // 3. Register the session with Django and save the authoritative rates back to Convex
+      const { data: { session: supaSession } } = await supabase.auth.getSession();
       const djangoRes = await fetch("/api/sessions", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(supaSession?.access_token ? { Authorization: `Bearer ${supaSession.access_token}` } : {}),
+        },
         body: JSON.stringify({
           session_id: convexId,
           user_id: me.id,
-          goal: goalId,
+          goal: parseInt(goal?.id ?? "0", 10),
           activity: activityId,
           status: "live",
           started_at: new Date().toISOString(),
@@ -322,7 +330,7 @@ export default function GoalDetailPage() {
         alert("Failed to start session. Please try again.");
       }
     }
-  }, [me, startSessionMutation, updateInitialRatesMutation, goalId, goal?.title, router]);
+  }, [me, startSessionMutation, updateInitialRatesMutation, goalId, goal?.id, goal?.title, router]);
 
   const handleStartSession = useCallback(async () => {
     if (!goal?.last_activity?.uid) return;
@@ -332,7 +340,7 @@ export default function GoalDetailPage() {
   const handleSelectActivity = useCallback(async (activity: Activity) => {
     setIsNewActivityModalOpen(false);
     setIsNewSessionPopupOpen(false);
-    await createAndNavigate(activity.uid ?? activity.id, activity.name);
+    await createAndNavigate(activity.uid ?? activity.id, activity.name, activity.xp_distribution);
   }, [createAndNavigate]);
 
   const handleGenerateNew = useCallback(async (query: string) => {
@@ -348,7 +356,7 @@ export default function GoalDetailPage() {
       if (!response.ok) throw new Error("Failed to create activity");
 
       const activity = await response.json();
-      await createAndNavigate(activity.uid ?? activity.id, query);
+      await createAndNavigate(activity.uid ?? activity.id, query, activity.xp_distribution);
     } catch (error) {
       console.error("Failed to generate activity:", error);
       alert("Failed to create activity. Please try again.");

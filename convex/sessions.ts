@@ -109,6 +109,7 @@ export const startSession = mutation({
   userId: v.string(),
 
   username: v.optional(v.string()),
+  userProfile: v.optional(v.string()),
 
   goalId: v.string(),
   goalTitle: v.optional(v.string()),
@@ -119,7 +120,7 @@ export const startSession = mutation({
   activityEmoji: v.optional(v.string()),
   activityType: v.optional(v.string()),
 
-  activity_uid: v.string(),
+  activity_uid: v.optional(v.string()),
 
   rates: xpRates,
 
@@ -162,6 +163,7 @@ const now = Date.now();
 const sessionId = await ctx.db.insert("sessions", {
   userId: args.userId,
   username: args.username,
+  userProfile: args.userProfile,
 
   goalId: args.goalId,
   goalTitle: args.goalTitle,

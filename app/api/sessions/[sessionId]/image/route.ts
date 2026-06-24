@@ -1,18 +1,16 @@
 import { sharedRefresh } from "@/src/lib/auth/refreshLock";
 import { refreshTokens } from "@/src/lib/auth/refreshTokens";
-import { cookies } from "next/headers";
+import { getAuthToken } from "@/src/lib/auth/getAuthToken";
 import { NextResponse } from "next/server";
 
-async function authedFetch(url: string, options: RequestInit = {}) {
-
-  const cookieStore = await cookies();
-  let access = cookieStore.get("sb-access-token")?.value;
+async function authedFetch(req: Request, url: string, options: RequestInit = {}) {
+  let access = await getAuthToken(req);
 
   if (!access) {
     return NextResponse.json({ detail: "Not authenticated" }, { status: 401 });
   }
 
-  let res = await fetch(url, {
+  const res = await fetch(url, {
     ...options,
     headers: {
       ...(options.headers || {}),
@@ -50,6 +48,7 @@ export async function POST(
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
 
   const res = await authedFetch(
+    req,
     `${baseUrl}/api/v1/sessions/${sessionId}/image/`,
     {
       method: "POST",

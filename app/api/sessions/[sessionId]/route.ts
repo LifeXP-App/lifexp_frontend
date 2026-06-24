@@ -1,12 +1,11 @@
 import { sharedRefresh } from "@/src/lib/auth/refreshLock";
 import { refreshTokens } from "@/src/lib/auth/refreshTokens";
-import { cookies } from "next/headers";
+import { getAuthToken } from "@/src/lib/auth/getAuthToken";
 import { NextResponse } from "next/server";
 import { getPostHogClient } from "@/src/lib/posthog-server";
 
-async function authedFetch(url: string, options: RequestInit = {}) {
-  const cookieStore = await cookies();
-  let access = cookieStore.get("sb-access-token")?.value;
+async function authedFetch(req: Request, url: string, options: RequestInit = {}) {
+  let access = await getAuthToken(req);
 
   if (!access) {
     return NextResponse.json({ detail: "Not authenticated" }, { status: 401 });
@@ -44,13 +43,13 @@ async function authedFetch(url: string, options: RequestInit = {}) {
 
 // Fetch a single session (requires GET /api/v1/sessions/{session_id}/ on Django)
 export async function GET(
-  _req: Request,
+  req: Request,
   context: { params: Promise<{ sessionId: string }> },
 ) {
   const { sessionId } = await context.params;
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
 
-  const res = await authedFetch(`${baseUrl}/api/v1/sessions/${sessionId}/`);
+  const res = await authedFetch(req, `${baseUrl}/api/v1/sessions/${sessionId}/`);
 
   if (res instanceof NextResponse) return res;
 
@@ -72,7 +71,7 @@ export async function PUT(
   const body = await req.json();
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
 
-  const res = await authedFetch(`${baseUrl}/api/v1/sessions/${sessionId}/`, {
+  const res = await authedFetch(req, `${baseUrl}/api/v1/sessions/${sessionId}/`, {
     method: "PUT",
     body: JSON.stringify(body),
   });

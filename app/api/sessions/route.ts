@@ -1,11 +1,10 @@
 import { sharedRefresh } from "@/src/lib/auth/refreshLock";
 import { refreshTokens } from "@/src/lib/auth/refreshTokens";
-import { cookies } from "next/headers";
+import { getAuthToken } from "@/src/lib/auth/getAuthToken";
 import { NextResponse } from "next/server";
 
-async function authedFetch(url: string, options: RequestInit = {}) {
-  const cookieStore = await cookies();
-  let access = cookieStore.get("sb-access-token")?.value;
+async function authedFetch(req: Request, url: string, options: RequestInit = {}) {
+  let access = await getAuthToken(req);
 
   if (!access) {
     return NextResponse.json({ detail: "Not authenticated" }, { status: 401 });
@@ -46,6 +45,7 @@ export async function POST(req: Request) {
   const body = await req.json();
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
 
+<<<<<<< HEAD
   const res = await authedFetch(
     `${baseUrl}/api/v1/sessions/new/`,
     {
@@ -54,6 +54,12 @@ export async function POST(req: Request) {
     }
   );
   console.log("Session POST response:", res);
+=======
+  const res = await authedFetch(req, `${baseUrl}/api/v1/sessions/`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+>>>>>>> 536ba260c015e863b9b84ae5f2ac4c56c3f7fa43
 
   if (res instanceof NextResponse) return res;
 

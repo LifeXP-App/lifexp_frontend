@@ -2,6 +2,7 @@ import { supabase } from "@/src/lib/supabase";
 
 export interface Goal {
   id: string;
+  uid: string;
   title: string;
   emoji: string;
   description: string | null;
@@ -190,6 +191,7 @@ function normalizeGoal(item: unknown): Goal | null {
 
   return {
     id: String(rawId),
+    uid: typeof goal.uid === "string" ? goal.uid : String(rawId),
 
     title,
 
