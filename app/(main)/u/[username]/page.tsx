@@ -37,6 +37,7 @@ type UserPost = {
   post_image_url: string;
   duration: string;
   duration_display: string;
+  status: string;
   xp_distribution: {
     logic: number;
     energy: number;
@@ -623,12 +624,24 @@ export default function ProfilePage({ params }: PageProps) {
           {/* Achievements skeleton */}
           <div className="max-w-6xl mx-auto px-2 p-2 pb-12 my-4 rounded-sm w-full animate-pulse">
             <div className="h-5 w-36 rounded bg-gray-200 dark:bg-gray-800 mb-8" />
-            <div className="flex flex-col gap-6">
-              {[1, 2, 3].map((i) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
                 <div
                   key={i}
-                  className="w-full h-28 rounded-2xl bg-gray-200 dark:bg-gray-800"
-                />
+                  className="rounded-2xl overflow-hidden"
+                >
+                  <div className="h-36 bg-gray-200 dark:bg-gray-800" />
+                  <div className="p-4 bg-white dark:bg-[#151618] border border-gray-200 dark:border-gray-800 border-t-0 rounded-b-2xl">
+                    <div className="h-4 w-3/4 rounded bg-gray-200 dark:bg-gray-800 mb-3" />
+                    <div className="h-3 w-full rounded bg-gray-200 dark:bg-gray-800 mb-2" />
+                    <div className="h-3 w-2/3 rounded bg-gray-200 dark:bg-gray-800 mb-4" />
+                    <div className="grid grid-cols-5 gap-1.5">
+                      {[1,2,3,4,5].map((j) => (
+                        <div key={j} className="h-8 rounded-lg bg-gray-200 dark:bg-gray-800" />
+                      ))}
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
@@ -1089,17 +1102,24 @@ export default function ProfilePage({ params }: PageProps) {
             <div className="my-4 flex flex-col sm:flex-row justify-between text-sm gap-4">
               {/* Streak count */}
               <div className="bg-white dark:bg-dark-2 border-2 rounded-xl border-gray-200 dark:border-gray-900 w-full flex flex-col rounded-md items-center justify-between p-4">
-                <p className="text-sm dark:text-gray-300">Streak Count</p>
-                <div className="flex gap-2 items-center">
-                  <FireIcon
-                    className="size-6 text-gray-400 dark:text-gray-500"
-                    fill={profileUser.streak_active ? "#FFA500" : "#BBBBBB"}
-                  />
-                  <p className={`text-lg font-bold ${profileUser.streak_active ? "text-orange-500" : "text-gray-400 dark:text-gray-600"}`}>
-                    {profileUser.streak_count || 0}
-                  </p>
-                </div>
-              </div>
+                          
+                          <p className="text-sm dark:text-gray-300">Streak Count</p>
+              
+                          <p className={`text-lg font-extrabold text-gray-400 dark:text-gray-500 flex gap-1 items-center ${
+                                profileUser.streak_active
+                                  ? "text-orange-500 "
+                                  : "text-gray-400 dark:text-gray-600"
+                              }`}>
+                            <FireIcon
+                              className={`w-6 h-6 inline-block ml-1 ${
+                                profileUser.streak_active
+                                  ? "text-orange-500"
+                                  : "text-gray-400 dark:text-gray-600 "
+                              }`}
+                            />
+                            {profileUser.streak_count}
+                          </p>
+                        </div>
 
               {/* life level */}
               <div className="bg-white dark:bg-dark-2 border-2 rounded-xl border-gray-200 dark:border-gray-900 w-full flex flex-col rounded-md items-center justify-between p-4">
@@ -1314,52 +1334,107 @@ export default function ProfilePage({ params }: PageProps) {
 
             {/* EXPERIENCES */}
             <div className="max-w-6xl mx-auto px-2 p-2 pb-12 my-4 rounded-sm w-full">
-              <div className="flex flex-col gap-8">
-                <h2 className="text-lg sm:text-xl font-semibold col-span-3 dark:text-white">
-                  Achievements
-                </h2>
+              <h2 className="text-lg sm:text-xl font-semibold dark:text-white mb-6">
+                Achievements
+              </h2>
 
-                {postsLoading ? (
-                  <div className="flex flex-col gap-6 animate-pulse">
-                    {[1, 2, 3].map((i) => (
-                      <div
-                        key={i}
-                        className="w-full h-28 rounded-2xl bg-gray-200 dark:bg-gray-800"
-                      />
-                    ))}
-                  </div>
-                ) : userPosts.length > 0 ? (
-                  userPosts.map((post) => (
-                    <div key={post.id} className="relative pb-4">
-                      <Achievement
-                        emoji={post.tags_list[0]?.charAt(0) || "🎯"}
-                        title={post.title}
-                        description={post.content}
-                        xp={post.total_xp}
-                        coverImage={post.post_image_url || null}
-                        timeText={getTimeAgo(post.created_at)}
-                        accent={{
-                          primary: accent.primary,
-                          secondary: accent.secondary,
-                        }}
-                        stats={{
-                          physique: post.xp_distribution.physique,
-                          energy: post.xp_distribution.energy,
-                          logic: post.xp_distribution.logic,
-                          creativity: post.xp_distribution.creativity,
-                          social: post.xp_distribution.social,
-                        }}
-                      />
+              {postsLoading ? (
+                <div className="flex flex-col gap-8 animate-pulse">
+                  {/* Ongoing skeleton */}
+                  <div>
+                    <div className="h-4 w-24 rounded bg-gray-200 dark:bg-gray-800 mb-4" />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="rounded-2xl border border-gray-200 dark:border-gray-800 p-4 bg-white dark:bg-[#151618]">
+                          <div className="h-4 w-3/4 rounded bg-gray-200 dark:bg-gray-800 mb-3" />
+                          <div className="h-3 w-full rounded bg-gray-200 dark:bg-gray-800 mb-2" />
+                          <div className="h-3 w-2/3 rounded bg-gray-200 dark:bg-gray-800 mb-4" />
+                          <div className="grid grid-cols-5 gap-1.5">
+                            {[1,2,3,4,5].map((j) => (
+                              <div key={j} className="h-8 rounded-lg bg-gray-200 dark:bg-gray-800" />
+                            ))}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))
-                ) : (
-                  <div className="text-center py-12">
-                    <p className="text-gray-500 dark:text-gray-400">
-                      No posts yet
-                    </p>
                   </div>
-                )}
-              </div>
+                  {/* Completed skeleton */}
+                  <div>
+                    <div className="h-4 w-28 rounded bg-gray-200 dark:bg-gray-800 mb-4" />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="rounded-2xl overflow-hidden">
+                          <div className="h-36 bg-gray-200 dark:bg-gray-800" />
+                          <div className="p-4 bg-white dark:bg-[#151618] border border-gray-200 dark:border-gray-800 border-t-0 rounded-b-2xl">
+                            <div className="h-4 w-3/4 rounded bg-gray-200 dark:bg-gray-800 mb-3" />
+                            <div className="h-3 w-full rounded bg-gray-200 dark:bg-gray-800 mb-2" />
+                            <div className="grid grid-cols-5 gap-1.5 mt-3">
+                              {[1,2,3,4,5].map((j) => (
+                                <div key={j} className="h-8 rounded-lg bg-gray-200 dark:bg-gray-800" />
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : userPosts.length > 0 ? (
+                (() => {
+                  const ongoingPosts = userPosts.filter((p) => p.status === "ongoing");
+                  const otherPosts = userPosts.filter((p) => p.status !== "ongoing");
+                  const sharedProps = (post: UserPost) => ({
+                    emoji: post.tags_list[0]?.charAt(0) || "🎯",
+                    title: post.title,
+                    description: post.content,
+                    xp: post.total_xp,
+                    coverImage: post.post_image_url || null,
+                    timeText: getTimeAgo(post.created_at),
+                    accent: { primary: accent.primary, secondary: accent.secondary },
+                    stats: {
+                      physique: post.xp_distribution.physique,
+                      energy: post.xp_distribution.energy,
+                      logic: post.xp_distribution.logic,
+                      creativity: post.xp_distribution.creativity,
+                      social: post.xp_distribution.social,
+                    },
+                  });
+                  return (
+                    <div className="flex flex-col gap-10">
+                      {ongoingPosts.length > 0 && (
+                        <div>
+                          <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">
+                            Ongoing
+                          </p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {ongoingPosts.map((post) => (
+                              <Achievement key={post.id} compact {...sharedProps(post)} />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {otherPosts.length > 0 && (
+                        <div>
+                          <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">
+                            Completed
+                          </p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {otherPosts.map((post) => (
+                              <Achievement key={post.id} {...sharedProps(post)} />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-gray-500 dark:text-gray-400">
+                    No posts yet
+                  </p>
+                </div>
+              )}
             </div>
           </>
         )}

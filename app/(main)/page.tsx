@@ -692,8 +692,8 @@ useEffect(() => {
       nextLevelXp: nextLevelXp,
       progressPercent: progressPercent,
       rank: 0,
-      streak: 0,
-      streak_active: false,
+      streak: userData.streak_count || 0,
+      streak_active: userData.streak_active || false,
     };
   }, [userData, player]);
 
