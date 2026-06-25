@@ -1089,17 +1089,24 @@ export default function ProfilePage({ params }: PageProps) {
             <div className="my-4 flex flex-col sm:flex-row justify-between text-sm gap-4">
               {/* Streak count */}
               <div className="bg-white dark:bg-dark-2 border-2 rounded-xl border-gray-200 dark:border-gray-900 w-full flex flex-col rounded-md items-center justify-between p-4">
-                <p className="text-sm dark:text-gray-300">Streak Count</p>
-                <div className="flex gap-2 items-center">
-                  <FireIcon
-                    className="size-6 text-gray-400 dark:text-gray-500"
-                    fill={profileUser.streak_active ? "#FFA500" : "#BBBBBB"}
-                  />
-                  <p className={`text-lg font-bold ${profileUser.streak_active ? "text-orange-500" : "text-gray-400 dark:text-gray-600"}`}>
-                    {profileUser.streak_count || 0}
-                  </p>
-                </div>
-              </div>
+                          
+                          <p className="text-sm dark:text-gray-300">Streak Count</p>
+              
+                          <p className={`text-lg font-extrabold text-gray-400 dark:text-gray-500 flex gap-1 items-center ${
+                                profileUser.streak_active
+                                  ? "text-orange-500 "
+                                  : "text-gray-400 dark:text-gray-600"
+                              }`}>
+                            <FireIcon
+                              className={`w-6 h-6 inline-block ml-1 ${
+                                profileUser.streak_active
+                                  ? "text-orange-500"
+                                  : "text-gray-400 dark:text-gray-600 "
+                              }`}
+                            />
+                            {profileUser.streak_count}
+                          </p>
+                        </div>
 
               {/* life level */}
               <div className="bg-white dark:bg-dark-2 border-2 rounded-xl border-gray-200 dark:border-gray-900 w-full flex flex-col rounded-md items-center justify-between p-4">

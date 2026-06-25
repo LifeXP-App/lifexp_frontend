@@ -1159,15 +1159,23 @@ function RightSidebar({ user }: { user: UserGoalsInfo }) {
             </p>
           </div>
 
-          <div className="bg-gray-100 dark:bg-dark-3 w-full flex flex-col rounded-md items-center justify-between p-4">
+          <div className={`bg-gray-100 dark:bg-dark-3 w-full flex flex-col rounded-md items-center justify-between p-4 ${
+                  user.streak_active
+                    ? "bg-orange-500/10 text-orange-500 "
+                    : ""
+                }`}>
             <p className="text-sm dark:text-gray-300">Streak Count</p>
 
-            <p className="text-lg font-extrabold text-gray-400 dark:text-gray-500 flex gap-1 items-center">
+            <p className={`text-lg font-extrabold text-gray-400 dark:text-gray-500 flex gap-1 items-center ${
+                  user.streak_active
+                    ? "text-orange-500 "
+                    : "text-gray-400 dark:text-gray-600"
+                }`}>
               <FireIcon
                 className={`w-6 h-6 inline-block ml-1 ${
                   user.streak_active
-                    ? "text-yellow-500 animate-pulse"
-                    : "text-gray-400 dark:text-gray-600"
+                    ? "text-orange-500"
+                    : "text-gray-400 dark:text-gray-600 "
                 }`}
               />
               {user.streak}
