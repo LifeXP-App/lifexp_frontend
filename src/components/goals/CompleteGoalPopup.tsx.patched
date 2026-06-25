@@ -6,6 +6,8 @@ interface CompleteGoalPopupProps {
   isOpen: boolean;
   onClose: () => void;
   onPost?: (payload: { title: string; description: string; finishBy?: string; image?: File | null }) => void;
+
+  imageUrl?: string;
   defaultFinishBy?: string;
 
   defaultTitle?: string;
@@ -20,6 +22,7 @@ export default function CompleteGoalPopup({
   isOpen,
   onClose,
   onPost,
+  imageUrl,
   defaultFinishBy = undefined,
   defaultTitle = "Drawing Mandalorian",
   defaultDescription = "Wanted to get back to drawing and make some really good art of one of my favorite characters, so here it is",
@@ -31,7 +34,7 @@ export default function CompleteGoalPopup({
   const [title, setTitle] = useState(defaultTitle);
   const [description, setDescription] = useState(defaultDescription);
   const [finishBy, setFinishBy] = useState<string | undefined>(undefined);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(imageUrl || null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -41,10 +44,10 @@ export default function CompleteGoalPopup({
     setTitle(defaultTitle);
     setDescription(defaultDescription);
     setFinishBy(defaultFinishBy || undefined);
-    setImagePreview(null);
+    setImagePreview(imageUrl || null);
     setImageFile(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
-  }, [isOpen, defaultTitle, defaultDescription, defaultFinishBy]);
+  }, [isOpen, defaultTitle, defaultDescription, defaultFinishBy, imageUrl]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   if (!isOpen) return null;
@@ -71,7 +74,7 @@ export default function CompleteGoalPopup({
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 flex items-center justify-center rounded-full cursor-pointer active:opacity-70 transition-all"
+            className="w-9 h-9 flex items-center justify-center rounded-full cursor-pointer active:opacity-70 transition-all cursor-pointer"
             aria-label="Close"
           >
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -125,6 +128,10 @@ export default function CompleteGoalPopup({
                   >
                     ✕
                   </button>
+
+                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/50 text-white text-xs px-3 py-1 rounded-full">
+                    Click to replace
+                  </div>
                 </>
               ) : (
                 <>
@@ -141,19 +148,13 @@ export default function CompleteGoalPopup({
               )}
             </div>
 
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                const url = URL.createObjectURL(file);
-                setImagePreview(url);
-                setImageFile(file);
-              }}
-            />
+            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const url = URL.createObjectURL(file);
+              setImagePreview(url);
+              setImageFile(file);
+            }} />
           </div>
 
           {/* Editable Title */}
@@ -191,46 +192,44 @@ export default function CompleteGoalPopup({
               <p className="text-xs font-semibold" style={{ color: "var(--muted)" }}>Finish by</p>
               <p className="text-xs text-gray-500">optional</p>
             </div>
-            <input
-              type="date"
-              value={finishBy || ""}
-              onChange={(e) => setFinishBy(e.target.value)}
-              className="w-full px-4 py-3 rounded-2xl bg-white dark:bg-dark-3 text-foreground dark:text-white placeholder-gray-400 outline-none border"
-              style={{ borderColor: "var(--border)" }}
-            />
+            <input type="date" value={finishBy || ""} onChange={(e) => setFinishBy(e.target.value)} className="w-full px-4 py-3 rounded-2xl bg-white dark:bg-dark-3 text-foreground dark:text-white placeholder-gray-400 outline-none border" style={{ borderColor: "var(--border)" }} />
           </div>
 
           {/* Stats */}
           <div
-            className="relative grid grid-cols-3 gap-3 p-2 rounded-2xl border bg-white dark:bg-dark-3"
-            style={{ borderColor: "var(--border)" }}
-          >
-            <div
-              className="absolute top-3 bottom-3 left-1/3 w-px"
-              style={{ backgroundColor: "var(--border)" }}
-            />
-            <div
-              className="absolute top-3 bottom-3 left-2/3 w-px"
-              style={{ backgroundColor: "var(--border)" }}
-            />
+                className="relative grid grid-cols-3 gap-3 p-2 rounded-2xl border bg-white dark:bg-dark-3"
+                style={{ borderColor: "var(--border)" }}
+                >
+                {/* vertical dividers */}
+                <div
+                    className="absolute top-3 bottom-3 left-1/3 w-px"
+                    style={{ backgroundColor: "var(--border)" }}
+                />
+                <div
+                    className="absolute top-3 bottom-3 left-2/3 w-px"
+                    style={{ backgroundColor: "var(--border)" }}
+                />
 
-            <StatBox label="Time spent" value={timeSpent} />
-            <StatBox label="XP gained" value={xpGained.toString()} />
-            <StatBox label="Sessions" value={sessionsCount.toString()} />
-          </div>
+                <StatBox label="Time spent" value={timeSpent} />
+                <StatBox label="XP gained" value={xpGained.toString()} />
+                <StatBox label="Sessions" value={sessionsCount.toString()} />
+                </div>
+
+
+          
+          
         </div>
-
         {/* Post Button */}
-        <div className="flex items-center bg-white justify-between px-5 pt-5 pb-4 border-t border-gray-200 dark:border-gray-800">
-          <button
-            type="button"
-            onClick={() => onPost?.({ title, description, finishBy, image: imageFile })}
-            className="w-full py-3 rounded-2xl font-semibold text-white transition-all active:opacity-80 cursor-pointer"
-            style={{ backgroundColor: "var(--rookie-primary)" }}
-          >
-            Post Achievement
-          </button>
-        </div>
+          <div className="flex items-center bg-white justify-between px-5 pt-5 pb-4 border-t border-gray-200 dark:border-gray-800">
+            <button
+              type="button"
+              onClick={() => onPost?.({ title, description, finishBy, image: imageFile })}
+              className="w-full py-3 rounded-2xl font-semibold text-white transition-all active:opacity-80 cursor-pointer"
+              style={{ backgroundColor: "var(--rookie-primary)" }}
+            >
+              Post Achievement
+            </button>
+          </div>
       </div>
     </div>
   );

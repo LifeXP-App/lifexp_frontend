@@ -385,16 +385,43 @@ export default function GoalDetailPage() {
   const handleOpenCompleteGoal = () => setIsCompleteGoalOpen(true);
   const handleCloseCompleteGoal = () => setIsCompleteGoalOpen(false);
 
-  const handlePostAchievement = ({
+  const handlePostAchievement = async ({
     title,
     description,
+    finishBy,
+    image,
   }: {
     title: string;
     description: string;
+    finishBy?: string;
+    image?: File | null;
   }) => {
-    console.log("POST ACHIEVEMENT:", { title, description });
-    // close after post
-    setIsCompleteGoalOpen(false);
+    try {
+      const formData = new FormData();
+      formData.append("title", title);
+      formData.append("description", description);
+      if (finishBy) formData.append("finish_by", finishBy);
+      if (image) formData.append("image", image);
+
+      const res = await fetch(`/api/goals/${goalId}/complete`, {
+        method: "POST",
+        body: formData,
+        credentials: "same-origin",
+      });
+
+      if (!res.ok) {
+        const body = await res.text();
+        console.error("Complete goal failed:", res.status, body);
+        alert(`Failed to complete goal (${res.status}): ${body}`);
+        return;
+      }
+
+      setIsCompleteGoalOpen(false);
+      router.push("/feed");
+    } catch (err) {
+      console.error("Failed to complete goal", err);
+      alert("Failed to complete goal. Please try again.");
+    }
   };
 
   const handleDeleteGoal = async () => {
