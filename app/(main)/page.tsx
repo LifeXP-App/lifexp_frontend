@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Post } from "@/src/components/homepage/Post";
+import { Post, type PostType } from "@/src/components/homepage/Post";
+import { SessionPost, type ApiSessionPost } from "@/src/components/homepage/SessionPost";
 import { UserStatus } from "@/src/components/homepage/UserStatus";
 import { RightSidebarInfo } from "@/src/components/homepage/RightSidebarInfo";
 import { RightSidebarNotifications } from "@/src/components/homepage/RightSidebarNotifications";
@@ -473,57 +474,88 @@ export default function Home() {
   }, [session]);
 
   // Posts (your existing behavior)
-  type ApiDiscoverPost = {
-  id: number;
-  uid: string;
-  title: string;
-  content: string;
-  post_image: string | null;
-  created_at: string;
-  duration: string | null;
-  tags: any;
-  xp_distribution: any;
-  user_liked: boolean;
-  user: {
-    username: string;
-    profile_picture: string;
-    fullname: string;
-    mastery_title: string;
-    life_level: number;
-    primary_color: string;
-    secondary_color: string;
-    isFollowing: boolean;
-  };
-  like_count: number;
-  comment_count: number;
-  session: {
-    number: number;
-    total_sessions: number;
-    session_post_image_url: string | null;
-    activity: {
-      name: string;
-      type: string;
-      emoji: string;
-    };
-    duration: string;
-    xp_gained: number;
-    dateTime: string;
-  } | null;
-  comments: {
+  type ApiGoalPost = {
+    type: "goal";
     id: number;
+    uid: string;
+    title: string;
     content: string;
+    post_image: string | null;
     created_at: string;
-    commented_by: {
+    duration: string | null;
+    tags: any;
+    xp_distribution: any;
+    user_liked: boolean;
+    user: {
       username: string;
-      fullname: string;
       profile_picture: string;
+      fullname: string;
       mastery_title: string;
       life_level: number;
+      primary_color: string;
+      secondary_color: string;
+      isFollowing: boolean;
     };
-  }[];
-};
+    like_count: number;
+    comment_count: number;
+    session: {
+      number: number;
+      total_sessions: number;
+      session_post_image_url: string | null;
+      activity: { name: string; type: string; emoji: string };
+      duration: string;
+      xp_gained: number;
+      dateTime: string;
+    } | null;
+    comments: {
+      id: number;
+      content: string;
+      created_at: string;
+      commented_by: {
+        username: string;
+        fullname: string;
+        profile_picture: string;
+        mastery_title: string;
+        life_level: number;
+      };
+    }[];
+  };
 
-const [posts, setPosts] = useState<typeof postsData>([]);
+  type ApiFeedItem = ApiGoalPost | ApiSessionPost;
+
+  function mapGoalToPostType(p: ApiGoalPost): PostType {
+    return {
+      id: p.id,
+      uid: p.uid,
+      username: p.user.username,
+      fullname: p.user.fullname,
+      profile_picture: p.user.profile_picture,
+      created_at: getTimeAgo(p.created_at),
+      started_at: p.created_at,
+      title: p.title,
+      content: p.content,
+      post_image: p.post_image || "",
+      duration: p.duration || "",
+      likes: p.like_count || 0,
+      masterytitle: (p.user.mastery_title || "").trim(),
+      primary: p.user.primary_color || "#4168e2",
+      own_post: false,
+      user_liked: p.user_liked,
+      xp_data: p.xp_distribution || { physique: 0, energy: 0, social: 0, creativity: 0, logic: 0 },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      session: p.session as any,
+      comments: (p.comments || []).map((c) => ({
+        id: c.id,
+        username: c.commented_by.username,
+        fullname: c.commented_by.fullname,
+        profile_picture: c.commented_by.profile_picture,
+        created_at: getTimeAgo(c.created_at),
+        comment: c.content,
+      })),
+    };
+  }
+
+const [posts, setPosts] = useState<ApiFeedItem[]>([]);
 const [postsPage, setPostsPage] = useState(1);
 const [postsHasMore, setPostsHasMore] = useState(true);
 const [postsLoading, setPostsLoading] = useState(false);
@@ -555,51 +587,10 @@ const loadPosts = async (pageToLoad: number) => {
 
     const data = await res.json();
 
-    const list: ApiDiscoverPost[] = Array.isArray(data?.posts) ? data.posts : [];
+    const list: ApiFeedItem[] = Array.isArray(data?.posts) ? data.posts : [];
     const hasMore = !!data?.has_more;
 
-    // ✅ map backend -> your Post component props shape
-    const mapped = list.map((p) => ({
-  id: p.id,
-  uid: p.uid,
-  username: p.user.username,
-  fullname: p.user.fullname,
-  profile_picture: p.user.profile_picture,
-  created_at: getTimeAgo(p.created_at),
-  started_at: p.created_at,
-  title: p.title,
-  content: p.content,
-  post_image: p.post_image || "",
-  duration: p.duration || "",
-  likes: p.like_count || 0,
-  masterytitle: (p.user.mastery_title || "").trim(),
-  primary: p.user.primary_color || "#4168e2",
-  own_post: false,
-  user_liked: p.user_liked,
-
-  xp_data: p.xp_distribution || {
-    physique: 0,
-    energy: 0,
-    social: 0,
-    creativity: 0,
-    logic: 0,
-  },
-
-  session: p?.session,
-
-  // ✅ REAL COMMENTS FROM BACKEND
-  comments: (p.comments || []).map((c) => ({
-    id: c.id,
-    username: c.commented_by.username,
-    fullname: c.commented_by.fullname,
-    profile_picture: c.commented_by.profile_picture,
-    created_at: getTimeAgo(c.created_at),
-    comment: c.content,
-  })),
-}));
-
-
-    setPosts((prev) => (pageToLoad === 1 ? mapped : [...prev, ...mapped]));
+    setPosts((prev) => (pageToLoad === 1 ? list : [...prev, ...list]));
     setPostsHasMore(hasMore);
     setPostsPage(pageToLoad);
   } catch (err) {
@@ -808,7 +799,13 @@ useEffect(() => {
                 <PostSkeleton />
               </>
             ) : (
-              posts.map((post) => <Post key={post.id} post={post} />)
+              posts.map((item) =>
+                item.type === "session" ? (
+                  <SessionPost key={item.id} session={item} />
+                ) : (
+                  <Post key={item.uid} post={mapGoalToPostType(item)} />
+                )
+              )
             )}
 
             {/* infinite scroll trigger */}

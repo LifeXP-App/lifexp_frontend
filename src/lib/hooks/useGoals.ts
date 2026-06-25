@@ -2,23 +2,18 @@ import { useCallback, useEffect, useState, useMemo } from "react";
 import { Goal, GoalsService, Session } from "../services/goals";
 import { useConvexSessionsByGoal } from "./useConvexSessions";
 
-/**
- * Hybrid hook that fetches:
- * - Goal data from Django (metadata, status, etc.)
- * - Session data from Convex (real-time, live + completed)
- *
- * This provides real-time session updates while keeping goal data in Django
- */
 export function useGoal(goalId: string) {
   const [goal, setGoal] = useState<Goal | null>(null);
+  const [djangoSessions, setDjangoSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch sessions from Convex in real-time
+  // Real-time sessions from Convex (live + recently completed)
   const { sessions: convexSessions, loading: sessionsLoading } = useConvexSessionsByGoal(goalId);
 
-  // Transform Convex sessions to match Django Session interface
-  const sessions = useMemo<Session[]>(() => {
+  // Transform Convex sessions to match the Session interface
+  const convexMapped = useMemo<Session[]>(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return convexSessions.map((convexSession: any) => ({
       id: convexSession._id,
       completion_picture: convexSession.completionPicture ?? null,
@@ -44,20 +39,29 @@ export function useGoal(goalId: string) {
     }));
   }, [convexSessions]);
 
+  // Merge: Convex wins for sessions in both (has live state); Django fills in historical ones
+  const sessions = useMemo<Session[]>(() => {
+    const convexIds = new Set(convexMapped.map((s) => s.id));
+    const historicalOnly = djangoSessions.filter((s) => !convexIds.has(s.id));
+    return [...convexMapped, ...historicalOnly].sort(
+      (a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime()
+    );
+  }, [convexMapped, djangoSessions]);
+
   const fetchGoalData = useCallback(async () => {
     if (!goalId) return;
 
     setLoading(true);
     setError(null);
-    if (process.env.NODE_ENV !== "production") {
-      console.log("[useGoal] fetchGoalData:start", { goalId });
-    }
 
     try {
-      const goalData = await GoalsService.getGoal(goalId);
+      const [goalData, sessionData] = await Promise.all([
+        GoalsService.getGoal(goalId),
+        GoalsService.getGoalSessions(goalId).catch(() => null),
+      ]);
       setGoal(goalData);
-      if (process.env.NODE_ENV !== "production") {
-        console.log("[useGoal] goalData", goalData);
+      if (sessionData?.results) {
+        setDjangoSessions(sessionData.results);
       }
     } catch (err) {
       setError(
@@ -65,9 +69,6 @@ export function useGoal(goalId: string) {
       );
       console.error(err);
     } finally {
-      if (process.env.NODE_ENV !== "production") {
-        console.log("[useGoal] fetchGoalData:end", { goalId });
-      }
       setLoading(false);
     }
   }, [goalId]);
@@ -76,7 +77,6 @@ export function useGoal(goalId: string) {
     fetchGoalData();
   }, [fetchGoalData]);
 
-  // Combined loading state: goal must be loaded, sessions can stream in
   const isLoading = loading || (sessionsLoading && sessions.length === 0);
 
   return {
@@ -84,6 +84,6 @@ export function useGoal(goalId: string) {
     sessions,
     loading: isLoading,
     error,
-    refetch: fetchGoalData
+    refetch: fetchGoalData,
   };
 }

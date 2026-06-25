@@ -15,12 +15,12 @@ type Comment = {
 };
 
 type CommentSectionProps = {
-  postId: number;
-  comments: Comment[];
+  commentsEndpoint: string;
+  initialComments: Comment[];
   onClose: () => void;
 };
 
-export function CommentSection({ postId, comments: initialComments, onClose }: CommentSectionProps) {
+export function CommentSection({ commentsEndpoint, initialComments, onClose }: CommentSectionProps) {
   const [comments, setComments] = useState<Comment[]>(initialComments);
   const [commentText, setCommentText] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -62,7 +62,7 @@ export function CommentSection({ postId, comments: initialComments, onClose }: C
           ? { Authorization: `Bearer ${session.access_token}` }
           : {};
 
-        const res = await fetch(`/api/goals/${postId}/comments`, {
+        const res = await fetch(commentsEndpoint, {
           headers: authHeaders,
           cache: "no-store",
         });
@@ -93,7 +93,7 @@ export function CommentSection({ postId, comments: initialComments, onClose }: C
     };
 
     loadComments();
-  }, [postId]);
+  }, [commentsEndpoint]);
 
   /* ---------------- POST COMMENT ---------------- */
 
@@ -110,7 +110,7 @@ export function CommentSection({ postId, comments: initialComments, onClose }: C
         ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
       };
 
-      const res = await fetch(`/api/goals/${postId}/comments`, {
+      const res = await fetch(commentsEndpoint, {
         method: "POST",
         headers: authHeaders,
         body: JSON.stringify({ content: commentText }),

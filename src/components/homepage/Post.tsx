@@ -289,8 +289,8 @@ export function Post({ post }: { post: PostType }) {
       {/* COMMENT SECTION MODAL - ADD THIS */}
       {showComments && (
         <CommentSection
-          postId={post.id}
-          comments={post.comments || []}
+          commentsEndpoint={`/api/goals/${post.id}/comments`}
+          initialComments={post.comments || []}
           onClose={() => setShowComments(false)}
         />
       )}
