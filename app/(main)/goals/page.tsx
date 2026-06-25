@@ -308,6 +308,7 @@ import posthog from "posthog-js";
 interface Activity {
   id: string;
   uid?: string;
+  pk?: number;
   name: string;
   type: ActivityType;
   total_xp?: number;
@@ -627,7 +628,7 @@ export default function GoalsPage() {
         ? `&rates=${encodeURIComponent(JSON.stringify(rates))}`
         : '';
       router.push(
-        `/goals/${selectedGoalId}/session/new?activity=${activity.uid ?? activity.id}${ratesParam}`,
+        `/goals/${selectedGoalId}/session/new?activity=${activity.pk ?? activity.uid ?? activity.id}${ratesParam}`,
       );
     }
   };

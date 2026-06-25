@@ -71,11 +71,14 @@ function EditProfileSkeleton() {
 export default function EditProfilePage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const router = useRouter();
-  const { me, loading: authLoading } = useAuth();
+  const { me, session, loading: authLoading } = useAuth();
+  const sessionRef = useRef(session);
 
   /* ---------------- STATE ---------------- */
 
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   const [initialForm, setInitialForm] = useState<{
     username: string;
@@ -93,6 +96,7 @@ export default function EditProfilePage() {
 
   const [initialPreview, setInitialPreview] = useState("");
   const [profilePreview, setProfilePreview] = useState("");
+  const userId = me?.id;
 
   // popup
   const [showDiscardPopup, setShowDiscardPopup] = useState(false);
@@ -100,12 +104,19 @@ export default function EditProfilePage() {
   /* ---------------- LOAD PROFILE ---------------- */
 
   useEffect(() => {
+    sessionRef.current = session;
+  }, [session]);
+
+  useEffect(() => {
     if (authLoading) return;
-    if (!me) return;
+    if (!userId) return;
 
     const loadProfile = async () => {
       try {
-        const res = await fetch(`/api/users/${me.id}`, {
+        const res = await fetch(`/api/users/${userId}`, {
+          headers: sessionRef.current?.access_token
+            ? { Authorization: `Bearer ${sessionRef.current.access_token}` }
+            : undefined,
           cache: "no-store",
         });
 
@@ -132,7 +143,7 @@ export default function EditProfilePage() {
     };
 
     loadProfile();
-  }, [authLoading, me]);
+  }, [authLoading, userId]);
 
 
   const [profileFile, setProfileFile] = useState<File | null>(null);
@@ -200,7 +211,10 @@ export default function EditProfilePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!me) return;
+    if (!me || saving) return;
+
+    setSaving(true);
+    setSaveError("");
 
     const formData = new FormData();
 
@@ -217,17 +231,29 @@ export default function EditProfilePage() {
       formData.append("profile_picture", "");
     }
 
-    const res = await fetch(`/api/users/${me.id}`, {
-      method: "PATCH",
-      body: formData,
-    });
+    try {
+      const res = await fetch(`/api/users/${me.id}`, {
+        method: "PATCH",
+        headers: session?.access_token
+          ? { Authorization: `Bearer ${session.access_token}` }
+          : undefined,
+        body: formData,
+      });
 
-    if (!res.ok) {
-      console.log(await res.text());
-      return;
+      if (!res.ok) {
+        const text = await res.text();
+        console.log(text);
+        setSaveError("Could not save your profile. Please try again.");
+        return;
+      }
+
+      router.push(`/u/${me.username}`);
+    } catch (err) {
+      console.error("Profile save failed:", err);
+      setSaveError("Could not save your profile. Please try again.");
+    } finally {
+      setSaving(false);
     }
-
-    router.push(`/u/${me.username}`);
   };
 
   /* ---------------- UNLOAD WARNING ---------------- */
@@ -368,10 +394,14 @@ export default function EditProfilePage() {
 
             {/* Buttons */}
             <div className="flex items-center justify-end gap-3">
+              {saveError && (
+                <p className="mr-auto text-sm text-red-600">{saveError}</p>
+              )}
+
               <button
                 type="button"
                 onClick={handleDiscardClick}
-                disabled={!isDirty}
+                disabled={!isDirty || saving}
                 className="mt-4 cursor-pointer rounded-lg bg-red-700 px-8 py-2 font-medium text-white active:opacity-80 disabled:opacity-50 disabled:hidden disabled:cursor-not-allowed"
               >
                 Discard
@@ -379,11 +409,11 @@ export default function EditProfilePage() {
 
               <button
                 type="submit"
-                disabled={!isDirty}
+                disabled={!isDirty || saving}
                 style={{ backgroundColor: "#4168e2" }}
                 className="mt-4 rounded-lg font-medium active:opacity-80 cursor-pointer py-2 px-12 text-white disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Save
+                {saving ? "Saving..." : "Save"}
               </button>
             </div>
           </form>

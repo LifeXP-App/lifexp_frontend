@@ -3,6 +3,7 @@
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useAuth } from "@/src/context/AuthContext";
+import { authedFetch } from "@/src/lib/api/authedFetch";
 import { GoalsService } from "@/src/lib/services/goals";
 import {
   BoltIcon,
@@ -55,19 +56,17 @@ const activityTypeColors: Record<string, string> = {
   social: "#31784e",
 };
 
-const ASPECTS = ['physique', 'energy', 'logic', 'creativity', 'social'] as const;
-const SECONDS_PER_HOUR = 3600;
 
-function computeXpRates(xpDistribution: Record<string, number> | undefined | null): XpRates {
-  const dist = xpDistribution ?? {};
-  const totalXp = ASPECTS.reduce((sum, cat) => sum + (dist[cat] ?? 0), 0);
-  if (totalXp === 0) return { physique: 0, energy: 0, logic: 0, creativity: 0, social: 0 };
+// The rates passed via the URL `rates` param (from the activity picker) and the
+// `xp_increase_rate_per_second` returned by Django are BOTH already per-second.
+// Just normalize the shape — do not divide again.
+function normalizeRates(r: Record<string, unknown> | null | undefined): XpRates {
   return {
-    physique: Math.round((dist.physique ?? 0) / SECONDS_PER_HOUR * 10000) / 10000,
-    energy: Math.round((dist.energy ?? 0) / SECONDS_PER_HOUR * 10000) / 10000,
-    logic: Math.round((dist.logic ?? 0) / SECONDS_PER_HOUR * 10000) / 10000,
-    creativity: Math.round((dist.creativity ?? 0) / SECONDS_PER_HOUR * 10000) / 10000,
-    social: Math.round((dist.social ?? 0) / SECONDS_PER_HOUR * 10000) / 10000,
+    physique: typeof r?.physique === "number" ? r.physique : 0,
+    energy: typeof r?.energy === "number" ? r.energy : 0,
+    logic: typeof r?.logic === "number" ? r.logic : 0,
+    creativity: typeof r?.creativity === "number" ? r.creativity : 0,
+    social: typeof r?.social === "number" ? r.social : 0,
   };
 }
 
@@ -76,7 +75,7 @@ async function syncSessionToDjango(
   stats: SessionFinalStats,
   completedReason: "manual" | "abandoned",
 ) {
-  const res = await fetch(`/api/sessions/${sessionId}`, {
+  const res = await authedFetch(`/api/sessions/${sessionId}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -84,12 +83,14 @@ async function syncSessionToDjango(
       ended_at: new Date(stats.endedAt).toISOString(),
       total_duration_seconds: Math.floor(stats.totalDurationSeconds),
       focused_duration_seconds: Math.floor(stats.focusedDurationSeconds),
-      xp_total: stats.xpTotal,
-      xp_physique: stats.xpBreakdown.physique,
-      xp_energy: stats.xpBreakdown.energy,
-      xp_logic: stats.xpBreakdown.logic,
-      xp_creativity: stats.xpBreakdown.creativity,
-      xp_social: stats.xpBreakdown.social,
+      // Django stores xp_* as integers; the Convex breakdown is fractional
+      // (rate × seconds), so round before sending or the PUT 400s.
+      xp_total: Math.round(stats.xpTotal),
+      xp_physique: Math.round(stats.xpBreakdown.physique),
+      xp_energy: Math.round(stats.xpBreakdown.energy),
+      xp_logic: Math.round(stats.xpBreakdown.logic),
+      xp_creativity: Math.round(stats.xpBreakdown.creativity),
+      xp_social: Math.round(stats.xpBreakdown.social),
       completed_reason: completedReason,
       device_platform: "web",
     }),
@@ -98,32 +99,6 @@ async function syncSessionToDjango(
     const err = await res.json().catch(() => ({}));
     throw new Error(
       (err as { detail?: string }).detail ?? "Failed to sync session to Django",
-    );
-  }
-}
-
-async function endSessionInDjango(
-  sessionId: string,
-  body: {
-    startedAt: number;
-    lastHeartbeatAt: number;
-    totalDurationSeconds: number;
-    focusedDurationSeconds: number;
-    nudgeCount: number;
-    xpTotal: number;
-    xpBreakdown: XpRates;
-  },
-) {
-  const res = await fetch(`/api/sessions/${sessionId}/end`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(
-      (err as { detail?: string }).detail ?? "Failed to end session in Django",
     );
   }
 }
@@ -239,7 +214,7 @@ export default function SessionTimer({ params }: SessionTimerProps) {
     if (ratesParam) {
       try { parsedRates = JSON.parse(decodeURIComponent(ratesParam)); } catch { /* ignore */ }
     }
-    const rates = computeXpRates(parsedRates);
+    const rates = normalizeRates(parsedRates);
 
     Promise.resolve()
       .then(async () => {
@@ -259,25 +234,33 @@ export default function SessionTimer({ params }: SessionTimerProps) {
           },
         });
 
-        // Register session start with Django (fire-and-forget — don't block the timer)
-        fetch("/api/sessions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            session_id: id,
-            user_id: me.id,
-            goal: goalIntId,
-            activity: activityIdStr,
-            status: "active",
-            started_at: startedAt,
-            device_platform: "web",
-          }),
-        })
-          .then(async (res) => {
-            if (!res.ok) return;
+        // Register the session with Django BEFORE navigating. This must be awaited:
+        // router.replace below changes the route and can abort an in-flight
+        // fire-and-forget request, leaving Django with no session record — which
+        // then makes completion (PUT) and reflection (GET) 404.
+        try {
+          const res = await authedFetch("/api/sessions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              session_id: id,
+              user_id: me.id,
+              goal: goalIntId,
+              activity: activityIdStr,
+              status: "active",
+              started_at: startedAt,
+              device_platform: "web",
+            }),
+          });
+          if (res.ok) {
             const data = await res.json();
             const activityUid =
               data.activity_uid === undefined ? undefined : String(data.activity_uid);
+            // Django returns the authoritative per-second rates; apply them to Convex
+            // so XP actually accrues (the URL rates are only an optimistic fallback).
+            const r = data.xp_increase_rate_per_second;
+            const djangoRates =
+              r && typeof r === "object" ? normalizeRates(r) : undefined;
             await updateInitialRatesMutation({
               sessionId: id,
               activityId: activityUid,
@@ -285,11 +268,15 @@ export default function SessionTimer({ params }: SessionTimerProps) {
               activityName: data.activityName,
               activityEmoji: data.activityEmoji,
               activityType: data.activityType,
+              rates: djangoRates,
             });
-          })
-          .catch((err) =>
-            console.error("Failed to register session start with Django:", err),
-          );
+          } else {
+            const err = await res.json().catch(() => ({}));
+            console.error("Django rejected session start:", res.status, err);
+          }
+        } catch (err) {
+          console.error("Failed to register session start with Django:", err);
+        }
 
         posthog.capture("session_started", {
           session_id: id,
@@ -532,16 +519,7 @@ useEffect(() => {
 
       if (!sessionSynced) {
         try {
-          // await syncSessionToDjango(sessionId, finalStats, "manual");
-          await endSessionInDjango(sessionId, {
-            startedAt: session?.startedAt ?? finalStats.endedAt,
-            lastHeartbeatAt: session?.lastHeartbeatAt ?? finalStats.endedAt,
-            totalDurationSeconds: finalStats.totalDurationSeconds,
-            focusedDurationSeconds: finalStats.focusedDurationSeconds,
-            nudgeCount: session?.nudgeCount ?? 0,
-            xpTotal: finalStats.xpTotal,
-            xpBreakdown: finalStats.xpBreakdown,
-          });
+          await syncSessionToDjango(sessionId, finalStats, "manual");
           await markSyncedMutation({ sessionId });
         } catch (err) {
           console.error("Failed to sync completed session to Django:", err);
@@ -567,9 +545,6 @@ useEffect(() => {
     isActive,
     isSyncing,
     sessionSynced,
-    session?.startedAt,
-    session?.lastHeartbeatAt,
-    session?.nudgeCount,
     completeMutation,
     markSyncedMutation,
     router,

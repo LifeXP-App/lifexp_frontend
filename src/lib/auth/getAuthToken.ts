@@ -23,7 +23,7 @@ export async function getAuthToken(request: Request): Promise<string | null> {
   if (sbToken) return sbToken;
 
   // Legacy Django JWT cookie — backwards compatibility
-  const legacyToken = cookieStore.get("sb-access-token")?.value;
+  const legacyToken = cookieStore.get("access")?.value;
   if (legacyToken) return legacyToken;
 
   return null;

@@ -255,7 +255,8 @@ export default function GoalDetailPage() {
           locale: navigator.language,
         },
       });
-
+      console.log("Convex session created:", convexId);
+      console.log("Sending Django session request...");
       // 3. Register the session with Django and save the authoritative rates back to Convex
       const { data: { session: supaSession } } = await supabase.auth.getSession();
       const djangoRes = await fetch("/api/sessions", {
@@ -274,9 +275,11 @@ export default function GoalDetailPage() {
           device_platform: "web",
         }),
       });
+      console.log("Django response status:", djangoRes.status);
 
       if (djangoRes.ok) {
         const djangoData = await djangoRes.json();
+        console.log("Django returned:", djangoData);
         const r = djangoData.xp_increase_rate_per_second;
         const djangoActivityUid =
           djangoData.activity_uid === undefined

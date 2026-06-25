@@ -45,14 +45,28 @@ export async function POST(req: Request) {
   const body = await req.json();
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
 
+<<<<<<< HEAD
+  const res = await authedFetch(
+    `${baseUrl}/api/v1/sessions/new/`,
+    {
+      method: "POST",
+      body: JSON.stringify(body),
+    }
+  );
+  console.log("Session POST response:", res);
+=======
   const res = await authedFetch(req, `${baseUrl}/api/v1/sessions/`, {
     method: "POST",
     body: JSON.stringify(body),
   });
+>>>>>>> 536ba260c015e863b9b84ae5f2ac4c56c3f7fa43
 
   if (res instanceof NextResponse) return res;
 
+  console.log("status:", res.status);
+  console.log("headers:", Object.fromEntries(res.headers.entries()));
   const text = await res.text();
+  console.log("body:", text);
   try {
     const data = JSON.parse(text);
     return NextResponse.json(data, { status: res.status });
