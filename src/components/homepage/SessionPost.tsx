@@ -1,10 +1,13 @@
 "use client";
 
-import Link from "next/link";
-import { BoltIcon, ChatBubbleOvalLeftIcon, EllipsisVerticalIcon } from "@heroicons/react/24/solid";
-import { useState } from "react";
-import { supabase } from "@/src/lib/supabase";
 import { CommentSection } from "@/src/components/homepage/CommentSection";
+import { supabase } from "@/src/lib/supabase";
+import {
+  ChatBubbleOvalLeftIcon,
+  EllipsisVerticalIcon,
+} from "@heroicons/react/24/solid";
+import Link from "next/link";
+import { useState } from "react";
 
 export type ApiSessionPost = {
   type: "session";
@@ -50,7 +53,6 @@ function toggleDropdown(btn: HTMLElement) {
   dropdown?.classList.toggle("hidden");
 }
 
-
 function copyGoalLink(uid: string) {
   navigator.clipboard.writeText(`${window.location.origin}/goals/${uid}`);
 }
@@ -71,12 +73,20 @@ function getTimeAgo(dateString: string): string {
   if (diffInDays < 7) return `${diffInDays}d ago`;
   if (diffInWeeks < 4) return `${diffInWeeks}w ago`;
   if (diffInMonths < 12) return `${diffInMonths}mo ago`;
-  return date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  return date.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 }
 
 function formatSessionTime(dateString: string): string {
   const date = new Date(dateString);
-  const time = date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", hour12: true });
+  const time = date.toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
   const day = date.getDate();
   const month = date.toLocaleDateString(undefined, { month: "long" });
   const year = date.getFullYear();
@@ -99,7 +109,9 @@ export function SessionPost({ session }: { session: ApiSessionPost }) {
     setNudgeCount((prev) => prev + 1);
     setNudging(true);
     try {
-      const { data: { session: supaSession } } = await supabase.auth.getSession();
+      const {
+        data: { session: supaSession },
+      } = await supabase.auth.getSession();
       const res = await fetch(`/api/sessions/${session.id}/nudge`, {
         method: "POST",
         headers: supaSession?.access_token
@@ -152,12 +164,16 @@ export function SessionPost({ session }: { session: ApiSessionPost }) {
             />
             <div className="ml-3">
               <span className="flex items-center gap-2">
-                <p className="text-sm md:text-base font-semibold">{user.fullname}</p>
+                <p className="text-sm md:text-base font-semibold">
+                  {user.fullname}
+                </p>
                 <p className="text-sm md:text-base font-regular text-gray-500">
-                  @{user.username} 
+                  @{user.username}
                 </p>
               </span>
-              <p className="text-sm text-gray-500">{getTimeAgo(session.started_at)}</p>
+              <p className="text-sm text-gray-500">
+                {getTimeAgo(session.started_at)}
+              </p>
             </div>
           </div>
         </Link>
@@ -200,7 +216,7 @@ export function SessionPost({ session }: { session: ApiSessionPost }) {
 
       {/* SESSION BLOCK */}
       <div className="px-2 md:px-0">
-        <div className="flex gap-4 bg-white dark:bg-dark-3 ">
+        <div className="flex gap-4 ">
           {/* 1:1 image or emoji placeholder */}
           <Link href={`/goals/${goal.uid}`} className="shrink-0">
             {session.completion_picture ? (
@@ -219,8 +235,6 @@ export function SessionPost({ session }: { session: ApiSessionPost }) {
             )}
           </Link>
 
-
-
           {/* Middle info */}
           <div className="flex flex-col justify-between gap-1  w-full min-w-0">
             <p
@@ -230,51 +244,45 @@ export function SessionPost({ session }: { session: ApiSessionPost }) {
               {activity.name}
             </p>
 
-<Link href={`/goals/${goal.uid}`}>
-        <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">
-              Session {session.session_number}  {goal.title}
-            </p>
-
+            <Link href={`/goals/${goal.uid}`}>
+              <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">
+                Session {session.session_number} {goal.title}
+              </p>
             </Link>
 
-
-             <p className="text-sm text-gray-500 dark:text-gray-400">
-                {session.xp_total} XP • {formatSessionTime(session.started_at)}
-
-             </p>
-            
-
-            
-          
-            
-           
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {session.xp_total} XP • {formatSessionTime(session.started_at)}
+            </p>
           </div>
 
           {/* Right: XP + duration */}
           <div className="flex flex-col items-end justify-center gap-1.5 shrink-0">
-             <p className="text-sm md:text-xl font-bold text-black dark:text-[#dfdfe0] whitespace-nowrap mr-2">
+            <p className="text-sm md:text-xl font-bold text-black dark:text-[#dfdfe0] whitespace-nowrap mr-2">
               {session.duration}
             </p>
-            
-           
           </div>
         </div>
 
-
         {/* ACTION BAR */}
         <div className="flex items-center mt-6 gap-6 justify-between px-1">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={handleNudge}>
-           
+          <div
+            className="flex items-center gap-2 cursor-pointer"
+            onClick={handleNudge}
+          >
             <span
               className="text-md font-medium transition-all border-2 rounded-md px-2 py-1"
-              style={hasNudged ? {
-                color: `var(--aspect-${activity.type.toLowerCase()})`,
-                borderColor: `var(--aspect-${activity.type.toLowerCase()})`,
-                backgroundColor: `color-mix(in srgb, var(--aspect-${activity.type.toLowerCase()}) 12%, transparent)`,
-              } : {
-                color: "rgb(100 100 100)",
-                borderColor: "rgb(100 100 100)",
-              }}
+              style={
+                hasNudged
+                  ? {
+                      color: `var(--aspect-${activity.type.toLowerCase()})`,
+                      borderColor: `var(--aspect-${activity.type.toLowerCase()})`,
+                      backgroundColor: `color-mix(in srgb, var(--aspect-${activity.type.toLowerCase()}) 12%, transparent)`,
+                    }
+                  : {
+                      color: "rgb(100 100 100)",
+                      borderColor: "rgb(100 100 100)",
+                    }
+              }
             >
               <b>👋 {nudgeCount}</b>&nbsp; {hasNudged ? "Nudged" : "Nudge"}
             </span>

@@ -3,6 +3,7 @@ import { ActivityType } from "@/src/lib/types/activityMeta";
 import ActivitySelectButton, {
   AiSuggestionButton,
 } from "@/src/components/goals/ActivityResult";
+import { ActivitiesService } from "@/src/lib/services/activities";
 
 interface Activity {
   id: string;
@@ -48,7 +49,8 @@ interface NewActivityModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectActivity: (activity: Activity) => void;
-  onGenerateNew: (query: string) => void;
+  /** @deprecated Custom activities are now generated inline via the AI button. Kept for backwards compatibility. */
+  onGenerateNew?: (query: string) => void;
   onStartDrawing: () => void;
 }
 
@@ -104,7 +106,6 @@ export default function NewActivityModal({
   isOpen,
   onClose,
   onSelectActivity,
-  onGenerateNew,
   onStartDrawing,
 }: NewActivityModalProps) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -113,6 +114,52 @@ export default function NewActivityModal({
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
   const [showAiSuggestion, setShowAiSuggestion] = useState(false);
+
+  // AI-generated custom-activity creation state
+  const [creating, setCreating] = useState(false);
+  const [creationError, setCreationError] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<string[] | null>(null);
+
+  const handleCreateCustom = useCallback(async () => {
+    const name = searchQuery.trim();
+    if (!name || creating) return;
+
+    setCreating(true);
+    setCreationError(null);
+    setSuggestions(null);
+
+    const result = await ActivitiesService.createCustomActivity(name);
+
+    switch (result.status) {
+      case "success": {
+        const a = result.activity;
+        onSelectActivity({
+          id: String(a.uid ?? a.id),
+          uid: a.uid ? String(a.uid) : undefined,
+          pk: a.id,
+          name: a.name,
+          type: a.activity_type,
+          total_xp: a.total_xp,
+          xp_distribution: a.xp_distribution,
+        });
+        break;
+      }
+      case "warning":
+        setSuggestions(result.fundamentalizedVersions);
+        setCreationError(result.message);
+        break;
+      case "exists":
+        // Surface the existing activity by searching for it.
+        setSearchQuery(name);
+        break;
+      case "invalid":
+      case "error":
+        setCreationError(result.message);
+        break;
+    }
+
+    setCreating(false);
+  }, [searchQuery, creating, onSelectActivity]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const loadingRef = useRef(false);
@@ -206,6 +253,8 @@ export default function NewActivityModal({
 
     const query = searchQuery.trim();
     setShowAiSuggestion(false);
+    setCreationError(null);
+    setSuggestions(null);
 
     const timeout = window.setTimeout(() => {
       if (query) {
@@ -350,11 +399,53 @@ export default function NewActivityModal({
                   />
                 ))}
 
-                {shouldShowAiSuggestion && (
+                {creating ? (
+                  <div className="w-full flex items-center gap-3 p-3.5 rounded-2xl bg-blue-600/10 border border-blue-500/25">
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-blue-500/15">
+                      <span className="block w-5 h-5 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
+                    </div>
+                    <div className="flex flex-col items-start">
+                      <span className="text-sm font-bold tracking-tight text-blue-700 dark:text-blue-300">
+                        Generating activity…
+                      </span>
+                      <span className="text-[10px] font-semibold opacity-70 uppercase tracking-widest mt-0.5 text-blue-700 dark:text-blue-300">
+                        Scoring with AI
+                      </span>
+                    </div>
+                  </div>
+                ) : shouldShowAiSuggestion ? (
                   <AiSuggestionButton
                     query={searchQuery}
-                    onSelect={() => onGenerateNew(searchQuery.trim())}
+                    onSelect={handleCreateCustom}
                   />
+                ) : null}
+
+                {suggestions && suggestions.length > 0 && (
+                  <div className="w-full p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 space-y-2">
+                    <p className="text-xs font-medium text-amber-700 dark:text-amber-300">
+                      {creationError ?? "That name is a bit complex."} Try one of
+                      these instead:
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {suggestions.map((s) => (
+                        <button
+                          key={s}
+                          onClick={() => {
+                            setSuggestions(null);
+                            setCreationError(null);
+                            setSearchQuery(s);
+                          }}
+                          className="px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-200 border border-amber-500/30 hover:bg-amber-500/25 transition-colors cursor-pointer"
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {creationError && !(suggestions && suggestions.length > 0) && (
+                  <p className="text-sm text-red-500 px-1">{creationError}</p>
                 )}
 
                 {loading && (hasMore || page === 1) && (
