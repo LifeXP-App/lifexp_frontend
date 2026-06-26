@@ -390,18 +390,20 @@ export function Post({ post }: { post: PostType }) {
       </div>
 
       {/* IMAGE */}
-      <a href={`/goals/${post.uid}`} className="block">
-        <div className="w-full my-4">
-          <img
-            className="w-[100vw] max-w-none md:w-full cursor-pointer md:rounded-lg"
-            style={{ aspectRatio: "1.91 / 1", objectFit: "cover" }}
-            src={post.post_image.replace(
-              "/upload/",
-              "/upload/f_auto,q_auto,w_800,c_fill/",
-            )}
-          />
-        </div>
-      </a>
+      {post.post_image?.trim() ? (
+        <a href={`/goals/${post.uid}`} className="block">
+          <div className="w-full my-4">
+            <img
+              className="w-[100vw] max-w-none md:w-full cursor-pointer md:rounded-lg"
+              style={{ aspectRatio: "1.91 / 1", objectFit: "cover" }}
+              src={post.post_image.replace(
+                "/upload/",
+                "/upload/f_auto,q_auto,w_800,c_fill/",
+              )}
+            />
+          </div>
+        </a>
+      ) : null}
 
       {/* CONTENT */}
       <div className="px-2 md:px-0">
