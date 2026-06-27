@@ -384,7 +384,6 @@ export default function GoalDetailPage() {
 
   const handleOpenCompleteGoal = () => setIsCompleteGoalOpen(true);
   const handleCloseCompleteGoal = () => setIsCompleteGoalOpen(false);
-
   const handlePostAchievement = async ({
     title,
     description,
@@ -396,12 +395,18 @@ export default function GoalDetailPage() {
     finishBy?: string;
     image?: File | null;
   }) => {
+    // --- Guard: a goal cannot be completed without an image ---
+    if (!image) {
+      alert("Please add a photo before posting your achievement.");
+      return;
+    }
+
     try {
       const formData = new FormData();
       formData.append("title", title);
       formData.append("description", description);
       if (finishBy) formData.append("finish_by", finishBy);
-      if (image) formData.append("image", image);
+      formData.append("image", image); // now guaranteed non-null
 
       const res = await fetch(`/api/goals/${goalId}/complete`, {
         method: "POST",
@@ -423,7 +428,6 @@ export default function GoalDetailPage() {
       alert("Failed to complete goal. Please try again.");
     }
   };
-
   const handleDeleteGoal = async () => {
     if (confirm("Are you sure you want to delete this goal?")) {
       try {

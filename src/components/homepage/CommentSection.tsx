@@ -14,6 +14,17 @@ type Comment = {
   comment: string;
 };
 
+type RawComment = {
+  id: number;
+  user: {
+    username: string;
+    fullname: string;
+    profile_picture: string;
+  };
+  created_at: string;
+  content: string;
+};
+
 type CommentSectionProps = {
   commentsEndpoint: string;
   initialComments: Comment[];
@@ -65,20 +76,21 @@ export function CommentSection({ commentsEndpoint, initialComments, onClose }: C
         const res = await fetch(commentsEndpoint, {
           headers: authHeaders,
           cache: "no-store",
+          credentials: "include",
         });
 
         if (!res.ok) return;
 
         const data = await res.json();
 
-        const list = Array.isArray(data?.results)
+        const list: RawComment[] = Array.isArray(data?.results)
           ? data.results
           : Array.isArray(data)
           ? data
           : [];
 
         setComments(
-          list.map((c: any) => ({
+          list.map((c) => ({
             id: c.id,
             username: c.user.username,
             fullname: c.user.fullname,
@@ -114,6 +126,7 @@ export function CommentSection({ commentsEndpoint, initialComments, onClose }: C
         method: "POST",
         headers: authHeaders,
         body: JSON.stringify({ content: commentText }),
+        credentials: "include",
       });
 
       if (!res.ok) return;
@@ -184,6 +197,7 @@ export function CommentSection({ commentsEndpoint, initialComments, onClose }: C
                       "/upload/",
                       "/upload/f_auto,q_auto,w_80,c_fill/"
                     )}
+                    alt={`${comment.fullname} profile picture`}
                     className="w-10 h-10 rounded-full object-cover"
                   />
 
