@@ -12,6 +12,7 @@ import FireIcon from "@heroicons/react/24/solid/FireIcon";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
 import { FaBrain, FaHammer } from "react-icons/fa";
+import NewSessionPopup from '@/src/components/goals/NewSessionPopup';
 
 type AspectKey = "physique" | "energy" | "social" | "creativity" | "logic";
 
@@ -391,6 +392,7 @@ export default function GoalsPage() {
 
   const [goals, setGoals] = useState<GoalPost[]>([]);
   const [goalsLoading, setGoalsLoading] = useState(false);
+  const [isSessionPopupOpen, setIsSessionPopupOpen] = useState(false);
   const fetchedGoalsForUsername = useRef<string | null>(null);
 
   const [isStatusConfirmOpen, setIsStatusConfirmOpen] = useState(false);
@@ -705,6 +707,33 @@ export default function GoalsPage() {
     }
   };
 
+  const handleGoallessSession = async (activity: Activity) => {
+    try {
+        const res = await fetch("/api/sessions/new", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                session_id: crypto.randomUUID(),
+                user_id: me?.id,
+                activity: activity.id,
+                started_at: new Date().toISOString(),
+                status: "active",
+                device_platform: "web",
+            }),
+        });
+
+        const session = await res.json();
+
+        setIsSessionPopupOpen(false);
+
+        router.push(`/session/${session.id}`);
+    } catch (err) {
+        console.error(err);
+    }
+  };
+
   const handleStatusChangeRequest = (goalId: string, newStatus: string) => {
     const goal = goals.find((g) => g.uid === goalId);
     if (!goal) return;
@@ -792,6 +821,13 @@ export default function GoalsPage() {
             >
               <span className="text-lg cursor-pointer leading-none">＋</span>
               <span>Create New Goal</span>
+            </button>
+            <button
+              onClick={() => setIsSessionPopupOpen(true)}
+              className="mt-3 w-full rounded-2xl cursor-pointer bg-gray-200 dark:bg-dark-2 text-black dark:text-white font-semibold py-4 flex items-center justify-start gap-3 px-5 hover:bg-gray-300 dark:hover:bg-dark-3 transition"
+            >
+              <span className="text-lg leading-none">＋</span>
+              <span>Create New Session</span>
             </button>
 
             {/* Ongoing */}
@@ -1040,6 +1076,15 @@ export default function GoalsPage() {
         newStatus={pendingStatusChange?.newStatus || ''}
         goalTitle={pendingStatusChange?.goalTitle || ''}
       />
+      <NewSessionPopup
+        isOpen={isSessionPopupOpen}
+        onClose={() => setIsSessionPopupOpen(false)}
+        onSelectActivity={handleGoallessSession}
+        onNewActivity={() => {
+            setIsSessionPopupOpen(false);
+            // open your NewActivity modal
+        }}
+       />
     </main>
   );
 }
