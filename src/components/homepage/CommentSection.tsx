@@ -177,7 +177,7 @@ export function CommentSection({ commentsEndpoint, initialComments, onClose }: C
             </h2>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"
+              className="p-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"
             >
               <XMarkIcon className="w-6 h-6 dark:text-white" />
             </button>

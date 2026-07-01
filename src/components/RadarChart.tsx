@@ -25,6 +25,7 @@ interface RadarChartProps {
   username: string;
   comparisonMode?: boolean;
   comparisonUsername?: string;
+  color?: string;
 }
 
 interface TooltipPayloadItem {
@@ -66,6 +67,7 @@ export default function RadarChart({
   username,
   comparisonMode = false,
   comparisonUsername,
+  color = "#4f7df3",
 }: RadarChartProps) {
   // Radius domain based on fullMark
   const maxMark = useMemo(() => {
@@ -127,12 +129,13 @@ export default function RadarChart({
           <Radar
             name={"You"}
             dataKey="value"
-            stroke="#4f7df3"
+            stroke={color}
             strokeWidth={2}
-            fill="rgba(79, 125, 243, 0.25)"
+            fill={color}
+            fillOpacity={0.25}
             dot={{
               r: 3,
-              fill: "#4f7df3",
+              fill: color,
               stroke: "#ffffff",
               strokeWidth: 1.5,
             }}
