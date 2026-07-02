@@ -6,7 +6,7 @@ import StatusChangeConfirmationModal from "@/src/components/goals/StatusChangeCo
 import { useAuth } from "@/src/context/AuthContext";
 import { usePopup } from "@/src/context/PopupContext";
 import { ActivityType } from "@/src/lib/types/activityMeta";
-import { BoltIcon, UsersIcon } from "@heroicons/react/24/solid";
+import { BoltIcon, PlayIcon, PlusIcon, UsersIcon } from "@heroicons/react/24/solid";
 import FireIcon from "@heroicons/react/24/solid/FireIcon";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
@@ -799,25 +799,25 @@ export default function GoalsPage() {
               Goals
             </h1>
 
-            {/* Create new goal */}
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="w-full rounded-2xl cursor-pointer bg-gray-200 dark:bg-dark-2 text-black dark:text-white font-semibold py-4 flex items-center justify-start gap-3 px-5 hover:bg-gray-300 dark:hover:bg-dark-3 transition"
-            >
-              <span className="text-lg cursor-pointer leading-none">＋</span>
-              <span>Create New Goal</span>
-            </button>
-            <button
-              onClick={() => {
-                setSelectedGoalId(getPreferredGoalId());
-                setIsSessionPopupOpen(true);
-              }}
-              className="mt-3 w-full rounded-2xl cursor-pointer bg-gray-200 dark:bg-dark-2 text-black dark:text-white font-semibold py-4 flex items-center justify-start gap-3 px-5 hover:bg-gray-300 dark:hover:bg-dark-3 transition"
-            >
-              <span className="text-lg leading-none">＋</span>
-              <span>Create New Session</span>
-            </button>
-
+            <div className="flex mt-3 gap-3">
+              {/* Create new goal */}
+              <button
+                type="button"
+                onClick={() => setIsSessionPopupOpen(true)}
+                className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-gray-200 dark:bg-dark-2 text-black dark:text-white font-semibold py-4 px-5 hover:bg-gray-300 dark:hover:bg-dark-3 transition cursor-pointer"
+              >
+                <PlayIcon className="w-5 h-5" />
+                <span>Empty Session</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(true)}
+                className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-gray-200 dark:bg-dark-2 text-black dark:text-white font-semibold py-4 px-5 hover:bg-gray-300 dark:hover:bg-dark-3 transition cursor-pointer"
+              >
+                <PlusIcon className="w-5 h-5" />
+                <span>Create New Goal</span>
+              </button>
+            </div>
             {/* Ongoing */}
             <div className="mt-6">
               {(ongoingGoals.length > 0 || showGoalsSkeleton) && (

@@ -8,6 +8,7 @@ import { RightSidebarInfo } from "@/src/components/homepage/RightSidebarInfo";
 import { RightSidebarNotifications } from "@/src/components/homepage/RightSidebarNotifications";
 import { DiscoverUsers } from "@/src/components/homepage/DiscoverUsers";
 import { useAuth } from "@/src/context/AuthContext";
+import type { ActivityType } from "@/src/lib/types/activityMeta";
 
 /* ---------- MOCK DATA (keep your existing stuff) ---------- */
 
@@ -174,18 +175,16 @@ type UserApiResponse = {
 
 function UserStatusSkeleton() {
   return (
-    <div className="mb-8 pl-2 md:pl-0 flex gap-4 overflow-x-auto whitespace-nowrap scrollbar-hide">
-      <div className="bg-white dark:bg-dark-2 border-2 border-gray-200 dark:border-gray-900 flex p-3 rounded-xl gap-3 min-w-[200px] max-w-[250px] items-center flex-shrink-0 animate-pulse">
-        <div className="p-[1.5px] rounded-full h-14 w-14 aspect-square bg-gray-200 dark:bg-gray-800" />
+    <div className="bg-white dark:bg-dark-2 border-2 border-gray-200 dark:border-gray-900 flex p-3 rounded-xl gap-3 min-w-[200px] max-w-[250px] items-center flex-shrink-0 animate-pulse">
+      <div className="p-[1.5px] rounded-full h-14 w-14 aspect-square bg-gray-200 dark:bg-gray-800" />
 
-        <div className="flex flex-col justify-between w-full">
-          <div className="h-4 w-32 rounded bg-gray-200 dark:bg-gray-800 mb-2" />
-          <div className="h-3 w-20 rounded bg-gray-200 dark:bg-gray-800 mb-2" />
+      <div className="flex flex-col justify-between w-full">
+        <div className="h-4 w-32 rounded bg-gray-200 dark:bg-gray-800 mb-2" />
+        <div className="h-3 w-20 rounded bg-gray-200 dark:bg-gray-800 mb-2" />
 
-          <div className="flex items-center gap-2">
-            <div className="h-3 w-24 rounded bg-gray-200 dark:bg-gray-800" />
-            <div className="h-4 w-4 rounded bg-gray-200 dark:bg-gray-800" />
-          </div>
+        <div className="flex items-center gap-2">
+          <div className="h-3 w-24 rounded bg-gray-200 dark:bg-gray-800" />
+          <div className="h-4 w-4 rounded bg-gray-200 dark:bg-gray-800" />
         </div>
       </div>
     </div>
@@ -382,10 +381,66 @@ function getTimeAgo(dateString: string): string {
 
 export default function Home() {
 
-  const { me, loading, session } = useAuth();
+  const { me, session } = useAuth();
 
   const [userData, setUserData] = useState<UserApiResponse | null>(null);
-  const [userLoading, setUserLoading] = useState(false);
+
+  type ApiFriendStatus = {
+    id: number;
+    username: string;
+    fullname: string;
+    profile_picture: string;
+    life_level: number;
+    mastery_title: string;
+    primary_color: string;
+    secondary_color: string;
+    streak_count: number;
+    streak_active: boolean;
+    is_self: boolean;
+    last_activity?: {
+      name: string;
+      emoji: string;
+      type: ActivityType;
+    } | null;
+  };
+
+  const [friendsStatus, setFriendsStatus] = useState<ApiFriendStatus[]>([]);
+  const [friendsStatusLoading, setFriendsStatusLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchFriendsStatus = async () => {
+      if (!session?.access_token) {
+        return;
+      }
+
+      setFriendsStatusLoading(true);
+
+      try {
+        const res = await fetch("/api/users/friends-status", {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${session.access_token}`,
+          },
+          cache: "no-store",
+        });
+
+        if (!res.ok) {
+          setFriendsStatus([]);
+          return;
+        }
+
+        const data = await res.json();
+        setFriendsStatus(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error("Failed to fetch friends status:", err);
+        setFriendsStatus([]);
+      } finally {
+        setFriendsStatusLoading(false);
+      }
+    };
+
+    fetchFriendsStatus();
+  }, [session?.access_token]);
 
   type ApiNotification = {
     id: number | string;
@@ -471,7 +526,7 @@ export default function Home() {
     };
 
     fetchNotifications();
-  }, [session]);
+  }, [session?.access_token]);
 
   // Posts (your existing behavior)
   type ApiGoalPost = {
@@ -612,8 +667,6 @@ useEffect(() => {
     const fetchUser = async () => {
       if (!me?.username) return;
 
-      setUserLoading(true);
-
       try {
         const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
         if (!baseUrl) return;
@@ -634,15 +687,11 @@ useEffect(() => {
       } catch (err) {
         console.error("Failed to fetch homepage user:", err);
         setUserData(null);
-      } finally {
-        setUserLoading(false);
       }
     };
 
     fetchUser();
   }, [me?.username]);
-
-  const showUserSkeleton = loading || userLoading || !me?.username || !userData;
 
   // ✅ only build once data exists
   const player = useMemo(() => {
@@ -769,7 +818,7 @@ useEffect(() => {
   };
 
   fetchDiscoverUsers();
-}, [session]);
+}, [session?.access_token]);
 
 
   return (
@@ -781,11 +830,30 @@ useEffect(() => {
           className="flex-1 min-h-[100vh] pb-16 md:pb-6 py-2 md:py-6 md:px-4 sm:px-6 overflow-y-auto scrollbar-hide h-screen"
         >
           {/* TOP BAR */}
-          {showUserSkeleton ? (
-            <UserStatusSkeleton />
-          ) : (
-            player && <UserStatus player={player} />
-          )}
+          <div className="mb-8 pl-2 md:pl-0 flex gap-4 overflow-x-auto whitespace-nowrap scrollbar-hide">
+            {friendsStatusLoading ? (
+              <>
+                <UserStatusSkeleton />
+                <UserStatusSkeleton />
+                <UserStatusSkeleton />
+              </>
+            ) : (
+              friendsStatus.map((friend) => (
+                <UserStatus
+                  key={friend.id}
+                  player={{
+                    username: friend.username,
+                    fullname: friend.fullname,
+                    lifelevel: friend.life_level,
+                    streak_count: friend.streak_count,
+                    streak_active: friend.streak_active,
+                    profile_picture: friend.profile_picture,
+                    last_activity: friend.last_activity,
+                  }}
+                />
+              ))
+            )}
+          </div>
 
           {/* POSTS */}
           <div

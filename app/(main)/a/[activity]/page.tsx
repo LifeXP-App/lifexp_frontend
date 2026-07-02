@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import RadarChart from "@/src/components/RadarChart";
 import AspectChip from '@/src/components/goals/AspectChip';
@@ -19,6 +19,7 @@ import {
   UsersIcon,
   PlayIcon,
 } from "@heroicons/react/24/solid";
+import { RocketLaunchIcon } from "@heroicons/react/24/outline";
 import { FaBrain, FaHammer } from "react-icons/fa";
 import NewActivityModal from '@/src/components/goals/NewActivityModel';
 import NewSessionPopup from '@/src/components/goals/NewSessionPopup';
@@ -576,13 +577,29 @@ const [loading, setLoading] = useState(true);
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 
-const [radarData, setRadarData] = useState([
-  { aspect: "Physique", value: user.aspects.physique.level, fullMark: 0 },
-  { aspect: "Energy", value: user.aspects.energy.level, fullMark: 0 },
-  { aspect: "Logic", value: user.aspects.logic.level, fullMark: 0 },
-  { aspect: "Creativity", value: user.aspects.creativity.level, fullMark: 0 },
-  { aspect: "Social", value: user.aspects.social.level, fullMark: 0 },
-]);
+const radarData = useMemo(() => {
+  const dist = activityData?.xp_distribution || {};
+  const physique = dist.physique ?? 0;
+  const energy = dist.energy ?? 0;
+  const logic = dist.logic ?? 0;
+  const creativity = dist.creativity ?? 0;
+  const social = dist.social ?? 0;
+
+  // Shared fullMark across every aspect keeps the spokes on a single, equal scale.
+  const fullMark = Math.max(physique, energy, logic, creativity, social, 10);
+
+  return [
+    { aspect: "Physique", value: physique, fullMark },
+    { aspect: "Energy", value: energy, fullMark },
+    { aspect: "Logic", value: logic, fullMark },
+    { aspect: "Creativity", value: creativity, fullMark },
+    { aspect: "Social", value: social, fullMark },
+  ];
+}, [activityData]);
+
+const activityColor = activityData?.activity_type && ACTIVITY_META[activityData.activity_type as ActivityType]
+  ? ACTIVITY_META[activityData.activity_type as ActivityType].cssColorVar
+  : "#4f7df3";
 
 const formatDuration = (seconds: number) => {
   if (!seconds) return "00:00:00";
@@ -618,17 +635,6 @@ useEffect(() => {
       const data = await res.json();
       
       setActivityData(data);
-      setRadarData([
-          { aspect: "Physique", value: user.aspects.physique.level, fullMark: 0 },
-          { aspect: "Energy", value: user.aspects.energy.level, fullMark: 0 },
-          { aspect: "Logic", value: user.aspects.logic.level, fullMark: 0 },
-          {
-            aspect: "Creativity",
-            value: user.aspects.creativity.level,
-            fullMark: 0,
-          },
-          { aspect: "Social", value: user.aspects.social.level, fullMark: 0 },
-        ])
     } catch (e) {
       console.error(e);
     } finally {
@@ -906,7 +912,10 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                 }}
                 onClick={handleOpenCompleteGoal}
               >
-                Start {activityData?.name || 'Activity'}
+
+                Start {activityData?.name && activityData.name.length > 12
+                  ? ` ${activityData.name.substring(0, 10)}...`
+                  : activityData?.name || 'Activity'}
                 <PlayIcon className="w-4 h-4 inline-block ml-4" />
 
               </button>
@@ -1037,6 +1046,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
          
 
 
+              {liveSessions && liveSessions.length > 0 && (
+              <>
               <div className="flex justify-between">
             <h2 className="text-xl font-bold my-6 text-foreground dark:text-white">Currently Live</h2>
             <button className='bg-transparent font-medium text-sm cursor-pointer active:opacity-80 hover:opacity-90' style={{color:"var(--rookie-primary)"}}>
@@ -1044,7 +1055,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
             </button>
             </div>
             <div className="grid grid-cols-2 mb-2 gap-3">
-                {liveSessions?.map((session) => (
+                {liveSessions.map((session) => (
                   <LiveSessionItem
                     key={session._id}
                     status={session.status}
@@ -1060,6 +1071,23 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                   />
                 ))}
               </div>
+              </>
+              )}
+
+{!sessionsLoading &&
+  leaderboard.length === 0 &&
+  mySessions.length === 0 &&
+  friendsSessions.length === 0 && (
+    <div
+      className="flex flex-col items-center justify-center text-center py-24 px-6 my-6 rounded-2xl "
+      style={{ borderColor: "var(--border)" }}
+    >
+      <RocketLaunchIcon className="w-16 h-16 mb-8 stroke-black opacity-20 dark:stroke-white"/>
+      <p className="text-base font-semibold text-black opacity-20 dark:text-white">
+        Be the first to try this activity!
+      </p>
+    </div>
+)}
 
 {!sessionsLoading && friendsSessions.length > 0 && (
             <>
@@ -1122,6 +1150,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                   data={radarData}
                   masteryTitle={user.masteryTitle}
                   username={user.username}
+                  color={activityColor}
                 />
               </div>
 
