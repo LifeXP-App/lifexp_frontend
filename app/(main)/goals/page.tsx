@@ -1,7 +1,6 @@
 "use client";
 
 import NewActivityModal from "@/src/components/goals/NewActivityModel";
-import StatusBadge from "@/src/components/goals/StatusBadge";
 import GoalStatusMenu from "@/src/components/goals/GoalStatusMenu";
 import StatusChangeConfirmationModal from "@/src/components/goals/StatusChangeConfirmationModal";
 import { useAuth } from "@/src/context/AuthContext";
@@ -608,6 +607,13 @@ export default function GoalsPage() {
     }
   };
 
+  const getPreferredGoalId = () => {
+    const fallbackGoal = goals.find(
+      (goal) => goal.status !== "completed" && goal.status !== "abandoned",
+    );
+    return fallbackGoal?.uid ?? goals[0]?.uid ?? null;
+  };
+
   const handleOpenActivityModal = (goalId: string) => {
     setSelectedGoalId(goalId);
     setIsActivityModalOpen(true);
@@ -615,24 +621,30 @@ export default function GoalsPage() {
 
   const handleSelectActivity = (activity: Activity) => {
     setIsActivityModalOpen(false);
-    if (selectedGoalId) {
-      const dist = activity.xp_distribution ?? {};
-      const SECONDS_PER_HOUR = 3600;
-      const aspects = ['physique', 'energy', 'logic', 'creativity', 'social'] as const;
-      const totalXp = aspects.reduce((s, k) => s + (dist[k] ?? 0), 0);
-      const rates = totalXp > 0
-        ? aspects.reduce((acc, k) => {
-            acc[k] = Math.round((dist[k] ?? 0) / SECONDS_PER_HOUR * 10000) / 10000;
-            return acc;
-          }, {} as Record<string, number>)
-        : {};
-      const ratesParam = Object.keys(rates).length > 0
-        ? `&rates=${encodeURIComponent(JSON.stringify(rates))}`
-        : '';
-      router.push(
-        `/goals/${selectedGoalId}/session/new?activity=${activity.pk ?? activity.uid ?? activity.id}${ratesParam}`,
-      );
+    setIsSessionPopupOpen(false);
+
+    const goalId = selectedGoalId ?? getPreferredGoalId();
+    if (!goalId) {
+      alert("Create a goal first to start a session.");
+      return;
     }
+
+    const dist = activity.xp_distribution ?? {};
+    const SECONDS_PER_HOUR = 3600;
+    const aspects = ['physique', 'energy', 'logic', 'creativity', 'social'] as const;
+    const totalXp = aspects.reduce((s, k) => s + (dist[k] ?? 0), 0);
+    const rates = totalXp > 0
+      ? aspects.reduce((acc, k) => {
+          acc[k] = Math.round((dist[k] ?? 0) / SECONDS_PER_HOUR * 10000) / 10000;
+          return acc;
+        }, {} as Record<string, number>)
+      : {};
+    const ratesParam = Object.keys(rates).length > 0
+      ? `&rates=${encodeURIComponent(JSON.stringify(rates))}`
+      : '';
+    router.push(
+      `/goals/${goalId}/session/new?activity=${activity.pk ?? activity.uid ?? activity.id}${ratesParam}`,
+    );
   };
 
   const handleGenerateNewActivity = (query: string) => {
@@ -704,33 +716,6 @@ export default function GoalsPage() {
       }
     } finally {
       setDeletingGoalId(null);
-    }
-  };
-
-  const handleGoallessSession = async (activity: Activity) => {
-    try {
-        const res = await fetch("/api/sessions/new", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                session_id: crypto.randomUUID(),
-                user_id: me?.id,
-                activity: activity.id,
-                started_at: new Date().toISOString(),
-                status: "active",
-                device_platform: "web",
-            }),
-        });
-
-        const session = await res.json();
-
-        setIsSessionPopupOpen(false);
-
-        router.push(`/session/${session.id}`);
-    } catch (err) {
-        console.error(err);
     }
   };
 
@@ -823,7 +808,10 @@ export default function GoalsPage() {
               <span>Create New Goal</span>
             </button>
             <button
-              onClick={() => setIsSessionPopupOpen(true)}
+              onClick={() => {
+                setSelectedGoalId(getPreferredGoalId());
+                setIsSessionPopupOpen(true);
+              }}
               className="mt-3 w-full rounded-2xl cursor-pointer bg-gray-200 dark:bg-dark-2 text-black dark:text-white font-semibold py-4 flex items-center justify-start gap-3 px-5 hover:bg-gray-300 dark:hover:bg-dark-3 transition"
             >
               <span className="text-lg leading-none">＋</span>
@@ -1079,10 +1067,11 @@ export default function GoalsPage() {
       <NewSessionPopup
         isOpen={isSessionPopupOpen}
         onClose={() => setIsSessionPopupOpen(false)}
-        onSelectActivity={handleGoallessSession}
+        onSelectActivity={handleSelectActivity}
         onNewActivity={() => {
-            setIsSessionPopupOpen(false);
-            // open your NewActivity modal
+          setIsSessionPopupOpen(false);
+          setSelectedGoalId(getPreferredGoalId());
+          setIsActivityModalOpen(true);
         }}
        />
     </main>
