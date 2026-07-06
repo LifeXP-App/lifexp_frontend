@@ -247,7 +247,9 @@ const LiveSessionItem: React.FC<LiveSession & { onClick?: () => void }> = ({
   onClick,
 }) => {
   const s = STATUS_CONFIG[status];
-  const accentColor = `var(--${activityType || "alchemist"}-primary)`;
+  const accentColor =
+    ACTIVITY_META[activityType as ActivityType]?.cssColorVar ??
+    "var(--aspect-creativity)";
 
   return (
     <div
@@ -313,7 +315,7 @@ const LiveSessionItem: React.FC<LiveSession & { onClick?: () => void }> = ({
 
 
 
-const SessionItem: React.FC<Session & { onClick?: () => void }> = ({
+const SessionItem: React.FC<Session & { onClick?: () => void; accentColor?: string }> = ({
   sessionNumber,
   activity,
   goalTitle,
@@ -323,6 +325,7 @@ const SessionItem: React.FC<Session & { onClick?: () => void }> = ({
   thumbnail,
   emoji,
   onClick,
+  accentColor = "var(--aspect-creativity)",
 }) => {
 
   const [open, setOpen] = React.useState(false);
@@ -361,13 +364,14 @@ const SessionItem: React.FC<Session & { onClick?: () => void }> = ({
 
       <div className="flex-1 min-w-0">
         <h3 className="font-semibold text-lg text-foreground dark:text-white">
-          {goalTitle}
+          {goalTitle? goalTitle : `Free ${activity} Session`}
         </h3>
-        <p className="text-sm font-bold" style={{ color: "var(--alchemist-primary)" }}>
+        <p className="text-sm font-bold" style={{ color: accentColor }}>
           Session {sessionNumber}
         </p>
         <p className="text-xs mt-1 font-medium" style={{ color: "var(--muted)" }}>
           {xpEarned} XP Earned • {dateTime}
+          
         </p>
       </div>
 
@@ -386,7 +390,7 @@ const SessionItem: React.FC<Session & { onClick?: () => void }> = ({
 
 
 
-const FriendSessionItem: React.FC<Session & { onClick?: () => void }> = ({
+const FriendSessionItem: React.FC<Session & { onClick?: () => void; accentColor?: string }> = ({
   sessionNumber,
   goalTitle,
   user,
@@ -396,6 +400,7 @@ const FriendSessionItem: React.FC<Session & { onClick?: () => void }> = ({
   thumbnail,
   emoji,
   onClick,
+  accentColor = "var(--aspect-creativity)",
 }) => {
 
   const [open, setOpen] = React.useState(false);
@@ -435,8 +440,8 @@ const FriendSessionItem: React.FC<Session & { onClick?: () => void }> = ({
         <h3 className="font-semibold text-lg text-foreground dark:text-white">
           {goalTitle}
         </h3>
-        <Link href={`/u/${user?.username}`} className="text-sm font-bold" style={{ color: "var(--alchemist-primary)" }}>
-        <p className="text-sm font-bold" style={{ color: "var(--alchemist-primary)" }}>
+        <Link href={`/u/${user?.username}`} className="text-sm font-bold" style={{ color: accentColor }}>
+        <p className="text-sm font-bold" style={{ color: accentColor }}>
           @{user?.username}
         </p>
         </Link>
@@ -884,7 +889,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
               activity={{
                 name: selectedSession?.activity ?? "",
                 emoji: "🎨",
-                color: "var(--alchemist-primary)",
+                color: activityColor,
               }}
             />
 
@@ -907,8 +912,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
             <div ref={moreMenuRef} className="relative">
             <button
                 className="w-full px-6 py-2 flex items-center justify-center rounded-lg font-medium text-white text-md transition-all active:scale-95 cursor-pointer"
-                style={{ 
-                  backgroundColor: 'var(--rookie-primary)',
+                style={{
+                  backgroundColor: activityColor,
                 }}
                 onClick={handleOpenCompleteGoal}
               >
@@ -989,6 +994,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                 <SessionItem
                   key={session.id}
                   {...session}
+                  accentColor={activityColor}
                   onClick={() => handleOpenSessionPopup(session)}
                 />
               ))}
@@ -1001,6 +1007,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                 <SessionItem
                   key={session.id}
                   {...session}
+                  accentColor={activityColor}
                   onClick={() => handleOpenSessionPopup(session)}
                 />
               ))}
@@ -1050,7 +1057,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
               <>
               <div className="flex justify-between">
             <h2 className="text-xl font-bold my-6 text-foreground dark:text-white">Currently Live</h2>
-            <button className='bg-transparent font-medium text-sm cursor-pointer active:opacity-80 hover:opacity-90' style={{color:"var(--rookie-primary)"}}>
+            <button className='bg-transparent font-medium text-sm cursor-pointer active:opacity-80 hover:opacity-90' style={{color: activityColor}}>
               View more →
             </button>
             </div>
@@ -1093,7 +1100,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
             <>
             <div className="flex justify-between">
             <h2 className="text-xl font-bold my-6 text-foreground dark:text-white">Friends' Drawing Sessions</h2>
-            <button className='bg-transparent font-medium text-sm cursor-pointer active:opacity-80 hover:opacity-90' style={{color:"var(--rookie-primary)"}}>
+            <button className='bg-transparent font-medium text-sm cursor-pointer active:opacity-80 hover:opacity-90' style={{color: activityColor}}>
               View more →
             </button>
             </div>
@@ -1104,6 +1111,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                     <FriendSessionItem
                       key={session.id}
                       {...session}
+                      accentColor={activityColor}
                       onClick={() => handleOpenSessionPopup(session)}
                     />
                   ))}
@@ -1119,7 +1127,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   <>
             <div className="flex justify-between">
             <h2 className="text-xl font-bold my-6 text-foreground dark:text-white">Your Sessions</h2>
-            <button className='bg-transparent font-medium text-sm cursor-pointer active:opacity-80 hover:opacity-90' style={{color:"var(--rookie-primary)"}}>
+            <button className='bg-transparent font-medium text-sm cursor-pointer active:opacity-80 hover:opacity-90' style={{color: activityColor}}>
               View more →
             </button>
             </div>
@@ -1128,6 +1136,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                 <SessionItem
                   key={session.id}
                   {...session}
+                  accentColor={activityColor}
                   onClick={() => handleOpenSessionPopup(session)}
                 />
                   ))}

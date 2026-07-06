@@ -22,7 +22,7 @@ interface ReflectionResponse {
     fullname: string
     profile_picture: string
   }[]
-  days_left: number
+  days_left: number | null
   progress_bar: number
   activity: {
     id: string
@@ -40,6 +40,7 @@ const DayCompletePage = () => {
   const uid = params?.sessionId as string;
 
   const goalId = params?.goalId as string;
+  const isEmptySession = goalId === "none";
 
   const [reflection, setReflection] = useState<ReflectionResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -432,9 +433,11 @@ const DayCompletePage = () => {
 
             </div>
 
-            <div className="text-center mt-3 text-sm text-gray-500">
-              {reflection.days_left} days left
-            </div>
+            {reflection.days_left !== null && (
+              <div className="text-center mt-3 text-sm text-gray-500">
+                {reflection.days_left} days left
+              </div>
+            )}
 
           </div>
 
@@ -442,7 +445,7 @@ const DayCompletePage = () => {
 
           <div className="px-6 pb-8">
 
-                <a href={`/goals/${goalId}`} >
+                <a href={isEmptySession ? "/goals" : `/goals/${goalId}`} >
             <button
               className="w-full py-4 cursor-pointer rounded-2xl font-semibold text-white text-lg active:opacity-75"
               style={{ backgroundColor: activity.color }}

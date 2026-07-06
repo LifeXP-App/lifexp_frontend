@@ -11,7 +11,6 @@ import FireIcon from "@heroicons/react/24/solid/FireIcon";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
 import { FaBrain, FaHammer } from "react-icons/fa";
-import NewSessionPopup from '@/src/components/goals/NewSessionPopup';
 
 type AspectKey = "physique" | "energy" | "social" | "creativity" | "logic";
 
@@ -391,7 +390,7 @@ export default function GoalsPage() {
 
   const [goals, setGoals] = useState<GoalPost[]>([]);
   const [goalsLoading, setGoalsLoading] = useState(false);
-  const [isSessionPopupOpen, setIsSessionPopupOpen] = useState(false);
+  const [isEmptySession, setIsEmptySession] = useState(false);
   const fetchedGoalsForUsername = useRef<string | null>(null);
 
   const [isStatusConfirmOpen, setIsStatusConfirmOpen] = useState(false);
@@ -615,20 +614,18 @@ export default function GoalsPage() {
   };
 
   const handleOpenActivityModal = (goalId: string) => {
+    setIsEmptySession(false);
     setSelectedGoalId(goalId);
     setIsActivityModalOpen(true);
   };
 
-  const handleSelectActivity = (activity: Activity) => {
-    setIsActivityModalOpen(false);
-    setIsSessionPopupOpen(false);
+  const handleOpenEmptySessionModal = () => {
+    setIsEmptySession(true);
+    setSelectedGoalId(null);
+    setIsActivityModalOpen(true);
+  };
 
-    const goalId = selectedGoalId ?? getPreferredGoalId();
-    if (!goalId) {
-      alert("Create a goal first to start a session.");
-      return;
-    }
-
+  const buildRatesParam = (activity: Activity) => {
     const dist = activity.xp_distribution ?? {};
     const SECONDS_PER_HOUR = 3600;
     const aspects = ['physique', 'energy', 'logic', 'creativity', 'social'] as const;
@@ -639,12 +636,29 @@ export default function GoalsPage() {
           return acc;
         }, {} as Record<string, number>)
       : {};
-    const ratesParam = Object.keys(rates).length > 0
+    return Object.keys(rates).length > 0
       ? `&rates=${encodeURIComponent(JSON.stringify(rates))}`
       : '';
-    router.push(
-      `/goals/${goalId}/session/new?activity=${activity.pk ?? activity.uid ?? activity.id}${ratesParam}`,
-    );
+  };
+
+  const handleSelectActivity = (activity: Activity) => {
+    setIsActivityModalOpen(false);
+
+    const activityRef = activity.pk ?? activity.uid ?? activity.id;
+    const ratesParam = buildRatesParam(activity);
+
+    if (isEmptySession) {
+      router.push(`/goals/none/session/new?activity=${activityRef}${ratesParam}`);
+      return;
+    }
+
+    const goalId = selectedGoalId ?? getPreferredGoalId();
+    if (!goalId) {
+      alert("Create a goal first to start a session.");
+      return;
+    }
+
+    router.push(`/goals/${goalId}/session/new?activity=${activityRef}${ratesParam}`);
   };
 
   const handleGenerateNewActivity = (query: string) => {
@@ -803,7 +817,7 @@ export default function GoalsPage() {
               {/* Create new goal */}
               <button
                 type="button"
-                onClick={() => setIsSessionPopupOpen(true)}
+                onClick={handleOpenEmptySessionModal}
                 className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-gray-200 dark:bg-dark-2 text-black dark:text-white font-semibold py-4 px-5 hover:bg-gray-300 dark:hover:bg-dark-3 transition cursor-pointer"
               >
                 <PlayIcon className="w-5 h-5" />
@@ -1064,16 +1078,6 @@ export default function GoalsPage() {
         newStatus={pendingStatusChange?.newStatus || ''}
         goalTitle={pendingStatusChange?.goalTitle || ''}
       />
-      <NewSessionPopup
-        isOpen={isSessionPopupOpen}
-        onClose={() => setIsSessionPopupOpen(false)}
-        onSelectActivity={handleSelectActivity}
-        onNewActivity={() => {
-          setIsSessionPopupOpen(false);
-          setSelectedGoalId(getPreferredGoalId());
-          setIsActivityModalOpen(true);
-        }}
-       />
     </main>
   );
 }

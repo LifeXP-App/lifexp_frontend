@@ -126,6 +126,7 @@ export default function SessionTimer({ params }: SessionTimerProps) {
   const { me } = useAuth();
 
   const isNew = sessionIdStr === "new";
+  const isEmptySession = goalId === "none";
   const [createdSessionId, setCreatedSessionId] =
     useState<Id<"sessions"> | null>(null);
   const creatingRef = useRef(false);
@@ -138,6 +139,16 @@ export default function SessionTimer({ params }: SessionTimerProps) {
   const [goalError, setGoalError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (isEmptySession) {
+      setGoalData({
+        title: "Free Session",
+        emoji: "⚡",
+        category: "",
+        categoryColor: "#4187a2",
+      });
+      return;
+    }
+
     GoalsService.getGoal(goalId)
       .then((goal) => {
         setGoalData({
@@ -149,7 +160,7 @@ export default function SessionTimer({ params }: SessionTimerProps) {
         setGoalIntId(parseInt(goal.id, 10));
       })
       .catch(() => setGoalError("Failed to load goal data"));
-  }, [goalId]);
+  }, [goalId, isEmptySession]);
 
   const [showStats, setShowStats] = useState(false);
   const [ratesError, setRatesError] = useState<string | null>(null);
@@ -189,7 +200,7 @@ export default function SessionTimer({ params }: SessionTimerProps) {
       creatingRef.current ||
       !me ||
       !goalData ||
-      goalIntId === null
+      (goalIntId === null && !isEmptySession)
     )
       return;
     if (existingSession === undefined) return; // still loading
@@ -245,7 +256,7 @@ export default function SessionTimer({ params }: SessionTimerProps) {
             body: JSON.stringify({
               session_id: id,
               user_id: me.id,
-              goal: goalIntId,
+              ...(isEmptySession ? {} : { goal: goalIntId }),
               activity: activityIdStr,
               status: "active",
               started_at: startedAt,
@@ -298,6 +309,7 @@ export default function SessionTimer({ params }: SessionTimerProps) {
     goalData,
     goalIntId,
     goalId,
+    isEmptySession,
     searchParams,
     startMutation,
     updateInitialRatesMutation,
@@ -577,7 +589,7 @@ useEffect(() => {
         xp_total: finalStats.xpTotal,
         duration_seconds: finalStats.totalDurationSeconds,
       });
-      router.push(`/goals/${goalId}`);
+      router.push(isEmptySession ? "/goals" : `/goals/${goalId}`);
     } catch (err) {
       console.error("Failed to abandon session:", err);
       posthog.captureException(err);
@@ -592,6 +604,7 @@ useEffect(() => {
     markSyncedMutation,
     router,
     goalId,
+    isEmptySession,
   ]);
 
   const handleSkipBreak = useCallback(async () => {
