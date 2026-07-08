@@ -59,12 +59,41 @@ export async function GET(
   }
 }
 
+async function readBody(req: Request) {
+  const text = await req.text();
+  if (!text) return {};
+
+  try {
+    const parsed = JSON.parse(text);
+    return typeof parsed === "object" && parsed !== null ? parsed : { content: text };
+  } catch {
+    return { content: text };
+  }
+}
+
+function normalizeCommentBody(body: Record<string, unknown> | undefined) {
+  const content =
+    typeof body?.content === "string"
+      ? body.content
+      : typeof body?.comment === "string"
+        ? body.comment
+        : "";
+
+  if (!content) return body ?? {};
+
+  return {
+    ...(body ?? {}),
+    content,
+    comment: content,
+  };
+}
+
 export async function POST(
   req: Request,
   context: { params: Promise<{ sessionId: string }> },
 ) {
   const { sessionId } = await context.params;
-  const body = await req.json();
+  const body = normalizeCommentBody(await readBody(req));
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
 
   const res = await authedFetch(req, `${baseUrl}/api/v1/sessions/${sessionId}/comments/`, {

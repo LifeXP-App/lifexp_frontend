@@ -31,6 +31,46 @@ type CommentSectionProps = {
   onClose: () => void;
 };
 
+function normalizeComment(rawComment: unknown, fallbackText = ""): Comment | null {
+  if (!rawComment || typeof rawComment !== "object" || Array.isArray(rawComment)) {
+    return null;
+  }
+
+  const candidate = rawComment as Record<string, unknown>;
+  const content =
+    typeof candidate.content === "string"
+      ? candidate.content
+      : typeof candidate.comment === "string"
+        ? candidate.comment
+        : "";
+
+  const user =
+    candidate.user && typeof candidate.user === "object" && !Array.isArray(candidate.user)
+      ? (candidate.user as Record<string, unknown>)
+      : null;
+
+  if (!content && !candidate.id) return null;
+
+  return {
+    id: Number(candidate.id ?? Date.now()),
+    username: typeof user?.username === "string" ? user.username : "you",
+    fullname: typeof user?.fullname === "string" ? user.fullname : "You",
+    profile_picture: typeof user?.profile_picture === "string" ? user.profile_picture : "",
+    created_at:
+      typeof candidate.created_at === "string"
+        ? candidate.created_at
+        : new Date().toISOString(),
+    comment: content || fallbackText,
+  };
+}
+
+function normalizeCommentPayload(commentText: string) {
+  return {
+    content: commentText,
+    comment: commentText,
+  };
+}
+
 export function CommentSection({ commentsEndpoint, initialComments, onClose }: CommentSectionProps) {
   const [comments, setComments] = useState<Comment[]>(initialComments);
   const [commentText, setCommentText] = useState("");
@@ -85,19 +125,18 @@ export function CommentSection({ commentsEndpoint, initialComments, onClose }: C
 
         const list: RawComment[] = Array.isArray(data?.results)
           ? data.results
-          : Array.isArray(data)
-          ? data
-          : [];
+          : Array.isArray(data?.comments)
+            ? data.comments
+            : Array.isArray(data?.items)
+              ? data.items
+              : Array.isArray(data)
+                ? data
+                : [];
 
         setComments(
-          list.map((c) => ({
-            id: c.id,
-            username: c.user.username,
-            fullname: c.user.fullname,
-            profile_picture: c.user.profile_picture,
-            created_at: c.created_at,
-            comment: c.content,
-          }))
+          list
+            .map((c) => normalizeComment(c))
+            .filter((c): c is Comment => Boolean(c))
         );
       } catch (err) {
         console.error("Failed to load comments", err);
@@ -125,26 +164,32 @@ export function CommentSection({ commentsEndpoint, initialComments, onClose }: C
       const res = await fetch(commentsEndpoint, {
         method: "POST",
         headers: authHeaders,
-        body: JSON.stringify({ content: commentText }),
+        body: JSON.stringify(normalizeCommentPayload(commentText.trim())),
         credentials: "include",
       });
 
-      if (!res.ok) return;
+      if (!res.ok) {
+        const errorText = await res.text().catch(() => "");
+        console.error("Failed to post comment", errorText);
+        return;
+      }
 
-      const c = await res.json();
+      const responseText = await res.text();
+      let parsed: unknown = null;
 
-      // optimistic prepend
-      setComments((prev) => [
-        {
-          id: c.id,
-          username: c.user.username,
-          fullname: c.user.fullname,
-          profile_picture: c.user.profile_picture,
-          created_at: c.created_at,
-          comment: c.content,
-        },
-        ...prev,
-      ]);
+      if (responseText) {
+        try {
+          parsed = JSON.parse(responseText);
+        } catch {
+          parsed = null;
+        }
+      }
+
+      const createdComment = normalizeComment(parsed, commentText.trim());
+
+      if (createdComment) {
+        setComments((prev) => [createdComment, ...prev]);
+      }
 
       setCommentText("");
     } catch (err) {

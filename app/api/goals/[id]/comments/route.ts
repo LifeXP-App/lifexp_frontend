@@ -13,7 +13,7 @@ async function safeJson(res: Response) {
 }
 
 async function authedFetch(access: string, url: string, options: RequestInit = {}) {
-  let res = await fetch(url, {
+  const res = await fetch(url, {
     ...options,
     headers: {
       ...(options.headers || {}),
@@ -41,6 +41,22 @@ async function authedFetch(access: string, url: string, options: RequestInit = {
   });
 }
 
+async function fetchCommentsEndpoint(
+  access: string,
+  baseUrl: string,
+  id: string,
+  options: RequestInit = {}
+) {
+  const primaryUrl = `${baseUrl}/api/v1/posts/${id}/comments/`;
+  const fallbackUrl = `${baseUrl}/api/v1/goals/${id}/comments/`;
+
+  const primaryRes = await authedFetch(access, primaryUrl, options);
+  if (primaryRes instanceof NextResponse) return primaryRes;
+  if (primaryRes.status !== 404) return primaryRes;
+
+  return authedFetch(access, fallbackUrl, options);
+}
+
 /* ---------------- GET COMMENTS ---------------- */
 export async function GET(
   req: Request,
@@ -54,10 +70,39 @@ export async function GET(
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
-  const res = await authedFetch(access, `${baseUrl}/api/v1/goals/${id}/comments/`);
+  const res = await fetchCommentsEndpoint(access, baseUrl, id);
 
   if (res instanceof NextResponse) return res;
   return NextResponse.json(await safeJson(res), { status: res.status });
+}
+
+async function readBody(req: Request) {
+  const text = await req.text();
+  if (!text) return {};
+
+  try {
+    const parsed = JSON.parse(text);
+    return typeof parsed === "object" && parsed !== null ? parsed : { content: text };
+  } catch {
+    return { content: text };
+  }
+}
+
+function normalizeCommentBody(body: Record<string, unknown> | undefined) {
+  const content =
+    typeof body?.content === "string"
+      ? body.content
+      : typeof body?.comment === "string"
+        ? body.comment
+        : "";
+
+  if (!content) return body ?? {};
+
+  return {
+    ...(body ?? {}),
+    content,
+    comment: content,
+  };
 }
 
 /* ---------------- POST COMMENT ---------------- */
@@ -66,7 +111,7 @@ export async function POST(
   context: { params: Promise<{ id: string }> }
 ) {
   const { id } = await context.params;
-  const body = await req.json();
+  const body = normalizeCommentBody(await readBody(req));
 
   const access = await getAuthToken(req);
   if (!access) {
@@ -74,7 +119,7 @@ export async function POST(
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
-  const res = await authedFetch(access, `${baseUrl}/api/v1/goals/${id}/comments/`, {
+  const res = await fetchCommentsEndpoint(access, baseUrl, id, {
     method: "POST",
     body: JSON.stringify(body),
   });
