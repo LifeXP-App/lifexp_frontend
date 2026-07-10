@@ -45,8 +45,8 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   if (!active || !payload || payload.length === 0) return null;
 
   return (
-    <div className="bg-white dark:bg-dark-2 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg px-3 py-2">
-      <p className="font-semibold text-sm text-gray-800 dark:text-gray-200 mb-1">
+    <div className="bg-white dark:bg-dark-2 border border-gray-200 dark:border-[var(--border)] rounded-lg shadow-lg px-3 py-2">
+      <p className="font-semibold text-sm text-gray-800 dark:text-[var(--foreground)] mb-1">
         {label}
       </p>
       {payload.map((entry) => (
@@ -167,7 +167,7 @@ export default function RadarChart({
                 paddingTop: 10,
               }}
               formatter={(value) => (
-                <span className="text-sm text-gray-700 dark:text-gray-300">
+                <span className="text-sm text-gray-700 dark:text-[var(--muted)]">
                   {value}
                 </span>
               )}

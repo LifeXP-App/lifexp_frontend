@@ -231,11 +231,11 @@ export default function SearchPage() {
   const showContent = hasContent && !loadingRecent;
 
   return (
-    <div className="h-screen bg-gray-50 dark:bg-[#0a0a0a] overflow-hidden flex">
+    <div className="h-screen bg-gray-50 dark:bg-dark-1 overflow-hidden flex">
       {/* Left Column - Search Sidebar */}
-      <div className="w-96 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0a0a0a] flex flex-col h-screen overflow-y-auto">
+      <div className="w-96 border-r border-gray-200 dark:border-[var(--border)] bg-white dark:bg-dark-1 flex flex-col h-screen overflow-y-auto">
         <div className="p-6">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-[var(--foreground)] mb-6">
             Search
           </h1>
 
@@ -246,12 +246,12 @@ export default function SearchPage() {
               placeholder="🔍 Start Searching..."
               value={query}
               onChange={(e) => handleSearchQueryChange(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-gray-100 outline-none focus:border-blue-500 dark:focus:border-blue-500 transition-colors"
+              className="w-full px-4 py-3 border border-gray-300 dark:border-[var(--border)] rounded-lg bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-[var(--foreground)] outline-none focus:border-blue-500 dark:focus:border-blue-500 transition-colors"
             />
             {query && (
               <button
                 onClick={() => setQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-[var(--foreground)]"
               >
                 ✕
               </button>
@@ -265,7 +265,7 @@ export default function SearchPage() {
               className={`px-6 py-2 rounded-full text-sm font-medium transition-colors ${
                 activeFilters.includes("posts")
                   ? "bg-blue-600 text-white"
-                  : "bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"
+                  : "bg-gray-200 dark:bg-[var(--dark-2)] text-gray-700 dark:text-[var(--muted)] hover:bg-gray-300 dark:hover:bg-[var(--dark-3)]"
               }`}
             >
               Posts
@@ -280,7 +280,7 @@ export default function SearchPage() {
               className={`px-6 py-2 rounded-full text-sm font-medium transition-colors ${
                 activeFilters.includes("users")
                   ? "bg-blue-600 text-white"
-                  : "bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"
+                  : "bg-gray-200 dark:bg-[var(--dark-2)] text-gray-700 dark:text-[var(--muted)] hover:bg-gray-300 dark:hover:bg-[var(--dark-3)]"
               }`}
             >
               Users
@@ -295,7 +295,7 @@ export default function SearchPage() {
               className={`px-6 py-2 rounded-full text-sm font-medium transition-colors ${
                 activeFilters.includes("activities")
                   ? "bg-blue-600 text-white"
-                  : "bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"
+                  : "bg-gray-200 dark:bg-[var(--dark-2)] text-gray-700 dark:text-[var(--muted)] hover:bg-gray-300 dark:hover:bg-[var(--dark-3)]"
               }`}
             >
               Activities
@@ -308,14 +308,14 @@ export default function SearchPage() {
           </div>
 
           {/* Recent Searches */}
-          <div className="pt-6 border-t border-gray-200 dark:border-gray-800">
+          <div className="pt-6 border-t border-gray-200 dark:border-[var(--border)]">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+              <h3 className="text-sm font-medium text-gray-500 dark:text-[var(--muted)]">
                 Recent
               </h3>
             </div>
             {history.length === 0 ? (
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-gray-500 dark:text-[var(--muted)]">
                 No recent searches
               </p>
             ) : (
@@ -324,19 +324,19 @@ export default function SearchPage() {
                   <div
                     key={item.id}
                     onClick={() => handleHistoryItemClick(item.search_query)}
-                    className="flex items-center justify-between p-2 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-lg cursor-pointer group"
+                    className="flex items-center justify-between p-2 hover:bg-gray-100 dark:hover:bg-[var(--dark-1)] rounded-lg cursor-pointer group"
                   >
                     <div className="flex-1">
-                      <p className="text-sm text-gray-700 dark:text-gray-300">
+                      <p className="text-sm text-gray-700 dark:text-[var(--muted)]">
                         {item.search_query}
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-500">
+                      <p className="text-xs text-gray-500 dark:text-[var(--muted)]">
                         {item.search_type}
                       </p>
                     </div>
                     <button
                       onClick={(e) => handleDeleteHistoryItem(item.id, e)}
-                      className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-opacity"
+                      className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-800 dark:hover:text-[var(--foreground)] transition-opacity"
                     >
                       ✕
                     </button>
@@ -362,17 +362,17 @@ export default function SearchPage() {
               {/* Skeleton Loaders for Posts */}
               {activeFilters.includes("posts") && (
                 <div className="text-left mb-10">
-                  <div className="h-6 w-32 bg-gray-300 dark:bg-gray-700 rounded animate-pulse mb-4" />
+                  <div className="h-6 w-32 bg-gray-300 dark:bg-[var(--dark-3)] rounded animate-pulse mb-4" />
                   <div className="grid grid-cols-3 gap-4">
                     {[1, 2, 3, 4, 5, 6].map((i) => (
                       <div
                         key={i}
-                        className="rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-900"
+                        className="rounded-lg overflow-hidden bg-gray-100 dark:bg-[var(--dark-1)]"
                       >
-                        <div className="h-40 w-full bg-gray-300 dark:bg-gray-700 animate-pulse" />
+                        <div className="h-40 w-full bg-gray-300 dark:bg-[var(--dark-3)] animate-pulse" />
                         <div className="p-3">
-                          <div className="h-4 w-3/4 bg-gray-300 dark:bg-gray-700 rounded animate-pulse mb-2" />
-                          <div className="h-3 w-1/2 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
+                          <div className="h-4 w-3/4 bg-gray-300 dark:bg-[var(--dark-3)] rounded animate-pulse mb-2" />
+                          <div className="h-3 w-1/2 bg-gray-200 dark:bg-[var(--dark-2)] rounded animate-pulse" />
                         </div>
                       </div>
                     ))}
@@ -387,14 +387,14 @@ export default function SearchPage() {
                   {/* Users Skeleton */}
                   {activeFilters.includes("users") && (
                     <div className="text-left">
-                      <div className="h-6 w-32 bg-gray-300 dark:bg-gray-700 rounded animate-pulse mb-4" />
+                      <div className="h-6 w-32 bg-gray-300 dark:bg-[var(--dark-3)] rounded animate-pulse mb-4" />
                       <div className="space-y-3">
                         {[1, 2, 3, 4, 5].map((i) => (
                           <div key={i} className="flex items-center gap-4 p-3">
-                            <div className="w-12 h-12 bg-gray-300 dark:bg-gray-700 rounded-full animate-pulse" />
+                            <div className="w-12 h-12 bg-gray-300 dark:bg-[var(--dark-3)] rounded-full animate-pulse" />
                             <div className="flex-1">
-                              <div className="h-4 w-32 bg-gray-300 dark:bg-gray-700 rounded animate-pulse mb-2" />
-                              <div className="h-3 w-24 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
+                              <div className="h-4 w-32 bg-gray-300 dark:bg-[var(--dark-3)] rounded animate-pulse mb-2" />
+                              <div className="h-3 w-24 bg-gray-200 dark:bg-[var(--dark-2)] rounded animate-pulse" />
                             </div>
                           </div>
                         ))}
@@ -405,14 +405,14 @@ export default function SearchPage() {
                   {/* Activities Skeleton */}
                   {activeFilters.includes("activities") && (
                     <div className="text-left">
-                      <div className="h-6 w-32 bg-gray-300 dark:bg-gray-700 rounded animate-pulse mb-4" />
+                      <div className="h-6 w-32 bg-gray-300 dark:bg-[var(--dark-3)] rounded animate-pulse mb-4" />
                       <div className="space-y-3">
                         {[1, 2, 3].map((i) => (
                           <div key={i} className="flex items-center gap-4 p-3">
-                            <div className="w-12 h-12 bg-gray-300 dark:bg-gray-700 rounded-full animate-pulse" />
+                            <div className="w-12 h-12 bg-gray-300 dark:bg-[var(--dark-3)] rounded-full animate-pulse" />
                             <div className="flex-1">
-                              <div className="h-4 w-32 bg-gray-300 dark:bg-gray-700 rounded animate-pulse mb-2" />
-                              <div className="h-3 w-24 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
+                              <div className="h-4 w-32 bg-gray-300 dark:bg-[var(--dark-3)] rounded animate-pulse mb-2" />
+                              <div className="h-3 w-24 bg-gray-200 dark:bg-[var(--dark-2)] rounded animate-pulse" />
                             </div>
                           </div>
                         ))}
@@ -426,7 +426,7 @@ export default function SearchPage() {
 
           {showEmptyResults && (
             <div className="text-center py-16">
-              <div className="w-20 h-20 mx-auto mb-6 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
+              <div className="w-20 h-20 mx-auto mb-6 bg-gray-100 dark:bg-[var(--dark-2)] rounded-full flex items-center justify-center">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-10 w-10 text-gray-400"
@@ -442,10 +442,10 @@ export default function SearchPage() {
                   />
                 </svg>
               </div>
-              <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">
+              <h2 className="text-2xl font-semibold text-gray-900 dark:text-[var(--foreground)] mb-2">
                 No results found
               </h2>
-              <p className="text-gray-500 dark:text-gray-400">
+              <p className="text-gray-500 dark:text-[var(--muted)]">
                 Try different keywords or check your spelling
               </p>
             </div>
@@ -458,7 +458,7 @@ export default function SearchPage() {
               {/* Recent Posts */}
               {filteredResults.posts.length > 0 && (
                 <div className="text-left mb-10">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-[var(--foreground)] mb-4">
                     Recent Posts ({filteredResults.posts.length})
                   </h3>
                   <div className="grid grid-cols-3 gap-4">
@@ -466,7 +466,7 @@ export default function SearchPage() {
                       <Link
                         key={post.id}
                         href={`/post/${post.uid}`}
-                        className="block h-48 bg-gray-200 dark:bg-gray-800 rounded-lg overflow-hidden"
+                        className="block h-48 bg-gray-200 dark:bg-[var(--dark-2)] rounded-lg overflow-hidden"
                       >
                         {post.post_image && (
                           <img
@@ -488,7 +488,7 @@ export default function SearchPage() {
                   {/* Users Column */}
                   {filteredResults.users.length > 0 && (
                     <div className="text-left">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-[var(--foreground)] mb-4">
                         {query ? "Users" : "Active Users"}
                         {query && counts.users > 0 && (
                           <span className="ml-2 text-sm opacity-70">
@@ -501,7 +501,7 @@ export default function SearchPage() {
                           <Link
                             key={user.id}
                             href={`/u/${user.username}`}
-                            className="flex items-center gap-4 p-3 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-lg transition-colors"
+                            className="flex items-center gap-4 p-3 hover:bg-gray-100 dark:hover:bg-[var(--dark-1)] rounded-lg transition-colors"
                           >
                             {user.profile_picture && (
                               <img
@@ -511,10 +511,10 @@ export default function SearchPage() {
                               />
                             )}
                             <div>
-                              <p className="font-semibold text-gray-900 dark:text-white">
+                              <p className="font-semibold text-gray-900 dark:text-[var(--foreground)]">
                                 {user.fullname}
                               </p>
-                              <p className="text-sm opacity-70 text-gray-600 dark:text-gray-400">
+                              <p className="text-sm opacity-70 text-gray-600 dark:text-[var(--muted)]">
                                 @{user.username}
                               </p>
                             </div>
@@ -527,7 +527,7 @@ export default function SearchPage() {
                   {/* Activities Column */}
                   {filteredResults.activities.length > 0 && (
                     <div className="text-left">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-[var(--foreground)] mb-4">
                         {query ? "Activities" : "Recent Activities"}
                         {query && counts.activities > 0 && (
                           <span className="ml-2 text-sm opacity-70">
@@ -540,17 +540,17 @@ export default function SearchPage() {
                           <Link
                             key={activity.id}
                             href={`/a/${activity.uid}`}
-                            className="flex items-center gap-4 p-3 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-lg transition-colors"
+                            className="flex items-center gap-4 p-3 hover:bg-gray-100 dark:hover:bg-[var(--dark-1)] rounded-lg transition-colors"
                           >
-                            <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center text-2xl">
+                            <div className="w-12 h-12 bg-gray-200 dark:bg-[var(--dark-3)] rounded-full flex items-center justify-center text-2xl">
                               {activity.emoji}
                             </div>
 
                             <div className="flex-1">
-                              <p className="font-semibold text-gray-900 dark:text-white">
+                              <p className="font-semibold text-gray-900 dark:text-[var(--foreground)]">
                                 {activity.name}
                               </p>
-                              <p className="text-sm opacity-70 text-gray-600 dark:text-gray-400 capitalize">
+                              <p className="text-sm opacity-70 text-gray-600 dark:text-[var(--muted)] capitalize">
                                 {activity.activity_type}
                               </p>
                             </div>

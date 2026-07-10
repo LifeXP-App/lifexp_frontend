@@ -40,7 +40,7 @@ export function Sidebar() {
         style={{ borderColor: "var(--border)" }}
       >
         <div className="flex items-center justify-between">
-          <span className="text-xs text-gray-500 dark:text-gray-400">
+          <span className="text-xs text-gray-500 dark:text-[var(--muted)]">
             Theme
           </span>
           <ThemeToggle />

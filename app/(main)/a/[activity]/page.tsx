@@ -177,7 +177,7 @@ const ActivityLeaderboard: React.FC<{ users: LeaderboardUser[] }> = ({ users }) 
       );
 
     return (
-      <p className="w-[17px] text-sm font-semibold text-left text-gray-600 dark:text-gray-400">
+      <p className="w-[17px] text-sm font-semibold text-left text-gray-600 dark:text-[var(--muted)]">
         {rank}
       </p>
     );
@@ -205,7 +205,7 @@ const ActivityLeaderboard: React.FC<{ users: LeaderboardUser[] }> = ({ users }) 
       <div className="divide-y" style={{ borderColor: "var(--border)" }}>
         {users.map((user, idx) => (
            <Link key={user.id} href={`/profile/${user.id}`}>
-                  <div className={`flex ${user.isYou ? 'bg-gray-50 dark:bg-dark-2  ' : 'dark:bg-dark-1'} hover:bg-gray-50 dark:hover:bg-dark-2 cursor-pointer justify-between items-center w-full px-5 py-4 rounded-xl transition-all    border border-transparent hover:border-gray-200 dark:hover:border-gray-700`}>
+                  <div className={`flex ${user.isYou ? 'bg-gray-50 dark:bg-dark-2  ' : 'dark:bg-dark-1'} hover:bg-gray-50 dark:hover:bg-dark-2 cursor-pointer justify-between items-center w-full px-5 py-4 rounded-xl transition-all    border border-transparent hover:border-gray-200 dark:hover:border-[var(--border)]`}>
                     <div className="flex items-center gap-4">
                       <div className="w-5 flex justify-center">
                         <RankBadge rank={user.rank} />
@@ -217,12 +217,12 @@ const ActivityLeaderboard: React.FC<{ users: LeaderboardUser[] }> = ({ users }) 
                         alt={user.name}
                       />
 
-                      <p className="text-base font-semibold dark:text-white">
+                      <p className="text-base font-semibold dark:text-[var(--foreground)]">
                         {`${user.name} ${user.isYou ? "(You)" : ""}`} 
                       </p>
                     </div>
 
-                    <p className="text-base font-semibold dark:text-gray-200">
+                    <p className="text-base font-semibold dark:text-[var(--foreground)]">
                       {user.totalXp.toLocaleString()} XP
                     </p>
                   </div>
@@ -282,7 +282,7 @@ const LiveSessionItem: React.FC<LiveSession & { onClick?: () => void }> = ({
       {/* Left content */}
       <div className="flex flex-col min-w-0 gap-1 pr-8">
         {/* Title */}
-        <h3 className="font-semibold text-lg text-foreground dark:text-white truncate">
+        <h3 className="font-semibold text-lg text-foreground dark:text-[var(--foreground)] truncate">
           {goalTitle}
         </h3>
 
@@ -302,7 +302,7 @@ const LiveSessionItem: React.FC<LiveSession & { onClick?: () => void }> = ({
 
       {/* Right: duration */}
       <div className="flex-shrink-0 text-right">
-        <div className="font-semibold text-lg text-foreground dark:text-white">
+        <div className="font-semibold text-lg text-foreground dark:text-[var(--foreground)]">
           {duration}
         </div>
       </div>
@@ -363,7 +363,7 @@ const SessionItem: React.FC<Session & { onClick?: () => void; accentColor?: stri
       </div>
 
       <div className="flex-1 min-w-0">
-        <h3 className="font-semibold text-lg text-foreground dark:text-white">
+        <h3 className="font-semibold text-lg text-foreground dark:text-[var(--foreground)]">
           {goalTitle? goalTitle : `Free ${activity} Session`}
         </h3>
         <p className="text-sm font-bold" style={{ color: accentColor }}>
@@ -378,7 +378,7 @@ const SessionItem: React.FC<Session & { onClick?: () => void; accentColor?: stri
       {/* Right side: duration + menu */}
       <div className="flex items-center gap-3">
         <div className="text-right">
-          <div className="font-semibold text-lg text-foreground dark:text-white">
+          <div className="font-semibold text-lg text-foreground dark:text-[var(--foreground)]">
             {duration}
           </div>
         </div>
@@ -437,7 +437,7 @@ const FriendSessionItem: React.FC<Session & { onClick?: () => void; accentColor?
       </div>
 
       <div className="flex-1 min-w-0">
-        <h3 className="font-semibold text-lg text-foreground dark:text-white">
+        <h3 className="font-semibold text-lg text-foreground dark:text-[var(--foreground)]">
           {goalTitle}
         </h3>
         <Link href={`/u/${user?.username}`} className="text-sm font-bold" style={{ color: accentColor }}>
@@ -453,7 +453,7 @@ const FriendSessionItem: React.FC<Session & { onClick?: () => void; accentColor?
       {/* Right side: duration + menu */}
       <div className="flex items-center gap-3">
         <div className="text-right">
-          <div className="font-semibold text-lg text-foreground dark:text-white">
+          <div className="font-semibold text-lg text-foreground dark:text-[var(--foreground)]">
             {duration}
           </div>
         </div>
@@ -907,7 +907,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
               </svg>
             </button>
             
-            <h1 className="text-xl font-bold flex-1 ml-2 text-foreground dark:text-white">{activityData?.name || 'Activity'}</h1>
+            <h1 className="text-xl font-bold flex-1 ml-2 text-foreground dark:text-[var(--foreground)]">{activityData?.name || 'Activity'}</h1>
             
             <div ref={moreMenuRef} className="relative">
             <button
@@ -936,14 +936,14 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 <div className="mb-6 flex justify-around bg-white dark:bg-dark-2 rounded-2xl p-4 border" style={{ borderColor: 'var(--border)' }}>
             <div className="flex flex-col items-center justify-between">
               <span className="text-sm" style={{ color: 'var(--muted)' }}>Time Spent</span>
-              <span className="text-lg font-bold text-foreground dark:text-white">{totalTimeSpent}</span>
+              <span className="text-lg font-bold text-foreground dark:text-[var(--foreground)]">{totalTimeSpent}</span>
             </div>
 
             <div className="h-px" style={{ backgroundColor: 'var(--border)' }} />
 
             <div className="flex flex-col items-center justify-between">
               <span className="text-sm" style={{ color: 'var(--muted)' }}>XP gained</span>
-              <span className="text-lg font-bold text-foreground dark:text-white">{totalXP}</span>
+              <span className="text-lg font-bold text-foreground dark:text-[var(--foreground)]">{totalXP}</span>
             </div>
 
             <div className="h-px" style={{ backgroundColor: 'var(--border)' }} />
@@ -960,14 +960,14 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                     />
                   ))}
                 </div>
-                <span className="text-md font-semibold text-foreground dark:text-white">+{stats.likes}</span>
+                <span className="text-md font-semibold text-foreground dark:text-[var(--foreground)]">+{stats.likes}</span>
               </div>
             </div>
           </div>
          
 
           {/* Description */}
-          <p className="text-base mb-6 text-foreground dark:text-white">
+          <p className="text-base mb-6 text-foreground dark:text-[var(--foreground)]">
             {description}
           </p>
 
@@ -988,7 +988,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
             </div>
           </div>
 
-<h2 className="text-xl font-bold my-4 text-foreground dark:text-white">Your Recent Sessions</h2>
+<h2 className="text-xl font-bold my-4 text-foreground dark:text-[var(--foreground)]">Your Recent Sessions</h2>
             <div className="space-y-3">
             {todaySessions.map((session) => (
                 <SessionItem
@@ -1001,7 +1001,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
             </div>
 
 
-           <h2 className="text-xl font-bold my-4 text-foreground dark:text-white">Your Recent Sessions</h2>
+           <h2 className="text-xl font-bold my-4 text-foreground dark:text-[var(--foreground)]">Your Recent Sessions</h2>
             <div className="space-y-3">
             {todaySessions.map((session) => (
                 <SessionItem
@@ -1027,7 +1027,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
             <div className="mb-6 flex justify-around bg-white dark:bg-dark-2 rounded-2xl px-4 py-6 border" style={{ borderColor: 'var(--border)' }}>
             <div className="flex flex-col items-center justify-between">
-              <span className="text-lg font-bold text-foreground dark:text-white">{totalTimeSpent}</span>
+              <span className="text-lg font-bold text-foreground dark:text-[var(--foreground)]">{totalTimeSpent}</span>
               <span className="text-sm" style={{ color: 'var(--muted)' }}>Time Spent</span>
             </div>
 
@@ -1035,7 +1035,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
             <div className="flex flex-col items-center justify-between">
 
-              <span className="text-lg font-bold text-foreground dark:text-white">{totalXP}</span>
+              <span className="text-lg font-bold text-foreground dark:text-[var(--foreground)]">{totalXP}</span>
               <span className="text-sm" style={{ color: 'var(--muted)' }}>XP gained</span>
             </div>
 
@@ -1043,7 +1043,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
 <div className="flex flex-col items-center justify-between">
 
-              <span className="text-lg font-bold text-foreground dark:text-white">{totalSessions}</span>
+              <span className="text-lg font-bold text-foreground dark:text-[var(--foreground)]">{totalSessions}</span>
               <span className="text-sm" style={{ color: 'var(--muted)' }}>Sessions</span>
             </div>
           
@@ -1056,7 +1056,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
               {liveSessions && liveSessions.length > 0 && (
               <>
               <div className="flex justify-between">
-            <h2 className="text-xl font-bold my-6 text-foreground dark:text-white">Currently Live</h2>
+            <h2 className="text-xl font-bold my-6 text-foreground dark:text-[var(--foreground)]">Currently Live</h2>
             <button className='bg-transparent font-medium text-sm cursor-pointer active:opacity-80 hover:opacity-90' style={{color: activityColor}}>
               View more →
             </button>
@@ -1090,7 +1090,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       style={{ borderColor: "var(--border)" }}
     >
       <RocketLaunchIcon className="w-16 h-16 mb-8 stroke-black opacity-20 dark:stroke-white"/>
-      <p className="text-base font-semibold text-black opacity-20 dark:text-white">
+      <p className="text-base font-semibold text-black opacity-20 dark:text-[var(--foreground)]">
         Be the first to try this activity!
       </p>
     </div>
@@ -1099,7 +1099,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 {!sessionsLoading && friendsSessions.length > 0 && (
             <>
             <div className="flex justify-between">
-            <h2 className="text-xl font-bold my-6 text-foreground dark:text-white">Friends' Drawing Sessions</h2>
+            <h2 className="text-xl font-bold my-6 text-foreground dark:text-[var(--foreground)]">Friends' Drawing Sessions</h2>
             <button className='bg-transparent font-medium text-sm cursor-pointer active:opacity-80 hover:opacity-90' style={{color: activityColor}}>
               View more →
             </button>
@@ -1126,7 +1126,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
   <>
             <div className="flex justify-between">
-            <h2 className="text-xl font-bold my-6 text-foreground dark:text-white">Your Sessions</h2>
+            <h2 className="text-xl font-bold my-6 text-foreground dark:text-[var(--foreground)]">Your Sessions</h2>
             <button className='bg-transparent font-medium text-sm cursor-pointer active:opacity-80 hover:opacity-90' style={{color: activityColor}}>
               View more →
             </button>
@@ -1183,7 +1183,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
               {/* Description */}
 
-                <p className="text-md text-foreground dark:text-white">
+                <p className="text-md text-foreground dark:text-[var(--foreground)]">
                   {activityData?.description}
                 </p>
 

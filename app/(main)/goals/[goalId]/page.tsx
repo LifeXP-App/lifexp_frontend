@@ -99,7 +99,7 @@ const SessionItem: React.FC<any & { onClick?: () => void, color?: string  }> = (
       </div>
 
       <div className="flex-1 min-w-0">
-        <h3 className="font-semibold text-lg text-foreground dark:text-white">
+        <h3 className="font-semibold text-lg text-foreground dark:text-[var(--foreground)]">
           Session {sessionNumber || "?"}
         </h3>
         <p
@@ -119,7 +119,7 @@ const SessionItem: React.FC<any & { onClick?: () => void, color?: string  }> = (
       {/* Right side: duration + menu */}
       <div className="flex items-center gap-3">
         <div className="text-right">
-          <div className="font-semibold text-lg text-foreground dark:text-white">
+          <div className="font-semibold text-lg text-foreground dark:text-[var(--foreground)]">
             {duration}
           </div>
         </div>
@@ -828,7 +828,7 @@ export default function GoalDetailPage() {
               </svg>
             </button>
 
-            <h1 className="text-xl font-bold flex-1 ml-2 text-foreground dark:text-white">
+            <h1 className="text-xl font-bold flex-1 ml-2 text-foreground dark:text-[var(--foreground)]">
               {goal.title}
             </h1>
 
@@ -897,7 +897,7 @@ export default function GoalDetailPage() {
 
           {/* Description */}
           {goalDescription && (
-            <p className="text-base mb-4 text-foreground dark:text-white">
+            <p className="text-base mb-4 text-foreground dark:text-[var(--foreground)]">
               {goalDescription}
             </p>
           )}
@@ -911,7 +911,7 @@ export default function GoalDetailPage() {
               <span className="text-sm" style={{ color: "var(--muted)" }}>
                 Time Spent
               </span>
-              <span className="text-lg font-bold text-foreground dark:text-white">
+              <span className="text-lg font-bold text-foreground dark:text-[var(--foreground)]">
                 {formatDuration(totalDurationSeconds)}
               </span>
             </div>
@@ -925,7 +925,7 @@ export default function GoalDetailPage() {
               <span className="text-sm" style={{ color: "var(--muted)" }}>
                 XP gained
               </span>
-              <span className="text-lg font-bold text-foreground dark:text-white">
+              <span className="text-lg font-bold text-foreground dark:text-[var(--foreground)]">
                 {totalXp}
               </span>
             </div>
@@ -1026,7 +1026,7 @@ export default function GoalDetailPage() {
             </div>
           )}
 
-          <h2 className="text-xl font-bold my-4 text-foreground dark:text-white">
+          <h2 className="text-xl font-bold my-4 text-foreground dark:text-[var(--foreground)]">
             Today
           </h2>
           <div className="space-y-3">
@@ -1050,7 +1050,7 @@ export default function GoalDetailPage() {
           </div>
 
           {/* Sessions - Earlier */}
-          <h2 className="text-xl font-bold my-4 text-foreground dark:text-white">
+          <h2 className="text-xl font-bold my-4 text-foreground dark:text-[var(--foreground)]">
             History
           </h2>
           <div className="space-y-3">
@@ -1120,7 +1120,7 @@ export default function GoalDetailPage() {
             )}
 
             {/* Sessions - Today */}
-            <h2 className="text-xl font-bold my-4 text-foreground dark:text-white">
+            <h2 className="text-xl font-bold my-4 text-foreground dark:text-[var(--foreground)]">
               Today
             </h2>
             <div className="space-y-3">
@@ -1145,7 +1145,7 @@ export default function GoalDetailPage() {
             </div>
 
             {/* Sessions - History */}
-            <h2 className="text-xl font-bold my-4 text-foreground dark:text-white">
+            <h2 className="text-xl font-bold my-4 text-foreground dark:text-[var(--foreground)]">
               History
             </h2>
             <div className="space-y-3">
@@ -1248,7 +1248,7 @@ export default function GoalDetailPage() {
 
               {/* Description */}
               {goalDescription && (
-                <p className="text-md text-foreground dark:text-white">
+                <p className="text-md text-foreground dark:text-[var(--foreground)]">
                   {goalDescription}
                 </p>
               )}
@@ -1263,7 +1263,7 @@ export default function GoalDetailPage() {
                   <span className="text-sm" style={{ color: "var(--muted)" }}>
                     Time Spent
                   </span>
-                  <span className="text-lg font-bold text-foreground dark:text-white">
+                  <span className="text-lg font-bold text-foreground dark:text-[var(--foreground)]">
                     {formatDuration(totalDurationSeconds)}
                   </span>
                 </div>
@@ -1278,7 +1278,7 @@ export default function GoalDetailPage() {
                   <span className="text-sm" style={{ color: "var(--muted)" }}>
                     XP gained
                   </span>
-                  <span className="text-lg font-bold text-foreground dark:text-white">
+                  <span className="text-lg font-bold text-foreground dark:text-[var(--foreground)]">
                     {totalXp}
                   </span>
                 </div>

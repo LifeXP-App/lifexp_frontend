@@ -69,13 +69,13 @@ export function NavigationItem({
       }
     >
       <span
-        className={isActive ? "" : "text-gray-600 dark:text-gray-400"}
+        className={isActive ? "" : "text-gray-600 dark:text-[var(--muted)]"}
       >
         <IconComponent className="w-6 h-6 shrink-0" />
       </span>
       <span
         className={`text-md font-medium ${
-          isActive ? "" : "text-gray-600  dark:text-gray-400"
+          isActive ? "" : "text-gray-600  dark:text-[var(--muted)]"
         }`}
       >
         {label}

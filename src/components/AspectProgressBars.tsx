@@ -12,7 +12,7 @@ const ASPECT_ORDER = ['physique', 'energy', 'logic', 'creativity', 'social'] as 
 export function AspectProgressBars({ user }: AspectProgressBarsProps) {
   return (
     <div className="px-6 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
-      <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
+      <h4 className="text-xs font-semibold text-gray-500 dark:text-[var(--muted)] uppercase tracking-wide mb-3">
         Life Aspects
       </h4>
       <div className="space-y-3">

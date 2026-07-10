@@ -108,12 +108,12 @@ export default function NewGoalModal({
       >
         {/* Modal */}
         <div
-          className="bg-gray-100 dark:bg-dark-2 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden dark:border dark:border-gray-800"
+          className="bg-gray-100 dark:bg-dark-2 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden dark:border dark:border-[var(--border)]"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-            <h2 className="text-xl  font-bold text-black dark:text-white">
+          <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200 dark:border-[var(--border)] bg-white dark:bg-[var(--dark-1)]">
+            <h2 className="text-xl  font-bold text-black dark:text-[var(--foreground)]">
               {isEdit ? "Edit Goal Details" : "Create New Goal"}
             </h2>
             <button
@@ -139,7 +139,7 @@ export default function NewGoalModal({
 
            
             <div className="mb-6">
-              <label className="block text-sm font-semibold mb-2 text-black dark:text-white">
+              <label className="block text-sm font-semibold mb-2 text-black dark:text-[var(--foreground)]">
                 What {goalCompleted ? "did you" : "What do you want to"} achieve?
               </label>
               <input
@@ -147,13 +147,13 @@ export default function NewGoalModal({
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g., Learn to play guitar"
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-dark-3 text-black dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-dark-3 text-black dark:text-[var(--foreground)] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
               />
             </div>
 
             {/* Description Input */}
             <div className="mb-6">
-              <label className="block text-sm font-semibold mb-2 text-black dark:text-white">
+              <label className="block text-sm font-semibold mb-2 text-black dark:text-[var(--foreground)]">
                 Describe your goal{" "}
                 <span className="text-gray-400 font-normal">(optional)</span>
               </label>
@@ -162,14 +162,14 @@ export default function NewGoalModal({
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Add more details about your goal..."
                 rows={3}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-dark-3 text-black dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-dark-3 text-black dark:text-[var(--foreground)] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"
               />
             </div>
             {!goalCompleted && (
                 <>
             {/* Finish By Section */}
             <div className="mb-6">
-              <label className="block text-sm font-semibold mb-3 text-black dark:text-white">
+              <label className="block text-sm font-semibold mb-3 text-black dark:text-[var(--foreground)]">
                 Finish by
               </label>
               <div className="grid grid-cols-5 gap-3">
@@ -193,8 +193,8 @@ export default function NewGoalModal({
                       flex items-center  justify-center
                       ${
                         selectedPeriod === period.value
-                          ? "bg-black dark:bg-gray-700 text-white"
-                          : "bg-gray-200 dark:bg-dark-3 text-black dark:text-white hover:bg-gray-300 dark:hover:bg-gray-800"
+                          ? "bg-black dark:bg-[var(--dark-3)] text-white"
+                          : "bg-gray-200 dark:bg-dark-3 text-black dark:text-[var(--foreground)] hover:bg-gray-300 dark:hover:bg-[var(--dark-2)]"
                       }
                     `}
                   >
@@ -213,7 +213,7 @@ export default function NewGoalModal({
             {/* Calendar Picker */}
             {showCalendar && (
               <div>
-                <label className="block text-sm font-semibold mb-2 text-black dark:text-white">
+                <label className="block text-sm font-semibold mb-2 text-black dark:text-[var(--foreground)]">
                   Select date
                 </label>
                 <input
@@ -221,7 +221,7 @@ export default function NewGoalModal({
                   value={customDate}
                   onChange={(e) => setCustomDate(e.target.value)}
                   min={new Date().toISOString().split("T")[0]}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-dark-3 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-dark-3 text-black dark:text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                 />
               </div>
             )}
@@ -230,7 +230,7 @@ export default function NewGoalModal({
         )}
         </div>
 
-            <div className="mt-4 p-6 w-full bg-white dark:bg-gray-900  border-t border-gray-200 dark:border-gray-800">
+            <div className="mt-4 p-6 w-full bg-white dark:bg-[var(--dark-1)]  border-t border-gray-200 dark:border-[var(--border)]">
               {/* Submit Button */}
             <button
               type="submit"
@@ -240,7 +240,7 @@ export default function NewGoalModal({
                 ${
                   isFormValid
                     ? "cursor-pointer "
-                    : "bg-gray-300 dark:bg-gray-700 opacity-50 cursor-not-allowed"
+                    : "bg-gray-300 dark:bg-[var(--dark-3)] opacity-50 cursor-not-allowed"
                 }
               `}
               style={{background:"var(--rookie-primary)"}}

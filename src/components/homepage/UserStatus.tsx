@@ -32,7 +32,7 @@ export function UserStatus({ player }: UserStatusProps) {
 
   return (
     <Link href={`/u/${player.username}`}>
-      <div className="bg-white dark:bg-dark-2 border-2 border-gray-200 dark:border-gray-900 flex p-3 rounded-xl gap-3 min-w-[220px] max-w-[220px] items-center cursor-pointer flex-shrink-0">
+      <div className="bg-white dark:bg-dark-2 border-2 border-gray-200 dark:border-[var(--border)] flex p-3 rounded-xl gap-3 min-w-[220px] max-w-[220px] items-center cursor-pointer flex-shrink-0">
         <Image
           src={player.profile_picture}
           width={56}
@@ -45,7 +45,7 @@ export function UserStatus({ player }: UserStatusProps) {
         <div className="flex flex-col justify-between flex-1 min-w-0">
           <h1 className="text-md font-semibold truncate">{player.fullname}</h1>
 
-          <p className="text-xs font-medium text-black/40 dark:text-white/40">
+          <p className="text-xs font-medium text-black/40 dark:text-[var(--foreground)]/40">
             Life Level {player.lifelevel}
           </p>
 

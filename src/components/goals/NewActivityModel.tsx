@@ -333,14 +333,14 @@ export default function NewActivityModal({
         onClick={onClose}
       >
         <div
-          className="bg-gray-100 dark:bg-dark-3 dark:border dark:border-gray-800 rounded-3xl shadow-2xl w-full max-w-lg h-[78vh] max-h-[720px] overflow-hidden flex flex-col"
+          className="bg-gray-100 dark:bg-dark-3 dark:border dark:border-[var(--border)] rounded-3xl shadow-2xl w-full max-w-lg h-[78vh] max-h-[720px] overflow-hidden flex flex-col"
           onClick={(e) => e.stopPropagation()}>
   {/* Header */}
   <div
-    className="flex bg-white dark:bg-gray-900 items-center  px-5 pt-5 pb-4 border-b"
+    className="flex bg-white dark:bg-[var(--dark-1)] items-center  px-5 pt-5 pb-4 border-b"
     style={{ borderColor: "var(--border)" }}
   >
-    <h2 className="text-xl font-bold text-foreground dark:text-white">
+    <h2 className="text-xl font-bold text-foreground dark:text-[var(--foreground)]">
       Pick Activity
     </h2>
 
@@ -371,7 +371,7 @@ export default function NewActivityModal({
             value={searchQuery}
               type="text"
               placeholder="🔍  Start Searching..."
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-gray-100 outline-none focus:border-blue-500 dark:focus:border-blue-500 transition-colors"
+              className="w-full px-4 py-3 border border-gray-300 dark:border-[var(--border)] rounded-lg bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-[var(--foreground)] outline-none focus:border-blue-500 dark:focus:border-blue-500 transition-colors"
             />
           </div>
       
@@ -386,7 +386,7 @@ export default function NewActivityModal({
             className="px-5 pb-4 flex-1 overflow-y-auto noscrollbar space-y-5"
           >
             <div>
-              <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 px-1">
+              <h3 className="text-xs font-semibold text-gray-500 dark:text-[var(--muted)] mb-2 px-1">
                 {sectionTitle}
               </h3>
 
@@ -453,19 +453,19 @@ export default function NewActivityModal({
                         {[1, 2, 3, 4].map((i) => (
                           <div
                             key={i}
-                            className="flex items-center gap-3 px-3 py-3 bg-white dark:bg-[#1a1a1a] rounded-xl border border-gray-200 dark:border-gray-700"
+                            className="flex items-center gap-3 px-3 py-3 bg-white dark:bg-[#1a1a1a] rounded-xl border border-gray-200 dark:border-[var(--border)]"
                           >
                             {/* Emoji circle */}
-                            <div className="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-700" />
+                            <div className="w-10 h-10 rounded-full bg-gray-300 dark:bg-[var(--dark-3)]" />
 
                             {/* Text area */}
                             <div className="flex-1 space-y-2">
-                              <div className="h-4 w-40 bg-gray-300 dark:bg-gray-700 rounded" />
-                              <div className="h-3 w-24 bg-gray-200 dark:bg-gray-800 rounded" />
+                              <div className="h-4 w-40 bg-gray-300 dark:bg-[var(--dark-3)] rounded" />
+                              <div className="h-3 w-24 bg-gray-200 dark:bg-[var(--dark-2)] rounded" />
                             </div>
 
                             {/* XP badge placeholder */}
-                            <div className="w-12 h-6 bg-gray-300 dark:bg-gray-700 rounded-full" />
+                            <div className="w-12 h-6 bg-gray-300 dark:bg-[var(--dark-3)] rounded-full" />
                           </div>
                         ))}
                       </div>
@@ -475,10 +475,10 @@ export default function NewActivityModal({
           </div>
 
           {/* Bottom Buttons */}
-          <div className="p-5 pt-3 grid grid-cols-2 gap-3 border-t bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
+          <div className="p-5 pt-3 grid grid-cols-2 gap-3 border-t bg-white dark:bg-[var(--dark-1)] border-gray-200 dark:border-[var(--border)]">
             <button
               onClick={onClose}
-              className="py-3 px-4 rounded-xl font-medium active:opacity-80  text-white bg-gray-600 dark:bg-gray-700 hover:bg-gray-700 dark:hover:bg-gray-600 transition-all cursor-pointer "
+              className="py-3 px-4 rounded-xl font-medium active:opacity-80  text-white bg-gray-600 dark:bg-[var(--dark-3)] hover:bg-gray-700 dark:hover:bg-[var(--dark-3)] transition-all cursor-pointer "
             >
               Close
             </button>

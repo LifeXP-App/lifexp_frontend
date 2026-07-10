@@ -101,9 +101,9 @@ export function NudgesLikesSection() {
   return (
     <>
       {/* NOTIFICATIONS */}
-      <div className="bg-white w-full p-6 mb-4 rounded-xl border-2 border-gray-200 dark:bg-dark-2 dark:border-gray-800">
+      <div className="bg-white w-full p-6 mb-4 rounded-xl border-2 border-gray-200 dark:bg-dark-2 dark:border-[var(--border)]">
         <div className="flex justify-between items-center mb-4">
-          <p className="text-md font-semibold dark:text-white">
+          <p className="text-md font-semibold dark:text-[var(--foreground)]">
             Recent Interactions
           </p>
         </div>
@@ -134,7 +134,7 @@ export function NudgesLikesSection() {
                     </div>
 
                     <div className="flex flex-col gap-2">
-                      <p className="text-base dark:text-white truncate">
+                      <p className="text-base dark:text-[var(--foreground)] truncate">
                         <span className="font-semibold">{i.username}</span>{" "}
                         {i.type === "nudge" ? (
                           <>

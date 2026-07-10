@@ -6,8 +6,8 @@ export default function StatusBadge({ status }: StatusBadgeProps) {
   const statusConfig = {
     planned: {
       label: 'Planned',
-      bg: 'bg-gray-200 dark:bg-gray-800',
-      text: 'text-gray-700 dark:text-gray-300'
+      bg: 'bg-gray-200 dark:bg-[var(--dark-2)]',
+      text: 'text-gray-700 dark:text-[var(--muted)]'
     },
     ongoing: {
       label: 'Ongoing',

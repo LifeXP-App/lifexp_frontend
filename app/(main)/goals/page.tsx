@@ -71,7 +71,7 @@ import { NudgesLikesSection } from "@/src/components/goals/NudgesLikesSection";
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="text-xl font-bold text-black dark:text-white mb-3">
+    <h2 className="text-xl font-bold text-black dark:text-[var(--foreground)] mb-3">
       {children}
     </h2>
   );
@@ -93,7 +93,7 @@ function GoalCard({
   const isCompleted = goal.status === "completed";
 
   return (
-    <div className="w-full rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-dark-2  p-4">
+    <div className="w-full rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-dark-2  p-4">
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className=" w-full flex items-start gap-3">
@@ -101,7 +101,7 @@ function GoalCard({
 
           <div className="w-full">
             <div className="flex w-full items-center justify-between gap-2">
-              <p className="font-semibold text-lg text-black dark:text-white truncate">
+              <p className="font-semibold text-lg text-black dark:text-[var(--foreground)] truncate">
                 {goal.title}
               </p>
 
@@ -134,24 +134,24 @@ function GoalCard({
 
         {/* Right meta */}
         {!isCompleted && goal.metaRight && !onStatusChange && (
-          <p className="text-xs text-gray-400 dark:text-gray-500 italic whitespace-nowrap mt-1">
+          <p className="text-xs text-gray-400 dark:text-[var(--muted)] italic whitespace-nowrap mt-1">
             {goal.metaRight}
           </p>
         )}
       </div>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mt-3 line-clamp-2">
+      <p className="text-sm text-gray-500 dark:text-[var(--muted)] mt-3 line-clamp-2">
         {goal.description}
       </p>
       {/* Completed extra row */}
       {isCompleted && goal.timeSummary && (
-        <div className="mt-3 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+        <div className="mt-3 flex items-center gap-2 text-sm text-gray-500 dark:text-[var(--muted)]">
           <span className="inline-flex items-center justify-center">
             {/* clock icon */}
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 24 24"
               fill="currentColor"
-              className="h-4 w-4 text-gray-400 dark:text-gray-500"
+              className="h-4 w-4 text-gray-400 dark:text-[var(--muted)]"
             >
               <path
                 fillRule="evenodd"
@@ -212,7 +212,7 @@ function GoalCard({
         {secondaryCta && (
           <button
             onClick={secondaryCta.onClick}
-            className="flex-1 rounded-xl cursor-pointer bg-gray-700 dark:bg-gray-600 text-white font-semibold py-3 hover:bg-gray-800 dark:hover:bg-gray-700 transition"
+            className="flex-1 rounded-xl cursor-pointer bg-gray-700 dark:bg-[var(--dark-3)] text-white font-semibold py-3 hover:bg-gray-800 dark:hover:bg-[var(--dark-3)] transition"
           >
             {secondaryCta.label}
           </button>
@@ -221,7 +221,7 @@ function GoalCard({
         {showAchievementCta && (
           <button
             onClick={showAchievementCta.onClick}
-            className="w-full rounded-xl bg-gray-700 dark:bg-gray-600 text-white font-semibold py-3 hover:bg-gray-800 dark:hover:bg-gray-700 transition"
+            className="w-full rounded-xl bg-gray-700 dark:bg-[var(--dark-3)] text-white font-semibold py-3 hover:bg-gray-800 dark:hover:bg-[var(--dark-3)] transition"
           >
             {showAchievementCta.label}
           </button>
@@ -232,29 +232,29 @@ function GoalCard({
 }
 function GoalCardSkeleton() {
   return (
-    <div className="w-full rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-dark-2 p-4 animate-pulse">
+    <div className="w-full rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-dark-2 p-4 animate-pulse">
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3 w-full">
           {/* emoji placeholder */}
-          <div className="h-4 w-4 rounded bg-gray-200 dark:bg-gray-800 mt-1" />
+          <div className="h-4 w-4 rounded bg-gray-200 dark:bg-[var(--dark-2)] mt-1" />
 
-          <div className="h-6 w-3/4 rounded bg-gray-200 dark:bg-gray-800" />
+          <div className="h-6 w-3/4 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
         </div>
 
         {/* meta right */}
-        <div className="h-2 w-16 rounded bg-gray-200 dark:bg-gray-800 mt-1" />
+        <div className="h-2 w-16 rounded bg-gray-200 dark:bg-[var(--dark-2)] mt-1" />
       </div>
 
       {/* description */}
       <div className="mt-4 space-y-2">
-        <div className="h-3 w-full rounded bg-gray-200 dark:bg-gray-800" />
+        <div className="h-3 w-full rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
       </div>
 
       {/* buttons */}
       <div className="mt-6 flex gap-3">
-        <div className="h-10 w-full rounded-xl bg-gray-200 dark:bg-gray-800" />
-        <div className="h-10 w-full rounded-xl bg-gray-200 dark:bg-gray-800" />
+        <div className="h-10 w-full rounded-xl bg-gray-200 dark:bg-[var(--dark-2)]" />
+        <div className="h-10 w-full rounded-xl bg-gray-200 dark:bg-[var(--dark-2)]" />
       </div>
     </div>
   );
@@ -318,18 +318,18 @@ function RightSidebarInfoSkeleton() {
   return (
     <aside className="w-2xl hidden md:block">
       {/* PROFILE CARD */}
-      <div className="bg-white p-6 mb-4 rounded-xl border-2 border-gray-200 dark:bg-dark-2 dark:border-gray-800 animate-pulse">
+      <div className="bg-white p-6 mb-4 rounded-xl border-2 border-gray-200 dark:bg-dark-2 dark:border-[var(--border)] animate-pulse">
         <div className="text-center flex flex-col items-center">
           {/* avatar */}
-          <div className="h-24 w-24 aspect-square p-[1.5px] rounded-full bg-gray-200 dark:bg-gray-800 mb-3" />
+          <div className="h-24 w-24 aspect-square p-[1.5px] rounded-full bg-gray-200 dark:bg-[var(--dark-2)] mb-3" />
 
           {/* fullname */}
-          <div className="h-4 w-40 rounded bg-gray-200 dark:bg-gray-800 mb-3" />
+          <div className="h-4 w-40 rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-3" />
 
           {/* mastery row */}
           <span className="flex gap-2 justify-center items-center">
-            <div className="h-4 w-4 rounded bg-gray-200 dark:bg-gray-800" />
-            <div className="h-3 w-16 rounded bg-gray-200 dark:bg-gray-800" />
+            <div className="h-4 w-4 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
+            <div className="h-3 w-16 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
             <span className="w-4" />
           </span>
         </div>
@@ -338,32 +338,32 @@ function RightSidebarInfoSkeleton() {
         <div className="mt-4 flex justify-between text-sm">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="text-center">
-              <div className="h-4 w-6 mx-auto rounded bg-gray-200 dark:bg-gray-800 mb-2" />
-              <div className="h-3 w-14 mx-auto rounded bg-gray-200 dark:bg-gray-800" />
+              <div className="h-4 w-6 mx-auto rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-2" />
+              <div className="h-3 w-14 mx-auto rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
             </div>
           ))}
         </div>
 
         {/* XP BAR */}
-        <div className="w-full relative rounded-full h-4 my-4 ml-1 overflow-hidden bg-gray-200 dark:bg-gray-800">
-          <div className="h-6 w-[55%] bg-gray-300 dark:bg-gray-700" />
+        <div className="w-full relative rounded-full h-4 my-4 ml-1 overflow-hidden bg-gray-200 dark:bg-[var(--dark-2)]">
+          <div className="h-6 w-[55%] bg-gray-300 dark:bg-[var(--dark-3)]" />
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="h-3 w-20 rounded bg-gray-300/80 dark:bg-gray-700/70" />
+            <div className="h-3 w-20 rounded bg-gray-300/80 dark:bg-[var(--dark-3)]/70" />
           </div>
         </div>
 
         {/* XP + STREAK */}
         <div className="mt-4 flex justify-between text-sm gap-4">
-          <div className="bg-gray-100 w-full flex flex-col rounded-md items-center justify-between p-4 dark:bg-gray-900 dark:bg-opacity-50">
-            <div className="h-5 w-24 rounded bg-gray-200 dark:bg-gray-800 mb-2" />
-            <div className="h-3 w-28 rounded bg-gray-200 dark:bg-gray-800" />
+          <div className="bg-gray-100 w-full flex flex-col rounded-md items-center justify-between p-4 dark:bg-[var(--dark-1)] dark:bg-opacity-50">
+            <div className="h-5 w-24 rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-2" />
+            <div className="h-3 w-28 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
           </div>
 
-          <div className="bg-gray-100 w-full hidden md:flex flex-col rounded-md items-center justify-between p-4 dark:bg-gray-900 dark:bg-opacity-50">
-            <div className="h-3 w-20 rounded bg-gray-200 dark:bg-gray-800 mb-2" />
+          <div className="bg-gray-100 w-full hidden md:flex flex-col rounded-md items-center justify-between p-4 dark:bg-[var(--dark-1)] dark:bg-opacity-50">
+            <div className="h-3 w-20 rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-2" />
             <div className="flex gap-2 items-center">
-              <div className="h-4 w-4 rounded bg-gray-200 dark:bg-gray-800" />
-              <div className="h-5 w-8 rounded bg-gray-200 dark:bg-gray-800" />
+              <div className="h-4 w-4 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
+              <div className="h-5 w-8 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
             </div>
           </div>
         </div>
@@ -809,7 +809,7 @@ export default function GoalsPage() {
           {/* LEFT MAIN CONTENT */}
           <div className="w-full h-screen overflow-scroll noscrollbar py-4 px-6 md:px-12">
             {/* Title */}
-            <h1 className="text-xl font-bold text-black dark:text-white mb-4">
+            <h1 className="text-xl font-bold text-black dark:text-[var(--foreground)] mb-4">
               Goals
             </h1>
 
@@ -818,7 +818,7 @@ export default function GoalsPage() {
               <button
                 type="button"
                 onClick={handleOpenEmptySessionModal}
-                className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-gray-200 dark:bg-dark-2 text-black dark:text-white font-semibold py-4 px-5 hover:bg-gray-300 dark:hover:bg-dark-3 transition cursor-pointer"
+                className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-gray-200 dark:bg-dark-2 text-black dark:text-[var(--foreground)] font-semibold py-4 px-5 hover:bg-gray-300 dark:hover:bg-dark-3 transition cursor-pointer"
               >
                 <PlayIcon className="w-5 h-5" />
                 <span>Empty Session</span>
@@ -826,7 +826,7 @@ export default function GoalsPage() {
               <button
                 type="button"
                 onClick={() => setIsModalOpen(true)}
-                className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-gray-200 dark:bg-dark-2 text-black dark:text-white font-semibold py-4 px-5 hover:bg-gray-300 dark:hover:bg-dark-3 transition cursor-pointer"
+                className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-gray-200 dark:bg-dark-2 text-black dark:text-[var(--foreground)] font-semibold py-4 px-5 hover:bg-gray-300 dark:hover:bg-dark-3 transition cursor-pointer"
               >
                 <PlusIcon className="w-5 h-5" />
                 <span>Create New Goal</span>
@@ -1088,11 +1088,11 @@ export default function GoalsPage() {
 
    function RecentInteractionsSkeleton() {
   return (
-    <div className="bg-white dark:bg-dark-2 w-full p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-gray-800 animate-pulse">
+    <div className="bg-white dark:bg-dark-2 w-full p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-[var(--border)] animate-pulse">
       
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
-        <div className="h-4 w-40 rounded bg-gray-200 dark:bg-gray-800" />
+        <div className="h-4 w-40 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
       </div>
 
       {/* List */}
@@ -1104,16 +1104,16 @@ export default function GoalsPage() {
               
               {/* Avatar */}
               <div className="relative w-12 h-12 flex-shrink-0">
-                <div className="h-12 w-12 rounded-full bg-gray-200 dark:bg-gray-800" />
+                <div className="h-12 w-12 rounded-full bg-gray-200 dark:bg-[var(--dark-2)]" />
                 
                 {/* small interaction bubble */}
-                <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-gray-300 dark:bg-gray-700 border border-gray-200 dark:border-gray-800" />
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-gray-300 dark:bg-[var(--dark-3)] border border-gray-200 dark:border-[var(--border)]" />
               </div>
 
               {/* Text content */}
               <div className="flex flex-col flex-1 gap-2">
-                <div className="h-4 w-3/4 rounded bg-gray-200 dark:bg-gray-800" />
-                <div className="h-3 w-1/4 rounded bg-gray-200 dark:bg-gray-800" />
+                <div className="h-4 w-3/4 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
+                <div className="h-3 w-1/4 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
               </div>
             </li>
           ))}
@@ -1132,7 +1132,7 @@ function RightSidebar({ user }: { user: UserGoalsInfo }) {
   return (
     <aside className="w-2xl hidden md:block">
       {/* PROFILE CARD */}
-      <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-gray-800">
+      <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-[var(--border)]">
         <div className="text-center flex flex-col items-center">
           <div className="flex flex-col items-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1142,7 +1142,7 @@ function RightSidebar({ user }: { user: UserGoalsInfo }) {
               loading="lazy"
               alt="Profile"
             />
-            <h3 className="font-semibold mt-2 dark:text-white">
+            <h3 className="font-semibold mt-2 dark:text-[var(--foreground)]">
               {user.fullname}
             </h3>
           </div>
@@ -1154,7 +1154,7 @@ function RightSidebar({ user }: { user: UserGoalsInfo }) {
                 viewBox="0 0 24 24"
                 fill="currentColor"
                 onClick={openMasteryPopup}
-                className="w-4 h-4 text-gray-400 dark:text-gray-500"
+                className="w-4 h-4 text-gray-400 dark:text-[var(--muted)]"
               >
                 <path
                   fillRule="evenodd"
@@ -1192,7 +1192,7 @@ function RightSidebar({ user }: { user: UserGoalsInfo }) {
             >
               {user.totalXp} XP
             </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+            <p className="text-xs text-gray-500 dark:text-[var(--muted)]">
               Overall ranked <b>#{user.rank}</b>
             </p>
           </div>
@@ -1202,18 +1202,18 @@ function RightSidebar({ user }: { user: UserGoalsInfo }) {
                     ? "bg-orange-500/10 text-orange-500 "
                     : ""
                 }`}>
-            <p className="text-sm dark:text-gray-300">Streak Count</p>
+            <p className="text-sm dark:text-[var(--muted)]">Streak Count</p>
 
-            <p className={`text-lg font-extrabold text-gray-400 dark:text-gray-500 flex gap-1 items-center ${
+            <p className={`text-lg font-extrabold text-gray-400 dark:text-[var(--muted)] flex gap-1 items-center ${
                   user.streak_active
                     ? "text-orange-500 "
-                    : "text-gray-400 dark:text-gray-600"
+                    : "text-gray-400 dark:text-[var(--muted)]"
                 }`}>
               <FireIcon
                 className={`w-6 h-6 inline-block ml-1 ${
                   user.streak_active
                     ? "text-orange-500"
-                    : "text-gray-400 dark:text-gray-600 "
+                    : "text-gray-400 dark:text-[var(--muted)] "
                 }`}
               />
               {user.streak}
@@ -1231,8 +1231,8 @@ function RightSidebar({ user }: { user: UserGoalsInfo }) {
 function Stat({ label, value }: { label: string; value: number }) {
   return (
     <div className="text-center">
-      <p className="font-semibold dark:text-white">{value}</p>
-      <p className="text-gray-500 dark:text-gray-400">{label}</p>
+      <p className="font-semibold dark:text-[var(--foreground)]">{value}</p>
+      <p className="text-gray-500 dark:text-[var(--muted)]">{label}</p>
     </div>
   );
 }

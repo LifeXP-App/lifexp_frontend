@@ -216,22 +216,22 @@ export function CommentSection({ commentsEndpoint, initialComments, onClose }: C
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-xl font-bold dark:text-white">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-[var(--border)]">
+            <h2 className="text-xl font-bold dark:text-[var(--foreground)]">
               Comments ({comments.length})
             </h2>
             <button
               onClick={onClose}
-              className="p-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"
+              className="p-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-[var(--dark-2)] rounded-full"
             >
-              <XMarkIcon className="w-6 h-6 dark:text-white" />
+              <XMarkIcon className="w-6 h-6 dark:text-[var(--foreground)]" />
             </button>
           </div>
 
           {/* Comments */}
           <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50 dark:bg-dark-2">
             {comments.length === 0 ? (
-              <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+              <div className="text-center py-12 text-gray-500 dark:text-[var(--muted)]">
                 No comments yet. Be the first to comment!
               </div>
             ) : (
@@ -248,7 +248,7 @@ export function CommentSection({ commentsEndpoint, initialComments, onClose }: C
 
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-semibold text-sm dark:text-white">
+                      <span className="font-semibold text-sm dark:text-[var(--foreground)]">
                         {comment.fullname}
                       </span>
                       <span className="text-sm text-gray-500 font-bold">
@@ -259,7 +259,7 @@ export function CommentSection({ commentsEndpoint, initialComments, onClose }: C
                       </span>
                     </div>
 
-                    <p className="text-base dark:text-gray-200">
+                    <p className="text-base dark:text-[var(--foreground)]">
                       {comment.comment}
                     </p>
                   </div>
@@ -271,7 +271,7 @@ export function CommentSection({ commentsEndpoint, initialComments, onClose }: C
           {/* Input */}
           <form
             onSubmit={handleSubmit}
-            className="p-6 border-t border-gray-200 dark:border-gray-700 dark:bg-dark-3"
+            className="p-6 border-t border-gray-200 dark:border-[var(--border)] dark:bg-dark-3"
           >
             <div className="relative">
               <input
@@ -286,7 +286,7 @@ export function CommentSection({ commentsEndpoint, initialComments, onClose }: C
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-[var(--dark-2)]"
                 >
                   <PaperAirplaneIcon className="w-5 h-5 text-blue-600" />
                 </button>

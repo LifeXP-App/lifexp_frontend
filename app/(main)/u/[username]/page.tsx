@@ -485,50 +485,50 @@ export default function ProfilePage({ params }: PageProps) {
               <div className="flex flex-row items-center gap-4 sm:gap-8 w-full mb-4">
                 {/* Avatar */}
                 <div className="shrink-0">
-                  <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-full bg-gray-200 dark:bg-gray-800" />
+                  <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-full bg-gray-200 dark:bg-[var(--dark-2)]" />
                 </div>
 
                 {/* Name + stats */}
                 <div className="flex flex-col w-full">
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="h-4 w-32 rounded bg-gray-200 dark:bg-gray-800" />
-                    <div className="h-4 w-24 rounded bg-gray-200 dark:bg-gray-800" />
+                    <div className="h-4 w-32 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
+                    <div className="h-4 w-24 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
                   </div>
 
-                  <div className="h-3 w-40 rounded bg-gray-200 dark:bg-gray-800 mb-4" />
+                  <div className="h-3 w-40 rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-4" />
 
                   <div className="mt-4 flex gap-6 sm:gap-8 text-sm">
                     <div className="text-center sm:text-left">
-                      <div className="h-4 w-10 rounded bg-gray-200 dark:bg-gray-800 mx-auto sm:mx-0" />
-                      <div className="h-3 w-12 rounded bg-gray-200 dark:bg-gray-800 mt-2 mx-auto sm:mx-0" />
+                      <div className="h-4 w-10 rounded bg-gray-200 dark:bg-[var(--dark-2)] mx-auto sm:mx-0" />
+                      <div className="h-3 w-12 rounded bg-gray-200 dark:bg-[var(--dark-2)] mt-2 mx-auto sm:mx-0" />
                     </div>
 
                     <div className="text-center sm:text-left">
-                      <div className="h-4 w-10 rounded bg-gray-200 dark:bg-gray-800 mx-auto sm:mx-0" />
-                      <div className="h-3 w-16 rounded bg-gray-200 dark:bg-gray-800 mt-2 mx-auto sm:mx-0" />
+                      <div className="h-4 w-10 rounded bg-gray-200 dark:bg-[var(--dark-2)] mx-auto sm:mx-0" />
+                      <div className="h-3 w-16 rounded bg-gray-200 dark:bg-[var(--dark-2)] mt-2 mx-auto sm:mx-0" />
                     </div>
 
                     <div className="text-center sm:text-left">
-                      <div className="h-4 w-10 rounded bg-gray-200 dark:bg-gray-800 mx-auto sm:mx-0" />
-                      <div className="h-3 w-16 rounded bg-gray-200 dark:bg-gray-800 mt-2 mx-auto sm:mx-0" />
+                      <div className="h-4 w-10 rounded bg-gray-200 dark:bg-[var(--dark-2)] mx-auto sm:mx-0" />
+                      <div className="h-3 w-16 rounded bg-gray-200 dark:bg-[var(--dark-2)] mt-2 mx-auto sm:mx-0" />
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Title + bio */}
-              <div className="h-4 w-3/5 rounded bg-gray-200 dark:bg-gray-800 mt-2" />
-              <div className="h-3 w-4/5 rounded bg-gray-200 dark:bg-gray-800 mt-2" />
-              <div className="h-3 w-2/3 rounded bg-gray-200 dark:bg-gray-800 mt-2" />
+              <div className="h-4 w-3/5 rounded bg-gray-200 dark:bg-[var(--dark-2)] mt-2" />
+              <div className="h-3 w-4/5 rounded bg-gray-200 dark:bg-[var(--dark-2)] mt-2" />
+              <div className="h-3 w-2/3 rounded bg-gray-200 dark:bg-[var(--dark-2)] mt-2" />
 
               {/* Ongoing goals skeleton pills */}
               <div className="mt-4">
-                <div className="h-3 w-28 rounded bg-gray-200 dark:bg-gray-800 mb-3" />
+                <div className="h-3 w-28 rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-3" />
                 <div className="flex gap-2 flex-wrap">
                   {[1, 2, 3, 4].map((i) => (
                     <span
                       key={i}
-                      className="px-3 py-1.5 rounded-full bg-gray-200 dark:bg-gray-800 w-24 h-7"
+                      className="px-3 py-1.5 rounded-full bg-gray-200 dark:bg-[var(--dark-2)] w-24 h-7"
                     />
                   ))}
                 </div>
@@ -536,85 +536,85 @@ export default function ProfilePage({ params }: PageProps) {
 
               {/* Buttons skeleton */}
               <span className="flex flex-col sm:flex-row md:gap-2 gap-4 items-center w-full mt-2 sm:mt-4">
-                <div className="w-48 h-10 rounded-lg bg-gray-200 dark:bg-gray-800" />
-                <div className="w-48 h-10 rounded-lg bg-gray-200 dark:bg-gray-800" />
+                <div className="w-48 h-10 rounded-lg bg-gray-200 dark:bg-[var(--dark-2)]" />
+                <div className="w-48 h-10 rounded-lg bg-gray-200 dark:bg-[var(--dark-2)]" />
               </span>
             </div>
 
             {/* Desktop chart skeleton */}
             <div className="hidden xl:flex w-full focus:outline-none justify-end p-4 sm:p-6 overflow-visible">
               <div className="w-full max-w-[360px] h-[320px] overflow-visible py-6">
-                <div className="w-full h-full rounded-xl bg-gray-200 dark:bg-gray-800" />
+                <div className="w-full h-full rounded-xl bg-gray-200 dark:bg-[var(--dark-2)]" />
               </div>
             </div>
           </div>
 
           {/* Mobile chart skeleton */}
           <div className="xl:hidden my-4 flex justify-center w-full animate-pulse">
-            <div className="w-full bg-white dark:bg-dark-2 rounded-xl border-2 border-gray-200 dark:border-gray-900 p-6">
-              <div className="mx-auto w-full max-w-[280px] h-72 rounded-xl bg-gray-200 dark:bg-gray-800" />
+            <div className="w-full bg-white dark:bg-dark-2 rounded-xl border-2 border-gray-200 dark:border-[var(--border)] p-6">
+              <div className="mx-auto w-full max-w-[280px] h-72 rounded-xl bg-gray-200 dark:bg-[var(--dark-2)]" />
             </div>
           </div>
 
           {/* STREAK / LEVEL / XP skeleton cards */}
           <div className="my-4 flex flex-col sm:flex-row justify-between text-sm gap-4 animate-pulse">
-            <div className="bg-white dark:bg-dark-2 border-2 rounded-xl border-gray-200 dark:border-gray-900 w-full p-4">
-              <div className="h-3 w-24 rounded bg-gray-200 dark:bg-gray-800 mb-3" />
-              <div className="h-5 w-16 rounded bg-gray-200 dark:bg-gray-800" />
+            <div className="bg-white dark:bg-dark-2 border-2 rounded-xl border-gray-200 dark:border-[var(--border)] w-full p-4">
+              <div className="h-3 w-24 rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-3" />
+              <div className="h-5 w-16 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
             </div>
 
-            <div className="bg-white dark:bg-dark-2 border-2 rounded-xl border-gray-200 dark:border-gray-900 w-full p-4">
-              <div className="h-4 w-28 rounded bg-gray-200 dark:bg-gray-800 mb-3" />
-              <div className="h-3 w-40 rounded bg-gray-200 dark:bg-gray-800" />
+            <div className="bg-white dark:bg-dark-2 border-2 rounded-xl border-gray-200 dark:border-[var(--border)] w-full p-4">
+              <div className="h-4 w-28 rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-3" />
+              <div className="h-3 w-40 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
             </div>
 
-            <div className="bg-gray-200 dark:bg-dark-2 border-2 rounded-xl border-gray-200 dark:border-gray-900 w-full p-4 animate-pulse">
-              <div className="h-5 w-28 rounded bg-gray-300 dark:bg-gray-800 mb-3" />
-              <div className="h-3 w-44 rounded bg-gray-300 dark:bg-gray-800" />
+            <div className="bg-gray-200 dark:bg-dark-2 border-2 rounded-xl border-gray-200 dark:border-[var(--border)] w-full p-4 animate-pulse">
+              <div className="h-5 w-28 rounded bg-gray-300 dark:bg-[var(--dark-2)] mb-3" />
+              <div className="h-3 w-44 rounded bg-gray-300 dark:bg-[var(--dark-2)]" />
             </div>
           </div>
 
           {/* Weekly XP chart skeleton */}
-          <div className="p-4 sm:p-6 my-4 bg-white dark:bg-dark-2 dark:border-gray-900 border-2 border-gray-200 rounded-2xl w-full animate-pulse">
+          <div className="p-4 sm:p-6 my-4 bg-white dark:bg-dark-2 dark:border-[var(--border)] border-2 border-gray-200 rounded-2xl w-full animate-pulse">
             <div className="flex justify-between items-center mb-4">
               <span className="flex gap-3 items-center">
-                <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-800" />
-                <div className="h-4 w-40 rounded bg-gray-200 dark:bg-gray-800" />
+                <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-[var(--dark-2)]" />
+                <div className="h-4 w-40 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
               </span>
             </div>
 
-            <div className="relative h-48 sm:h-64 rounded-xl bg-gray-200 dark:bg-gray-800" />
+            <div className="relative h-48 sm:h-64 rounded-xl bg-gray-200 dark:bg-[var(--dark-2)]" />
           </div>
 
           {/* Top Activities + Recent Sessions skeleton */}
           <div className="flex flex-col md:flex-row gap-4 animate-pulse">
-            <div className="p-4 sm:p-6 my-2 bg-white border-2 border-gray-200 dark:bg-dark-2 dark:border-gray-900 rounded-2xl w-full">
-              <div className="h-4 w-32 rounded bg-gray-200 dark:bg-gray-800 mb-6" />
+            <div className="p-4 sm:p-6 my-2 bg-white border-2 border-gray-200 dark:bg-dark-2 dark:border-[var(--border)] rounded-2xl w-full">
+              <div className="h-4 w-32 rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-6" />
               {[1, 2, 3, 4, 5].map((i) => (
                 <div key={i} className="flex items-center justify-between mb-5">
                   <div className="flex items-center gap-4">
-                    <div className="h-4 w-4 rounded bg-gray-200 dark:bg-gray-800" />
-                    <div className="h-10 w-10 rounded bg-gray-200 dark:bg-gray-800" />
-                    <div className="h-4 w-40 rounded bg-gray-200 dark:bg-gray-800" />
+                    <div className="h-4 w-4 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
+                    <div className="h-10 w-10 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
+                    <div className="h-4 w-40 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
                   </div>
-                  <div className="h-4 w-14 rounded bg-gray-200 dark:bg-gray-800" />
+                  <div className="h-4 w-14 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
                 </div>
               ))}
             </div>
 
-            <div className="p-4 sm:p-6 my-2 bg-white border-2 border-gray-200 dark:bg-dark-2 dark:border-gray-900 rounded-2xl w-full">
-              <div className="h-4 w-36 rounded bg-gray-200 dark:bg-gray-800 mb-6" />
+            <div className="p-4 sm:p-6 my-2 bg-white border-2 border-gray-200 dark:bg-dark-2 dark:border-[var(--border)] rounded-2xl w-full">
+              <div className="h-4 w-36 rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-6" />
               {[1, 2, 3, 4, 5].map((i) => (
                 <div key={i} className="p-3 rounded-lg mb-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="h-10 w-10 rounded bg-gray-200 dark:bg-gray-800" />
+                      <div className="h-10 w-10 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
                       <div>
-                        <div className="h-4 w-44 rounded bg-gray-200 dark:bg-gray-800 mb-2" />
-                        <div className="h-3 w-24 rounded bg-gray-200 dark:bg-gray-800" />
+                        <div className="h-4 w-44 rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-2" />
+                        <div className="h-3 w-24 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
                       </div>
                     </div>
-                    <div className="h-4 w-14 rounded bg-gray-200 dark:bg-gray-800" />
+                    <div className="h-4 w-14 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
                   </div>
                 </div>
               ))}
@@ -623,21 +623,21 @@ export default function ProfilePage({ params }: PageProps) {
 
           {/* Achievements skeleton */}
           <div className="max-w-6xl mx-auto px-2 p-2 pb-12 my-4 rounded-sm w-full animate-pulse">
-            <div className="h-5 w-36 rounded bg-gray-200 dark:bg-gray-800 mb-8" />
+            <div className="h-5 w-36 rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-8" />
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {[1, 2, 3, 4, 5, 6].map((i) => (
                 <div
                   key={i}
                   className="rounded-2xl overflow-hidden"
                 >
-                  <div className="h-36 bg-gray-200 dark:bg-gray-800" />
-                  <div className="p-4 bg-white dark:bg-[#151618] border border-gray-200 dark:border-gray-800 border-t-0 rounded-b-2xl">
-                    <div className="h-4 w-3/4 rounded bg-gray-200 dark:bg-gray-800 mb-3" />
-                    <div className="h-3 w-full rounded bg-gray-200 dark:bg-gray-800 mb-2" />
-                    <div className="h-3 w-2/3 rounded bg-gray-200 dark:bg-gray-800 mb-4" />
+                  <div className="h-36 bg-gray-200 dark:bg-[var(--dark-2)]" />
+                  <div className="p-4 bg-white dark:bg-[#151618] border border-gray-200 dark:border-[var(--border)] border-t-0 rounded-b-2xl">
+                    <div className="h-4 w-3/4 rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-3" />
+                    <div className="h-3 w-full rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-2" />
+                    <div className="h-3 w-2/3 rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-4" />
                     <div className="grid grid-cols-5 gap-1.5">
                       {[1,2,3,4,5].map((j) => (
-                        <div key={j} className="h-8 rounded-lg bg-gray-200 dark:bg-gray-800" />
+                        <div key={j} className="h-8 rounded-lg bg-gray-200 dark:bg-[var(--dark-2)]" />
                       ))}
                     </div>
                   </div>
@@ -656,10 +656,10 @@ export default function ProfilePage({ params }: PageProps) {
         className="w-full flex flex-col items-center justify-center"
         style={{ minHeight: "calc(100vh - 60px)" }}
       >
-        <h1 className="text-2xl font-bold dark:text-white mb-4">
+        <h1 className="text-2xl font-bold dark:text-[var(--foreground)] mb-4">
           User not found
         </h1>
-        <p className="text-gray-500 dark:text-gray-400">
+        <p className="text-gray-500 dark:text-[var(--muted)]">
           @{username} doesn&apos;t exist
         </p>
       </main>
@@ -672,10 +672,10 @@ export default function ProfilePage({ params }: PageProps) {
         className="w-full flex flex-col items-center justify-center"
         style={{ minHeight: "calc(100vh - 60px)" }}
       >
-        <h1 className="text-2xl font-bold dark:text-white mb-4">
+        <h1 className="text-2xl font-bold dark:text-[var(--foreground)] mb-4">
           Error loading user data
         </h1>
-        <p className="text-gray-500 dark:text-gray-400">Please try again</p>
+        <p className="text-gray-500 dark:text-[var(--muted)]">Please try again</p>
       </main>
     );
   }
@@ -770,26 +770,26 @@ export default function ProfilePage({ params }: PageProps) {
     >
       {showShare && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 ">
-          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-dark-2 border-2 border-gray-200 dark:border-gray-900 p-6 relative">
+          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-dark-2 border-2 border-gray-200 dark:border-[var(--border)] p-6 relative">
             {/* Header */}
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold dark:text-white">
+              <h3 className="text-lg font-semibold dark:text-[var(--foreground)]">
                 Share Profile
               </h3>
               <button
                 onClick={() => setShowShare(false)}
-                className="text-gray-400 hover:text-gray-600 text-xl cursor-pointer dark:hover:text-gray-300"
+                className="text-gray-400 hover:text-gray-600 text-xl cursor-pointer dark:hover:text-[var(--foreground)]"
               >
                 ✕
               </button>
             </div>
 
             {/* Profile link box */}
-            <div className="mb-4 text-gray-600 dark:text-gray-400 flex gap-2 w-full">
-              <div className="flex items-center gap-2 w-full bg-gray-100 dark:bg-dark-3 border border-gray-200 dark:border-gray-800 rounded-lg p-2 ">
+            <div className="mb-4 text-gray-600 dark:text-[var(--muted)] flex gap-2 w-full">
+              <div className="flex items-center gap-2 w-full bg-gray-100 dark:bg-dark-3 border border-gray-200 dark:border-[var(--border)] rounded-lg p-2 ">
                 <p
                   id="profile-url"
-                  className="text-md active:opacity-75 m-2 truncate text-gray-700 dark:text-gray-300 flex-1"
+                  className="text-md active:opacity-75 m-2 truncate text-gray-700 dark:text-[var(--muted)] flex-1"
                 >
                   {profileUrl}
                 </p>
@@ -824,10 +824,10 @@ export default function ProfilePage({ params }: PageProps) {
                   profileUrl,
                 )}`}
                 target="_blank"
-                className="flex flex-col items-center justify-center p-3 rounded-xl border border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-dark-3 transition"
+                className="flex flex-col items-center justify-center p-3 rounded-xl border border-gray-200 dark:border-[var(--border)] hover:bg-gray-100 dark:hover:bg-dark-3 transition"
               >
                 <span className="text-xl">𝕏</span>
-                <span className="text-xs mt-1 text-gray-600 dark:text-gray-400">
+                <span className="text-xs mt-1 text-gray-600 dark:text-[var(--muted)]">
                   X
                 </span>
               </a>
@@ -837,10 +837,10 @@ export default function ProfilePage({ params }: PageProps) {
                   profileUrl,
                 )}`}
                 target="_blank"
-                className="flex flex-col items-center justify-center p-3 rounded-xl border border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-dark-3 transition"
+                className="flex flex-col items-center justify-center p-3 rounded-xl border border-gray-200 dark:border-[var(--border)] hover:bg-gray-100 dark:hover:bg-dark-3 transition"
               >
                 <FaLinkedin className="w-8 h-8 fill-blue-500" />
-                <span className="text-xs mt-1 text-gray-600 dark:text-gray-400">
+                <span className="text-xs mt-1 text-gray-600 dark:text-[var(--muted)]">
                   LinkedIn
                 </span>
               </a>
@@ -848,10 +848,10 @@ export default function ProfilePage({ params }: PageProps) {
               <a
                 href={`https://wa.me/?text=${encodeURIComponent(profileUrl)}`}
                 target="_blank"
-                className="flex flex-col items-center justify-center p-3 rounded-xl border border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-dark-3 transition"
+                className="flex flex-col items-center justify-center p-3 rounded-xl border border-gray-200 dark:border-[var(--border)] hover:bg-gray-100 dark:hover:bg-dark-3 transition"
               >
                 <FaSquareWhatsapp className="w-8 h-8 fill-green-700" />
-                <span className="text-xs mt-1 text-gray-600 dark:text-gray-400">
+                <span className="text-xs mt-1 text-gray-600 dark:text-[var(--muted)]">
                   WhatsApp
                 </span>
               </a>
@@ -908,14 +908,14 @@ export default function ProfilePage({ params }: PageProps) {
               </div>
               <div className="flex flex-col w-full">
                 <span className="flex items-center gap-2 mb-1">
-                  <p className="text-base font-bold dark:text-white">
+                  <p className="text-base font-bold dark:text-[var(--foreground)]">
                     {profileUser.fullname}
                   </p>
-                  <p className="text-base font-medium text-gray-500 dark:text-gray-400">
+                  <p className="text-base font-medium text-gray-500 dark:text-[var(--muted)]">
                     @{profileUser.username}
                   </p>
                   {profileUser.visibility === "private" && (
-                    <LockClosedIcon className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                    <LockClosedIcon className="w-4 h-4 text-gray-400 dark:text-[var(--muted)]" />
                   )}
                 </span>
                 <span className="flex items-center cursor-pointer">
@@ -930,7 +930,7 @@ export default function ProfilePage({ params }: PageProps) {
                     className="mastery-info flex float-right cursor-pointer"
                   >
                     <svg
-                      className="w-4 h-4 ms-2 text-gray-400 dark:text-gray-500 group-hover:text-gray-500 dark:group-hover:text-gray-400 transition-colors"
+                      className="w-4 h-4 ms-2 text-gray-400 dark:text-[var(--muted)] group-hover:text-gray-500 dark:group-hover:text-gray-400 transition-colors"
                       aria-hidden="true"
                       fill="currentColor"
                       viewBox="0 0 24 24"
@@ -947,19 +947,19 @@ export default function ProfilePage({ params }: PageProps) {
                 </span>
                 <div className="mt-4 flex gap-6 sm:gap-8 text-sm">
                   <div className="text-center sm:text-left">
-                    <p className="font-semibold dark:text-white">
+                    <p className="font-semibold dark:text-[var(--foreground)]">
                       {profileUser.posts_count}
                     </p>
-                    <p className="text-gray-500 dark:text-gray-400">Posts</p>
+                    <p className="text-gray-500 dark:text-[var(--muted)]">Posts</p>
                   </div>
                   <div
                     className="text-center sm:text-left cursor-pointer hover:opacity-70 transition-opacity"
                     onClick={() => setShowFollowersPopup(true)}
                   >
-                    <p className="font-semibold dark:text-white">
+                    <p className="font-semibold dark:text-[var(--foreground)]">
                       {followersCount}
                     </p>
-                    <p className="text-gray-500 dark:text-gray-400">
+                    <p className="text-gray-500 dark:text-[var(--muted)]">
                       Followers
                     </p>
                   </div>
@@ -967,10 +967,10 @@ export default function ProfilePage({ params }: PageProps) {
                     className="text-center sm:text-left cursor-pointer hover:opacity-70 transition-opacity"
                     onClick={() => setShowFollowingPopup(true)}
                   >
-                    <p className="font-semibold dark:text-white">
+                    <p className="font-semibold dark:text-[var(--foreground)]">
                       {followingCount}
                     </p>
-                    <p className="text-gray-500 dark:text-gray-400">
+                    <p className="text-gray-500 dark:text-[var(--muted)]">
                       Following
                     </p>
                   </div>
@@ -980,16 +980,16 @@ export default function ProfilePage({ params }: PageProps) {
 
             {canViewContent && (
               <>
-                <p className="text-gray-800 dark:text-gray-300 font-semibold">
+                <p className="text-gray-800 dark:text-[var(--muted)] font-semibold">
                   {profileUser.title}
                 </p>
 
-                <p className="text-gray-500 dark:text-gray-400  whitespace-pre-wrap">
+                <p className="text-gray-500 dark:text-[var(--muted)]  whitespace-pre-wrap">
                   {profileUser.bio}
                 </p>
                 {/* Ongoing Goals */}
                 <div className="mt-2">
-                  <h3 className="font-bold text-sm mb-3 dark:text-white">
+                  <h3 className="font-bold text-sm mb-3 dark:text-[var(--foreground)]">
                     Ongoing Goals
                   </h3>
                   <div className="flex gap-2 flex-wrap">
@@ -1009,7 +1009,7 @@ export default function ProfilePage({ params }: PageProps) {
                         </span>
                       ))
                     ) : (
-                      <p className="text-gray-500 dark:text-gray-400 text-sm">
+                      <p className="text-gray-500 dark:text-[var(--muted)] text-sm">
                         No ongoing goals
                       </p>
                     )}
@@ -1085,7 +1085,7 @@ export default function ProfilePage({ params }: PageProps) {
           <>
             {/* Mobile Chart - Comparison Mode */}
             {!isXlViewport && <div className="my-4 flex justify-center w-full">
-              <div className="w-full bg-white dark:bg-dark-2 rounded-xl border-2 border-gray-200 dark:border-gray-900 p-6">
+              <div className="w-full bg-white dark:bg-dark-2 rounded-xl border-2 border-gray-200 dark:border-[var(--border)] p-6">
                 <div className="mx-auto w-full max-w-[280px] h-72">
                   <RadarChart
                     data={radarData}
@@ -1101,20 +1101,20 @@ export default function ProfilePage({ params }: PageProps) {
             {/* STREAK, LIFE LEVEL, XP CARDS */}
             <div className="my-4 flex flex-col sm:flex-row justify-between text-sm gap-4">
               {/* Streak count */}
-              <div className="bg-white dark:bg-dark-2 border-2 rounded-xl border-gray-200 dark:border-gray-900 w-full flex flex-col rounded-md items-center justify-between p-4">
+              <div className="bg-white dark:bg-dark-2 border-2 rounded-xl border-gray-200 dark:border-[var(--border)] w-full flex flex-col rounded-md items-center justify-between p-4">
                           
-                          <p className="text-sm dark:text-gray-300">Streak Count</p>
+                          <p className="text-sm dark:text-[var(--muted)]">Streak Count</p>
               
-                          <p className={`text-lg font-extrabold text-gray-400 dark:text-gray-500 flex gap-1 items-center ${
+                          <p className={`text-lg font-extrabold text-gray-400 dark:text-[var(--muted)] flex gap-1 items-center ${
                                 profileUser.streak_active
                                   ? "text-orange-500 "
-                                  : "text-gray-400 dark:text-gray-600"
+                                  : "text-gray-400 dark:text-[var(--muted)]"
                               }`}>
                             <FireIcon
                               className={`w-6 h-6 inline-block ml-1 ${
                                 profileUser.streak_active
                                   ? "text-orange-500"
-                                  : "text-gray-400 dark:text-gray-600 "
+                                  : "text-gray-400 dark:text-[var(--muted)] "
                               }`}
                             />
                             {profileUser.streak_count}
@@ -1122,16 +1122,16 @@ export default function ProfilePage({ params }: PageProps) {
                         </div>
 
               {/* life level */}
-              <div className="bg-white dark:bg-dark-2 border-2 rounded-xl border-gray-200 dark:border-gray-900 w-full flex flex-col rounded-md items-center justify-between p-4">
+              <div className="bg-white dark:bg-dark-2 border-2 rounded-xl border-gray-200 dark:border-[var(--border)] w-full flex flex-col rounded-md items-center justify-between p-4">
                 <span className="flex items-center justify-center gap-1">
-                  <p className="text-gray-600 dark:text-white text-base sm:text-lg font-bold">
+                  <p className="text-gray-600 dark:text-[var(--foreground)] text-base sm:text-lg font-bold">
                     Life Level {profileUser.lifeLevel}
                   </p>
                 </span>
                 <span className="flex items-center justify-center gap-1">
                   <p
                     style={{ fontSize: "11px" }}
-                    className="text-gray-500 dark:text-gray-400"
+                    className="text-gray-500 dark:text-[var(--muted)]"
                   >
                     Member since{" "}
                     {profileUser.joined_date
@@ -1142,7 +1142,7 @@ export default function ProfilePage({ params }: PageProps) {
               </div>
 
               {/* XP */}
-              <div className="bg-gray-200 dark:bg-dark-2 border-2 rounded-xl border-gray-200 dark:border-gray-900 w-full flex flex-col rounded-md items-center justify-between p-4">
+              <div className="bg-gray-200 dark:bg-dark-2 border-2 rounded-xl border-gray-200 dark:border-[var(--border)] w-full flex flex-col rounded-md items-center justify-between p-4">
                 <span className="flex items-center justify-center gap-1">
                   <p
                     style={{ color: accent.text }}
@@ -1166,7 +1166,7 @@ export default function ProfilePage({ params }: PageProps) {
                   </svg>
                   <p
                     style={{ fontSize: "11px" }}
-                    className="text-gray-400 dark:text-gray-500"
+                    className="text-gray-400 dark:text-[var(--muted)]"
                   >
                     {profileUser.xp_to_next_master_level
                       ? `${profileUser.xp_to_next_master_level.toLocaleString()} XP to next mastery`
@@ -1177,7 +1177,7 @@ export default function ProfilePage({ params }: PageProps) {
             </div>
 
             {/* WEEKLY XP CHART */}
-            <div className="p-4 sm:p-6 my-4 bg-white dark:bg-dark-2 dark:border-gray-900 border-2 border-gray-200 rounded-2xl w-full">
+            <div className="p-4 sm:p-6 my-4 bg-white dark:bg-dark-2 dark:border-[var(--border)] border-2 border-gray-200 rounded-2xl w-full">
               <div className="flex justify-between items-center mb-4">
                 <span className="flex gap-3 items-center">
                   {profileUser.avatar ? (
@@ -1200,7 +1200,7 @@ export default function ProfilePage({ params }: PageProps) {
                       </span>
                     </div>
                   )}
-                  <h2 className="opacity-50 dark:opacity-70 text-lg sm:text-xl font-regular dark:text-gray-300">
+                  <h2 className="opacity-50 dark:opacity-70 text-lg sm:text-xl font-regular dark:text-[var(--muted)]">
                     {totalWeeklyXP.toLocaleString()} XP this week
                   </h2>
                 </span>
@@ -1220,16 +1220,16 @@ export default function ProfilePage({ params }: PageProps) {
 
             {/* TOP ACTIVITIES & RECENT SESSIONS */}
             <div className="flex flex-col md:flex-row gap-4">
-              <div className="p-4 sm:p-6 my-2 bg-white border-2 border-gray-200 dark:bg-dark-2 dark:border-gray-900 rounded-2xl w-full">
+              <div className="p-4 sm:p-6 my-2 bg-white border-2 border-gray-200 dark:bg-dark-2 dark:border-[var(--border)] rounded-2xl w-full">
                 <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-lg font-bold dark:text-white">
+                  <h2 className="text-lg font-bold dark:text-[var(--foreground)]">
                     Top Activities
                   </h2>
-                  <span className="text-gray-500 dark:text-gray-400 text-sm"></span>
+                  <span className="text-gray-500 dark:text-[var(--muted)] text-sm"></span>
                 </div>
 
                 {dataLoading ? (
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">
+                  <p className="text-gray-500 dark:text-[var(--muted)] text-sm">
                     Loading activities...
                   </p>
                 ) : topActivities.length > 0 ? (
@@ -1245,19 +1245,19 @@ export default function ProfilePage({ params }: PageProps) {
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-2 sm:space-x-4">
-                            <span className="text-gray-400 dark:text-gray-500 font-semibold w-5">
+                            <span className="text-gray-400 dark:text-[var(--muted)] font-semibold w-5">
                               {index + 1}
                             </span>
                             <div className="flex items-center space-x-2 sm:space-x-4">
                               <p className="text-2xl">
                                 {activity.activity__emoji || "📊"}
                               </p>
-                              <span className="font-medium text-sm sm:text-base truncate dark:text-gray-200">
+                              <span className="font-medium text-sm sm:text-base truncate dark:text-[var(--foreground)]">
                                 {activity.activity__name || "Unknown Activity"}
                               </span>
                             </div>
                           </div>
-                          <span className="font-semibold text-sm sm:text-md dark:text-gray-300">
+                          <span className="font-semibold text-sm sm:text-md dark:text-[var(--muted)]">
                             {hours}h
                           </span>
                         </div>
@@ -1265,23 +1265,23 @@ export default function ProfilePage({ params }: PageProps) {
                     );
                   })
                 ) : (
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">
+                  <p className="text-gray-500 dark:text-[var(--muted)] text-sm">
                     No activity data yet
                   </p>
                 )}
               </div>
 
               {/* Recent Sessions */}
-              <div className="p-4 sm:p-6 my-2 bg-white border-2 border-gray-200 dark:bg-dark-2 dark:border-gray-900 rounded-2xl w-full">
+              <div className="p-4 sm:p-6 my-2 bg-white border-2 border-gray-200 dark:bg-dark-2 dark:border-[var(--border)] rounded-2xl w-full">
                 <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-lg font-bold dark:text-white">
+                  <h2 className="text-lg font-bold dark:text-[var(--foreground)]">
                     Recent Sessions
                   </h2>
-                  <span className="text-gray-500 dark:text-gray-400 text-sm"></span>
+                  <span className="text-gray-500 dark:text-[var(--muted)] text-sm"></span>
                 </div>
 
                 {dataLoading ? (
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">
+                  <p className="text-gray-500 dark:text-[var(--muted)] text-sm">
                     Loading sessions...
                   </p>
                 ) : recentSessions.length > 0 ? (
@@ -1308,16 +1308,16 @@ export default function ProfilePage({ params }: PageProps) {
                                 {session.activity?.emoji || "📝"}
                               </p>
                               <div className="flex flex-col">
-                                <span className="font-medium text-sm sm:text-base truncate dark:text-gray-200">
+                                <span className="font-medium text-sm sm:text-base truncate dark:text-[var(--foreground)]">
                                   {session.activity?.name || "Session"}
                                 </span>
-                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                <span className="text-xs text-gray-500 dark:text-[var(--muted)]">
                                   {timestamp}
                                 </span>
                               </div>
                             </div>
                           </div>
-                          <span className="text-gray-600 dark:text-gray-400 font-semibold text-sm">
+                          <span className="text-gray-600 dark:text-[var(--muted)] font-semibold text-sm">
                             {duration}
                           </span>
                         </div>
@@ -1325,7 +1325,7 @@ export default function ProfilePage({ params }: PageProps) {
                     );
                   })
                 ) : (
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">
+                  <p className="text-gray-500 dark:text-[var(--muted)] text-sm">
                     No recent sessions
                   </p>
                 )}
@@ -1334,7 +1334,7 @@ export default function ProfilePage({ params }: PageProps) {
 
             {/* EXPERIENCES */}
             <div className="max-w-6xl mx-auto px-2 p-2 pb-12 my-4 rounded-sm w-full">
-              <h2 className="text-lg sm:text-xl font-semibold dark:text-white mb-6">
+              <h2 className="text-lg sm:text-xl font-semibold dark:text-[var(--foreground)] mb-6">
                 Achievements
               </h2>
 
@@ -1342,16 +1342,16 @@ export default function ProfilePage({ params }: PageProps) {
                 <div className="flex flex-col gap-8 animate-pulse">
                   {/* Ongoing skeleton */}
                   <div>
-                    <div className="h-4 w-24 rounded bg-gray-200 dark:bg-gray-800 mb-4" />
+                    <div className="h-4 w-24 rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-4" />
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       {[1, 2, 3].map((i) => (
-                        <div key={i} className="rounded-2xl border border-gray-200 dark:border-gray-800 p-4 bg-white dark:bg-[#151618]">
-                          <div className="h-4 w-3/4 rounded bg-gray-200 dark:bg-gray-800 mb-3" />
-                          <div className="h-3 w-full rounded bg-gray-200 dark:bg-gray-800 mb-2" />
-                          <div className="h-3 w-2/3 rounded bg-gray-200 dark:bg-gray-800 mb-4" />
+                        <div key={i} className="rounded-2xl border border-gray-200 dark:border-[var(--border)] p-4 bg-white dark:bg-[#151618]">
+                          <div className="h-4 w-3/4 rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-3" />
+                          <div className="h-3 w-full rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-2" />
+                          <div className="h-3 w-2/3 rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-4" />
                           <div className="grid grid-cols-5 gap-1.5">
                             {[1,2,3,4,5].map((j) => (
-                              <div key={j} className="h-8 rounded-lg bg-gray-200 dark:bg-gray-800" />
+                              <div key={j} className="h-8 rounded-lg bg-gray-200 dark:bg-[var(--dark-2)]" />
                             ))}
                           </div>
                         </div>
@@ -1360,17 +1360,17 @@ export default function ProfilePage({ params }: PageProps) {
                   </div>
                   {/* Completed skeleton */}
                   <div>
-                    <div className="h-4 w-28 rounded bg-gray-200 dark:bg-gray-800 mb-4" />
+                    <div className="h-4 w-28 rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-4" />
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       {[1, 2, 3].map((i) => (
                         <div key={i} className="rounded-2xl overflow-hidden">
-                          <div className="h-36 bg-gray-200 dark:bg-gray-800" />
-                          <div className="p-4 bg-white dark:bg-[#151618] border border-gray-200 dark:border-gray-800 border-t-0 rounded-b-2xl">
-                            <div className="h-4 w-3/4 rounded bg-gray-200 dark:bg-gray-800 mb-3" />
-                            <div className="h-3 w-full rounded bg-gray-200 dark:bg-gray-800 mb-2" />
+                          <div className="h-36 bg-gray-200 dark:bg-[var(--dark-2)]" />
+                          <div className="p-4 bg-white dark:bg-[#151618] border border-gray-200 dark:border-[var(--border)] border-t-0 rounded-b-2xl">
+                            <div className="h-4 w-3/4 rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-3" />
+                            <div className="h-3 w-full rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-2" />
                             <div className="grid grid-cols-5 gap-1.5 mt-3">
                               {[1,2,3,4,5].map((j) => (
-                                <div key={j} className="h-8 rounded-lg bg-gray-200 dark:bg-gray-800" />
+                                <div key={j} className="h-8 rounded-lg bg-gray-200 dark:bg-[var(--dark-2)]" />
                               ))}
                             </div>
                           </div>
@@ -1403,7 +1403,7 @@ export default function ProfilePage({ params }: PageProps) {
                     <div className="flex flex-col gap-10">
                       {ongoingPosts.length > 0 && (
                         <div>
-                          <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">
+                          <p className="text-sm font-semibold text-gray-500 dark:text-[var(--muted)] uppercase tracking-wide mb-4">
                             Ongoing
                           </p>
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -1415,7 +1415,7 @@ export default function ProfilePage({ params }: PageProps) {
                       )}
                       {otherPosts.length > 0 && (
                         <div>
-                          <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">
+                          <p className="text-sm font-semibold text-gray-500 dark:text-[var(--muted)] uppercase tracking-wide mb-4">
                             Completed
                           </p>
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1430,7 +1430,7 @@ export default function ProfilePage({ params }: PageProps) {
                 })()
               ) : (
                 <div className="text-center py-12">
-                  <p className="text-gray-500 dark:text-gray-400">
+                  <p className="text-gray-500 dark:text-[var(--muted)]">
                     No posts yet
                   </p>
                 </div>

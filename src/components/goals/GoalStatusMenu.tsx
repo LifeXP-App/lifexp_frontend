@@ -34,12 +34,12 @@ export default function GoalStatusMenu({
       actions.push({
         label: 'Pause Goal',
         value: 'paused',
-        color: 'text-black dark:text-white'
+        color: 'text-black dark:text-[var(--foreground)]'
       });
       actions.push({
         label: 'Mark as Completed',
         value: 'completed',
-        color: 'text-black dark:text-white'
+        color: 'text-black dark:text-[var(--foreground)]'
       });
     }
 
@@ -47,12 +47,12 @@ export default function GoalStatusMenu({
       actions.push({
         label: 'Resume Goal',
         value: 'ongoing',
-        color: 'text-black dark:text-white'
+        color: 'text-black dark:text-[var(--foreground)]'
       });
       actions.push({
         label: 'Mark as Completed',
         value: 'completed',
-        color: 'text-black dark:text-white'
+        color: 'text-black dark:text-[var(--foreground)]'
       });
     }
 
@@ -83,7 +83,7 @@ export default function GoalStatusMenu({
           e.stopPropagation();
           setOpen((prev) => !prev);
         }}
-        className="p-2 cursor-pointer rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+        className="p-2 cursor-pointer rounded-lg hover:bg-gray-100 dark:hover:bg-[var(--dark-2)] transition-colors"
         aria-label="Goal status menu"
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -95,7 +95,7 @@ export default function GoalStatusMenu({
 
       {open && (
         <div
-          className="absolute right-0 top-10 w-48 bg-white dark:bg-dark-2 border border-gray-200 dark:border-gray-800 rounded-xl shadow-lg overflow-hidden z-20"
+          className="absolute right-0 top-10 w-48 bg-white dark:bg-dark-2 border border-gray-200 dark:border-[var(--border)] rounded-xl shadow-lg overflow-hidden z-20"
           onClick={(e) => e.stopPropagation()}
         >
           {actions.map((action) => (

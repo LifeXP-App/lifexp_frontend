@@ -59,13 +59,13 @@ export default function Achievement({
 
   if (compact) {
     return (
-      <div className="cursor-pointer active:opacity-90 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#151618] overflow-hidden flex flex-col p-4 gap-2">
+      <div className="cursor-pointer active:opacity-90 rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-[#151618] overflow-hidden flex flex-col p-4 gap-2">
         {/* Header row: emoji + title + XP */}
         <div className="flex items-start gap-3">
           <span className="text-xl shrink-0 mt-0.5">{emoji}</span>
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-2">
-              <p className="font-semibold text-base text-black dark:text-white leading-tight truncate">
+              <p className="font-semibold text-base text-black dark:text-[var(--foreground)] leading-tight truncate">
                 {title}
               </p>
               <span
@@ -81,12 +81,12 @@ export default function Achievement({
         </div>
 
         {description && (
-          <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
+          <p className="text-sm text-gray-500 dark:text-[var(--muted)] line-clamp-2">
             {description}
           </p>
         )}
 
-        <p className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
+        <p className="text-xs text-gray-400 dark:text-[var(--muted)] flex items-center gap-1">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 24 24"
@@ -115,7 +115,7 @@ export default function Achievement({
   }
 
   return (
-    <div className="cursor-pointer active:opacity-90 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#151618] overflow-hidden flex flex-col">
+    <div className="cursor-pointer active:opacity-90 rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-[#151618] overflow-hidden flex flex-col">
       {/* Cover */}
       <div className="relative h-36 w-full shrink-0">
         {coverImage ? (
@@ -154,17 +154,17 @@ export default function Achievement({
 
       {/* Content */}
       <div className="p-4 mt-4 flex flex-col flex-1 gap-2">
-        <p className="font-semibold text-base text-black dark:text-white leading-tight">
+        <p className="font-semibold text-base text-black dark:text-[var(--foreground)] leading-tight">
           {title}
         </p>
 
         {description && (
-          <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
+          <p className="text-sm text-gray-500 dark:text-[var(--muted)] line-clamp-2">
             {description}
           </p>
         )}
 
-        <p className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1 mt-auto pt-1">
+        <p className="text-xs text-gray-400 dark:text-[var(--muted)] flex items-center gap-1 mt-auto pt-1">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 24 24"

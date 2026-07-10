@@ -103,8 +103,8 @@ export default function LeaderboardSwitcher({
   }, []);
 
   return (
-    <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border border-gray-200 dark:border-gray-800">
-      <h4 className="font-semibold text-lg mb-4 dark:text-white">
+    <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border border-gray-200 dark:border-[var(--border)]">
+      <h4 className="font-semibold text-lg mb-4 dark:text-[var(--foreground)]">
         Other Leaderboards
       </h4>
 
@@ -125,7 +125,7 @@ export default function LeaderboardSwitcher({
                 </div>
 
                 <div className="flex-1">
-                  <p className="font-medium text-gray-900 dark:text-white">
+                  <p className="font-medium text-gray-900 dark:text-[var(--foreground)]">
                     {mastery.name}
                   </p>
                   <p className="text-xs text-gray-500">{mastery.aspect}</p>
@@ -160,7 +160,7 @@ export default function LeaderboardSwitcher({
               </div>
 
               <div className="flex-1">
-                <p className="font-medium text-gray-900 dark:text-white">
+                <p className="font-medium text-gray-900 dark:text-[var(--foreground)]">
                   Rookie
                 </p>
                 <p className="text-xs text-gray-500">All Aspects</p>

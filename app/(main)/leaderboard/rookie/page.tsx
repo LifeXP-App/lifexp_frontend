@@ -32,29 +32,29 @@ type UserApiResponse = {
 };
 function LeaderboardRowSkeleton() {
   return (
-    <div className="flex justify-between items-center w-full px-5 py-4 rounded-xl bg-white dark:bg-dark-2 border-2 border-gray-200 dark:border-gray-900 animate-pulse">
+    <div className="flex justify-between items-center w-full px-5 py-4 rounded-xl bg-white dark:bg-dark-2 border-2 border-gray-200 dark:border-[var(--border)] animate-pulse">
       <div className="flex items-center gap-4">
         {/* rank */}
         <div className="w-5 flex justify-center">
-          <div className="h-4 w-3 rounded bg-gray-200 dark:bg-gray-800" />
+          <div className="h-4 w-3 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
         </div>
 
         {/* avatar */}
-        <div className="h-10 w-10 rounded-full p-[1.5px] bg-gray-200 dark:bg-gray-800">
-          <div className="h-full w-full rounded-full bg-gray-300 dark:bg-gray-700" />
+        <div className="h-10 w-10 rounded-full p-[1.5px] bg-gray-200 dark:bg-[var(--dark-2)]">
+          <div className="h-full w-full rounded-full bg-gray-300 dark:bg-[var(--dark-3)]" />
         </div>
 
         {/* name + subtitle */}
         <div className="flex flex-col gap-2">
-          <div className="h-4 w-32 rounded bg-gray-200 dark:bg-gray-800" />
-          <div className="h-3 w-20 rounded bg-gray-200/70 dark:bg-gray-800/70" />
+          <div className="h-4 w-32 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
+          <div className="h-3 w-20 rounded bg-gray-200/70 dark:bg-[var(--dark-2)]/70" />
         </div>
       </div>
 
       {/* XP block */}
       <div className="flex flex-col items-end gap-2">
-        <div className="h-4 w-20 rounded bg-gray-200 dark:bg-gray-800" />
-        <div className="h-3 w-12 rounded bg-gray-200/70 dark:bg-gray-800/70" />
+        <div className="h-4 w-20 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
+        <div className="h-3 w-12 rounded bg-gray-200/70 dark:bg-[var(--dark-2)]/70" />
       </div>
     </div>
   );
@@ -64,18 +64,18 @@ function RightSidebarInfoSkeleton() {
   return (
     <aside className="w-full hidden md:block">
       {/* PROFILE CARD */}
-      <div className="bg-white p-6 mb-4 rounded-xl border-2 border-gray-200 dark:bg-dark-2 dark:border-gray-900 animate-pulse">
+      <div className="bg-white p-6 mb-4 rounded-xl border-2 border-gray-200 dark:bg-dark-2 dark:border-[var(--border)] animate-pulse">
         <div className="text-center flex flex-col items-center">
           {/* avatar */}
-          <div className="h-24 w-24 aspect-square p-[1.5px] rounded-full bg-gray-200 dark:bg-gray-800 mb-3" />
+          <div className="h-24 w-24 aspect-square p-[1.5px] rounded-full bg-gray-200 dark:bg-[var(--dark-2)] mb-3" />
 
           {/* fullname */}
-          <div className="h-4 w-40 rounded bg-gray-200 dark:bg-gray-800 mb-3" />
+          <div className="h-4 w-40 rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-3" />
 
           {/* mastery row */}
           <span className="flex gap-2 justify-center items-center">
-            <div className="h-4 w-4 rounded bg-gray-200 dark:bg-gray-800" />
-            <div className="h-3 w-16 rounded bg-gray-200 dark:bg-gray-800" />
+            <div className="h-4 w-4 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
+            <div className="h-3 w-16 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
             <span className="w-4" />
           </span>
         </div>
@@ -84,32 +84,32 @@ function RightSidebarInfoSkeleton() {
         <div className="mt-4 flex justify-between text-sm">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="text-center">
-              <div className="h-4 w-6 mx-auto rounded bg-gray-200 dark:bg-gray-800 mb-2" />
-              <div className="h-3 w-14 mx-auto rounded bg-gray-200 dark:bg-gray-800" />
+              <div className="h-4 w-6 mx-auto rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-2" />
+              <div className="h-3 w-14 mx-auto rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
             </div>
           ))}
         </div>
 
         {/* XP BAR */}
-        <div className="w-full relative rounded-full h-4 my-4 ml-1 overflow-hidden bg-gray-200 dark:bg-gray-800">
-          <div className="h-6 w-[55%] bg-gray-300 dark:bg-gray-700" />
+        <div className="w-full relative rounded-full h-4 my-4 ml-1 overflow-hidden bg-gray-200 dark:bg-[var(--dark-2)]">
+          <div className="h-6 w-[55%] bg-gray-300 dark:bg-[var(--dark-3)]" />
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="h-3 w-20 rounded bg-gray-300/80 dark:bg-gray-700/70" />
+            <div className="h-3 w-20 rounded bg-gray-300/80 dark:bg-[var(--dark-3)]/70" />
           </div>
         </div>
 
         {/* XP + STREAK */}
         <div className="mt-4 flex justify-between text-sm gap-4">
-          <div className="bg-gray-100 w-full flex flex-col rounded-md items-center justify-between p-4 dark:bg-gray-900 dark:bg-opacity-50">
-            <div className="h-5 w-24 rounded bg-gray-200 dark:bg-gray-800 mb-2" />
-            <div className="h-3 w-28 rounded bg-gray-200 dark:bg-gray-800" />
+          <div className="bg-gray-100 w-full flex flex-col rounded-md items-center justify-between p-4 dark:bg-[var(--dark-1)] dark:bg-opacity-50">
+            <div className="h-5 w-24 rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-2" />
+            <div className="h-3 w-28 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
           </div>
 
-          <div className="bg-gray-100 w-full hidden md:flex flex-col rounded-md items-center justify-between p-4 dark:bg-gray-900 dark:bg-opacity-50">
-            <div className="h-3 w-20 rounded bg-gray-200 dark:bg-gray-800 mb-2" />
+          <div className="bg-gray-100 w-full hidden md:flex flex-col rounded-md items-center justify-between p-4 dark:bg-[var(--dark-1)] dark:bg-opacity-50">
+            <div className="h-3 w-20 rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-2" />
             <div className="flex gap-2 items-center">
-              <div className="h-4 w-4 rounded bg-gray-200 dark:bg-gray-800" />
-              <div className="h-5 w-8 rounded bg-gray-200 dark:bg-gray-800" />
+              <div className="h-4 w-4 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
+              <div className="h-5 w-8 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
             </div>
           </div>
         </div>
@@ -270,7 +270,7 @@ export default function RookieLeaderboard() {
       );
 
     return (
-      <p className="w-[17px] text-sm font-semibold text-left text-gray-600 dark:text-gray-400">
+      <p className="w-[17px] text-sm font-semibold text-left text-gray-600 dark:text-[var(--muted)]">
         {rank}
       </p>
     );
@@ -281,7 +281,7 @@ export default function RookieLeaderboard() {
       {/* Main leaderboard */}
       <div className="w-full md:w-[calc(100%-450px)] relative noscrollbar flex-1 overflow-auto py-4 px-4 md:py-8 md:px-12">
         <div className="flex justify-between items-center w-full mb-8">
-          <h1 className="text-2xl font-bold dark:text-white">Rookies</h1>
+          <h1 className="text-2xl font-bold dark:text-[var(--foreground)]">Rookies</h1>
           <span
             style={{
               backgroundColor: "rgba(var(--rookie-primary-rgb), 0.2)",
@@ -300,7 +300,7 @@ export default function RookieLeaderboard() {
               ))
             : players.map((u) => (
                 <Link key={u.username} href={`/u/${u.username}`}>
-                  <div className="flex hover:bg-white dark:hover:bg-dark-2 cursor-pointer justify-between items-center w-full px-5 py-4 rounded-xl transition-all bg-white/50 dark:bg-dark-1 border border-transparent hover:border-gray-200 dark:hover:border-gray-700">
+                  <div className="flex hover:bg-white dark:hover:bg-dark-2 cursor-pointer justify-between items-center w-full px-5 py-4 rounded-xl transition-all bg-white/50 dark:bg-dark-1 border border-transparent hover:border-gray-200 dark:hover:border-[var(--border)]">
                     <div className="flex items-center gap-4">
                       <div className="w-5 flex justify-center">
                         <RankBadge rank={u.rank} />
@@ -312,12 +312,12 @@ export default function RookieLeaderboard() {
                         alt={u.fullname}
                       />
 
-                      <p className="text-base font-semibold dark:text-white">
+                      <p className="text-base font-semibold dark:text-[var(--foreground)]">
                         {u.fullname}
                       </p>
                     </div>
 
-                    <p className="text-base font-semibold dark:text-gray-200">
+                    <p className="text-base font-semibold dark:text-[var(--foreground)]">
                       {u.xp.toLocaleString()} XP
                     </p>
                   </div>
@@ -331,7 +331,7 @@ export default function RookieLeaderboard() {
         {showSidebarSkeleton ? (
           <RightSidebarInfoSkeleton />
         ) : (
-          <div className="bg-white dark:bg-dark-2 p-6 rounded-xl border border-gray-200 dark:border-gray-800 mb-4">
+          <div className="bg-white dark:bg-dark-2 p-6 rounded-xl border border-gray-200 dark:border-[var(--border)] mb-4">
             <div className="text-center flex flex-col items-center">
               <Link href={`/u/${currentUser.username}`}>
                 <img
@@ -339,7 +339,7 @@ export default function RookieLeaderboard() {
                   className="h-24 w-24 rounded-full object-cover"
                   alt={currentUser.fullname}
                 />
-                <h3 className="font-semibold mt-2 dark:text-white">
+                <h3 className="font-semibold mt-2 dark:text-[var(--foreground)]">
                   {currentUser.fullname}
                 </h3>
               </Link>

@@ -87,8 +87,8 @@ export function DiscoverUsers({ suggestedUsers }: DiscoverUsersProps) {
   return (
     <>
       {/* DISCOVER USERS */}
-      <div className="bg-white p-6 rounded-xl border-2 border-gray-200 dark:bg-dark-2 dark:border-gray-900">
-        <p className="text-md  font-semibold mb-4 dark:text-white">
+      <div className="bg-white p-6 rounded-xl border-2 border-gray-200 dark:bg-dark-2 dark:border-[var(--border)]">
+        <p className="text-md  font-semibold mb-4 dark:text-[var(--foreground)]">
           Discover players
         </p>
 
@@ -104,12 +104,12 @@ export function DiscoverUsers({ suggestedUsers }: DiscoverUsersProps) {
                   className="h-12 w-12 rounded-full object-cover"
                 />
                 <div className="flex flex-col">
-                 <p className="text-sm dark:text-white">
+                 <p className="text-sm dark:text-[var(--foreground)]">
                       {(u.fullname || "").length > 15
                         ? u.fullname.slice(0, 15) + "..."
                         : u.fullname}
                     </p>
-                  <p className="text-xs text-black/40 dark:text-white/40">
+                  <p className="text-xs text-black/40 dark:text-[var(--foreground)]/40">
                     Life Level {u.lifelevel}
                   </p>
                 </div>

@@ -60,23 +60,23 @@ type UserApiResponse = {
 // Skeleton loading components
 function PlayerRowSkeleton() {
   return (
-    <div className="flex items-center gap-4 p-4 rounded-2xl bg-white dark:bg-dark-2 border border-gray-100 dark:border-gray-800 animate-pulse mb-1">
+    <div className="flex items-center gap-4 p-4 rounded-2xl bg-white dark:bg-dark-2 border border-gray-100 dark:border-[var(--border)] animate-pulse mb-1">
       {/* Rank */}
-      <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700" />
+      <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-[var(--dark-3)]" />
 
       {/* Avatar */}
-      <div className="h-12 w-12 rounded-full bg-gray-200 dark:bg-gray-700" />
+      <div className="h-12 w-12 rounded-full bg-gray-200 dark:bg-[var(--dark-3)]" />
 
       {/* Name */}
       <div className="flex-1">
-        <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
-        <div className="h-3 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
+        <div className="h-4 w-32 bg-gray-200 dark:bg-[var(--dark-3)] rounded mb-2" />
+        <div className="h-3 w-20 bg-gray-200 dark:bg-[var(--dark-3)] rounded" />
       </div>
 
       {/* XP */}
       <div className="text-right">
-        <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded mb-1" />
-        <div className="h-3 w-8 bg-gray-200 dark:bg-gray-700 rounded ml-auto" />
+        <div className="h-4 w-20 bg-gray-200 dark:bg-[var(--dark-3)] rounded mb-1" />
+        <div className="h-3 w-8 bg-gray-200 dark:bg-[var(--dark-3)] rounded ml-auto" />
       </div>
     </div>
   );
@@ -89,17 +89,17 @@ function HeaderSkeleton() {
         <div className="relative px-4 md:px-12 py-8 animate-pulse">
           {/* Icon and title skeleton */}
           <div className="flex items-center gap-4 mb-6">
-            <div className="w-16 h-16 rounded-2xl bg-gray-200 dark:bg-gray-700" />
+            <div className="w-16 h-16 rounded-2xl bg-gray-200 dark:bg-[var(--dark-3)]" />
             <div>
-              <div className="h-8 w-40 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
-              <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
+              <div className="h-8 w-40 bg-gray-200 dark:bg-[var(--dark-3)] rounded mb-2" />
+              <div className="h-4 w-32 bg-gray-200 dark:bg-[var(--dark-3)] rounded" />
             </div>
           </div>
 
           {/* Stats skeleton */}
           <div className="flex gap-6">
-            <div className="w-36 h-20 rounded-xl bg-gray-200 dark:bg-gray-700" />
-            <div className="w-36 h-20 rounded-xl bg-gray-200 dark:bg-gray-700" />
+            <div className="w-36 h-20 rounded-xl bg-gray-200 dark:bg-[var(--dark-3)]" />
+            <div className="w-36 h-20 rounded-xl bg-gray-200 dark:bg-[var(--dark-3)]" />
           </div>
         </div>
       </div>
@@ -108,7 +108,7 @@ function HeaderSkeleton() {
       <div className="px-4 md:px-12 py-2">
         {/* Search bar skeleton */}
         <div className="mb-6">
-          <div className="w-full h-12 rounded-2xl bg-gray-200 dark:bg-gray-700" />
+          <div className="w-full h-12 rounded-2xl bg-gray-200 dark:bg-[var(--dark-3)]" />
         </div>
 
         {/* Player rows skeleton */}
@@ -168,7 +168,7 @@ function RankBadge({ rank, color }: { rank: number; color: string }) {
 
   return (
     <div className="w-8 h-8 flex items-center justify-center">
-      <span className="text-gray-500 dark:text-gray-400 font-semibold">
+      <span className="text-gray-500 dark:text-[var(--muted)] font-semibold">
         {rank}
       </span>
     </div>
@@ -432,11 +432,11 @@ export default function MasteryLeaderboard() {
 
                   <div className="text-left">
                     <div className="flex items-center gap-2">
-                      <h1 className="text-2xl md:text-3xl font-bold dark:text-white">
+                      <h1 className="text-2xl md:text-3xl font-bold dark:text-[var(--foreground)]">
                         {currentMastery.name}
                       </h1>
                       <ChevronDownIcon
-                        className={`w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform group-hover:text-gray-700 dark:group-hover:text-gray-300 ${
+                        className={`w-5 h-5 text-gray-500 dark:text-[var(--muted)] transition-transform group-hover:text-gray-700 dark:group-hover:text-gray-300 ${
                           isDropdownOpen ? "rotate-180" : ""
                         }`}
                       />
@@ -458,7 +458,7 @@ export default function MasteryLeaderboard() {
                       className="fixed inset-0 z-40"
                       onClick={() => setIsDropdownOpen(false)}
                     />
-                    <div className="absolute top-[calc(100%+8px)] left-0 w-80 bg-white dark:bg-dark-2 border border-gray-200 dark:border-gray-700 rounded-2xl z-50 overflow-hidden">
+                    <div className="absolute top-[calc(100%+8px)] left-0 w-80 bg-white dark:bg-dark-2 border border-gray-200 dark:border-[var(--border)] rounded-2xl z-50 overflow-hidden">
                       <div className="p-2">
                         {MASTERY_TYPES.map((mastery) => {
                           const isActive = mastery.id === masteryId;
@@ -473,7 +473,7 @@ export default function MasteryLeaderboard() {
                                 className={`flex items-center gap-3 px-4 py-3 rounded-r-xl cursor-pointer transition-all ${
                                   isActive
                                     ? ""
-                                    : "hover:bg-gray-50 dark:hover:bg-gray-800"
+                                    : "hover:bg-gray-50 dark:hover:bg-[var(--dark-2)]"
                                 }`}
                                 style={
                                   isActive
@@ -503,10 +503,10 @@ export default function MasteryLeaderboard() {
                                   />
                                 </div>
                                 <div className="flex-1">
-                                  <p className="font-semibold text-gray-900 dark:text-white">
+                                  <p className="font-semibold text-gray-900 dark:text-[var(--foreground)]">
                                     {mastery.name}
                                   </p>
-                                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  <p className="text-xs text-gray-500 dark:text-[var(--muted)]">
                                     {mastery.aspect} • {mastery.playerCount}{" "}
                                     players
                                   </p>
@@ -527,7 +527,7 @@ export default function MasteryLeaderboard() {
                           href="/leaderboard/rookie"
                           onClick={() => setIsDropdownOpen(false)}
                         >
-                          <div className="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all hover:bg-gray-50 dark:hover:bg-gray-800">
+                          <div className="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all hover:bg-gray-50 dark:hover:bg-[var(--dark-2)]">
                             <div
                               className="w-10 h-10 rounded-xl flex items-center justify-center"
                               style={{ backgroundColor: "#64748b20" }}
@@ -542,10 +542,10 @@ export default function MasteryLeaderboard() {
                               </svg>
                             </div>
                             <div className="flex-1">
-                              <p className="font-semibold text-gray-900 dark:text-white">
+                              <p className="font-semibold text-gray-900 dark:text-[var(--foreground)]">
                                 Rookie
                               </p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                              <p className="text-xs text-gray-500 dark:text-[var(--muted)]">
                                 All Aspects • New Players
                               </p>
                             </div>
@@ -569,7 +569,7 @@ export default function MasteryLeaderboard() {
                   >
                     {totalPlayers}
                   </p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                  <p className="text-xs text-gray-600 dark:text-[var(--muted)]">
                     Players
                   </p>
                 </div>
@@ -583,7 +583,7 @@ export default function MasteryLeaderboard() {
                   >
                     {currentMastery.playerCount}
                   </p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                  <p className="text-xs text-gray-600 dark:text-[var(--muted)]">
                     Total {currentMastery.name}s
                   </p>
                 </div>
@@ -602,7 +602,7 @@ export default function MasteryLeaderboard() {
                   placeholder="Search players..."
                   value={searchTerm}
                   onChange={handleSearch}
-                  className="w-full pl-12 pr-4 py-3.5 border border-gray-200 dark:border-gray-700 rounded-2xl bg-white dark:bg-dark-2 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none  transition-all "
+                  className="w-full pl-12 pr-4 py-3.5 border border-gray-200 dark:border-[var(--border)] rounded-2xl bg-white dark:bg-dark-2 text-gray-900 dark:text-[var(--foreground)] placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none  transition-all "
                   style={
                     {
                       focusRing: currentMastery?.color,
@@ -632,7 +632,7 @@ export default function MasteryLeaderboard() {
                       className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all bg-white dark:bg-dark-2 ${
                         isTopThree
                           ? "border"
-                          : "border border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700"
+                          : "border border-gray-100 dark:border-[var(--border)] hover:border-gray-200 dark:hover:border-[var(--border)]"
                       }`}
                       style={
                         isTopThree
@@ -675,7 +675,7 @@ export default function MasteryLeaderboard() {
                       {/* Name */}
                       <div className="flex-1 min-w-0 ">
                         <p
-                          className={`font-semibold truncate dark:text-white ${
+                          className={`font-semibold truncate dark:text-[var(--foreground)] ${
                             isFirst ? "text-lg" : ""
                           }`}
                         >
@@ -705,7 +705,7 @@ export default function MasteryLeaderboard() {
                         >
                           {u.xp}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                        <p className="text-xs text-gray-500 dark:text-[var(--muted)]">
                           XP
                         </p>
                       </div>
@@ -728,12 +728,12 @@ export default function MasteryLeaderboard() {
                       />
                     )}
                   </div>
-                  <p className="text-gray-500 dark:text-gray-400 text-lg">
+                  <p className="text-gray-500 dark:text-[var(--muted)] text-lg">
                     {searchTerm
                       ? "No players found matching your search"
                       : `No ${currentMastery?.name}s on the leaderboard yet`}
                   </p>
-                  <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">
+                  <p className="text-gray-400 dark:text-[var(--muted)] text-sm mt-1">
                     Be the first to claim the top spot!
                   </p>
                 </div>
@@ -767,7 +767,7 @@ export default function MasteryLeaderboard() {
                     {currentPage}
                   </span>
                   <span className="text-gray-400">of</span>
-                  <span className="font-medium dark:text-white">
+                  <span className="font-medium dark:text-[var(--foreground)]">
                     {totalPages}
                   </span>
                 </div>
@@ -855,7 +855,7 @@ export default function MasteryLeaderboard() {
 
         {/* User profile card */}
         {currentUser ? (
-          <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border border-gray-200 dark:border-gray-800">
+          <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border border-gray-200 dark:border-[var(--border)]">
             <div className="text-center flex flex-col items-center">
               <Link href={`/u/${currentUser.username}`}>
                 <img
@@ -863,60 +863,60 @@ export default function MasteryLeaderboard() {
                   className="h-24 w-24 object-cover aspect-square p-[1.5px] rounded-full"
                   alt={currentUser.fullname}
                 />
-                <h3 className="font-semibold mt-2 dark:text-white">
+                <h3 className="font-semibold mt-2 dark:text-[var(--foreground)]">
                   {currentUser.fullname}
                 </h3>
               </Link>
 
-              <p className="text-sm font-bold mt-1 text-gray-400 dark:text-gray-500">
+              <p className="text-sm font-bold mt-1 text-gray-400 dark:text-[var(--muted)]">
                 {currentUser.masteryTitle}
               </p>
             </div>
 
             <div className="mt-4 flex justify-between text-sm">
               <div className="text-center">
-                <p className="font-semibold dark:text-white">
+                <p className="font-semibold dark:text-[var(--foreground)]">
                   {currentUser.lifeLevel}
                 </p>
-                <p className="text-gray-500 dark:text-gray-400">Life Level</p>
+                <p className="text-gray-500 dark:text-[var(--muted)]">Life Level</p>
               </div>
               <div className="text-center">
-                <p className="font-semibold dark:text-white">
+                <p className="font-semibold dark:text-[var(--foreground)]">
                   {currentUser.posts}
                 </p>
-                <p className="text-gray-500 dark:text-gray-400">Posts</p>
+                <p className="text-gray-500 dark:text-[var(--muted)]">Posts</p>
               </div>
               <div className="text-center">
-                <p className="font-semibold dark:text-white">
+                <p className="font-semibold dark:text-[var(--foreground)]">
                   {currentUser.followers}
                 </p>
-                <p className="text-gray-500 dark:text-gray-400">Followers</p>
+                <p className="text-gray-500 dark:text-[var(--muted)]">Followers</p>
               </div>
               <div className="text-center">
-                <p className="font-semibold dark:text-white">
+                <p className="font-semibold dark:text-[var(--foreground)]">
                   {currentUser.following}
                 </p>
-                <p className="text-gray-500 dark:text-gray-400">Following</p>
+                <p className="text-gray-500 dark:text-[var(--muted)]">Following</p>
               </div>
             </div>
 
             <div className="mt-4 flex justify-between text-sm gap-4">
               <div className="bg-gray-100 dark:bg-dark-3 w-full flex flex-col rounded-md items-center justify-between p-4">
-                <p className="text-lg font-bold text-gray-400 dark:text-gray-500">
+                <p className="text-lg font-bold text-gray-400 dark:text-[var(--muted)]">
                   {currentUser.xp} XP
                 </p>
-                <p className="text-[10px] cursor-pointer text-gray-500 dark:text-gray-400">
+                <p className="text-[10px] cursor-pointer text-gray-500 dark:text-[var(--muted)]">
                   Mastery unlocks at 10K
                 </p>
               </div>
 
               <div className="bg-gray-100 w-full hidden md:flex flex-col rounded-md items-center justify-between p-4 dark:bg-dark-3">
-                <p className="text-sm dark:text-gray-300">Streak Count</p>
-                <p className="text-lg font-extrabold text-gray-400 dark:text-gray-600 flex gap-1 items-center">
+                <p className="text-sm dark:text-[var(--muted)]">Streak Count</p>
+                <p className="text-lg font-extrabold text-gray-400 dark:text-[var(--muted)] flex gap-1 items-center">
                   {currentUser.streak_active ? (
                     <FireIcon className="w-6 h-6 inline-block ml-1 text-yellow-500 animate-pulse" />
                   ) : (
-                    <FireIcon className="w-6 h-6 inline-block ml-1 text-gray-400 dark:text-gray-600" />
+                    <FireIcon className="w-6 h-6 inline-block ml-1 text-gray-400 dark:text-[var(--muted)]" />
                   )}
                   {currentUser.streak}
                 </p>
@@ -924,11 +924,11 @@ export default function MasteryLeaderboard() {
             </div>
           </div>
         ) : (
-          <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border border-gray-200 dark:border-gray-800 animate-pulse">
+          <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border border-gray-200 dark:border-[var(--border)] animate-pulse">
             <div className="text-center flex flex-col items-center">
-              <div className="h-24 w-24 rounded-full bg-gray-200 dark:bg-gray-700 mb-2" />
-              <div className="h-4 w-32 rounded bg-gray-200 dark:bg-gray-700 mb-2" />
-              <div className="h-3 w-20 rounded bg-gray-200 dark:bg-gray-700" />
+              <div className="h-24 w-24 rounded-full bg-gray-200 dark:bg-[var(--dark-3)] mb-2" />
+              <div className="h-4 w-32 rounded bg-gray-200 dark:bg-[var(--dark-3)] mb-2" />
+              <div className="h-3 w-20 rounded bg-gray-200 dark:bg-[var(--dark-3)]" />
             </div>
           </div>
         )}

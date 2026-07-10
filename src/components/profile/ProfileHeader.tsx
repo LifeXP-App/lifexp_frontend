@@ -55,12 +55,12 @@ export default function ProfileHeader({
         </div>
         <div className="flex flex-col w-full">
           <span className="flex items-center gap-2 mb-1">
-            <p className="text-base font-bold dark:text-white">{user.fullname}</p>
-            <p className="text-base font-medium text-gray-500 dark:text-gray-400">
+            <p className="text-base font-bold dark:text-[var(--foreground)]">{user.fullname}</p>
+            <p className="text-base font-medium text-gray-500 dark:text-[var(--muted)]">
               @{user.username}
             </p>
             {user.visibility === "private" && (
-              <LockClosedIcon className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+              <LockClosedIcon className="w-4 h-4 text-gray-400 dark:text-[var(--muted)]" />
             )}
           </span>
           <span className="flex items-center cursor-pointer">
@@ -75,7 +75,7 @@ export default function ProfileHeader({
               className="mastery-info flex float-right cursor-pointer"
             >
               <svg
-                className="w-4 h-4 ms-2 text-gray-400 dark:text-gray-500 group-hover:text-gray-500 dark:group-hover:text-gray-400 transition-colors"
+                className="w-4 h-4 ms-2 text-gray-400 dark:text-[var(--muted)] group-hover:text-gray-500 dark:group-hover:text-gray-400 transition-colors"
                 aria-hidden="true"
                 fill="currentColor"
                 viewBox="0 0 24 24"
@@ -92,26 +92,26 @@ export default function ProfileHeader({
           </span>
           <div className="mt-4 flex gap-6 sm:gap-8 text-sm">
             <div className="text-center sm:text-left">
-              <p className="font-semibold dark:text-white">{stats.posts}</p>
-              <p className="text-gray-500 dark:text-gray-400">Posts</p>
+              <p className="font-semibold dark:text-[var(--foreground)]">{stats.posts}</p>
+              <p className="text-gray-500 dark:text-[var(--muted)]">Posts</p>
             </div>
             <div className="text-center sm:text-left cursor-pointer">
-              <p className="font-semibold dark:text-white">{stats.followers}</p>
-              <p className="text-gray-500 dark:text-gray-400">Followers</p>
+              <p className="font-semibold dark:text-[var(--foreground)]">{stats.followers}</p>
+              <p className="text-gray-500 dark:text-[var(--muted)]">Followers</p>
             </div>
             <div className="text-center sm:text-left cursor-pointer">
-              <p className="font-semibold dark:text-white">{stats.following}</p>
-              <p className="text-gray-500 dark:text-gray-400">Following</p>
+              <p className="font-semibold dark:text-[var(--foreground)]">{stats.following}</p>
+              <p className="text-gray-500 dark:text-[var(--muted)]">Following</p>
             </div>
           </div>
         </div>
       </div>
 
-      <p className="text-gray-800 dark:text-gray-300 font-semibold">
+      <p className="text-gray-800 dark:text-[var(--muted)] font-semibold">
         {stats.bio}
       </p>
 
-      <p className="text-gray-500 dark:text-gray-400">{stats.tagline}</p>
+      <p className="text-gray-500 dark:text-[var(--muted)]">{stats.tagline}</p>
 
       {/* Action buttons */}
       <span className="flex flex-col sm:flex-row md:gap-2 gap-4 items-center w-full mt-2 sm:mt-4">
@@ -132,7 +132,7 @@ export default function ProfileHeader({
             {user.isFollowing ? (
               <button
                 onClick={onUnfollow}
-                className="w-full sm:w-auto p-2 rounded-lg cursor-pointer px-12 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-3"
+                className="w-full sm:w-auto p-2 rounded-lg cursor-pointer px-12 border-2 border-gray-300 dark:border-[var(--border)] text-gray-700 dark:text-[var(--muted)] hover:bg-gray-100 dark:hover:bg-dark-3"
               >
                 Following
               </button>

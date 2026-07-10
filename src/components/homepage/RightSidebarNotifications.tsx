@@ -33,9 +33,9 @@ export function RightSidebarNotifications({
   return (
     <>
       {/* NOTIFICATIONS */}
-      <div className="bg-white w-full p-6 mb-4 rounded-xl border-2 border-gray-200 dark:bg-dark-2 dark:border-gray-900">
+      <div className="bg-white w-full p-6 mb-4 rounded-xl border-2 border-gray-200 dark:bg-dark-2 dark:border-[var(--border)]">
         <div className="flex justify-between items-center mb-6">
-          <p className="text-md  font-semibold dark:text-white">Notifications</p>
+          <p className="text-md  font-semibold dark:text-[var(--foreground)]">Notifications</p>
           {unreadCount > 0 && (
             <span className="h-5 w-5 bg-red-600 text-white text-xs font-bold flex items-center justify-center rounded-full">
               {unreadCount}
@@ -46,7 +46,7 @@ export function RightSidebarNotifications({
         <div className="max-h-80 overflow-y-auto">
           <ul className="flex flex-col gap-3">
             {notifications.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-2 text-gray-400 dark:text-gray-500">
+              <div className="flex flex-col items-center justify-center py-2 text-gray-400 dark:text-[var(--muted)]">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 24 24"
@@ -72,7 +72,7 @@ export function RightSidebarNotifications({
                         loading="lazy"
                       />
                       <div className="flex flex-col">
-                        <p className="text-md font-medium text-gray-900 dark:text-white">
+                        <p className="text-md font-medium text-gray-900 dark:text-[var(--foreground)]">
                           <span className="font-bold">{n.sender}</span>{" "}
                           <span className="font-medium">{n.text}</span>
                         </p>

@@ -64,7 +64,7 @@ export default function CompleteGoalPopup({
           className="flex items-center bg-white justify-between px-6 pt-4 pb-4 border-b"
           style={{ borderColor: "var(--border)" }}
         >
-          <h2 className="text-xl font-bold text-foreground dark:text-white">
+          <h2 className="text-xl font-bold text-foreground dark:text-[var(--foreground)]">
             New Achievement
           </h2>
 
@@ -165,7 +165,7 @@ export default function CompleteGoalPopup({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Enter a title..."
-              className="w-full px-4 py-3 rounded-2xl bg-white dark:bg-dark-3 text-foreground dark:text-white placeholder-gray-400 outline-none border"
+              className="w-full px-4 py-3 rounded-2xl bg-white dark:bg-dark-3 text-foreground dark:text-[var(--foreground)] placeholder-gray-400 outline-none border"
               style={{ borderColor: "var(--border)" }}
             />
           </div>
@@ -180,7 +180,7 @@ export default function CompleteGoalPopup({
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Write something about this achievement..."
               rows={4}
-              className="w-full px-4 py-3 rounded-2xl bg-white dark:bg-dark-3 text-foreground dark:text-white placeholder-gray-400 outline-none border resize-none"
+              className="w-full px-4 py-3 rounded-2xl bg-white dark:bg-dark-3 text-foreground dark:text-[var(--foreground)] placeholder-gray-400 outline-none border resize-none"
               style={{ borderColor: "var(--border)" }}
             />
           </div>
@@ -195,7 +195,7 @@ export default function CompleteGoalPopup({
               type="date"
               value={finishBy || ""}
               onChange={(e) => setFinishBy(e.target.value)}
-              className="w-full px-4 py-3 rounded-2xl bg-white dark:bg-dark-3 text-foreground dark:text-white placeholder-gray-400 outline-none border"
+              className="w-full px-4 py-3 rounded-2xl bg-white dark:bg-dark-3 text-foreground dark:text-[var(--foreground)] placeholder-gray-400 outline-none border"
               style={{ borderColor: "var(--border)" }}
             />
           </div>
@@ -221,7 +221,7 @@ export default function CompleteGoalPopup({
         </div>
 
         {/* Post Button */}
-        <div className="flex items-center bg-white justify-between px-5 pt-5 pb-4 border-t border-gray-200 dark:border-gray-800">
+        <div className="flex items-center bg-white justify-between px-5 pt-5 pb-4 border-t border-gray-200 dark:border-[var(--border)]">
           <button
             type="button"
             onClick={() => onPost?.({ title, description, finishBy, image: imageFile })}
@@ -239,7 +239,7 @@ export default function CompleteGoalPopup({
 function StatBox({ label, value }: { label: string; value: string }) {
   return (
     <div className="text-center">
-      <div className="text-lg font-bold text-foreground dark:text-white">{value}</div>
+      <div className="text-lg font-bold text-foreground dark:text-[var(--foreground)]">{value}</div>
       <div className="text-xs mt-1" style={{ color: "var(--muted)" }}>
         {label}
       </div>

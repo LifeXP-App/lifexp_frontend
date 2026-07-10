@@ -82,7 +82,7 @@ export type PostType = {
     xp_gained: number;
     dateTime: string;
     session_post_image_url?: string;
-  };
+  } | null;
   // ADD THIS FOR COMMENTS
   comments?: Array<{
     id: number;
@@ -282,7 +282,7 @@ export function Post({ post }: { post: PostType }) {
   return (
     <div
       id="post-card"
-      className="mb-6 md:p-6 md:rounded-xl md:border-2 md:bg-white md:border-gray-200 md:dark:bg-dark-2 md:dark:border-gray-900 "
+      className="mb-6 md:p-6 md:rounded-xl md:border-2 md:bg-white md:border-gray-200 md:dark:bg-dark-2 md:dark:border-[var(--border)] "
     >
       {/* HEADER */}
 
@@ -341,10 +341,11 @@ export function Post({ post }: { post: PostType }) {
           </button>
 
           <div
-            className="dropdown  hidden absolute right-0 mt-2 w-44 border bg-white dark:border-gray-900 dark:bg-dark-2 overflow-hidden rounded-sm shadow-lg z-50"
+            className="dropdown  hidden absolute right-0 mt-2 w-44 border bg-white dark:border-[var(--border)] dark:bg-dark-2 overflow-hidden rounded-sm shadow-lg z-50"
             style={{ borderColor: "var(--border)" }}
           >
-            <a
+            {post.uid && (
+               <a
               href={`/goals/${post.uid}`}
               target="_blank"
               rel="noopener noreferrer"
@@ -354,6 +355,9 @@ export function Post({ post }: { post: PostType }) {
             >
               Go to post
             </a>
+            ) 
+              }
+           
 
             <button
               type="button"
@@ -426,58 +430,60 @@ export function Post({ post }: { post: PostType }) {
           {linkify(post.content)}
         </p>
 
-        <div className="flex items-center mt-3 gap-1 text-sm font-medium text-gray-500 dark:text-gray-400">
+        <div className="flex items-center mt-3 gap-1 text-sm font-medium text-gray-500 dark:text-[var(--muted)]">
           <ClockIcon className="w-5 h-5 inline-block mr-1" />
           <span>
             {post.duration} over {getDuration(post.started_at, post.created_at)}
           </span>
         </div>
 
-        <div className="border border-gray-200 dark:border-gray-700 rounded-lg flex gap-4 bg-white dark:bg-dark-3 mt-4 p-2">
-          {post.session.session_post_image_url &&
-          post.session.session_post_image_url.trim() !== "" ? (
-            <img
-              className="w-24 cursor-pointer md:rounded-lg"
-              style={{ aspectRatio: "1 / 1", objectFit: "cover" }}
-              src={post.session.session_post_image_url?.replace(
-                "/upload/",
-                "/upload/f_auto,q_auto,w_150,c_fill/",
-              )}
-            />
-          ) : (
-            <div className="w-24 h-24 shrink-0 bg-gray-100 dark:bg-gray-800 flex items-center justify-center rounded-lg">
-              <span className="text-4xl">{post.session.activity.emoji}</span>
+        {post.session && (
+          <div className="border border-gray-200 dark:border-[var(--border)] rounded-lg flex gap-4 bg-white dark:bg-dark-3 mt-4 p-2">
+            {post.session.session_post_image_url &&
+            post.session.session_post_image_url.trim() !== "" ? (
+              <img
+                className="w-24 cursor-pointer md:rounded-lg"
+                style={{ aspectRatio: "1 / 1", objectFit: "cover" }}
+                src={post.session.session_post_image_url?.replace(
+                  "/upload/",
+                  "/upload/f_auto,q_auto,w_150,c_fill/",
+                )}
+              />
+            ) : (
+              <div className="w-24 h-24 shrink-0 bg-gray-100 dark:bg-[var(--dark-2)] flex items-center justify-center rounded-lg">
+                <span className="text-4xl">{post.session.activity.emoji}</span>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-1 justify-center w-full">
+              <p className="text-sm md:text-lg font-semibold dark:text-[#dfdfe0]">
+                Session {post.session.number} of {post.session.total_sessions}
+              </p>
+
+              <p
+                className={`text-sm font-bold`}
+                style={{
+                  color: `var(--aspect-${post.session.activity.type.toLowerCase()})`,
+                }}
+              >
+                {post.session.activity.name}
+              </p>
+
+              <p className="text-sm text-gray-500 dark:text-[var(--muted)]">
+                {post.session.xp_gained} XP Earned •{" "}
+                {new Date(post.session.dateTime).toLocaleDateString(undefined, {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                })}
+              </p>
             </div>
-          )}
 
-          <div className="flex flex-col gap-1 justify-center w-full">
-            <p className="text-sm md:text-lg font-semibold dark:text-[#dfdfe0]">
-              Session {post.session.number} of {post.session.total_sessions}
-            </p>
-
-            <p
-              className={`text-sm font-bold`}
-              style={{
-                color: `var(--aspect-${post.session.activity.type.toLowerCase()})`,
-              }}
-            >
-              {post.session.activity.name}
-            </p>
-
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {post.session.xp_gained} XP Earned •{" "}
-              {new Date(post.session.dateTime).toLocaleDateString(undefined, {
-                year: "numeric",
-                month: "short",
-                day: "numeric",
-              })}
+            <p className="text-sm md:text-xl font-bold flex mr-4 items-center text-black dark:text-[#dfdfe0]">
+              {post.session.duration}
             </p>
           </div>
-
-          <p className="text-sm md:text-xl font-bold flex mr-4 items-center text-black dark:text-[#dfdfe0]">
-            {post.session.duration}
-          </p>
-        </div>
+        )}
 
         {/* Error notification */}
         {likeError && (
@@ -502,10 +508,10 @@ export function Post({ post }: { post: PostType }) {
               } ${
                 liked
                   ? "text-red-700 fill-red-700"
-                  : "text-gray-500 opacity-50 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                  : "text-gray-500 opacity-50 hover:text-gray-700 dark:text-[var(--muted)] dark:hover:text-[var(--foreground)]"
               }`}
             />
-            <span className="text-md font-medium text-gray-500 dark:text-gray-400">
+            <span className="text-md font-medium text-gray-500 dark:text-[var(--muted)]">
               {likes}
             </span>
           </div>
@@ -515,8 +521,8 @@ export function Post({ post }: { post: PostType }) {
             className="flex items-center gap-2"
             onClick={() => setShowComments(true)}
           >
-            <ChatBubbleOvalLeftIcon className="w-8 h-8 text-gray-500 opacity-50 cursor-pointer hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 cursor-pointer" />
-            <span className="text-md font-medium text-gray-500 dark:text-gray-400">
+            <ChatBubbleOvalLeftIcon className="w-8 h-8 text-gray-500 opacity-50 cursor-pointer hover:text-gray-700 dark:text-[var(--muted)] dark:hover:text-[var(--foreground)] cursor-pointer" />
+            <span className="text-md font-medium text-gray-500 dark:text-[var(--muted)]">
               {post.comments?.length || 0}
             </span>
           </div>

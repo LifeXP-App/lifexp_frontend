@@ -53,9 +53,9 @@ export default function XPChart({
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-white dark:bg-dark-2 border border-gray-300 dark:border-gray-800 rounded-xl p-3 shadow-lg">
-          <p className="text-gray-900 dark:text-gray-200 font-medium mb-1">{label}</p>
-          <p className="text-gray-700 dark:text-gray-300 text-sm">
+        <div className="bg-white dark:bg-dark-2 border border-gray-300 dark:border-[var(--border)] rounded-xl p-3 shadow-lg">
+          <p className="text-gray-900 dark:text-[var(--foreground)] font-medium mb-1">{label}</p>
+          <p className="text-gray-700 dark:text-[var(--muted)] text-sm">
             {payload[0].name}: {payload[0].value}
           </p>
         </div>

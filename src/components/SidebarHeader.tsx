@@ -34,14 +34,14 @@ export function SidebarHeader() {
               priority
               className="w-16 h-16"
             />
-            <span className="text-xl font-semibold text-gray-900 dark:text-white">
+            <span className="text-xl font-semibold text-gray-900 dark:text-[var(--foreground)]">
               LifeXP
             </span>
           </>
         ) : (
           <>
-            <div className="w-10 h-10 bg-gray-200 dark:bg-gray-800 rounded-full animate-pulse mx-3" />
-            <div className="h-6 w-20 bg-gray-200 dark:bg-gray-800 rounded animate-pulse mx-2" />
+            <div className="w-10 h-10 bg-gray-200 dark:bg-[var(--dark-2)] rounded-full animate-pulse mx-3" />
+            <div className="h-6 w-20 bg-gray-200 dark:bg-[var(--dark-2)] rounded animate-pulse mx-2" />
           </>
         )}
       </Link>

@@ -95,7 +95,7 @@ const LiveSessionItem: React.FC<LiveSession & { onClick?: () => void }> = ({
       {/* Left content */}
       <div className="flex flex-col min-w-0 gap-1 pr-8">
         {/* Title */}
-        <h3 className="font-semibold text-lg text-foreground dark:text-white truncate">
+        <h3 className="font-semibold text-lg text-foreground dark:text-[var(--foreground)] truncate">
           Drawing Mandalorian
         </h3>
 
@@ -115,7 +115,7 @@ const LiveSessionItem: React.FC<LiveSession & { onClick?: () => void }> = ({
 
       {/* Right: duration */}
       <div className="flex-shrink-0 text-right">
-        <div className="font-semibold text-lg text-foreground dark:text-white">
+        <div className="font-semibold text-lg text-foreground dark:text-[var(--foreground)]">
           {duration}
         </div>
       </div>
@@ -173,7 +173,7 @@ const SessionItem: React.FC<Session & { onClick?: () => void }> = ({
       </div>
 
       <div className="flex-1 min-w-0">
-        <h3 className="font-semibold text-lg text-foreground dark:text-white">
+        <h3 className="font-semibold text-lg text-foreground dark:text-[var(--foreground)]">
           Drawing Mandalorian
         </h3>
         <p className="text-sm font-bold" style={{ color: "var(--alchemist-primary)" }}>
@@ -187,7 +187,7 @@ const SessionItem: React.FC<Session & { onClick?: () => void }> = ({
       {/* Right side: duration + menu */}
       <div className="flex items-center gap-3">
         <div className="text-right">
-          <div className="font-semibold text-lg text-foreground dark:text-white">
+          <div className="font-semibold text-lg text-foreground dark:text-[var(--foreground)]">
             {duration}
           </div>
         </div>
@@ -372,7 +372,7 @@ export default function ActivitySessionsPage() {
               </svg>
             </button>
 
-            <h1 className="text-xl font-bold flex-1 ml-2 text-foreground dark:text-white">
+            <h1 className="text-xl font-bold flex-1 ml-2 text-foreground dark:text-[var(--foreground)]">
               Drawing
             </h1>
 

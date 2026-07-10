@@ -56,8 +56,8 @@ function formToBackend(payload: SettingsFormState) {
 function SkeletonRow() {
   return (
     <div className="flex justify-between w-full mb-4 animate-pulse">
-      <div className="h-6 w-40 rounded bg-gray-200 dark:bg-gray-700" />
-      <div className="h-10 w-32 rounded bg-gray-200 dark:bg-gray-700" />
+      <div className="h-6 w-40 rounded bg-gray-200 dark:bg-[var(--dark-3)]" />
+      <div className="h-10 w-32 rounded bg-gray-200 dark:bg-[var(--dark-3)]" />
     </div>
   );
 }
@@ -65,16 +65,16 @@ function SkeletonRow() {
 function SkeletonPanel() {
   return (
     <aside className="w-[420px] p-6 hidden md:block overflow-y-auto animate-pulse">
-      <div className="bg-white dark:bg-dark-3 p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 flex flex-col gap-4">
-        <div className="h-6 w-24 rounded bg-gray-200 dark:bg-gray-700" />
-        <div className="h-5 w-40 rounded bg-gray-200 dark:bg-gray-700" />
-        <div className="h-5 w-44 rounded bg-gray-200 dark:bg-gray-700" />
-        <div className="h-5 w-36 rounded bg-gray-200 dark:bg-gray-700" />
+      <div className="bg-white dark:bg-dark-3 p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-[var(--border)] flex flex-col gap-4">
+        <div className="h-6 w-24 rounded bg-gray-200 dark:bg-[var(--dark-3)]" />
+        <div className="h-5 w-40 rounded bg-gray-200 dark:bg-[var(--dark-3)]" />
+        <div className="h-5 w-44 rounded bg-gray-200 dark:bg-[var(--dark-3)]" />
+        <div className="h-5 w-36 rounded bg-gray-200 dark:bg-[var(--dark-3)]" />
       </div>
 
-      <div className="bg-white dark:bg-dark-3 p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 flex flex-col gap-4">
-        <div className="h-5 w-36 rounded bg-gray-200 dark:bg-gray-700" />
-        <div className="h-5 w-24 rounded bg-gray-200 dark:bg-gray-700" />
+      <div className="bg-white dark:bg-dark-3 p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-[var(--border)] flex flex-col gap-4">
+        <div className="h-5 w-36 rounded bg-gray-200 dark:bg-[var(--dark-3)]" />
+        <div className="h-5 w-24 rounded bg-gray-200 dark:bg-[var(--dark-3)]" />
       </div>
     </aside>
   );
@@ -211,14 +211,14 @@ export default function SettingsPage() {
     return (
       <main className="flex overflow-y-auto w-full">
         <div className="w-full md:w-[calc(100%-420px)] flex-1 overflow-y-auto py-8 px-6 md:px-12">
-          <div className="h-8 w-40 rounded bg-gray-200 dark:bg-gray-700 mb-6 animate-pulse" />
+          <div className="h-8 w-40 rounded bg-gray-200 dark:bg-[var(--dark-3)] mb-6 animate-pulse" />
 
           <SkeletonRow />
           <SkeletonRow />
           <SkeletonRow />
 
           <div className="flex justify-end md:justify-start mt-8 animate-pulse">
-            <div className="h-10 w-32 rounded bg-gray-200 dark:bg-gray-700" />
+            <div className="h-10 w-32 rounded bg-gray-200 dark:bg-[var(--dark-3)]" />
           </div>
         </div>
 
@@ -230,13 +230,13 @@ export default function SettingsPage() {
   return (
     <main className="flex overflow-y-auto w-full">
       <div className="w-full md:w-[calc(100%-420px)] flex-1 overflow-y-auto py-8 px-6 md:px-12">
-        <h2 className="text-2xl font-medium text-left text-black dark:text-white mb-6">
+        <h2 className="text-2xl font-medium text-left text-black dark:text-[var(--foreground)] mb-6">
           Settings
         </h2>
 
         {/* Account type */}
         <div className="flex justify-between w-full mb-4">
-          <h2 className="text-l md:text-xl font-medium text-left text-black dark:text-white mb-2">
+          <h2 className="text-l md:text-xl font-medium text-left text-black dark:text-[var(--foreground)] mb-2">
             Account Type
           </h2>
 
@@ -250,13 +250,13 @@ export default function SettingsPage() {
                     : prev,
                 )
               }
-              className="cursor-pointer text-sm md:text-base block appearance-none w-full bg-white dark:bg-gray-900 border border-gray-800 dark:border-gray-600 hover:border-gray-500 dark:hover:border-gray-400 px-4 py-2 pr-8 rounded leading-tight text-black dark:text-white"
+              className="cursor-pointer text-sm md:text-base block appearance-none w-full bg-white dark:bg-[var(--dark-1)] border border-gray-800 dark:border-[var(--border)] hover:border-gray-500 dark:hover:border-[var(--border)] px-4 py-2 pr-8 rounded leading-tight text-black dark:text-[var(--foreground)]"
             >
               <option value="Private">Private</option>
               <option value="Public">Public</option>
             </select>
 
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 dark:text-gray-300">
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 dark:text-[var(--muted)]">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
@@ -277,7 +277,7 @@ export default function SettingsPage() {
 
         {/* Notifications */}
         <div className="flex justify-between w-full mb-4">
-          <h2 className="text-l md:text-xl font-medium text-left text-black dark:text-white mb-2">
+          <h2 className="text-l md:text-xl font-medium text-left text-black dark:text-[var(--foreground)] mb-2">
             Notifications
           </h2>
 
@@ -294,13 +294,13 @@ export default function SettingsPage() {
                     : prev,
                 )
               }
-              className="cursor-pointer text-sm md:text-base block appearance-none w-full bg-white dark:bg-gray-900 border border-gray-800 dark:border-gray-600 hover:border-gray-500 dark:hover:border-gray-400 px-4 py-2 pr-8 rounded leading-tight text-black dark:text-white"
+              className="cursor-pointer text-sm md:text-base block appearance-none w-full bg-white dark:bg-[var(--dark-1)] border border-gray-800 dark:border-[var(--border)] hover:border-gray-500 dark:hover:border-[var(--border)] px-4 py-2 pr-8 rounded leading-tight text-black dark:text-[var(--foreground)]"
             >
               <option value="On">On</option>
               <option value="Off">Off</option>
             </select>
 
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 dark:text-gray-300">
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 dark:text-[var(--muted)]">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
@@ -321,7 +321,7 @@ export default function SettingsPage() {
 
         {/* Appearance */}
         <div className="flex justify-between w-full mb-8">
-          <h2 className="text-l md:text-xl font-medium text-left text-black dark:text-white mb-2">
+          <h2 className="text-l md:text-xl font-medium text-left text-black dark:text-[var(--foreground)] mb-2">
             Appearance
           </h2>
 
@@ -335,13 +335,13 @@ export default function SettingsPage() {
                     : prev,
                 )
               }
-              className="cursor-pointer text-sm md:text-base block appearance-none w-full bg-white dark:bg-gray-900 border border-gray-800 dark:border-gray-600 hover:border-gray-500 dark:hover:border-gray-400 px-4 py-2 pr-8 rounded leading-tight text-black dark:text-white"
+              className="cursor-pointer text-sm md:text-base block appearance-none w-full bg-white dark:bg-[var(--dark-1)] border border-gray-800 dark:border-[var(--border)] hover:border-gray-500 dark:hover:border-[var(--border)] px-4 py-2 pr-8 rounded leading-tight text-black dark:text-[var(--foreground)]"
             >
               <option value="Dark">Dark</option>
               <option value="Light">Light</option>
             </select>
 
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 dark:text-gray-300">
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 dark:text-[var(--muted)]">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
@@ -373,21 +373,21 @@ export default function SettingsPage() {
 
       {/* Desktop right panel */}
       <aside className="w-[420px] p-6 hidden md:block overflow-y-auto">
-        <div className="bg-white dark:bg-dark-3 p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 flex flex-col gap-4">
-          <h2 className="text-xl font-medium text-left text-black dark:text-white mb-2">
+        <div className="bg-white dark:bg-dark-3 p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-[var(--border)] flex flex-col gap-4">
+          <h2 className="text-xl font-medium text-left text-black dark:text-[var(--foreground)] mb-2">
             Account
           </h2>
 
           <Link
             href="/u/edit"
-            className="cursor-pointer active:opacity-80 text-l font-semibold text-left text-gray-800 dark:text-gray-200 hover:text-gray-600 dark:hover:text-gray-400"
+            className="cursor-pointer active:opacity-80 text-l font-semibold text-left text-gray-800 dark:text-[var(--foreground)] hover:text-gray-600 dark:hover:text-[var(--muted)]"
           >
             Edit Profile
           </Link>
 
           <Link
             href="/change-password"
-            className="cursor-pointer active:opacity-80 text-l font-semibold text-left text-gray-800 dark:text-gray-200 hover:text-gray-600 dark:hover:text-gray-400"
+            className="cursor-pointer active:opacity-80 text-l font-semibold text-left text-gray-800 dark:text-[var(--foreground)] hover:text-gray-600 dark:hover:text-[var(--muted)]"
           >
             Change Password
           </Link>
@@ -397,8 +397,8 @@ export default function SettingsPage() {
           </button>
         </div>
 
-        <div className="bg-white dark:bg-dark-3 p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 flex flex-col gap-4">
-          <button className="cursor-pointer active:opacity-80 text-l font-semibold text-left text-gray-800 dark:text-gray-200 hover:text-gray-600 dark:hover:text-gray-400">
+        <div className="bg-white dark:bg-dark-3 p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-[var(--border)] flex flex-col gap-4">
+          <button className="cursor-pointer active:opacity-80 text-l font-semibold text-left text-gray-800 dark:text-[var(--foreground)] hover:text-gray-600 dark:hover:text-[var(--muted)]">
             Invite Friends
           </button>
 

@@ -10,16 +10,16 @@ function EditProfileSkeleton() {
       <div className="mx-auto w-full p-8" style={{ width: "80%" }}>
         {/* Header */}
         <div className="mb-8 animate-pulse">
-          <div className="h-6 w-40 rounded bg-gray-200 dark:bg-gray-800" />
+          <div className="h-6 w-40 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
         </div>
 
         {/* Profile picture section */}
         <div className="flex items-center gap-6 mb-8 animate-pulse">
-          <div className="h-20 w-20 rounded-full bg-gray-200 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700" />
+          <div className="h-20 w-20 rounded-full bg-gray-200 dark:bg-[var(--dark-2)] border-2 border-gray-300 dark:border-[var(--border)]" />
 
           <div className="flex flex-col gap-3">
-            <div className="h-10 w-36 rounded-md bg-gray-200 dark:bg-gray-800 border border-gray-300 dark:border-gray-700" />
-            <div className="h-4 w-24 rounded bg-gray-200 dark:bg-gray-800" />
+            <div className="h-10 w-36 rounded-md bg-gray-200 dark:bg-[var(--dark-2)] border border-gray-300 dark:border-[var(--border)]" />
+            <div className="h-4 w-24 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
           </div>
         </div>
 
@@ -27,41 +27,41 @@ function EditProfileSkeleton() {
         <div className="space-y-6 animate-pulse">
           {/* Username */}
           <div>
-            <div className="h-4 w-24 mb-2 rounded bg-gray-200 dark:bg-gray-800" />
-            <div className="rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 p-1">
-              <div className="h-11 w-full rounded-md bg-gray-200 dark:bg-gray-800" />
+            <div className="h-4 w-24 mb-2 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
+            <div className="rounded-lg border border-gray-300 dark:border-[var(--border)] bg-gray-100 dark:bg-[var(--dark-1)] p-1">
+              <div className="h-11 w-full rounded-md bg-gray-200 dark:bg-[var(--dark-2)]" />
             </div>
           </div>
 
           {/* Display Name */}
           <div>
-            <div className="h-4 w-32 mb-2 rounded bg-gray-200 dark:bg-gray-800" />
-            <div className="rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 p-1">
-              <div className="h-11 w-full rounded-md bg-gray-200 dark:bg-gray-800" />
+            <div className="h-4 w-32 mb-2 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
+            <div className="rounded-lg border border-gray-300 dark:border-[var(--border)] bg-gray-100 dark:bg-[var(--dark-1)] p-1">
+              <div className="h-11 w-full rounded-md bg-gray-200 dark:bg-[var(--dark-2)]" />
             </div>
           </div>
 
           {/* Title */}
           <div>
-            <div className="h-4 w-16 mb-2 rounded bg-gray-200 dark:bg-gray-800" />
-            <div className="rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 p-1">
-              <div className="h-11 w-full rounded-md bg-gray-200 dark:bg-gray-800" />
+            <div className="h-4 w-16 mb-2 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
+            <div className="rounded-lg border border-gray-300 dark:border-[var(--border)] bg-gray-100 dark:bg-[var(--dark-1)] p-1">
+              <div className="h-11 w-full rounded-md bg-gray-200 dark:bg-[var(--dark-2)]" />
             </div>
           </div>
 
           {/* Bio */}
           <div>
-            <div className="h-4 w-16 mb-2 rounded bg-gray-200 dark:bg-gray-800" />
-            <div className="rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 p-1">
-              <div className="h-24 w-full rounded-md bg-gray-200 dark:bg-gray-800" />
+            <div className="h-4 w-16 mb-2 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
+            <div className="rounded-lg border border-gray-300 dark:border-[var(--border)] bg-gray-100 dark:bg-[var(--dark-1)] p-1">
+              <div className="h-24 w-full rounded-md bg-gray-200 dark:bg-[var(--dark-2)]" />
             </div>
           </div>
         </div>
 
         {/* ACTIONS */}
         <div className="flex justify-end gap-4 mt-8 animate-pulse">
-          <div className="h-10 w-28 rounded-lg bg-gray-300 dark:bg-gray-700 border border-gray-400 dark:border-gray-600" />
-          <div className="h-10 w-32 rounded-lg bg-gray-400 dark:bg-gray-600 border border-gray-500 dark:border-gray-500" />
+          <div className="h-10 w-28 rounded-lg bg-gray-300 dark:bg-[var(--dark-3)] border border-gray-400 dark:border-[var(--border)]" />
+          <div className="h-10 w-32 rounded-lg bg-gray-400 dark:bg-[var(--dark-3)] border border-gray-500 dark:border-[var(--border)]" />
         </div>
       </div>
     </main>
@@ -286,7 +286,7 @@ export default function EditProfilePage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Profile Picture Upload */}
             <div className="flex items-center space-x-4">
-              <div className="relative h-20 w-20 overflow-hidden rounded-full border-2 border-gray-400 dark:border-gray-600">
+              <div className="relative h-20 w-20 overflow-hidden rounded-full border-2 border-gray-400 dark:border-[var(--border)]">
                 {profilePreview ? (
                   <Image
                     src={profilePreview}
@@ -330,20 +330,20 @@ export default function EditProfilePage() {
 
             {/* Username */}
             <div>
-              <label className="block text-gray-600 dark:text-white/40">
+              <label className="block text-gray-600 dark:text-[var(--foreground)]/40">
                 Username
               </label>
               <input
                 type="text"
                 value={form.username}
                 disabled
-                className="w-full rounded-lg bg-gray-200 p-3 text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#4168e2] dark:border-[#2d2f32] dark:bg-[#1f2022] dark:text-white/20"
+                className="w-full rounded-lg bg-gray-200 p-3 text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#4168e2] dark:border-[#2d2f32] dark:bg-[#1f2022] dark:text-[var(--foreground)]/20"
               />
             </div>
 
             {/* Display Name */}
             <div>
-              <label className="block text-gray-600 dark:text-white/40">
+              <label className="block text-gray-600 dark:text-[var(--foreground)]/40">
                 Display Name
               </label>
               <input
@@ -352,13 +352,13 @@ export default function EditProfilePage() {
                 onChange={(e) =>
                   setForm((p) => ({ ...p, fullname: e.target.value }))
                 }
-                className="w-full rounded-lg border bg-white border-gray-400 p-3 focus:outline-none focus:ring-1 focus:ring-[#4168e2] dark:border-[#2d2f32] dark:bg-[#1f2022] dark:text-white"
+                className="w-full rounded-lg border bg-white border-gray-400 p-3 focus:outline-none focus:ring-1 focus:ring-[#4168e2] dark:border-[#2d2f32] dark:bg-[#1f2022] dark:text-[var(--foreground)]"
               />
             </div>
 
             {/* Title */}
             <div>
-              <label className="block text-gray-600 dark:text-white/40">
+              <label className="block text-gray-600 dark:text-[var(--foreground)]/40">
                 Title
               </label>
               <input
@@ -367,13 +367,13 @@ export default function EditProfilePage() {
                 onChange={(e) =>
                   setForm((p) => ({ ...p, title: e.target.value }))
                 }
-                className="w-full rounded-lg border bg-white border-gray-400 p-3 focus:outline-none focus:ring-1 focus:ring-[#4168e2] dark:border-[#2d2f32] dark:bg-[#1f2022] dark:text-white"
+                className="w-full rounded-lg border bg-white border-gray-400 p-3 focus:outline-none focus:ring-1 focus:ring-[#4168e2] dark:border-[#2d2f32] dark:bg-[#1f2022] dark:text-[var(--foreground)]"
               />
             </div>
 
             {/* Bio */}
             <div>
-              <label className="block text-gray-600 dark:text-white/40">
+              <label className="block text-gray-600 dark:text-[var(--foreground)]/40">
                 Bio
               </label>
               <textarea
@@ -388,7 +388,7 @@ export default function EditProfilePage() {
 
                   setForm((p) => ({ ...p, bio: value }));
                 }}
-                className="w-full rounded-lg bg-white border border-gray-400 p-3 focus:outline-none focus:ring-1 focus:ring-[#4168e2] dark:border-[#2d2f32] dark:bg-[#1f2022] dark:text-white"
+                className="w-full rounded-lg bg-white border border-gray-400 p-3 focus:outline-none focus:ring-1 focus:ring-[#4168e2] dark:border-[#2d2f32] dark:bg-[#1f2022] dark:text-[var(--foreground)]"
               />
             </div>
 
@@ -424,17 +424,17 @@ export default function EditProfilePage() {
       {showDiscardPopup && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-[#161719] dark:border dark:border-[#2d2f32]">
-            <h3 className="text-lg font-semibold dark:text-white">
+            <h3 className="text-lg font-semibold dark:text-[var(--foreground)]">
               Discard changes?
             </h3>
-            <p className="mt-2 text-sm text-gray-600 dark:text-white/50">
+            <p className="mt-2 text-sm text-gray-600 dark:text-[var(--foreground)]/50">
               You have unsaved edits. If you discard, your changes will be lost.
             </p>
 
             <div className="mt-6 flex items-center justify-end gap-3">
               <button
                 onClick={cancelDiscard}
-                className="rounded-lg cursor-pointer border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:border-[#2d2f32] dark:bg-[#1f2022] dark:text-white/80 dark:hover:bg-[#26282b]"
+                className="rounded-lg cursor-pointer border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:border-[#2d2f32] dark:bg-[#1f2022] dark:text-[var(--foreground)]/80 dark:hover:bg-[#26282b]"
               >
                 Cancel
               </button>

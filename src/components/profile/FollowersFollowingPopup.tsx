@@ -182,17 +182,17 @@ export default function FollowersFollowingPopup({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md max-h-[80vh] rounded-2xl bg-white dark:bg-dark-2 border-2 border-gray-200 dark:border-gray-900 flex flex-col"
+        className="w-full max-w-md max-h-[80vh] rounded-2xl bg-white dark:bg-dark-2 border-2 border-gray-200 dark:border-[var(--border)] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-800">
-          <h3 className="text-lg font-semibold dark:text-white">
+        <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-[var(--border)]">
+          <h3 className="text-lg font-semibold dark:text-[var(--foreground)]">
             {type === "followers" ? "Followers" : "Following"} ({initialCount})
           </h3>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xl cursor-pointer"
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-[var(--foreground)] text-xl cursor-pointer"
           >
             ✕
           </button>
@@ -205,7 +205,7 @@ export default function FollowersFollowingPopup({
             placeholder="Search..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-dark-3 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-[var(--border)] bg-white dark:bg-dark-3 text-gray-900 dark:text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
@@ -219,19 +219,19 @@ export default function FollowersFollowingPopup({
                   className="flex items-center justify-between animate-pulse"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="h-12 w-12 rounded-full bg-gray-200 dark:bg-gray-700" />
+                    <div className="h-12 w-12 rounded-full bg-gray-200 dark:bg-[var(--dark-3)]" />
                     <div>
-                      <div className="h-4 w-32 rounded bg-gray-200 dark:bg-gray-700 mb-2" />
-                      <div className="h-3 w-24 rounded bg-gray-200 dark:bg-gray-700" />
+                      <div className="h-4 w-32 rounded bg-gray-200 dark:bg-[var(--dark-3)] mb-2" />
+                      <div className="h-3 w-24 rounded bg-gray-200 dark:bg-[var(--dark-3)]" />
                     </div>
                   </div>
-                  <div className="h-8 w-20 rounded-lg bg-gray-200 dark:bg-gray-700" />
+                  <div className="h-8 w-20 rounded-lg bg-gray-200 dark:bg-[var(--dark-3)]" />
                 </div>
               ))}
             </div>
           ) : users.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-gray-500 dark:text-gray-400">
+              <p className="text-gray-500 dark:text-[var(--muted)]">
                 {searchQuery ? "No users found" : `No ${type} yet`}
               </p>
             </div>
@@ -269,10 +269,10 @@ export default function FollowersFollowingPopup({
                         </div>
                       )}
                       <div className="flex flex-col">
-                        <p className="text-sm font-semibold dark:text-white">
+                        <p className="text-sm font-semibold dark:text-[var(--foreground)]">
                           {user.fullname}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                        <p className="text-xs text-gray-500 dark:text-[var(--muted)]">
                           @{user.username} • Level {user.lifelevel}
                         </p>
                       </div>

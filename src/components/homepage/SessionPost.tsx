@@ -34,7 +34,7 @@ export type ApiSessionPost = {
   nudge_count: number;
   is_nudged: boolean;
   activity: { name: string; type: string; emoji: string };
-  goal: { id: number; uid: string; title: string; emoji: string };
+  goal: { id: number; uid: string; title: string; emoji: string } | null;
   user: {
     username: string;
     fullname: string;
@@ -137,7 +137,7 @@ export function SessionPost({ session }: { session: ApiSessionPost }) {
   return (
     <div
       id="post-card"
-      className="mb-6 md:p-6 md:rounded-xl md:border-2 md:bg-white md:border-gray-200 md:dark:bg-dark-2 md:dark:border-gray-900"
+      className="mb-6 md:p-6 md:rounded-xl md:border-2 md:bg-white md:border-gray-200 md:dark:bg-dark-2 md:dark:border-[var(--border)]"
     >
       {showComments && (
         <CommentSection
@@ -188,11 +188,11 @@ export function SessionPost({ session }: { session: ApiSessionPost }) {
           </button>
 
           <div
-            className="dropdown hidden absolute right-0 mt-2 w-44 border bg-white dark:border-gray-900 dark:bg-dark-2 overflow-hidden rounded-sm shadow-lg z-50"
+            className="dropdown hidden absolute right-0 mt-2 w-44 border bg-white dark:border-[var(--border)] dark:bg-dark-2 overflow-hidden rounded-sm shadow-lg z-50"
             style={{ borderColor: "var(--border)" }}
           >
             <a
-              href={`/goals/${goal.uid}`}
+              href={goal?.uid ? `/goals/${goal.uid}` : "#"}
               target="_blank"
               rel="noopener noreferrer"
               className="block cursor-pointer w-full text-left font-medium py-3 px-4 text-sm
@@ -203,7 +203,8 @@ export function SessionPost({ session }: { session: ApiSessionPost }) {
             </a>
             <button
               type="button"
-              onClick={() => copyGoalLink(goal.uid)}
+              disabled={!goal?.uid}
+              onClick={() => goal?.uid && copyGoalLink(goal.uid)}
               className="w-full cursor-pointer text-left font-medium py-3 px-4 text-sm
                         hover:bg-gray-100 dark:hover:bg-dark-3 transition-colors
                         dark:text-[#a5a5a6]"
@@ -218,7 +219,8 @@ export function SessionPost({ session }: { session: ApiSessionPost }) {
       <div className="px-2 md:px-0">
         <div className="flex gap-4 ">
           {/* 1:1 image or emoji placeholder */}
-          <Link href={`/goals/${goal.uid}`} className="shrink-0">
+
+          <Link href={goal?.uid ? `/goals/${goal.uid}` : "#"} className="shrink-0">
             {session.completion_picture ? (
               <img
                 className="w-24 h-24 object-cover rounded-lg cursor-pointer"
@@ -229,7 +231,7 @@ export function SessionPost({ session }: { session: ApiSessionPost }) {
                 alt="Completion"
               />
             ) : (
-              <div className="w-24 h-24 bg-gray-100 dark:bg-gray-800 flex items-center justify-center rounded-lg cursor-pointer">
+              <div className="w-24 h-24 bg-gray-100 dark:bg-dark-3/50 flex items-center justify-center rounded-lg cursor-pointer">
                 <span className="text-4xl">{activity.emoji}</span>
               </div>
             )}
@@ -244,13 +246,13 @@ export function SessionPost({ session }: { session: ApiSessionPost }) {
               {activity.name}
             </p>
 
-            <Link href={`/goals/${goal.uid}`}>
-              <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">
-                Session {session.session_number} {goal.title}
+            <Link href={goal?.uid ? `/goals/${goal.uid}` : "#"}>
+              <p className="text-sm font-semibold text-gray-500 dark:text-[var(--muted)]">
+                Session {session.session_number} {goal?.title ?? ""}
               </p>
             </Link>
 
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-sm text-gray-500 dark:text-[var(--muted)]">
               {session.xp_total} XP • {formatSessionTime(session.started_at)}
             </p>
           </div>
@@ -292,8 +294,8 @@ export function SessionPost({ session }: { session: ApiSessionPost }) {
             className="flex items-center gap-2 cursor-pointer"
             onClick={() => setShowComments(true)}
           >
-            <ChatBubbleOvalLeftIcon className="w-8 h-8 text-gray-500 opacity-50 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 cursor-pointer" />
-            <span className="text-md font-medium text-gray-500 dark:text-gray-400">
+            <ChatBubbleOvalLeftIcon className="w-8 h-8 text-gray-500 opacity-50 hover:text-gray-700 dark:text-[var(--muted)] dark:hover:text-[var(--foreground)] cursor-pointer" />
+            <span className="text-md font-medium text-gray-500 dark:text-[var(--muted)]">
               {commentCount}
             </span>
           </div>

@@ -18,12 +18,12 @@ export function AspectProgressBar({ aspect }: AspectProgressBarProps) {
           <span>{aspect.icon}</span>
           <span>{aspect.name}</span>
         </span>
-        <span className="text-gray-500 dark:text-gray-400">
+        <span className="text-gray-500 dark:text-[var(--muted)]">
           Lv {aspect.level}
         </span>
       </div>
 
-      <div className="h-2 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
+      <div className="h-2 bg-gray-200 dark:bg-[var(--dark-2)] rounded-full overflow-hidden">
         <div
           className="h-full transition-all duration-500 ease-out rounded-full"
           style={{
@@ -33,7 +33,7 @@ export function AspectProgressBar({ aspect }: AspectProgressBarProps) {
         />
       </div>
 
-      <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+      <div className="flex items-center justify-between text-xs text-gray-500 dark:text-[var(--muted)]">
         <span>{aspect.currentXP.toLocaleString()} / {aspect.xpToNextLevel.toLocaleString()} XP</span>
         <span>{percentage.toFixed(0)}%</span>
       </div>

@@ -117,7 +117,7 @@ const SessionInfoPopup: React.FC<SessionInfoPopupProps> = ({
       >
         {/* Popup Card */}
         <div
-          className="relative w-full max-w-lg rounded-3xl overflow-hidden bg-white dark:border dark:border-gray-800 dark:bg-gray-900 shadow-2xl"
+          className="relative w-full max-w-lg rounded-3xl overflow-hidden bg-white dark:border dark:border-[var(--border)] dark:bg-[var(--dark-1)] shadow-2xl"
           onClick={(e) => e.stopPropagation()}
           style={{
             animation: isAnimating ? "scaleIn 0.2s ease-out" : "none",

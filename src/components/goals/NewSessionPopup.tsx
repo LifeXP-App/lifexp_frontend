@@ -47,7 +47,7 @@ export default function NewSessionPopup({
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5">
           <div>
-            <h2 className="text-xl font-bold text-foreground dark:text-white leading-tight">
+            <h2 className="text-xl font-bold text-foreground dark:text-[var(--foreground)] leading-tight">
               Start Session
             </h2>
             <p className="text-xs text-muted-foreground font-medium mt-0.5 opacity-70">

@@ -27,7 +27,7 @@ export default function MasteryTitlesPopup({
       onClick={onClose}
     >
       <div
-        className="w-[90%] max-w-[700px] bg-white dark:bg-dark-2 border border-gray-100 dark:border-gray-800
+        className="w-[90%] max-w-[700px] bg-white dark:bg-dark-2 border border-gray-100 dark:border-[var(--border)]
                    rounded-2xl shadow-xl p-8 text-center space-y-4
                    animate-in zoom-in-95 slide-in-from-bottom-2 duration-200"
         onClick={(e) => e.stopPropagation()}
@@ -156,11 +156,11 @@ export default function MasteryTitlesPopup({
           </div>
         </div>
 
-        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200">
+        <h2 className="text-xl font-bold text-gray-800 dark:text-[var(--foreground)]">
           Mastery Titles
         </h2>
 
-        <p className="text-gray-600 dark:text-gray-400 text-md">
+        <p className="text-gray-600 dark:text-[var(--muted)] text-md">
           Mastery Titles show what kind of growth beast you are. Once you hit
           10,000 XP, your top life aspect (the one you&apos;ve grinded the most XP
           in) becomes your mastery path, and you earn a special title to match

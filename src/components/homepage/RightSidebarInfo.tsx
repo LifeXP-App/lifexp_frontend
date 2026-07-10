@@ -28,7 +28,7 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
   return (
     <aside className="w-full hidden md:block ">
       {/* PROFILE CARD */}
-      <div className="bg-white p-6 mb-4 rounded-xl border-2 border-gray-200 dark:bg-dark-2 dark:border-gray-900">
+      <div className="bg-white p-6 mb-4 rounded-xl border-2 border-gray-200 dark:bg-dark-2 dark:border-[var(--border)]">
         <div className="text-center flex flex-col items-center">
           <Link
             href={`/u/${user.username}`}
@@ -45,7 +45,7 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
 
           <span className="flex gap-1 justify-center items-center cursor-pointer">
             <button type="button" className="mastery-info flex cursor-pointer">
-              <InformationCircleIcon className="w-4 h-4 text-gray-400 dark:text-gray-600 dark:hover:text-gray-400" />
+              <InformationCircleIcon className="w-4 h-4 text-gray-400 dark:text-[var(--muted)] dark:hover:text-[var(--muted)]" />
             </button>
             <p
               className="text-sm font-bold"
@@ -86,7 +86,7 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
 
         {/* XP + STREAK */}
         <div className="mt-4 flex justify-between text-sm gap-4">
-          <div className="bg-gray-100 w-full flex flex-col rounded-md items-center justify-center p-4 dark:bg-gray-900 dark:bg-opacity-50">
+          <div className="bg-gray-100 dark:bg-dark-3 cursor-pointer w-full flex flex-col rounded-md items-center justify-center p-4 dark:bg-[var(--dark-1)] dark:bg-opacity-50">
             <p
               className="text-lg font-bold"
               style={{
@@ -98,23 +98,23 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
             
           </div>
 
-          <div className={`bg-gray-100 dark:bg-dark-3 w-full flex flex-col rounded-md items-center justify-between p-4 ${
+          <div className={`bg-gray-100 dark:bg-dark-3 cursor-pointer w-full flex flex-col rounded-md items-center justify-between p-4 ${
                   user.streak_active
                     ? "bg-orange-500/10 text-orange-500 "
                     : ""
                 }`}>
-            <p className="text-sm dark:text-gray-300">Streak Count</p>
+            <p className="text-sm dark:text-[var(--muted)]">Streak Count</p>
 
-            <p className={`text-lg font-extrabold text-gray-400 dark:text-gray-500 flex gap-1 items-center ${
+            <p className={`text-lg font-extrabold text-gray-400 dark:text-[var(--muted)] flex gap-1 items-center ${
                   user.streak_active
                     ? "text-orange-500 "
-                    : "text-gray-400 dark:text-gray-600"
+                    : "text-gray-400 dark:text-[var(--muted)]"
                 }`}>
               <FireIcon
                 className={`w-6 h-6 inline-block ml-1 ${
                   user.streak_active
                     ? "text-orange-500"
-                    : "text-gray-400 dark:text-gray-600 "
+                    : "text-gray-400 dark:text-[var(--muted)] "
                 }`}
               />
               {user.streak}
@@ -124,7 +124,7 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
       </div>
       <div
         id="next-level-tab"
-        className="bg-white p-6 mb-4 rounded-xl border-2 border-gray-200 dark:bg-dark-2 dark:border-gray-900"
+        className="bg-white p-6 mb-4 rounded-xl border-2 border-gray-200 dark:bg-dark-2 dark:border-[var(--border)]"
       >
         {user.mastery != "Rookie" ? (
           <>
