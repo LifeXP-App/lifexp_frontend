@@ -18,6 +18,8 @@ import {
   BoltIcon,
   UsersIcon,
   PlayIcon,
+  ClockIcon,
+  PauseCircleIcon,
 } from "@heroicons/react/24/solid";
 import { RocketLaunchIcon } from "@heroicons/react/24/outline";
 import { FaBrain, FaHammer } from "react-icons/fa";
@@ -25,20 +27,6 @@ import NewActivityModal from '@/src/components/goals/NewActivityModel';
 import NewSessionPopup from '@/src/components/goals/NewSessionPopup';
 import NewGoalModal from '@/src/components/goals/NewGoalModal';
 
-interface LiveSession {
-  id: string;
-  username?: string;
-  activityType?: string;
-  status: "live"|"completed"|"paused";
-  goalTitle:string;
-  sessionNumber: number;
-  activity: string;
-  xpEarned: number;
-  dateTime: string;
-  duration: string;
-  thumbnail?: string;
-  emoji?: string;
-}
 interface Session {
   id: string;
   user?:{
@@ -97,30 +85,6 @@ interface Activity {
   name: string;
   type: ActivityType;
 }
-
-const STATUS_CONFIG = {
-  live: {
-    label: "Ongoing",
-    dot: "bg-green-500",
-    text: "text-green-600",
-    bg: "bg-green-500/10",
-    pulse: true,
-  },
-  completed: {
-    label: "Completed",
-    dot: "bg-yellow-400",
-    text: "text-yellow-600",
-    bg: "bg-yellow-400/10",
-    pulse: false,
-  },
-  paused: {
-    label: "Paused",
-    dot: "bg-red-500",
-    text: "text-red-600",
-    bg: "bg-red-500/10",
-    pulse: false,
-  },
-} as const;
 
  type LeaderboardUser = {
   rank: number;
@@ -187,7 +151,7 @@ const ActivityLeaderboard: React.FC<{ users: LeaderboardUser[] }> = ({ users }) 
 
   return (
     <div
-      className="rounded-2xl border p-6 bg-white dark:bg-dark-3"
+      className="rounded-2xl border p-6 bg-white dark:bg-dark-2"
       style={{ borderColor: "var(--border)" }}
     >
       
@@ -228,6 +192,14 @@ const ActivityLeaderboard: React.FC<{ users: LeaderboardUser[] }> = ({ users }) 
                   </div>
                 </Link>
         ))}
+        {users.length === 0 && (
+          <div className="flex-col w-full  justify-center items-center py-4">
+            <RocketLaunchIcon className="w-16 h-16 mb-8 stroke-black opacity-20 dark:stroke-white mx-auto"/>
+                <p className="text-base text-center font-semibold text-black opacity-20 dark:text-[var(--foreground)] mx-auto">
+                  Be the first to try this activity!
+                </p>
+                </div>
+          )}
       </div>
     </div>
   );
@@ -235,76 +207,127 @@ const ActivityLeaderboard: React.FC<{ users: LeaderboardUser[] }> = ({ users }) 
 
 
 
-const LiveSessionItem: React.FC<LiveSession & { onClick?: () => void }> = ({
+const formatLiveDuration = (secs: number) => {
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = Math.floor(secs % 60);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+};
+
+interface LiveSessionCardProps {
+  username?: string;
+  userProfile?: string;
+  activityType?: string;
+  activityEmoji?: string;
+  status: "live" | "paused" | "completed";
+  goalTitle?: string;
+  totalDurationSeconds: number;
+  onClick?: () => void;
+}
+
+const LiveSessionCard: React.FC<LiveSessionCardProps> = ({
   username,
+  userProfile,
   activityType,
+  activityEmoji,
   status,
   goalTitle,
-  sessionNumber,
-  activity,
-  dateTime,
-  duration,
+  totalDurationSeconds,
   onClick,
 }) => {
-  const s = STATUS_CONFIG[status];
+  const isPaused = status === "paused";
+  const [elapsedSeconds, setElapsedSeconds] = useState(totalDurationSeconds);
+
+  // Resync whenever Convex pushes a fresh elapsed value
+  useEffect(() => {
+    setElapsedSeconds(totalDurationSeconds);
+  }, [totalDurationSeconds]);
+
+  // Tick locally every second while live, so the timer doesn't stall between Convex updates
+  useEffect(() => {
+    if (isPaused) return;
+    const ticker = setInterval(() => {
+      setElapsedSeconds((s) => s + 1);
+    }, 1000);
+    return () => clearInterval(ticker);
+  }, [isPaused]);
+
   const accentColor =
     ACTIVITY_META[activityType as ActivityType]?.cssColorVar ??
     "var(--aspect-creativity)";
+  const timerColor = isPaused ? "#f59e0b" : accentColor;
+  const emoji = activityEmoji || "✦";
+  const initial = username?.[0]?.toUpperCase() ?? "?";
 
   return (
     <div
       onClick={onClick}
       className="
-        relative
-        flex items-center justify-between
-        p-4 rounded-2xl border
-        bg-white dark:bg-dark-3
+        flex flex-col items-center justify-center
+        w-[148px] h-[195px] px-3.5 py-4
+        rounded-[20px] border
+        bg-white dark:bg-dark-2
         cursor-pointer
         transition-colors
-        hover:bg-gray-50 dark:hover:bg-dark-2
+        hover:bg-gray-50 dark:hover:bg-dark-3
       "
       style={{ borderColor: "var(--border)" }}
     >
-      {/* Status badge – top right */}
-      <div
-        className={`absolute top-3 right-3 flex items-center gap-2 px-2 py-0.5 rounded-full ${s.bg}`}
-      >
-        <span
-          className={`w-2 h-2 rounded-full ${s.dot} ${
-            s.pulse ? "animate-pulse" : ""
-          }`}
-        />
-        <span className={`text-xs font-semibold ${s.text}`}>
-          {s.label}
-        </span>
+      {/* Avatar with activity-emoji badge overlapping bottom-right */}
+      <div className="relative w-14 h-14 mb-3 shrink-0">
+        {userProfile ? (
+          <img
+            src={userProfile}
+            alt={username ?? "User"}
+            className="w-14 h-14 rounded-full object-cover"
+          />
+        ) : (
+          <div className="w-14 h-14 rounded-full flex items-center justify-center font-semibold text-lg bg-gray-200 dark:bg-dark-3 text-gray-600 dark:text-[var(--muted)]">
+            {initial}
+          </div>
+        )}
+        <div
+          className="absolute -bottom-1 bg-opacity-50 -right-2 w-7 h-7 rounded-full flex items-center justify-center text-sm border-2 border-white dark:border-dark-2"
+          style={{ backgroundColor: `${accentColor}` }}
+        >
+          {emoji}
+        </div>
       </div>
 
-      {/* Left content */}
-      <div className="flex flex-col min-w-0 gap-1 pr-8">
-        {/* Title */}
-        <h3 className="font-semibold text-lg text-foreground dark:text-[var(--foreground)] truncate">
-          {goalTitle}
-        </h3>
+      {/* Title */}
+      <p className="text-center text-[13px] font-semibold leading-tight line-clamp-2 text-foreground dark:text-[var(--foreground)]">
+        {goalTitle || "Active Session"}
+      </p>
 
-        {/* Session label */}
+      {/* Username */}
+      {username && (
         <p
-          className="text-sm font-bold truncate"
+          className="mt-1 text-xs font-semibold truncate max-w-full"
           style={{ color: accentColor }}
         >
-          {username ? `@${username}` : ""}
+          @{username}
         </p>
+      )}
 
-        {/* Date */}
-        <p className="text-xs" style={{ color: "var(--muted)" }}>
-          {dateTime}
-        </p>
-      </div>
-
-      {/* Right: duration */}
-      <div className="flex-shrink-0 text-right">
-        <div className="font-semibold text-lg text-foreground dark:text-[var(--foreground)]">
-          {duration}
-        </div>
+      {/* Live elapsed timer */}
+      <div
+        className="mt-2.5 w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-[10px]"
+        style={{
+          backgroundColor: `color-mix(in srgb, ${timerColor} 12%, transparent)`,
+        }}
+      >
+        {isPaused ? (
+          <PauseCircleIcon className="w-3.5 h-3.5" style={{ color: timerColor }} />
+        ) : (
+          <ClockIcon className="w-3.5 h-3.5" style={{ color: timerColor }} />
+        )}
+        <span
+          className="text-[15px] font-extrabold tabular-nums"
+          style={{ color: timerColor }}
+        >
+          {formatLiveDuration(elapsedSeconds)}
+        </span>
       </div>
     </div>
   );
@@ -344,11 +367,11 @@ const SessionItem: React.FC<Session & { onClick?: () => void; accentColor?: stri
   return (
     <div
         onClick={onClick}
-        className="flex items-center gap-4 p-4 bg-white dark:bg-dark-3 rounded-2xl border transition-shadow cursor-pointer"
+        className="flex items-center gap-4 p-4 bg-white dark:bg-dark-2 rounded-2xl border transition-shadow cursor-pointer"
         style={{ borderColor: "var(--border)" }}
       >
 
-      <div className="w-20 h-20 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden bg-gray-100 dark:bg-dark-3">
+      <div className="w-20 h-20 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden bg-gray-100 dark:bg-dark-3/50">
         {emoji ? (
           <span className="text-3xl">{emoji}</span>
         ) : thumbnail ? (
@@ -418,11 +441,11 @@ const FriendSessionItem: React.FC<Session & { onClick?: () => void; accentColor?
 }, []);
   return (
     <div
-        className="flex items-center gap-4 p-4 bg-white dark:bg-dark-3 rounded-2xl border transition-shadow cursor-pointer"
+        className="flex items-center gap-4 p-4 bg-white dark:bg-dark-2 rounded-2xl border transition-shadow cursor-pointer"
         style={{ borderColor: "var(--border)" }}
       >
 
-      <div className="w-20 h-20 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden bg-gray-100 dark:bg-dark-3">
+      <div className="w-20 h-20 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden bg-gray-100 dark:bg-dark-3/50">
         {emoji ? (
           <span className="text-3xl">{emoji}</span>
         ) : thumbnail ? (
@@ -817,33 +840,9 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   return (
     <>
       <style jsx global>{`
-        :root {
-          --background: #f3f4f6;
-          --foreground: #171717;
-          --dark-1: #000000;
-          --dark-2: #0c1017;
-          --dark-3: #0e141c;
-          --rookie-primary: #4168e2;
-          --warrior-primary: #8d2e2e;
-          --protagonist-primary: #c49352;
-          --prodigy-primary: #713599;
-          --alchemist-primary: #4187a2;
-          --diplomat-primary: #31784e;
-          --aspect-physique: #8d2e2e;
-          --aspect-energy: #c49352;
-          --aspect-logic: #713599;
-          --aspect-creativity: #4187a2;
-          --aspect-social: #31784e;
-          --border: #e5e7eb;
-          --muted: #9ca3af;
+        .bg-dark-1 {
+          background-color: var(--dark-1);
         }
-
-        .dark {
-          --background: #000000;
-          --foreground: #ededed;
-          --border: #262626;
-        }
-
         .bg-dark-2 {
           background-color: var(--dark-2);
         }
@@ -931,7 +930,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
         </div>
 
         {/* Mobile Layout - Single Scroll */}
-        <div className="block lg:hidden px-6 py-6">
+        <div className="block lg:hidden px-6 py-6 dark:bg-dark-1">
           {/* Stats */}
 <div className="mb-6 flex justify-around bg-white dark:bg-dark-2 rounded-2xl p-4 border" style={{ borderColor: 'var(--border)' }}>
             <div className="flex flex-col items-center justify-between">
@@ -1021,7 +1020,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
         </div>
 
         {/* Desktop Layout - Two Column */}
-        <div className="hidden lg:flex gap-6 px-6 py-6">
+        <div className="hidden lg:flex gap-6 px-6 py-6 dark:bg-dark-1">
           {/* Left Column - Main Content */}
           <div className="flex-1">
 
@@ -1061,20 +1060,20 @@ const [isModalOpen, setIsModalOpen] = useState(false);
               View more →
             </button>
             </div>
-            <div className="grid grid-cols-2 mb-2 gap-3">
+            <div className="flex flex-wrap mb-2 gap-3">
                 {liveSessions.map((session) => (
-                  <LiveSessionItem
+                  <LiveSessionCard
                     key={session._id}
                     status={session.status}
-                    sessionNumber={1}
-                    activity={session.activityName || "Activity"}
+                    goalTitle={session.goalTitle}
                     activityType={session.activityType}
+                    activityEmoji={session.activityEmoji}
                     username={session.username}
-                    dateTime={new Date(session.startedAt).toLocaleString()}
-                    duration={formatDuration(
-                      Math.floor((Date.now() - session.startedAt) / 1000)
-                    )}
-                    onClick={() => console.log(session)}
+                    userProfile={session.userProfile}
+                    totalDurationSeconds={session.totalDurationSeconds}
+                    onClick={() =>
+                      router.push(`/goals/${session.goalId}/session/${session._id}`)
+                    }
                   />
                 ))}
               </div>
@@ -1089,10 +1088,21 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       className="flex flex-col items-center justify-center text-center py-24 px-6 my-6 rounded-2xl "
       style={{ borderColor: "var(--border)" }}
     >
-      <RocketLaunchIcon className="w-16 h-16 mb-8 stroke-black opacity-20 dark:stroke-white"/>
-      <p className="text-base font-semibold text-black opacity-20 dark:text-[var(--foreground)]">
-        Be the first to try this activity!
-      </p>
+      <div className="flex flex-col items-center text-center">
+  <div className="text-5xl">🌱</div>
+
+          <div className="h-3" />
+
+          <h3 className="text-sm font-bold">
+            No sessions yet
+          </h3>
+
+          <div className="h-1.5" />
+
+          <p className="text-sm text-gray-500">
+            Be the first to log a session for this activity.
+          </p>
+</div>
     </div>
 )}
 

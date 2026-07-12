@@ -104,13 +104,58 @@ async function syncSessionToDjango(
 }
 
 function formatTime(seconds: number) {
-  const hrs = Math.floor(seconds / 3600);
-  const mins = Math.floor((seconds % 3600) / 60);
-  const secs = seconds % 60;
+  const total = Math.max(0, Math.floor(seconds));
+  const hrs = Math.floor(total / 3600);
+  const mins = Math.floor((total % 3600) / 60);
+  const secs = total % 60;
   if (hrs > 0) {
     return `${hrs}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   }
   return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+}
+
+// Shown instead of the normal owner controls when viewing someone else's live
+// session: no pause/discard/finish, just a one-shot nudge + a way back out.
+function SpectatorControls({
+  sessionId,
+  categoryColor,
+  onClose,
+}: {
+  sessionId: Id<"sessions"> | null;
+  categoryColor: string;
+  onClose: () => void;
+}) {
+  const [nudged, setNudged] = useState(false);
+
+  const handleNudge = useCallback(async () => {
+    if (nudged || !sessionId) return;
+    setNudged(true);
+    try {
+      await authedFetch(`/api/sessions/${sessionId}/nudge`, { method: "POST" });
+    } catch (err) {
+      console.error("Failed to nudge session:", err);
+    }
+  }, [nudged, sessionId]);
+
+  return (
+    <div className="flex items-center gap-4">
+      <button
+        onClick={handleNudge}
+        disabled={nudged}
+        className="w-36 h-14 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-medium transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-default"
+      >
+        {nudged ? "Nudged 👋" : "Nudge 👋"}
+      </button>
+
+      <button
+        onClick={onClose}
+        className="w-36 h-14 rounded-full text-white font-medium transition-transform cursor-pointer hover:scale-105"
+        style={{ backgroundColor: categoryColor }}
+      >
+        Close
+      </button>
+    </div>
+  );
 }
 
 // ── Component ──
@@ -185,6 +230,8 @@ export default function SessionTimer({ params }: SessionTimerProps) {
   const isActive = isRunning || isPaused;
   // Flat primitive so React Compiler can track it without inferring the whole session object
   const sessionSynced = session?.syncedToDjango ?? false;
+  // Whether the logged-in user owns this session, vs. viewing someone else's live session
+  const isOwn = Boolean(me && session && session.userId === String(me.id));
 
   // ── Check for existing active session before creating ──
   const existingSession = useQuery(
@@ -233,6 +280,7 @@ export default function SessionTimer({ params }: SessionTimerProps) {
         const id = await startMutation({
           userId: String(me.id),
           username: me.username,
+          userProfile: me.profile_picture ?? undefined,
           goalId,
           goalTitle: goalData.title,
           activityId: activityIdStr,
@@ -324,12 +372,32 @@ export default function SessionTimer({ params }: SessionTimerProps) {
   const [phaseSecondsLeft, setPhaseSecondsLeft] = useState(FOCUS_SECONDS);
 
   useEffect(() => {
+    // Only the owner runs the local pomodoro state machine — a spectator's
+    // countdown is unrelated to the actual session and must never pause it.
+    if (!isOwn) return;
     if (pomodoroPhase === "focus" && !isRunning) return;
     const id = setInterval(() => {
       setPhaseSecondsLeft((prev) => Math.max(0, prev - 1));
     }, 1000);
     return () => clearInterval(id);
-  }, [isRunning, pomodoroPhase]);
+  }, [isRunning, pomodoroPhase, isOwn]);
+
+  // ── Spectator elapsed-time ticker ──
+  // Non-owners see a plain elapsed-time counter (mirrors Convex's
+  // totalDurationSeconds), never a pomodoro countdown that could affect the
+  // owner's session.
+  const [spectatorElapsed, setSpectatorElapsed] = useState(0);
+
+  useEffect(() => {
+    if (isOwn || !session) return;
+    setSpectatorElapsed(session.totalDurationSeconds);
+  }, [isOwn, session, session?.totalDurationSeconds]);
+
+  useEffect(() => {
+    if (isOwn || !isRunning) return;
+    const id = setInterval(() => setSpectatorElapsed((s) => s + 1), 1000);
+    return () => clearInterval(id);
+  }, [isOwn, isRunning]);
 
   // When a phase countdown hits zero, transition to the next phase.
   // The dependency array intentionally omits sessionId/mutations to avoid
@@ -340,6 +408,7 @@ export default function SessionTimer({ params }: SessionTimerProps) {
   });
 
 useEffect(() => {
+  if (!isOwn) return;
   if (phaseSecondsLeft > 0) return;
 
   const sid = sessionIdRef.current;
@@ -373,8 +442,9 @@ useEffect(() => {
   const rateCreativity = currentRates?.creativity ?? 0;
   const rateSocial = currentRates?.social ?? 0;
 
-  // ── Heartbeat every 5s when live ──
+  // ── Heartbeat every 5s when live (owner only — spectators never heartbeat) ──
   useEffect(() => {
+    if (!isOwn) return;
     if (!isRunning) return;
     if (!sessionId) return;
     if (pomodoroPhase !== "focus") return;
@@ -395,6 +465,7 @@ useEffect(() => {
 
     return () => clearInterval(interval);
   }, [
+    isOwn,
     isRunning,
     sessionId,
     pomodoroPhase,
@@ -618,8 +689,10 @@ useEffect(() => {
     setPhaseSecondsLeft(FOCUS_SECONDS);
   }, [sessionId, resumeMutation]);
 
-  // ── Keyboard shortcuts ──
+  // ── Keyboard shortcuts (owner only — spectators have no session controls) ──
   useEffect(() => {
+    if (!isOwn) return;
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
         e.target instanceof HTMLInputElement ||
@@ -644,18 +717,20 @@ useEffect(() => {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [pomodoroPhase, handleToggle, handleSkipBreak, handleFinish]);
+  }, [isOwn, pomodoroPhase, handleToggle, handleSkipBreak, handleFinish]);
 
   // ── Update browser tab title with timer ──
   useEffect(() => {
-    const timeStr = formatTime(phaseSecondsLeft);
-    const status = pomodoroPhase === "break" ? "☕" : (isRunning ? "▶" : "⏸");
-    const title = pomodoroPhase === "break" ? "Break" : (goalData?.title ?? "Session");
+    const timeStr = isOwn ? formatTime(phaseSecondsLeft) : formatTime(spectatorElapsed);
+    const status = isOwn
+      ? (pomodoroPhase === "break" ? "☕" : (isRunning ? "▶" : "⏸"))
+      : (isRunning ? "👀" : "⏸");
+    const title = isOwn && pomodoroPhase === "break" ? "Break" : (goalData?.title ?? "Session");
     document.title = `${status} ${timeStr} - ${title}`;
     return () => {
       document.title = "LifeXP";
     };
-  }, [phaseSecondsLeft, isRunning, pomodoroPhase, goalData?.title]);
+  }, [phaseSecondsLeft, spectatorElapsed, isRunning, pomodoroPhase, goalData?.title, isOwn]);
 
   // ── Error state ──
   if (ratesError || goalError) {
@@ -727,7 +802,7 @@ useEffect(() => {
             className="text-[100px] md:text-[100px] opacity-80 font-semibold text-white tracking-tighter tabular-nums"
             style={{ fontVariantNumeric: "tabular-nums" }}
           >
-            {formatTime(phaseSecondsLeft)}
+            {isOwn ? formatTime(phaseSecondsLeft) : formatTime(spectatorElapsed)}
           </div>
         </div>
 
@@ -765,7 +840,13 @@ useEffect(() => {
         )}
 
         {/* Controls */}
-        {isBreak ? (
+        {!isOwn ? (
+          <SpectatorControls
+            sessionId={sessionId}
+            categoryColor={categoryColor}
+            onClose={() => router.back()}
+          />
+        ) : isBreak ? (
           <div className="flex items-center gap-4">
             <button
               onClick={handleSkipBreak}

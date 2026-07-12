@@ -194,7 +194,7 @@ const DayCompletePage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-dark-1">
 
         <div className="text-center  flex flex-col items-center justify-center space-y-4">
 
@@ -227,7 +227,7 @@ const DayCompletePage = () => {
     <>
       <div 
         className="min-h-screen overflow-hidden w-full flex items-center justify-center"
-        style={{ backgroundColor: '#f3f4f6' }}
+        style={{ backgroundColor: 'var(--background)' }}
       >
 
         <div className="w-full max-w-2xl rounded-3xl overflow-hidden">
@@ -274,7 +274,7 @@ const DayCompletePage = () => {
 
               }}
               style={{ borderColor: 'var(--border)' }}
-              className="relative w-full h-[280px] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer overflow-hidden bg-white transition-all hover:scale-[1.01] active:scale-[0.99]"
+              className="relative w-full h-[280px] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer overflow-hidden bg-white dark:bg-dark-2 transition-all hover:scale-[1.01] active:scale-[0.99]"
             >
 
               {imagePreview ? (
@@ -315,7 +315,7 @@ const DayCompletePage = () => {
                     or upload a snapshot of what you created.
                   </p>
 
-                  <div className="px-4 py-2 rounded-xl text-sm font-medium bg-gray-200">
+                  <div className="px-4 py-2 rounded-xl text-sm font-medium bg-gray-200 dark:bg-[var(--dark-3)] text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-300 dark:hover:bg-[var(--dark-2)] transition">
                     Browse Image
                   </div>
 
@@ -344,7 +344,7 @@ const DayCompletePage = () => {
           <div className="px-6 pb-6 flex justify-center cursor-pointer transition">
 
             <div
-              className="flex items-center gap-2 px-4 py-2 rounded-full bg-white border"
+              className="flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-dark-2 border"
               style={{ borderColor: "var(--border)" }}
 
             >
@@ -388,7 +388,7 @@ const DayCompletePage = () => {
                       key={user.id}
                       src={user.profile_picture}
                       alt={user.username}
-                      className="w-7 h-7 rounded-full border-2 border-white object-cover"
+                      className="w-7 h-7 rounded-full border-2 border-[var(--border)] object-cover"
                     />
                     </a>
 
@@ -419,9 +419,11 @@ const DayCompletePage = () => {
 
           {/* Progress */}
 
-          <div className="px-6 pb-6">
+          {reflection.days_left !== null && (
+            
+          <div className="px-6">
 
-            <div className="relative h-6 rounded-full overflow-hidden bg-gray-200">
+            <div className="relative h-6 rounded-full overflow-hidden bg-gray-200 dark:bg-dark-3">
 
               <div
                 className="absolute inset-y-0 left-0 rounded-full transition-all duration-1000"
@@ -440,10 +442,11 @@ const DayCompletePage = () => {
             )}
 
           </div>
+          )}
 
           {/* Done Button */}
 
-          <div className="px-6 pb-8">
+          <div className="px-6 py-8">
 
                 <a href={isEmptySession ? "/goals" : `/goals/${goalId}`} >
             <button

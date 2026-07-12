@@ -38,7 +38,7 @@ export default function RootLayout({
           <AuthProvider>
             <AuthGuard>
               <PopupProvider>
-                <div className="flex h-screen overflow-hidden">
+                <div className="flex h-screen overflow-hidden bg-gray-100 dark:bg-dark-1">
                   {/* ✅ Client wrapper handles state */}
                   <MasteryPopupWrapper />
 

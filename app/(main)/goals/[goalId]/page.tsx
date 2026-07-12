@@ -68,7 +68,7 @@ const SessionItem: React.FC<any & { onClick?: () => void, color?: string  }> = (
   return (
     <div
       onClick={onClick}
-      className="flex items-center gap-4 p-4 bg-white dark:bg-dark-3 rounded-2xl border transition-shadow cursor-pointer"
+      className="flex items-center gap-4 p-4 bg-white dark:bg-dark-2 rounded-2xl border transition-shadow cursor-pointer"
       style={{ borderColor: "var(--border)" }}
     >
       <div className="w-20 h-20 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden bg-gray-100 dark:bg-dark-3">
@@ -682,33 +682,6 @@ export default function GoalDetailPage() {
   return (
     <>
       <style jsx global>{`
-        :root {
-          --background: #f3f4f6;
-          --foreground: #171717;
-          --dark-1: #000000;
-          --dark-2: #0c1017;
-          --dark-3: #0e141c;
-          --rookie-primary: #4168e2;
-          --warrior-primary: #8d2e2e;
-          --protagonist-primary: #c49352;
-          --prodigy-primary: #713599;
-          --alchemist-primary: #4187a2;
-          --diplomat-primary: #31784e;
-          --aspect-physique: #8d2e2e;
-          --aspect-energy: #c49352;
-          --aspect-logic: #713599;
-          --aspect-creativity: #4187a2;
-          --aspect-social: #31784e;
-          --border: #e5e7eb;
-          --muted: #9ca3af;
-        }
-
-        .dark {
-          --background: #000000;
-          --foreground: #ededed;
-          --border: #262626;
-        }
-
         .bg-dark-2 {
           background-color: var(--dark-2);
         }
@@ -742,7 +715,7 @@ export default function GoalDetailPage() {
 
       <div
         className="min-h-screen"
-        style={{ backgroundColor: "var(--background)" }}
+        style={{ backgroundColor: "var(--bg-dark-1)" }}
       >
         <SessionInfoPopup
           isOpen={isSessionPopupOpen}

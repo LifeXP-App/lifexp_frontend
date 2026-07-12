@@ -83,12 +83,14 @@ function GoalCard({
   secondaryCta,
   showAchievementCta,
   onStatusChange,
+  onDelete,
 }: {
   goal: Goal;
   primaryCta?: { label: string; onClick: () => void };
   secondaryCta?: { label: string; onClick: () => void };
   showAchievementCta?: { label: string; onClick: () => void };
   onStatusChange?: (goalId: string, newStatus: string) => void;
+  onDelete?: (goalId: string) => void;
 }) {
   const isCompleted = goal.status === "completed";
 
@@ -123,12 +125,13 @@ function GoalCard({
           </div>
         </div>
 
-        {/* 3-dot Status Menu (only for non-completed goals) */}
-        {onStatusChange && (
+        {/* 3-dot Status Menu */}
+        {onStatusChange && onDelete && (
           <GoalStatusMenu
             goalId={goal.id}
             currentStatus={goal.status}
             onStatusChange={onStatusChange}
+            onDelete={onDelete}
           />
         )}
 
@@ -232,29 +235,29 @@ function GoalCard({
 }
 function GoalCardSkeleton() {
   return (
-    <div className="w-full rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-dark-2 p-4 animate-pulse">
+    <div className="w-full rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-dark-2 p-4 animate-pulse">
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3 w-full">
           {/* emoji placeholder */}
-          <div className="h-4 w-4 rounded bg-gray-200 dark:bg-[var(--dark-2)] mt-1" />
+          <div className="h-4 w-4 rounded bg-gray-200 dark:bg-dark-3 mt-1" />
 
-          <div className="h-6 w-3/4 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
+          <div className="h-6 w-3/4 rounded bg-gray-200 dark:bg-dark-3" />
         </div>
 
         {/* meta right */}
-        <div className="h-2 w-16 rounded bg-gray-200 dark:bg-[var(--dark-2)] mt-1" />
+        <div className="h-2 w-16 rounded bg-gray-200 dark:bg-dark-3 mt-1" />
       </div>
 
       {/* description */}
       <div className="mt-4 space-y-2">
-        <div className="h-3 w-full rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
+        <div className="h-3 w-full rounded bg-gray-200 dark:bg-dark-3" />
       </div>
 
       {/* buttons */}
       <div className="mt-6 flex gap-3">
-        <div className="h-10 w-full rounded-xl bg-gray-200 dark:bg-[var(--dark-2)]" />
-        <div className="h-10 w-full rounded-xl bg-gray-200 dark:bg-[var(--dark-2)]" />
+        <div className="h-10 w-full rounded-xl bg-gray-200 dark:bg-dark-3" />
+        <div className="h-10 w-full rounded-xl bg-gray-200 dark:bg-dark-3" />
       </div>
     </div>
   );
@@ -314,6 +317,7 @@ interface Activity {
   xp_distribution?: Record<string, number>;
 }
 
+
 function RightSidebarInfoSkeleton() {
   return (
     <aside className="w-2xl hidden md:block">
@@ -321,15 +325,15 @@ function RightSidebarInfoSkeleton() {
       <div className="bg-white p-6 mb-4 rounded-xl border-2 border-gray-200 dark:bg-dark-2 dark:border-[var(--border)] animate-pulse">
         <div className="text-center flex flex-col items-center">
           {/* avatar */}
-          <div className="h-24 w-24 aspect-square p-[1.5px] rounded-full bg-gray-200 dark:bg-[var(--dark-2)] mb-3" />
+          <div className="h-24 w-24 aspect-square p-[1.5px] rounded-full bg-gray-200 dark:bg-dark-3 mb-3" />
 
           {/* fullname */}
-          <div className="h-4 w-40 rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-3" />
+          <div className="h-4 w-40 rounded bg-gray-200 dark:bg-dark-3 mb-3" />
 
           {/* mastery row */}
           <span className="flex gap-2 justify-center items-center">
-            <div className="h-4 w-4 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
-            <div className="h-3 w-16 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
+            <div className="h-4 w-4 rounded bg-gray-200 dark:bg-dark-3" />
+            <div className="h-3 w-16 rounded bg-gray-200 dark:bg-dark-3" />
             <span className="w-4" />
           </span>
         </div>
@@ -338,44 +342,57 @@ function RightSidebarInfoSkeleton() {
         <div className="mt-4 flex justify-between text-sm">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="text-center">
-              <div className="h-4 w-6 mx-auto rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-2" />
-              <div className="h-3 w-14 mx-auto rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
+              <div className="h-4 w-6 mx-auto rounded bg-gray-200 dark:bg-dark-3 mb-2" />
+              <div className="h-3 w-14 mx-auto rounded bg-gray-200 dark:bg-dark-3" />
             </div>
           ))}
         </div>
 
         {/* XP BAR */}
-        <div className="w-full relative rounded-full h-4 my-4 ml-1 overflow-hidden bg-gray-200 dark:bg-[var(--dark-2)]">
-          <div className="h-6 w-[55%] bg-gray-300 dark:bg-[var(--dark-3)]" />
+        <div className="w-full relative rounded-full h-4 my-4 ml-1 overflow-hidden bg-gray-200 dark:bg-dark-3">
+          <div className="h-6 w-[55%] bg-gray-300 dark:bg-dark-3" />
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="h-3 w-20 rounded bg-gray-300/80 dark:bg-[var(--dark-3)]/70" />
+            <div className="h-3 w-20 rounded bg-gray-300/80 dark:bg-dark-3/70" />
           </div>
         </div>
 
         {/* XP + STREAK */}
         <div className="mt-4 flex justify-between text-sm gap-4">
-          <div className="bg-gray-100 w-full flex flex-col rounded-md items-center justify-between p-4 dark:bg-[var(--dark-1)] dark:bg-opacity-50">
-            <div className="h-5 w-24 rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-2" />
-            <div className="h-3 w-28 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
+          <div className="bg-gray-100 w-full flex flex-col rounded-md items-center justify-between p-4 dark:bg-dark-3 dark:bg-opacity-50">
+            <div className="h-5 w-24 rounded bg-gray-200 dark:bg-dark-3 mb-2" />
+            <div className="h-3 w-28 rounded bg-gray-200 dark:bg-dark-3" />
           </div>
 
-          <div className="bg-gray-100 w-full hidden md:flex flex-col rounded-md items-center justify-between p-4 dark:bg-[var(--dark-1)] dark:bg-opacity-50">
-            <div className="h-3 w-20 rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-2" />
+          <div className="bg-gray-100 w-full hidden md:flex flex-col rounded-md items-center justify-between p-4 dark:bg-dark-3 dark:bg-opacity-50">
+            <div className="h-3 w-20 rounded bg-gray-200 dark:bg-dark-3 mb-2" />
             <div className="flex gap-2 items-center">
-              <div className="h-4 w-4 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
-              <div className="h-5 w-8 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
+              <div className="h-4 w-4 rounded bg-gray-200 dark:bg-dark-3" />
+              <div className="h-5 w-8 rounded bg-gray-200 dark:bg-dark-3" />
             </div>
           </div>
         </div>
       </div>
 
-      <RecentInteractionsSkeleton/>
+      {/* NEXT LEVEL TAB CARD */}
+      <div
+        id="next-level-tab"
+        className="bg-white p-6 mb-4 rounded-xl border-2 border-gray-200 dark:bg-dark-2 dark:border-[var(--border)] animate-pulse"
+      >
+        <div className="flex justify-between mb-6">
+          <div className="h-4 w-44 rounded bg-gray-200 dark:bg-dark-3" />
+          <div className="h-4 w-16 rounded bg-gray-200 dark:bg-dark-3" />
+        </div>
 
-     
-     
+        <div className="w-full flex gap-1 items-center">
+          <div className="w-full rounded-full h-2.5 ml-1 bg-gray-200 dark:bg-dark-3 overflow-hidden">
+            <div className="h-2.5 w-[12%] rounded-full bg-gray-300 dark:bg-dark-3" />
+          </div>
+        </div>
+      </div>
     </aside>
   );
 }
+
 
 export default function GoalsPage() {
   const router = useRouter();
@@ -733,6 +750,14 @@ export default function GoalsPage() {
     }
   };
 
+  const handleDeleteGoalRequest = (goalId: string) => {
+    if (deletingGoalId) return; // Prevent multiple clicks
+    const goal = goals.find((g) => g.uid === goalId);
+    if (window.confirm(`Are you sure you want to delete "${goal?.title ?? "this goal"}"? This cannot be undone.`)) {
+      handleDeleteGoal(goalId);
+    }
+  };
+
   const handleStatusChangeRequest = (goalId: string, newStatus: string) => {
     const goal = goals.find((g) => g.uid === goalId);
     if (!goal) return;
@@ -867,6 +892,7 @@ export default function GoalsPage() {
                         onClick: () => router.push(`/goals/${goal.uid}`),
                       }}
                       onStatusChange={handleStatusChangeRequest}
+                      onDelete={handleDeleteGoalRequest}
                     />
                   ))}
                 </div>
@@ -912,6 +938,7 @@ export default function GoalsPage() {
                         },
                       }}
                       onStatusChange={handleStatusChangeRequest}
+                      onDelete={handleDeleteGoalRequest}
                     />
                   ))}
                 </div>
@@ -953,6 +980,7 @@ export default function GoalsPage() {
                         onClick: () => router.push(`/goals/${goal.uid}`),
                       }}
                       onStatusChange={handleStatusChangeRequest}
+                      onDelete={handleDeleteGoalRequest}
                     />
                   ))}
                 </div>
@@ -994,6 +1022,7 @@ export default function GoalsPage() {
                         onClick: () => router.push(`/goals/${goal.uid}`),
                       }}
                       onStatusChange={handleStatusChangeRequest}
+                      onDelete={handleDeleteGoalRequest}
                     />
                   ))}
                 </div>
@@ -1031,6 +1060,7 @@ export default function GoalsPage() {
                         onClick: () => router.push(`/goals/${goal.uid}`),
                       }}
                       onStatusChange={handleStatusChangeRequest}
+                      onDelete={handleDeleteGoalRequest}
                     />
                   ))}
                 </div>

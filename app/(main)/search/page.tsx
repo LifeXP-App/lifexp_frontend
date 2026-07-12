@@ -233,7 +233,7 @@ export default function SearchPage() {
   return (
     <div className="h-screen bg-gray-50 dark:bg-dark-1 overflow-hidden flex">
       {/* Left Column - Search Sidebar */}
-      <div className="w-96 border-r border-gray-200 dark:border-[var(--border)] bg-white dark:bg-dark-1 flex flex-col h-screen overflow-y-auto">
+      <div className="w-96 border-r border-gray-200 dark:border-[var(--border)]  bg-white dark:bg-dark-2/50 flex flex-col h-screen overflow-y-auto">
         <div className="p-6">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-[var(--foreground)] mb-6">
             Search
@@ -462,21 +462,34 @@ export default function SearchPage() {
                     Recent Posts ({filteredResults.posts.length})
                   </h3>
                   <div className="grid grid-cols-3 gap-4">
-                    {filteredResults.posts.map((post) => (
-                      <Link
-                        key={post.id}
-                        href={`/post/${post.uid}`}
-                        className="block h-48 bg-gray-200 dark:bg-[var(--dark-2)] rounded-lg overflow-hidden"
-                      >
-                        {post.post_image && (
+                    {filteredResults.posts.map((post) =>
+                      post.post_image ? (
+                        <Link
+                          key={post.id}
+                          href={`/goals/${post.uid}`}
+                          className="block h-48 bg-gray-200 dark:bg-[var(--dark-2)] rounded-lg overflow-hidden"
+                        >
                           <img
                             src={post.post_image}
                             alt={post.title}
                             className="h-full w-full object-cover"
                           />
-                        )}
-                      </Link>
-                    ))}
+                        </Link>
+                      ) : (
+                        <Link
+                          key={post.id}
+                          href={`/goals/${post.uid}`}
+                          className="flex flex-col justify-between h-48 p-4 bg-gray-200 dark:bg-[var(--dark-2)] rounded-lg overflow-hidden hover:bg-gray-300 dark:hover:bg-[var(--dark-3)] transition-colors"
+                        >
+                          <p className="font-semibold text-gray-900 dark:text-[var(--foreground)] line-clamp-3">
+                            {post.title}
+                          </p>
+                          <p className="text-sm text-gray-600 dark:text-[var(--muted)] line-clamp-2">
+                            {post.content}
+                          </p>
+                        </Link>
+                      ),
+                    )}
                   </div>
                 </div>
               )}

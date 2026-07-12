@@ -6,12 +6,14 @@ interface GoalStatusMenuProps {
   goalId: string;
   currentStatus: 'planned' | 'ongoing' | 'paused' | 'completed' | 'abandoned';
   onStatusChange: (goalId: string, newStatus: string) => void;
+  onDelete: (goalId: string) => void;
 }
 
 export default function GoalStatusMenu({
   goalId,
   currentStatus,
   onStatusChange,
+  onDelete,
 }: GoalStatusMenuProps) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -70,11 +72,6 @@ export default function GoalStatusMenu({
 
   const actions = getActions();
 
-  // Don't render if no actions available
-  if (actions.length === 0) {
-    return null;
-  }
-
   return (
     <div ref={menuRef} className="relative">
       <button
@@ -111,6 +108,21 @@ export default function GoalStatusMenu({
               {action.label}
             </button>
           ))}
+
+          {actions.length > 0 && (
+            <div className="border-t border-gray-200 dark:border-[var(--border)]" />
+          )}
+
+          <button
+            type="button"
+            className="w-full cursor-pointer text-left font-medium py-3 px-4 text-sm hover:bg-gray-100 dark:hover:bg-dark-3 transition-colors text-red-700 dark:text-red-500"
+            onClick={() => {
+              setOpen(false);
+              onDelete(goalId);
+            }}
+          >
+            Delete Goal
+          </button>
         </div>
       )}
     </div>

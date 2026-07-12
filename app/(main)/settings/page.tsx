@@ -53,11 +53,12 @@ function formToBackend(payload: SettingsFormState) {
   };
 }
 
+
 function SkeletonRow() {
   return (
     <div className="flex justify-between w-full mb-4 animate-pulse">
-      <div className="h-6 w-40 rounded bg-gray-200 dark:bg-[var(--dark-3)]" />
-      <div className="h-10 w-32 rounded bg-gray-200 dark:bg-[var(--dark-3)]" />
+      <div className="h-6 w-40 rounded bg-gray-200 dark:bg-dark-3" />
+      <div className="h-10 w-32 rounded bg-gray-200 border dark:border-[var(--border)] dark:bg-dark-2" />
     </div>
   );
 }
@@ -65,16 +66,16 @@ function SkeletonRow() {
 function SkeletonPanel() {
   return (
     <aside className="w-[420px] p-6 hidden md:block overflow-y-auto animate-pulse">
-      <div className="bg-white dark:bg-dark-3 p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-[var(--border)] flex flex-col gap-4">
-        <div className="h-6 w-24 rounded bg-gray-200 dark:bg-[var(--dark-3)]" />
-        <div className="h-5 w-40 rounded bg-gray-200 dark:bg-[var(--dark-3)]" />
-        <div className="h-5 w-44 rounded bg-gray-200 dark:bg-[var(--dark-3)]" />
-        <div className="h-5 w-36 rounded bg-gray-200 dark:bg-[var(--dark-3)]" />
+      <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-[var(--border)]  flex flex-col gap-4">
+        <div className="h-6 w-24 rounded bg-gray-200 dark:bg-dark-3" />
+        <div className="h-5 w-40 rounded bg-gray-200 dark:bg-dark-3" />
+        <div className="h-5 w-44 rounded bg-gray-200 dark:bg-dark-3" />
+        <div className="h-5 w-36 rounded bg-gray-200 dark:bg-dark-3" />
       </div>
 
-      <div className="bg-white dark:bg-dark-3 p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-[var(--border)] flex flex-col gap-4">
-        <div className="h-5 w-36 rounded bg-gray-200 dark:bg-[var(--dark-3)]" />
-        <div className="h-5 w-24 rounded bg-gray-200 dark:bg-[var(--dark-3)]" />
+      <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-[var(--border)]  flex flex-col gap-4">
+        <div className="h-5 w-36 rounded bg-gray-200 dark:bg-dark-3" />
+        <div className="h-5 w-24 rounded bg-gray-200 dark:bg-dark-3" />
       </div>
     </aside>
   );
@@ -373,7 +374,7 @@ export default function SettingsPage() {
 
       {/* Desktop right panel */}
       <aside className="w-[420px] p-6 hidden md:block overflow-y-auto">
-        <div className="bg-white dark:bg-dark-3 p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-[var(--border)] flex flex-col gap-4">
+        <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-[var(--border)] flex flex-col gap-4">
           <h2 className="text-xl font-medium text-left text-black dark:text-[var(--foreground)] mb-2">
             Account
           </h2>
@@ -397,7 +398,7 @@ export default function SettingsPage() {
           </button>
         </div>
 
-        <div className="bg-white dark:bg-dark-3 p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-[var(--border)] flex flex-col gap-4">
+        <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-[var(--border)] flex flex-col gap-4">
           <button className="cursor-pointer active:opacity-80 text-l font-semibold text-left text-gray-800 dark:text-[var(--foreground)] hover:text-gray-600 dark:hover:text-[var(--muted)]">
             Invite Friends
           </button>
