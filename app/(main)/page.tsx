@@ -8,6 +8,7 @@ import { RightSidebarInfo } from "@/src/components/homepage/RightSidebarInfo";
 import { RightSidebarNotifications } from "@/src/components/homepage/RightSidebarNotifications";
 import { DiscoverUsers } from "@/src/components/homepage/DiscoverUsers";
 import { useAuth } from "@/src/context/AuthContext";
+import { authedFetch } from "@/src/lib/api/authedFetch";
 import type { ActivityType } from "@/src/lib/types/activityMeta";
 
 /* ---------- MOCK DATA (keep your existing stuff) ---------- */
@@ -792,11 +793,8 @@ useEffect(() => {
     setDiscoverLoading(true);
 
     try {
-      const res = await fetch("/api/discover/users", {
+      const res = await authedFetch("/api/discover/users", {
         method: "GET",
-        headers: {
-          "Authorization": `Bearer ${session.access_token}`,
-        },
         cache: "no-store",
       });
 

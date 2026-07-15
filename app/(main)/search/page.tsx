@@ -2,6 +2,7 @@
 import { useAuth } from "@/src/context/AuthContext";
 import { useSearch } from "@/src/lib/hooks/useSearch";
 import { useSearchHistory } from "@/src/lib/hooks/useSearchHistory";
+import { authedFetch } from "@/src/lib/api/authedFetch";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import posthog from "posthog-js";
@@ -115,14 +116,10 @@ export default function SearchPage() {
       setLoadingRecent(true);
 
       try {
-        const headers = {
-          Authorization: `Bearer ${session.access_token}`,
-        };
-
         const [p, u, a] = await Promise.all([
-          fetch("/api/discover/posts", { cache: "no-store", headers }),
-          fetch("/api/discover/users", { cache: "no-store", headers }),
-          fetch("/api/discover/activities", { cache: "no-store", headers }),
+          authedFetch("/api/discover/posts", { cache: "no-store" }),
+          authedFetch("/api/discover/users", { cache: "no-store" }),
+          authedFetch("/api/discover/activities", { cache: "no-store" }),
         ]);
 
         const postsData = await p.json();
