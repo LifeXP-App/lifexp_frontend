@@ -8,7 +8,6 @@
     "start": "next start",
     "lint": "eslint",
     "convex:dev": "convex dev --url https://mellow-jackal-323.convex.cloud"
-
   },
   "dependencies": {
     "@fortawesome/free-regular-svg-icons": "^7.1.0",
@@ -31,6 +30,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
