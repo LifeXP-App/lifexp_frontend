@@ -160,7 +160,19 @@ export function NudgesLikesSection() {
               </Link>
             ))}
 
-            {loading && <li className="text-sm text-gray-400">Loading...</li>}
+            {loading &&
+              interactions.length === 0 &&
+              Array.from({ length: 3 }).map((_, i) => (
+                <li key={`skeleton-${i}`} className="animate-pulse">
+                  <div className="flex gap-4">
+                    <div className="w-12 h-12 rounded-full bg-gray-200 dark:bg-dark-3 shrink-0" />
+                    <div className="flex flex-col gap-2 flex-1 justify-center">
+                      <div className="h-3 w-3/4 rounded bg-gray-200 dark:bg-dark-3" />
+                      <div className="h-2 w-1/4 rounded bg-gray-200 dark:bg-dark-3" />
+                    </div>
+                  </div>
+                </li>
+              ))}
 
             {!loading && interactions.length === 0 && (
               <li className="text-sm text-gray-400">No recent interactions</li>

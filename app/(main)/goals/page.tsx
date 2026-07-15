@@ -224,7 +224,7 @@ function GoalCard({
         {showAchievementCta && (
           <button
             onClick={showAchievementCta.onClick}
-            className="w-full rounded-xl bg-gray-700 dark:bg-[var(--dark-3)] text-white font-semibold py-3 hover:bg-gray-800 dark:hover:bg-[var(--dark-3)] transition"
+            className="w-full rounded-xl cursor-pointer bg-gray-700 dark:bg-[var(--dark-3)] text-white font-semibold py-3 hover:bg-gray-800 dark:hover:bg-[var(--dark-3)] transition"
           >
             {showAchievementCta.label}
           </button>

@@ -178,6 +178,13 @@ export function Post({ post }: { post: PostType }) {
   const [showComments, setShowComments] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
   const [likeError, setLikeError] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  const handleShare = () => {
+    copyPostLink(post.uid);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+  };
 
   // Refs for race condition prevention
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -361,12 +368,12 @@ export function Post({ post }: { post: PostType }) {
 
             <button
               type="button"
-              onClick={() => copyPostLink(post.uid)}
+              onClick={handleShare}
               className="w-full cursor-pointer text-left font-medium py-3 px-4 text-sm
                         hover:bg-gray-100 dark:hover:bg-dark-3 transition-colors
                         dark:text-[#a5a5a6]"
             >
-              Share post
+              {linkCopied ? "Link copied!" : "Share post"}
             </button>
 
             {post.own_post ? (

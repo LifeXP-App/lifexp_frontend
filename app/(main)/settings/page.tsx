@@ -58,7 +58,7 @@ function SkeletonRow() {
   return (
     <div className="flex justify-between w-full mb-4 animate-pulse">
       <div className="h-6 w-40 rounded bg-gray-200 dark:bg-dark-3" />
-      <div className="h-10 w-32 rounded bg-gray-200 border dark:border-[var(--border)] dark:bg-dark-2" />
+      <div className="h-10 w-32 rounded bg-gray-200 border border-gray-300 dark:border-[var(--border)] dark:bg-dark-2" />
     </div>
   );
 }
@@ -399,8 +399,9 @@ export default function SettingsPage() {
         </div>
 
         <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-[var(--border)] flex flex-col gap-4">
+          
           <button className="cursor-pointer active:opacity-80 text-l font-semibold text-left text-gray-800 dark:text-[var(--foreground)] hover:text-gray-600 dark:hover:text-[var(--muted)]">
-            Invite Friends
+            Send Review
           </button>
 
           <button

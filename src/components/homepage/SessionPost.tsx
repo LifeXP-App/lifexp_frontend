@@ -101,6 +101,13 @@ export function SessionPost({ session }: { session: ApiSessionPost }) {
   const [nudgeCount, setNudgeCount] = useState(session.nudge_count ?? 0);
   const [hasNudged, setHasNudged] = useState(session.is_nudged);
   const [nudging, setNudging] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  const handleShare = (uid: string) => {
+    copyGoalLink(uid);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+  };
 
   const handleNudge = async () => {
     if (nudging || hasNudged) return;
@@ -204,12 +211,12 @@ export function SessionPost({ session }: { session: ApiSessionPost }) {
             <button
               type="button"
               disabled={!goal?.uid}
-              onClick={() => goal?.uid && copyGoalLink(goal.uid)}
+              onClick={() => goal?.uid && handleShare(goal.uid)}
               className="w-full cursor-pointer text-left font-medium py-3 px-4 text-sm
                         hover:bg-gray-100 dark:hover:bg-dark-3 transition-colors
                         dark:text-[#a5a5a6]"
             >
-              Share
+              {linkCopied ? "Link copied!" : "Share"}
             </button>
           </div>
         </div>

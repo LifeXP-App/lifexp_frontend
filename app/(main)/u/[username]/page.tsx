@@ -11,6 +11,7 @@ import { useAuth } from "@/src/context/AuthContext";
 import { UserProfile } from "@/src/lib/types";
 import { FireIcon, LockClosedIcon } from "@heroicons/react/24/solid";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useRef, useState } from "react";
 import { FaLinkedin, FaSquareWhatsapp } from "react-icons/fa6";
@@ -73,13 +74,12 @@ export default function ProfilePage({ params }: PageProps) {
 
   // Dynamic data state
   type Activity = {
-    activity__id: string;
-    activity__name: string;
-    activity__emoji?: string;
-    activity__activity_type: string;
-    count: number;
-    total_xp: number;
-    total_duration?: number;
+    activity_id: number;
+    activity_uid: string;
+    name: string;
+    emoji?: string;
+    total_duration_seconds: number;
+    total_duration_minutes: number;
   };
 
   type Session = {
@@ -257,13 +257,9 @@ export default function ProfilePage({ params }: PageProps) {
         const authHeaders = {
           Authorization: `Bearer ${session.access_token}`,
         };
-        const [weeklyRes, topActivitiesRes, sessionsRes, goalsRes] =
+        const [weeklyRes, sessionsRes, goalsRes] =
           await Promise.all([
             fetch(`/api/stats/weekly?username=${username}`, {
-              headers: authHeaders,
-              cache: "no-store",
-            }),
-            fetch(`/api/stats/activities/top?username=${username}&limit=5`, {
               headers: authHeaders,
               cache: "no-store",
             }),
@@ -301,14 +297,6 @@ export default function ProfilePage({ params }: PageProps) {
           setWeeklyXP(chartData);
         }
 
-        // Process top activities
-        if (topActivitiesRes.ok) {
-          const activitiesData = await topActivitiesRes.json();
-          // The backend returns an object with top_by_count array
-          const activities = activitiesData.top_by_count || [];
-          setTopActivities(activities);
-        }
-
         // Process recent sessions
         if (sessionsRes.ok) {
           const sessionsData = await sessionsRes.json();
@@ -341,6 +329,32 @@ export default function ProfilePage({ params }: PageProps) {
 
     fetchProfileData();
   }, [username, authLoading, session?.access_token]);
+
+  // Fetch top activities (requires the numeric profile user id)
+  useEffect(() => {
+    const fetchTopActivities = async () => {
+      if (authLoading || !profileUser?.id || !session?.access_token) return;
+
+      try {
+        const res = await fetch(
+          `/api/users/${profileUser.id}/top-activities?limit=5`,
+          {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+            cache: "no-store",
+          },
+        );
+
+        if (res.ok) {
+          const data = await res.json();
+          setTopActivities(data.top_activities || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch top activities:", err);
+      }
+    };
+
+    fetchTopActivities();
+  }, [profileUser?.id, authLoading, session?.access_token]);
 
   // Format member since date
   const formatMemberSince = (dateString: string) => {
@@ -1234,14 +1248,21 @@ export default function ProfilePage({ params }: PageProps) {
                   </p>
                 ) : topActivities.length > 0 ? (
                   topActivities.map((activity, index) => {
-                    // Format duration in hours
-                    const hours = Math.round(
-                      (activity.total_duration || 0) / 3600
-                    );
+                    const totalSeconds = activity.total_duration_seconds || 0;
+                    const hours = Math.floor(totalSeconds / 3600);
+                    const duration =
+                      hours < 1
+                        ? `${Math.round(totalSeconds / 60)}m`
+                        : `${hours}h`;
                     return (
-                      <div
-                        key={activity.activity__id || `activity-${index}`}
-                        className="space-y-4 mb-6"
+                      <Link
+                        key={activity.activity_id ?? `activity-${index}`}
+                        href={
+                          activity.activity_uid
+                            ? `/a/${activity.activity_uid}`
+                            : "#"
+                        }
+                        className="block space-y-4 mb-6"
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-2 sm:space-x-4">
@@ -1249,19 +1270,17 @@ export default function ProfilePage({ params }: PageProps) {
                               {index + 1}
                             </span>
                             <div className="flex items-center space-x-2 sm:space-x-4">
-                              <p className="text-2xl">
-                                {activity.activity__emoji || "📊"}
-                              </p>
+                              <p className="text-2xl">{activity.emoji || "📊"}</p>
                               <span className="font-medium text-sm sm:text-base truncate dark:text-[var(--foreground)]">
-                                {activity.activity__name || "Unknown Activity"}
+                                {activity.name || "Unknown Activity"}
                               </span>
                             </div>
                           </div>
                           <span className="font-semibold text-sm sm:text-md dark:text-[var(--muted)]">
-                            {hours}h
+                            {duration}
                           </span>
                         </div>
-                      </div>
+                      </Link>
                     );
                   })
                 ) : (
@@ -1408,7 +1427,9 @@ export default function ProfilePage({ params }: PageProps) {
                           </p>
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                             {ongoingPosts.map((post) => (
-                              <Achievement key={post.id} compact {...sharedProps(post)} />
+                              <Link key={post.id} href={`/goals/${post.uid}`}>
+                                <Achievement compact {...sharedProps(post)} />
+                              </Link>
                             ))}
                           </div>
                         </div>
@@ -1420,7 +1441,9 @@ export default function ProfilePage({ params }: PageProps) {
                           </p>
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             {otherPosts.map((post) => (
-                              <Achievement key={post.id} {...sharedProps(post)} />
+                              <Link key={post.id} href={`/goals/${post.uid}`}>
+                                <Achievement {...sharedProps(post)} />
+                              </Link>
                             ))}
                           </div>
                         </div>
