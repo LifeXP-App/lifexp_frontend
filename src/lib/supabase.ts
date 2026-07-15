@@ -14,6 +14,12 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables')
 }
 
+// TEMP DEBUG — remove after diagnosing prod auth-header loss
+console.log('[DEBUG supabase.ts] module init, window defined:', typeof window !== 'undefined')
+console.log('[DEBUG supabase.ts] NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl)
+console.log('[DEBUG supabase.ts] NEXT_PUBLIC_SUPABASE_ANON_KEY exists:', !!supabaseAnonKey)
+console.log('[DEBUG supabase.ts] NEXT_PUBLIC_SUPABASE_ANON_KEY length:', supabaseAnonKey?.length ?? 0)
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,       // Keep user logged in
@@ -23,6 +29,12 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     storage: typeof window !== 'undefined' ? window.localStorage : undefined,
   },
 })
+
+// TEMP DEBUG — remove after diagnosing prod auth-header loss
+if (typeof window !== 'undefined') {
+  const sbKeys = Object.keys(window.localStorage).filter((k) => k.startsWith('sb-'))
+  console.log('[DEBUG supabase.ts] localStorage sb- keys at module init:', sbKeys)
+}
 
 /**
  * Get the current session and user

@@ -196,7 +196,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    */
   useEffect(() => {
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
+    supabase.auth.getSession().then(({ data: { session: initialSession }, error: getSessionError }) => {
+      // TEMP DEBUG — remove after diagnosing prod auth-header loss
+      console.log("[DEBUG AuthContext] initial getSession() session present:", !!initialSession);
+      console.log("[DEBUG AuthContext] initial getSession() access_token present:", !!initialSession?.access_token);
+      console.log("[DEBUG AuthContext] initial getSession() error:", getSessionError?.message ?? null);
+      if (initialSession) {
+        console.log("[DEBUG AuthContext] initial session expires_at:", initialSession.expires_at);
+      }
+
       setSession(initialSession);
       setSupabaseUser(initialSession?.user ?? null);
 
@@ -211,6 +219,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, currentSession) => {
         console.log("Auth state changed:", _event);
+        // TEMP DEBUG — remove after diagnosing prod auth-header loss
+        console.log("[DEBUG AuthContext] onAuthStateChange session present:", !!currentSession);
+        console.log("[DEBUG AuthContext] onAuthStateChange access_token present:", !!currentSession?.access_token);
         setSession(currentSession);
         setSupabaseUser(currentSession?.user ?? null);
 
