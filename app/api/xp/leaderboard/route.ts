@@ -1,5 +1,6 @@
 import { getAuthToken } from "@/src/lib/auth/getAuthToken";
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { refreshTokens } from "@/src/lib/auth/refreshTokens";
 import { sharedRefresh } from "@/src/lib/auth/refreshLock";
 
@@ -97,11 +98,11 @@ export async function GET() {
 
     const data = await safeJson(res);
     return NextResponse.json(data, { status: res.status });
-  } catch (err: any) {
+  } catch (err) {
     return NextResponse.json(
       {
         detail: "Failed to fetch leaderboard",
-        error: String(err?.message || err),
+        error: err instanceof Error ? err.message : String(err),
       },
       { status: 500 }
     );

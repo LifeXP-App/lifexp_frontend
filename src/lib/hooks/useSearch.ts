@@ -125,7 +125,7 @@ export function useSearch(options: UseSearchOptions) {
                 post_image:
                   normalizedPost.post_image ??
                   normalizedPost.post_image_url ??
-                  null,
+                  undefined,
               };
             }),
             users: data.results.users.map((user) => {
@@ -137,7 +137,7 @@ export function useSearch(options: UseSearchOptions) {
                   normalizedUser.profile_picture ??
                   normalizedUser.profile_pic ??
                   normalizedUser.profile_picture_url ??
-                  null,
+                  undefined,
               };
             }),
           };
@@ -166,7 +166,7 @@ export function useSearch(options: UseSearchOptions) {
               post_image:
                 normalizedPost.post_image ??
                 normalizedPost.post_image_url ??
-                null,
+                undefined,
             };
           });
 
@@ -201,7 +201,7 @@ export function useSearch(options: UseSearchOptions) {
                 normalizedUser.profile_picture ??
                 normalizedUser.profile_pic ??
                 normalizedUser.profile_picture_url ??
-                null,
+                undefined,
             };
           });
 

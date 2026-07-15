@@ -15,7 +15,7 @@ interface ReflectionResponse {
   total_duration_seconds: number | null
   focused_duration_seconds: number | null
   xp_total: number
-  nudges: any[]
+  nudges: unknown[]
   nudge_users: {
     id: number
     username: string
@@ -241,7 +241,7 @@ const DayCompletePage = () => {
             </h1>
 
             <p className="text-sm text-gray-500">
-              Keep it up, we'll see you in the next session
+              Keep it up, we&apos;ll see you in the next session
             </p>
 
           </div>

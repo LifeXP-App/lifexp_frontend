@@ -13,7 +13,7 @@ async function safeJson(res: Response) {
 }
 
 async function authedFetch(access: string, url: string, options: RequestInit = {}) {
-  let res = await fetch(url, {
+  const res = await fetch(url, {
     ...options,
     headers: {
       ...(options.headers || {}),

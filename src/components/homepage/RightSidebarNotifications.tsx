@@ -57,7 +57,7 @@ export function RightSidebarNotifications({
                 </svg>
 
                 <p className="text-sm font-medium">No notifications</p>
-                <p className="text-xs opacity-70">You're all caught up</p>
+                <p className="text-xs opacity-70">You&apos;re all caught up</p>
               </div>
             ) : (
               notifications.map((n) => (

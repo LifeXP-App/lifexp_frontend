@@ -1,7 +1,9 @@
 let refreshPromise: Promise<{ access?: string; refresh?: string } | null> | null =
   null;
 
-export async function sharedRefresh(refreshFn: () => Promise<any>) {
+export async function sharedRefresh(
+  refreshFn: () => Promise<{ access?: string; refresh?: string } | null>
+) {
   if (!refreshPromise) {
     refreshPromise = (async () => {
       try {

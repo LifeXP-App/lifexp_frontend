@@ -23,6 +23,27 @@ interface XPChartProps {
   gradientEnd: string;
 }
 
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: { name: string; value: number | string }[];
+  label?: string | number;
+}
+
+// Custom tooltip component for better dark mode control
+function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white dark:bg-dark-2 border border-gray-300 dark:border-[var(--border)] rounded-xl p-3 shadow-lg">
+        <p className="text-gray-900 dark:text-[var(--foreground)] font-medium mb-1">{label}</p>
+        <p className="text-gray-700 dark:text-[var(--muted)] text-sm">
+          {payload[0].name}: {payload[0].value}
+        </p>
+      </div>
+    );
+  }
+  return null;
+}
+
 export default function XPChart({
   data,
   username,
@@ -48,21 +69,6 @@ export default function XPChart({
     ...item,
     date: generateDates()[index] || item.date
   }));
-
-  // Custom tooltip component for better dark mode control
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white dark:bg-dark-2 border border-gray-300 dark:border-[var(--border)] rounded-xl p-3 shadow-lg">
-          <p className="text-gray-900 dark:text-[var(--foreground)] font-medium mb-1">{label}</p>
-          <p className="text-gray-700 dark:text-[var(--muted)] text-sm">
-            {payload[0].name}: {payload[0].value}
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
 
   return (
     <div className="w-full h-full">

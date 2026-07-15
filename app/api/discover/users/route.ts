@@ -45,7 +45,7 @@ export async function GET(request: Request) {
 
     const responseData = await safeJson(res);
     return NextResponse.json(responseData, { status: res.status });
-  } catch (e: any) {
+  } catch (e) {
     console.error("Failed to fetch discover users:", e);
     return NextResponse.json({ detail: String(e) }, { status: 500 });
   }

@@ -15,6 +15,14 @@ type Player = {
   profile_picture: string;
 };
 
+type RawLeaderboardUser = {
+  username: string;
+  fullname: string;
+  total_xp: number;
+  rank: number;
+  profile_picture: string;
+};
+
 type UserApiResponse = {
   id: number;
   fullname: string;
@@ -145,7 +153,7 @@ export default function RookieLeaderboard() {
 
       const data = await res.json();
 
-      const mapped: Player[] = data.leaderboard.map((u: any) => ({
+      const mapped: Player[] = data.leaderboard.map((u: RawLeaderboardUser) => ({
         username: u.username,
         fullname: u.fullname,
         xp: u.total_xp,

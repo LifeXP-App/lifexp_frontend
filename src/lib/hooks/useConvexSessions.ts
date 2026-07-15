@@ -1,6 +1,6 @@
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { Id } from "../../../convex/_generated/dataModel";
+import { Doc, Id } from "../../../convex/_generated/dataModel";
 
 /**
  * Hook to fetch real-time sessions for a goal from Convex
@@ -54,7 +54,7 @@ export function useConvexSession(sessionId: Id<"sessions"> | null) {
  * Transform Convex session to match the Django Session interface
  * This maintains backward compatibility with existing components
  */
-export function transformConvexSession(convexSession: any) {
+export function transformConvexSession(convexSession: Doc<"sessions"> | null | undefined) {
   if (!convexSession) return null;
 
   return {

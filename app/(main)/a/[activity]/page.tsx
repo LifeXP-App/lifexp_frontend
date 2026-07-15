@@ -43,6 +43,31 @@ interface Session {
   emoji?: string;
 }
 
+interface RawSessionApi {
+  id: string | number;
+  session_number: number;
+  goal_title: string;
+  user?: { id: string; username: string };
+  activity?: { name?: string; emoji?: string };
+  xp_total: number;
+  started_at: string;
+  total_duration_seconds: number;
+}
+
+interface RawLeaderboardEntryApi {
+  rank: number;
+  user: { id: string | number; fullname: string; profile_picture?: string };
+  total_xp: number;
+  is_you: boolean;
+}
+
+interface ActivityDataResponse {
+  activity_type?: string;
+  name?: string;
+  description?: string;
+  xp_distribution: Record<string, number>;
+}
+
 interface ActivityStats {
   timeSpent: string;
   leaderboard: number;
@@ -599,7 +624,7 @@ export default function ActivityDetailPage({
 
 
 
-const [activityData, setActivityData] = useState<any>(null);
+const [activityData, setActivityData] = useState<ActivityDataResponse | null>(null);
 const [loading, setLoading] = useState(true);
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -675,7 +700,7 @@ useEffect(() => {
 }, [uid]);
 
 
-const [friendsSessions, setFriendsSessions] = useState<any[]>([]);
+const [friendsSessions, setFriendsSessions] = useState<Session[]>([]);
 const [sessionsLoading, setSessionsLoading] = useState(true);
 
 
@@ -698,7 +723,7 @@ useEffect(() => {
       });
       const data = await res.json();
 
-      const mapped = (data.results || []).map((s: any) => ({
+      const mapped = (data.results || []).map((s: RawSessionApi) => ({
         id: String(s.id),
         sessionNumber: s.session_number,
         goalTitle: s.goal_title,
@@ -749,7 +774,7 @@ useEffect(() => {
 
       console.log("leaderboard raw:", data);
       // 🔥 map API → UI format
-      const mapped = (data.leaderboard || []).map((item: any) => ({
+      const mapped = (data.leaderboard || []).map((item: RawLeaderboardEntryApi) => ({
         rank: item.rank,
         id: String(item.user.id),
         name: item.user.fullname,
@@ -772,7 +797,7 @@ useEffect(() => {
 
 
 
-const [mySessions, setMySessions] = useState<any[]>([]);
+const [mySessions, setMySessions] = useState<Session[]>([]);
 
 
 
@@ -795,7 +820,7 @@ useEffect(() => {
       });
 
       const data = await res.json();
-    const mapped = (data.results || []).map((s: any) => ({
+    const mapped = (data.results || []).map((s: RawSessionApi) => ({
       id: String(s.id),
       sessionNumber: s.session_number,
       goalTitle: s.goal_title,
@@ -1129,7 +1154,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 {!sessionsLoading && friendsSessions.length > 0 && (
             <>
             <div className="flex justify-between">
-            <h2 className="text-xl font-bold my-6 text-foreground dark:text-[var(--foreground)]">Friends' Drawing Sessions</h2>
+            <h2 className="text-xl font-bold my-6 text-foreground dark:text-[var(--foreground)]">Friends&apos; Drawing Sessions</h2>
             <button className='bg-transparent font-medium text-sm cursor-pointer active:opacity-80 hover:opacity-90' style={{color: activityColor}}>
               View more →
             </button>
@@ -1197,11 +1222,11 @@ const [isModalOpen, setIsModalOpen] = useState(false);
               <div>
                
                 <div className="flex  justify-around gap-2">
-                  <AspectChip icon={<BiDumbbell className="w-4 h-4" />} value={activityData?.xp_distribution.physique} tint="physique" />
-                  <AspectChip icon={<BoltIcon className="w-4 h-4" />} value={activityData?.xp_distribution.energy} tint="energy" />
-                  <AspectChip icon={<UsersIcon className="w-4 h-4" />} value={activityData?.xp_distribution.social} tint="social" />
-                  <AspectChip icon={<FaBrain className="w-4 h-4" />} value={activityData?.xp_distribution.creativity} tint="creativity" />
-                  <AspectChip icon={<FaHammer className="w-4 h-4" />} value={activityData?.xp_distribution.logic} tint="logic" />
+                  <AspectChip icon={<BiDumbbell className="w-4 h-4" />} value={activityData?.xp_distribution.physique ?? 0} tint="physique" />
+                  <AspectChip icon={<BoltIcon className="w-4 h-4" />} value={activityData?.xp_distribution.energy ?? 0} tint="energy" />
+                  <AspectChip icon={<UsersIcon className="w-4 h-4" />} value={activityData?.xp_distribution.social ?? 0} tint="social" />
+                  <AspectChip icon={<FaBrain className="w-4 h-4" />} value={activityData?.xp_distribution.creativity ?? 0} tint="creativity" />
+                  <AspectChip icon={<FaHammer className="w-4 h-4" />} value={activityData?.xp_distribution.logic ?? 0} tint="logic" />
                 </div>
               </div>
               

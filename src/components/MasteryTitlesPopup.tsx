@@ -16,9 +16,9 @@ export default function MasteryTitlesPopup({
   onClose,
   onContinue,
 }: MasteryTitlesPopupProps) {
-  if (!isOpen) return null;
-
   const { closeMasteryPopup } = usePopup();
+
+  if (!isOpen) return null;
 
   return (
     <div

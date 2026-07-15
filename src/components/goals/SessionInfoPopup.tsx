@@ -71,6 +71,7 @@ const SessionInfoPopup: React.FC<SessionInfoPopupProps> = ({
   useEffect(() => {
     if (!isOpen) return;
 
+    /* eslint-disable-next-line react-hooks/set-state-in-effect */
     setIsAnimating(true);
     const t = setTimeout(() => setIsAnimating(false), 350);
     return () => clearTimeout(t);

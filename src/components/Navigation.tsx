@@ -25,7 +25,7 @@ export function Navigation({ accentColor }: NavigationProps) {
       "/leaderboard/goals",
     ],
     icon: "trophy",
-  } as const;
+  };
 
   const NAV_ITEMS = [
     { label: "Feed", href: "/", active: ["/"], icon: "home" },

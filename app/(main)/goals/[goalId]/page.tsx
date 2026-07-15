@@ -39,8 +39,21 @@ const aspectColors: Record<string, string> = {
 
 
 
+interface SessionItemProps {
+  completion_picture?: string | null;
+  sessionNumber?: number;
+  activity?: string;
+  xpEarned?: number;
+  dateTime?: string;
+  duration?: string;
+  thumbnail?: string;
+  emoji?: string;
+  onClick?: () => void;
+  color?: string;
+}
+
 // Separate component for SessionItem to avoid re-renders of the list
-const SessionItem: React.FC<any & { onClick?: () => void, color?: string  }> = ({
+const SessionItem: React.FC<SessionItemProps> = ({
   completion_picture,
   sessionNumber,
   activity,
@@ -758,7 +771,6 @@ export default function GoalDetailPage() {
           isOpen={isCompleteGoalOpen}
           onClose={handleCloseCompleteGoal}
           onPost={handlePostAchievement}
-          imageUrl="https://res.cloudinary.com/dfohn9dcz/image/upload/f_auto,q_auto,w_800,c_fill/v1/posts/user_7/ske_20251115103836"
           defaultTitle={goal.title}
           defaultDescription={goalDescription || statusText}
           timeSpent={formatDuration(totalDurationSeconds)}
@@ -1014,7 +1026,7 @@ export default function GoalDetailPage() {
                 duration={formatDuration(session.total_duration_seconds)}
                 emoji={session.activity?.emoji}
                 onClick={() => handleOpenSessionPopup(session)}
-                color={aspectColors[session?.activity?.type] || "#9ca3af"}
+                color={aspectColors[session?.activity?.type ?? "muted"] || "#9ca3af"}
               />
             ))}
             {todaySessions.length === 0 && (
@@ -1038,7 +1050,7 @@ export default function GoalDetailPage() {
                 duration={formatDuration(session.total_duration_seconds)}
                 emoji={session.activity?.emoji}
                 onClick={() => handleOpenSessionPopup(session)}
-                color={aspectColors[session?.activity?.type] || "#9ca3af"}
+                color={aspectColors[session?.activity?.type ?? "muted"] || "#9ca3af"}
               />
             ))}
             {otherSessions.length === 0 && (
@@ -1109,7 +1121,7 @@ export default function GoalDetailPage() {
                   duration={formatDuration(session.total_duration_seconds)}
                   emoji={session.activity?.emoji}
                   onClick={() => handleOpenSessionPopup(session)}
-                  color={aspectColors[session?.activity?.type] || "#9ca3af"}
+                  color={aspectColors[session?.activity?.type ?? "muted"] || "#9ca3af"}
                 />
               ))}
               {todaySessions.length === 0 && (
@@ -1133,7 +1145,7 @@ export default function GoalDetailPage() {
                   duration={formatDuration(session.total_duration_seconds)}
                   emoji={session.activity?.emoji}
                   onClick={() => handleOpenSessionPopup(session)}
-                  color={aspectColors[session?.activity?.type] || "#9ca3af"}
+                  color={aspectColors[session?.activity?.type ?? "muted"] || "#9ca3af"}
                 />
               ))}
               {otherSessions.length === 0 && (

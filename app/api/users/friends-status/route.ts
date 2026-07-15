@@ -91,11 +91,11 @@ export async function GET(req: Request) {
 
     const data = await safeJson(res);
     return NextResponse.json(data, { status: res.status });
-  } catch (err: any) {
+  } catch (err) {
     return NextResponse.json(
       {
         detail: "Failed to fetch friends status",
-        error: String(err?.message || err),
+        error: err instanceof Error ? err.message : String(err),
       },
       { status: 500 }
     );

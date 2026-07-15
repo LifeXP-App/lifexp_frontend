@@ -34,6 +34,7 @@ type DiscoverUser = {
 
 type DiscoverActivity = {
   id: number;
+  uid: string;
   name: string;
   description?: string;
   activity_type: string;

@@ -27,9 +27,17 @@ type AuthContextType = {
   // Actions
   refreshMe: () => Promise<void>;
   logout: () => Promise<void>;
-  signIn: (email: string, password: string) => Promise<{ error?: any }>;
-  signUp: (email: string, password: string, username: string, fullname?: string) => Promise<{ error?: any }>;
-  signInWithGoogle: () => Promise<{ error?: any }>;
+  signIn: (email: string, password: string) => Promise<{ error?: { message?: string } | null }>;
+  signUp: (email: string, password: string, username: string, fullname?: string) => Promise<{
+    error?: {
+      message?: string;
+      detail?: string;
+      username?: string | string[];
+      email?: string | string[];
+      password?: string | string[];
+    } | null;
+  }>;
+  signInWithGoogle: () => Promise<{ error?: { message?: string } | null }>;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);

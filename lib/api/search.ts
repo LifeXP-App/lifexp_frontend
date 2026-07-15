@@ -43,6 +43,7 @@ export interface Post {
 
 export interface Activity {
   id: number;
+  uid: string;
   name: string;
   description?: string;
   activity_type: "physique" | "creativity" | "social" | "energy" | "logic";

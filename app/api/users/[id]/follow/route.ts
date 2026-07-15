@@ -22,7 +22,7 @@ async function authedFetch(url: string, options: RequestInit = {}) {
     );
   }
 
-  let res = await fetch(url, {
+  const res = await fetch(url, {
     ...options,
     headers: {
       ...(options.headers || {}),

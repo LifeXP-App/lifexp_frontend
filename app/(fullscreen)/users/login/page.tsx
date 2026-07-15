@@ -33,9 +33,9 @@ function LoginForm() {
 
       // Successfully logged in - AuthGuard will handle redirect
       router.push("/");
-    } catch (err: any) {
+    } catch (err) {
       console.error("LOGIN ERROR:", err);
-      setError(String(err?.message || err));
+      setError(err instanceof Error ? err.message : String(err));
       setLoading(false);
     }
   }
@@ -54,9 +54,9 @@ function LoginForm() {
       }
 
       // Redirect handled by Supabase OAuth flow
-    } catch (err: any) {
+    } catch (err) {
       console.error("GOOGLE SIGN-IN ERROR:", err);
-      setError(String(err?.message || err));
+      setError(err instanceof Error ? err.message : String(err));
       setLoading(false);
     }
   }

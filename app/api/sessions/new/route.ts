@@ -4,7 +4,7 @@ import { getAuthToken } from "@/src/lib/auth/getAuthToken";
 import { NextResponse } from "next/server";
 
 async function authedFetch(req: Request, url: string, options: RequestInit = {}) {
-  let access = await getAuthToken(req);
+  const access = await getAuthToken(req);
 
   if (!access) {
     return NextResponse.json({ detail: "Not authenticated" }, { status: 401 });

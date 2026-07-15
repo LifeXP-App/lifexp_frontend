@@ -7,7 +7,7 @@ export async function GET() {
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
   const cookieStore = await cookies();
-  let access = cookieStore.get("sb-access-token")?.value;
+  const access = cookieStore.get("sb-access-token")?.value;
 
   if (!access) {
     return NextResponse.json({ detail: "Not authenticated" }, { status: 401 });

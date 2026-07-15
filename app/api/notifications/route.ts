@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { getAuthToken } from "@/src/lib/auth/getAuthToken";
 
 async function safeJson(res: Response) {
@@ -60,7 +61,7 @@ export async function GET(req: Request) {
 
       // ✅ get fresh access from updated cookies
       const updatedStore = await cookies();
-      access = updatedStore.get("access")?.value;
+      access = updatedStore.get("access")?.value ?? null;
 
       if (!access) {
         const out = NextResponse.json(
@@ -82,11 +83,11 @@ export async function GET(req: Request) {
 
     const data = await safeJson(res);
     return NextResponse.json(data, { status: res.status });
-  } catch (err: any) {
+  } catch (err) {
     return NextResponse.json(
       {
         detail: "Route crashed",
-        error: String(err?.message || err),
+        error: err instanceof Error ? err.message : String(err),
       },
       { status: 500 }
     );

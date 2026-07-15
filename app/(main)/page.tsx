@@ -167,7 +167,9 @@ type UserApiResponse = {
   masteryLevel: number;
   visibility: "public" | "private";
   isFollowing: boolean;
-  aspects: any;
+  aspects: unknown;
+  streak_count: number;
+  streak_active: boolean;
 };
 
 
@@ -448,7 +450,7 @@ export default function Home() {
   type ApiNotification = {
     id: number | string;
     recipient: number;
-    sender: any;
+    sender: { username?: string } | null;
     notification_type: string;
     message: string;
     related_object_id: number | null;
@@ -541,8 +543,14 @@ export default function Home() {
     post_image: string | null;
     created_at: string;
     duration: string | null;
-    tags: any;
-    xp_distribution: any;
+    tags: unknown;
+    xp_distribution: {
+      physique?: number;
+      energy?: number;
+      social?: number;
+      creativity?: number;
+      logic?: number;
+    };
     user_liked: boolean;
     user: {
       username: string;
@@ -599,7 +607,13 @@ export default function Home() {
       primary: p.user.primary_color || "#4168e2",
       own_post: false,
       user_liked: p.user_liked,
-      xp_data: p.xp_distribution || { physique: 0, energy: 0, social: 0, creativity: 0, logic: 0 },
+      xp_data: {
+        physique: p.xp_distribution?.physique ?? 0,
+        energy: p.xp_distribution?.energy ?? 0,
+        social: p.xp_distribution?.social ?? 0,
+        creativity: p.xp_distribution?.creativity ?? 0,
+        logic: p.xp_distribution?.logic ?? 0,
+      },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       session: p.session as any,
       comments: (p.comments || []).map((c) => ({
@@ -800,7 +814,15 @@ useEffect(() => {
           ? data.users
           : [];
 
-      const mapped = list.map((u: any) => ({
+      const mapped = list.map((u: {
+        id: number;
+        username: string;
+        fullname: string;
+        profile_picture?: string;
+        lifelevel?: number;
+        life_level?: number;
+        isFollowing?: boolean;
+      }) => ({
         id: u.id,
         username: u.username,
         fullname: u.fullname,
