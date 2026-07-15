@@ -18,7 +18,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,       // Keep user logged in
     autoRefreshToken: true,      // Auto-refresh tokens in background
-    detectSessionInUrl: true,    // Handle OAuth redirects
+    detectSessionInUrl: false,   // We exchange the ?code= ourselves in /auth/callback (see page.tsx there)
+    flowType: 'pkce',            // Redirect back with an opaque ?code=, never raw tokens in the URL
     storage: typeof window !== 'undefined' ? window.localStorage : undefined,
   },
 })

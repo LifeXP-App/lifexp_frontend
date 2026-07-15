@@ -19,13 +19,24 @@ export async function POST(req: Request) {
       );
     } 
 
-    const supabase = await createSupabaseServerClient();
+    // TEMP DEBUG — remove after diagnosing prod 403
+    let supabase;
+    try {
+      supabase = await createSupabaseServerClient();
+    } catch (clientErr) {
+      console.error("[DEBUG login/supabase] createSupabaseServerClient threw:", clientErr);
+      throw clientErr;
+    }
 
     // Sign in with Supabase
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+
+    // TEMP DEBUG — remove after diagnosing prod 403
+    console.log("[DEBUG login/supabase] signInWithPassword error:", error?.message ?? null);
+    console.log("[DEBUG login/supabase] session present:", !!data.session);
 
     if (error || !data.session) {
       return NextResponse.json(
@@ -39,23 +50,72 @@ export async function POST(req: Request) {
 
     // Fetch user from Django using Supabase JWT
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-    const djangoRes = await fetch(`${baseUrl}/api/v1/auth/me/`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      cache: "no-store",
-    });
+    const targetUrl = `${baseUrl}/api/v1/auth/me/`;
+
+    // TEMP DEBUG — remove after diagnosing prod 403
+    console.log("[DEBUG login/supabase] baseUrl:", baseUrl);
+    console.log("[DEBUG login/supabase] accessToken exists:", !!accessToken);
+    console.log("[DEBUG login/supabase] fetch URL:", targetUrl);
+
+    let djangoRes: Response;
+    try {
+      djangoRes = await fetch(targetUrl, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+      });
+    } catch (fetchErr) {
+      // TEMP DEBUG — remove after diagnosing prod 403
+      console.error("[DEBUG login/supabase] fetch THREW instead of returning a Response:", fetchErr);
+      return NextResponse.json(
+        { error: "fetch to Django threw", debugFetchError: String(fetchErr) },
+        { status: 502 }
+      );
+    }
+
+    // TEMP DEBUG — remove after diagnosing prod 403
+    console.log("[DEBUG login/supabase] fetch did not throw");
+    console.log("[DEBUG login/supabase] response status:", djangoRes.status);
+    console.log(
+      "[DEBUG login/supabase] response headers:",
+      JSON.stringify(Object.fromEntries(djangoRes.headers.entries()))
+    );
+
+    // Read the body exactly once as text, then reuse it for both logging
+    // and JSON parsing below — calling .json() a second time on the same
+    // Response would throw "body already read".
+    const bodyText = await djangoRes.text();
+
+    // TEMP DEBUG — remove after diagnosing prod 403
+    console.log("[DEBUG login/supabase] response body:", bodyText);
 
     if (!djangoRes.ok) {
+      // TEMP: surface Django's actual response instead of a generic message
+      // so we can see the real cause instead of guessing.
       return NextResponse.json(
-        { error: "Failed to fetch user from Django" },
+        {
+          error: "Failed to fetch user from Django",
+          djangoStatus: djangoRes.status,
+          djangoBody: bodyText,
+        },
         { status: djangoRes.status }
       );
     }
 
-    const userData = await djangoRes.json();
+    let userData;
+    try {
+      userData = JSON.parse(bodyText);
+    } catch (parseErr) {
+      // TEMP DEBUG — remove after diagnosing prod 403
+      console.error("[DEBUG login/supabase] Django response was not valid JSON:", parseErr);
+      return NextResponse.json(
+        { error: "Django response was not valid JSON", djangoBody: bodyText },
+        { status: 502 }
+      );
+    }
 
     // Success - set Supabase session in secure httpOnly cookie
     const response = NextResponse.json({
