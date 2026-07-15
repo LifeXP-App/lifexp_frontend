@@ -686,11 +686,16 @@ useEffect(() => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const authHeader = session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
+      const headers: HeadersInit = {};
+
+      if (session?.access_token) {
+        headers.Authorization = `Bearer ${session.access_token}`;
+      }
+
       const res = await fetch(`/api/a/${uid}/sessions/friends/`, {
-        headers: authHeader,
+        headers,
         credentials: "include",
       });
-
       const data = await res.json();
 
       const mapped = (data.results || []).map((s: any) => ({
@@ -729,8 +734,17 @@ useEffect(() => {
   const fetchLeaderboard = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const authHeader = session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
-      const res = await fetch(`/api/a/${uid}/leaderboard/`, { headers: authHeader });
+
+      const headers: HeadersInit = {};
+
+      if (session?.access_token) {
+        headers.Authorization = `Bearer ${session.access_token}`;
+      }
+
+      const res = await fetch(`/api/a/${uid}/leaderboard/`, {
+        headers,
+      });
+            
       const data = await res.json();
 
       console.log("leaderboard raw:", data);
@@ -768,9 +782,15 @@ useEffect(() => {
   const fetchSessions = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const authHeader = session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
+
+      const headers: HeadersInit = {};
+
+      if (session?.access_token) {
+        headers.Authorization = `Bearer ${session.access_token}`;
+      }
+
       const res = await fetch(`/api/a/${uid}/sessions/mine/`, {
-        headers: authHeader,
+        headers,
         credentials: "include",
       });
 
