@@ -9,8 +9,12 @@ interface NavigationProps {
 }
 
 export function Navigation({ accentColor }: NavigationProps) {
-  const { me } = useAuth();
-  console.log(me);
+  const { me, supabaseUser } = useAuth();
+
+  // Prefer the Django Player username; fall back to the username captured in
+  // Supabase user_metadata at registration so we never route to `/u/undefined`
+  // during the brief window before `me` resolves.
+  const username = me?.username ?? supabaseUser?.user_metadata?.username;
 
   const leaderboardNavItem = {
     label: "Leaderboard",
@@ -42,7 +46,8 @@ export function Navigation({ accentColor }: NavigationProps) {
       : []),
     {
       label: "Profile",
-      href: `/u/${me?.username}`,
+      // Route to settings until we know the username, rather than `/u/undefined`.
+      href: username ? `/u/${username}` : "/settings",
       active: ["/u"],
       icon: "user",
     },

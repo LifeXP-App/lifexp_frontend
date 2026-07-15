@@ -53,26 +53,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    */
   const refreshMe = async () => {
     try {
-      // Get current Supabase session
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
-
-      if (!currentSession) {
-        setMe(null);
-        return;
-      } 
-
-      // Call Django backend with Supabase JWT token
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/auth/me/`, {
+      // Fetch Player data via the same-origin proxy route. The proxy reads the
+      // httpOnly `sb-access-token` cookie (the source of truth for auth in prod)
+      // and refreshes the token on a 401. We must NOT gate this on the browser
+      // SDK's localStorage session (`supabase.auth.getSession()`): after a
+      // server-side token refresh the localStorage session can be absent/stale
+      // while the httpOnly cookie is still valid. Gating here left `me` null for
+      // logged-in users, which routed every Profile link to `/u/undefined`.
+      const res = await fetch("/api/auth/me", {
         method: "GET",
-        headers: {
-          "Authorization": `Bearer ${currentSession.access_token}`,
-          "Content-Type": "application/json",
-        },
         cache: "no-store",
       });
 
       if (!res.ok) {
-        console.error("Failed to fetch player data:", res.status);
+        if (res.status !== 401) {
+          console.error("Failed to fetch player data:", res.status);
+        }
         setMe(null);
         return;
       }
@@ -208,11 +204,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(initialSession);
       setSupabaseUser(initialSession?.user ?? null);
 
-      if (initialSession) {
-        refreshMe();
-      } else {
-        setLoading(false);
-      }
+      // Always resolve `me` from the cookie-backed proxy, even when the browser
+      // SDK has no localStorage session — the httpOnly cookie may still be a
+      // valid session. The proxy returns 401 (→ me = null) when truly signed out.
+      refreshMe().finally(() => setLoading(false));
     });
 
     // Listen for auth state changes
@@ -225,12 +220,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(currentSession);
         setSupabaseUser(currentSession?.user ?? null);
 
-        if (currentSession) {
-          // User logged in or session refreshed
-          await refreshMe();
-        } else {
-          // User logged out
+        if (_event === "SIGNED_OUT") {
+          // Explicit sign-out — the cookie is cleared server-side; don't re-fetch.
           setMe(null);
+        } else {
+          // Login, token refresh, or initial session: resolve `me` from the
+          // cookie-backed proxy (not gated on the SDK localStorage session).
+          await refreshMe();
         }
 
         setLoading(false);
