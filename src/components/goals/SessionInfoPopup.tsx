@@ -45,6 +45,9 @@ interface SessionInfoPopupProps {
   nudgeAvatars?: AvatarType[];
 
   activity?: ActivityType;
+
+  onDelete?: () => void | Promise<void>;
+  deleting?: boolean;
 }
 
 const SessionInfoPopup: React.FC<SessionInfoPopupProps> = ({
@@ -65,6 +68,9 @@ const SessionInfoPopup: React.FC<SessionInfoPopupProps> = ({
   nudgeAvatars,
 
   activity,
+
+  onDelete,
+  deleting = false,
 }) => {
   const [isAnimating, setIsAnimating] = useState(true);
 
@@ -267,6 +273,29 @@ const SessionInfoPopup: React.FC<SessionInfoPopupProps> = ({
               <AspectChip icon={<FaHammer className="w-4 h-4" />} value={xpDistribution?.logic || 0} tint="logic" />
             </div>
           </div>
+
+          {/* Delete Session */}
+          {onDelete && (
+            <div
+              className="px-6 pb-6 pt-2 border-t"
+              style={{
+                borderColor: "var(--border)",
+                animation: isAnimating ? "slideUp 0.25s ease-out 0.16s both" : "none",
+              }}
+            >
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={() => {
+                  if (!confirm("Delete this session? This cannot be undone.")) return;
+                  onDelete();
+                }}
+                className="w-full cursor-pointer font-medium text-sm text-red-600 py-3 rounded-xl hover:bg-red-50 dark:hover:bg-dark-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deleting ? "Deleting..." : "Delete Session"}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </>

@@ -517,4 +517,14 @@ export const GoalsService = {
     });
     if (!res.ok) throw new Error("Failed to delete goal");
   },
+
+  async deleteSession(sessionId: string): Promise<void> {
+    const res = await goalsFetch(`/api/sessions/${sessionId}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      throw new Error(body?.error || body?.detail || "Failed to delete session");
+    }
+  },
 };

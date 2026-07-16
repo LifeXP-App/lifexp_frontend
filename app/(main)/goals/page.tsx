@@ -8,6 +8,7 @@ import { usePopup } from "@/src/context/PopupContext";
 import { ActivityType } from "@/src/lib/types/activityMeta";
 import { BoltIcon, PlayIcon, PlusIcon, UsersIcon } from "@heroicons/react/24/solid";
 import FireIcon from "@heroicons/react/24/solid/FireIcon";
+import { RocketLaunchIcon } from "@heroicons/react/24/outline";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
 import { FaBrain, FaHammer } from "react-icons/fa";
@@ -857,6 +858,29 @@ export default function GoalsPage() {
                 <span>Create New Goal</span>
               </button>
             </div>
+
+            {!showGoalsSkeleton && goals.length === 0 ? (
+              <div className="mt-12 flex flex-col items-center justify-center text-center py-16 px-6 ">
+                <div className="w-16 h-16 rounded-full bg-gray-200 dark:bg-dark-3 flex items-center justify-center mb-4">
+                  <RocketLaunchIcon className="w-8 h-8 text-gray-500 dark:text-[var(--muted)]" />
+                </div>
+                <h3 className="text-lg font-bold text-black dark:text-[var(--foreground)] mb-1">
+                  No goals yet? let&apos;s change that
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-[var(--muted)] max-w-xs">
+                  Every big achievement starts with a single goal. Create your first one and start earning XP today.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(true)}
+                  className="mt-5 flex items-center gap-2 rounded-2xl bg-[var(--rookie-primary)]  text-white font-semibold py-3 px-6 hover:opacity-90 transition cursor-pointer"
+                >
+                  <PlusIcon className="w-5 h-5" />
+                  <span>Create Your First Goal</span>
+                </button>
+              </div>
+            ) : (
+              <>
             {/* Ongoing */}
             <div className="mt-6">
               {(ongoingGoals.length > 0 || showGoalsSkeleton) && (
@@ -1066,6 +1090,8 @@ export default function GoalsPage() {
                 </div>
               )}
             </div>
+              </>
+            )}
 
             <div className="h-8" />
           </div>

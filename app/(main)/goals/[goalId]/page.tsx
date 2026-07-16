@@ -1,6 +1,7 @@
 "use client";
 
 import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
 import RadarChart from "@/src/components/RadarChart";
 import AspectChip from "@/src/components/goals/AspectChip";
 import CompleteGoalPopup from "@/src/components/goals/CompleteGoalPopup";
@@ -198,6 +199,7 @@ export default function GoalDetailPage() {
   const { me } = useAuth();
   const startSessionMutation = useMutation(api.sessions.startSession);
   const updateInitialRatesMutation = useMutation(api.sessions.updateInitialRates);
+  const deleteConvexSessionMutation = useMutation(api.sessions.deleteSession);
 
   const { goal, sessions, loading, error, refetch } = useGoal(goalId);
   console.log("GoalDetailPage render", { goal, sessions, loading, error });
@@ -391,6 +393,27 @@ export default function GoalDetailPage() {
   const handleOpenSessionPopup = (session: Session) => {
     setSelectedSession(session);
     setIsSessionPopupOpen(true);
+  };
+
+  const [isDeletingSession, setIsDeletingSession] = useState(false);
+
+  const handleDeleteSession = async () => {
+    if (!selectedSession) return;
+    setIsDeletingSession(true);
+    try {
+      await GoalsService.deleteSession(selectedSession.id);
+      await deleteConvexSessionMutation({
+        sessionId: selectedSession.id as Id<"sessions">,
+      });
+      setIsSessionPopupOpen(false);
+      setSelectedSession(null);
+      refetch();
+    } catch (err) {
+      console.error("Failed to delete session:", err);
+      alert(err instanceof Error ? err.message : "Failed to delete session");
+    } finally {
+      setIsDeletingSession(false);
+    }
   };
 
   const [isCompleteGoalOpen, setIsCompleteGoalOpen] = useState(false);
@@ -765,6 +788,8 @@ export default function GoalDetailPage() {
             emoji: selectedSession?.activity?.emoji ?? "🎯",
             color: `var(--aspect-${selectedSession?.activity?.type || "muted"})`,
           }}
+          onDelete={handleDeleteSession}
+          deleting={isDeletingSession}
         />
 
         <CompleteGoalPopup

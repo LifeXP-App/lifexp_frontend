@@ -728,7 +728,7 @@ useEffect(() => {
     const title = isOwn && pomodoroPhase === "break" ? "Break" : (goalData?.title ?? "Session");
     document.title = `${status} ${timeStr} - ${title}`;
     return () => {
-      document.title = "LifeXP";
+      document.title = "GamiLife";
     };
   }, [phaseSecondsLeft, spectatorElapsed, isRunning, pomodoroPhase, goalData?.title, isOwn]);
 
