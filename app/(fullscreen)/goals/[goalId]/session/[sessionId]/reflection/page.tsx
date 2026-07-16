@@ -120,7 +120,6 @@ const DayCompletePage = () => {
       if (!convexSession) return false
 
       const isEmptyGoal = convexSession.goalId === "none"
-      const goalIntId = isEmptyGoal ? null : parseInt(convexSession.goalId, 10)
 
       try {
         const res = await authedFetch("/api/sessions", {
@@ -128,9 +127,10 @@ const DayCompletePage = () => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             session_id: uid,
-            ...(isEmptyGoal || goalIntId === null || Number.isNaN(goalIntId)
-              ? {}
-              : { goal: goalIntId }),
+            // Convex stores the goal uid; Django resolves pk or uid, so pass
+            // it through as-is (parseInt on a uid yielded NaN and silently
+            // dropped the goal linkage).
+            ...(isEmptyGoal ? {} : { goal: convexSession.goalId }),
             activity: convexSession.activity_uid ?? convexSession.activityId,
             device_platform: convexSession.deviceContext?.platform ?? "web",
           }),

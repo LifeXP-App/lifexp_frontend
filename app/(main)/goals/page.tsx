@@ -662,7 +662,10 @@ export default function GoalsPage() {
   const handleSelectActivity = (activity: Activity) => {
     setIsActivityModalOpen(false);
 
-    const activityRef = activity.pk ?? activity.uid ?? activity.id;
+    // Django's session register resolves activities by uid, so never send the
+    // integer pk — a pk-only reference 400s the register and the session never
+    // reaches Django (reflection then 404s).
+    const activityRef = activity.uid ?? activity.id;
     const ratesParam = buildRatesParam(activity);
 
     if (isEmptySession) {
