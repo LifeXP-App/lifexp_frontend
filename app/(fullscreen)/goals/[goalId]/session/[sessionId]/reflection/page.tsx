@@ -5,6 +5,9 @@ import { useParams } from "next/navigation";
 import confetti from "canvas-confetti";
 import { Link } from 'lucide-react';
 import posthog from "posthog-js";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
 import { authedFetch } from "@/src/lib/api/authedFetch";
 
 interface ReflectionResponse {
@@ -53,6 +56,14 @@ const DayCompletePage = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Convex is the source of truth for the session; used to rebuild the Django
+  // row if it was never registered (historical registrations that predate the
+  // register-payload fix, or any future transient miss).
+  const convexSession = useQuery(
+    api.sessions.getSession,
+    uid ? { sessionId: uid as Id<"sessions"> } : "skip",
+  );
+
   const aspectColors: Record<string,string> = {
     physique: "#8d2e2e",
     energy: "#c49352",
@@ -98,17 +109,78 @@ const DayCompletePage = () => {
   useEffect(() => {
 
     if (!uid) return
+    if (convexSession === undefined) return // still loading Convex data
+
+    let cancelled = false
+
+    // Reconstruct the Django session row from Convex when it's missing.
+    // Convex always has the full record (it's created there first); Django's
+    // copy can be missing if the register POST failed or raced a deploy.
+    const registerFromConvex = async () => {
+      if (!convexSession) return false
+
+      const isEmptyGoal = convexSession.goalId === "none"
+      const goalIntId = isEmptyGoal ? null : parseInt(convexSession.goalId, 10)
+
+      try {
+        const res = await authedFetch("/api/sessions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            session_id: uid,
+            ...(isEmptyGoal || goalIntId === null || Number.isNaN(goalIntId)
+              ? {}
+              : { goal: goalIntId }),
+            activity: convexSession.activity_uid ?? convexSession.activityId,
+            device_platform: convexSession.deviceContext?.platform ?? "web",
+          }),
+        })
+        if (!res.ok) return false
+
+        // Django recomputes duration/XP itself from started_at + the
+        // activity's rate table (see complete_session in progression.py) —
+        // it only needs to know the terminal state, not Convex's numbers.
+        if (convexSession.status === "completed") {
+          try {
+            await authedFetch(`/api/sessions/${uid}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                status: convexSession.completedReason === "abandoned" ? "abandoned" : "completed",
+                device_platform: convexSession.deviceContext?.platform ?? "web",
+              }),
+            })
+          } catch (err) {
+            console.error("Self-heal: failed to sync completion to Django", err)
+          }
+        }
+
+        return true
+      } catch (err) {
+        console.error("Self-heal: failed to register session with Django", err)
+        return false
+      }
+    }
 
     const fetchReflection = async () => {
       try {
 
-        const res = await authedFetch(`/api/sessions/${uid}/reflection`)
+        let res = await authedFetch(`/api/sessions/${uid}/reflection`)
+
+        if (res.status === 404) {
+          posthog.capture("reflection_selfheal_attempted", { session_id: uid })
+          const registered = await registerFromConvex()
+          if (registered) {
+            res = await authedFetch(`/api/sessions/${uid}/reflection`)
+          }
+        }
 
         if (!res.ok) {
           throw new Error(`Failed to load reflection (${res.status})`)
         }
 
         const data = await res.json()
+        if (cancelled) return
 
         setReflection(data)
         if (data.completion_picture) {
@@ -124,17 +196,20 @@ const DayCompletePage = () => {
         });
 
       } catch (err) {
+        if (cancelled) return
         console.error("Failed to fetch reflection", err)
         posthog.captureException(err);
         setError(err instanceof Error ? err.message : "Failed to load session summary")
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
 
     fetchReflection()
 
-  }, [uid])
+    return () => { cancelled = true }
+
+  }, [uid, convexSession, goalId])
 
   useEffect(() => {
     if (!reflection) return
