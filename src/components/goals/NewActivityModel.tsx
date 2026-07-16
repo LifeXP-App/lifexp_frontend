@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { ActivityType } from "@/src/lib/types/activityMeta";
 import ActivitySelectButton, {
   AiSuggestionButton,
 } from "@/src/components/goals/ActivityResult";
 import { ActivitiesService } from "@/src/lib/services/activities";
+import { ActivityType } from "@/src/lib/types/activityMeta";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface Activity {
   id: string;
@@ -176,17 +176,18 @@ export default function NewActivityModal({
 
       try {
         const res = await fetch(
-          `${baseUrl}/api/v1/activities/?page=${pageNumber}`
+          `${baseUrl}/api/v1/activities/?page=${pageNumber}`,
         );
 
         const data = await res.json();
 
-        const mapped: Activity[] = getActivitiesFromPayload(data).map(mapActivity);
+        const mapped: Activity[] =
+          getActivitiesFromPayload(data).map(mapActivity);
         const pagination = getPaginationFromPayload(data, pageNumber);
 
         if (requestId === requestIdRef.current) {
           setActivities((prev) =>
-            pageNumber === 1 ? mapped : [...prev, ...mapped]
+            pageNumber === 1 ? mapped : [...prev, ...mapped],
           );
 
           setHasMore(pagination.hasMore);
@@ -201,52 +202,55 @@ export default function NewActivityModal({
         }
       }
     },
-    []
+    [],
   );
 
-  const searchActivities = useCallback(async (query: string, pageNumber: number) => {
-    const requestId = requestIdRef.current + 1;
-    requestIdRef.current = requestId;
-    loadingRef.current = true;
-    setLoading(true);
+  const searchActivities = useCallback(
+    async (query: string, pageNumber: number) => {
+      const requestId = requestIdRef.current + 1;
+      requestIdRef.current = requestId;
+      loadingRef.current = true;
+      setLoading(true);
 
-    try {
-      const params = new URLSearchParams({
-        q: query,
-        page: String(pageNumber),
-      });
-      const res = await fetch(
-        `${baseUrl}/api/v1/search/activities/?${params.toString()}`
-      );
-
-      if (!res.ok) {
-        throw new Error("Failed to search activities");
-      }
-
-      const data = await res.json();
-      const results = getActivitiesFromPayload(data);
-      const pagination = getPaginationFromPayload(data, pageNumber);
-
-      if (requestId === requestIdRef.current) {
-        const mapped = results.map(mapActivity);
-        setActivities((prev) =>
-          pageNumber === 1 ? mapped : [...prev, ...mapped]
+      try {
+        const params = new URLSearchParams({
+          q: query,
+          page: String(pageNumber),
+        });
+        const res = await fetch(
+          `${baseUrl}/api/v1/search/activities/?${params.toString()}`,
         );
-        setPage(pageNumber);
-        setHasMore(pagination.hasMore);
+
+        if (!res.ok) {
+          throw new Error("Failed to search activities");
+        }
+
+        const data = await res.json();
+        const results = getActivitiesFromPayload(data);
+        const pagination = getPaginationFromPayload(data, pageNumber);
+
+        if (requestId === requestIdRef.current) {
+          const mapped = results.map(mapActivity);
+          setActivities((prev) =>
+            pageNumber === 1 ? mapped : [...prev, ...mapped],
+          );
+          setPage(pageNumber);
+          setHasMore(pagination.hasMore);
+        }
+      } catch (err) {
+        console.error("Failed to search activities", err);
+        if (requestId === requestIdRef.current) {
+          setActivities([]);
+        }
+      } finally {
+        if (requestId === requestIdRef.current) {
+          loadingRef.current = false;
+          setLoading(false);
+        }
       }
-    } catch (err) {
-      console.error("Failed to search activities", err);
-      if (requestId === requestIdRef.current) {
-        setActivities([]);
-      }
-    } finally {
-      if (requestId === requestIdRef.current) {
-        loadingRef.current = false;
-        setLoading(false);
-      }
-    }
-  }, []);
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!isOpen) return;
@@ -296,8 +300,7 @@ export default function NewActivityModal({
     const handleScroll = () => {
       if (loading) return;
 
-      const nearBottom =
-        el.scrollTop + el.clientHeight >= el.scrollHeight - 50;
+      const nearBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 50;
 
       if (nearBottom && hasMore) {
         const query = searchQuery.trim();
@@ -320,10 +323,13 @@ export default function NewActivityModal({
   const hasExactSearchMatch =
     normalizedSearchQuery.length > 0 &&
     filteredActivities.some(
-      (activity) => activity.name.trim().toLowerCase() === normalizedSearchQuery,
+      (activity) =>
+        activity.name.trim().toLowerCase() === normalizedSearchQuery,
     );
   const shouldShowAiSuggestion =
-    showAiSuggestion && normalizedSearchQuery.length > 0 && !hasExactSearchMatch;
+    showAiSuggestion &&
+    normalizedSearchQuery.length > 0 &&
+    !hasExactSearchMatch;
   const sectionTitle = normalizedSearchQuery ? "Search results" : "Relevant";
 
   return (
@@ -334,53 +340,49 @@ export default function NewActivityModal({
       >
         <div
           className="bg-gray-100 dark:bg-dark-1 dark:border dark:border-[var(--border)] rounded-3xl shadow-2xl w-full max-w-lg h-[78vh] max-h-[720px] overflow-hidden flex flex-col"
-          onClick={(e) => e.stopPropagation()}>
-  {/* Header */}
-  <div
-    className="flex bg-white dark:bg-[var(--dark-2)] items-center  px-5 pt-5 pb-4 border-b"
-    style={{ borderColor: "var(--border)" }}
-  >
-    <h2 className="text-xl font-bold text-foreground dark:text-[var(--foreground)]">
-      Pick Activity
-    </h2>
-
- 
-  </div>
-
-  {/* Search */}
-  <div className="p-5 pb-3">
-    <div className="relative">
-      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-        <svg
-          className="w-5 h-5 text-gray-400"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
+          onClick={(e) => e.stopPropagation()}
         >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-          />
-        </svg>
-      </div>
-    <div className="relative mb-4">
-            <input
-            onChange={(e) => setSearchQuery(e.target.value)}
-            value={searchQuery}
-              type="text"
-              placeholder="🔍  Start Searching..."
-              className="w-full px-4 py-3 border border-gray-300 dark:border-[var(--border)] rounded-lg bg-white dark:bg-dark-1 text-gray-900 dark:text-[var(--foreground)] outline-none focus:border-blue-500 dark:focus:border-blue-500 transition-colors"
-            />
+          {/* Header */}
+          <div
+            className="flex bg-white dark:bg-[var(--dark-2)] items-center  px-5 pt-5 pb-4 border-b"
+            style={{ borderColor: "var(--border)" }}
+          >
+            <h2 className="text-xl font-bold text-foreground dark:text-[var(--foreground)]">
+              Pick Activity
+            </h2>
           </div>
-      
-    </div>
-  </div>
 
+          {/* Search */}
+          <div className="p-5 pb-3">
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <svg
+                  className="w-5 h-5 text-gray-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+              </div>
+              <div className="relative mb-4">
+                <input
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  value={searchQuery}
+                  type="text"
+                  placeholder="🔍  Start Searching..."
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-[var(--border)] rounded-lg bg-white dark:bg-dark-1 text-gray-900 dark:text-[var(--foreground)] outline-none focus:border-blue-500 dark:focus:border-blue-500 transition-colors"
+                />
+              </div>
+            </div>
+          </div>
 
-
-        {/* Content */}
+          {/* Content */}
           <div
             ref={scrollRef}
             className="px-5 pb-4 flex-1 overflow-y-auto noscrollbar space-y-5"
@@ -423,8 +425,8 @@ export default function NewActivityModal({
                 {suggestions && suggestions.length > 0 && (
                   <div className="w-full p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 space-y-2">
                     <p className="text-xs font-medium text-amber-700 dark:text-amber-300">
-                      {creationError ?? "That name is a bit complex."} Try one of
-                      these instead:
+                      {creationError ?? "That name is a bit complex."} Try one
+                      of these instead:
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {suggestions.map((s) => (
@@ -449,27 +451,27 @@ export default function NewActivityModal({
                 )}
 
                 {loading && (hasMore || page === 1) && (
-                      <div className="space-y-2 animate-pulse">
-                        {[1, 2, 3, 4].map((i) => (
-                          <div
-                            key={i}
-                            className="flex items-center gap-3 px-3 py-3 bg-white dark:bg-dark-1 rounded-xl border border-gray-200 dark:border-[var(--border)]"
-                          >
-                            {/* Emoji circle */}
-                            <div className="w-10 h-10 rounded-full bg-gray-300 dark:bg-[var(--dark-2)]" />
+                  <div className="space-y-2 animate-pulse">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div
+                        key={i}
+                        className="flex items-center gap-3 px-3 py-3 bg-white dark:bg-dark-1 rounded-xl border border-gray-200 dark:border-[var(--border)]"
+                      >
+                        {/* Emoji circle */}
+                        <div className="w-10 h-10 rounded-full bg-gray-300 dark:bg-[var(--dark-2)]" />
 
-                            {/* Text area */}
-                            <div className="flex-1 space-y-2">
-                              <div className="h-4 w-40 bg-gray-300 dark:bg-[var(--dark-2)] rounded" />
-                              <div className="h-3 w-24 bg-gray-200 dark:bg-[var(--dark-2)] rounded" />
-                            </div>
+                        {/* Text area */}
+                        <div className="flex-1 space-y-2">
+                          <div className="h-4 w-40 bg-gray-300 dark:bg-[var(--dark-2)] rounded" />
+                          <div className="h-3 w-24 bg-gray-200 dark:bg-[var(--dark-2)] rounded" />
+                        </div>
 
-                            {/* XP badge placeholder */}
-                            <div className="w-12 h-6 bg-gray-300 dark:bg-[var(--dark-2)] rounded-full" />
-                          </div>
-                        ))}
+                        {/* XP badge placeholder */}
+                        <div className="w-12 h-6 bg-gray-300 dark:bg-[var(--dark-2)] rounded-full" />
                       </div>
-                    )}
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -488,7 +490,7 @@ export default function NewActivityModal({
               className="py-3 px-4 rounded-xl font-medium active:opacity-80  text-white transition-all cursor-pointer "
               style={{ backgroundColor: "var(--rookie-primary)" }}
             >
-              Start Drawing
+              Start Activity
             </button>
           </div>
         </div>
