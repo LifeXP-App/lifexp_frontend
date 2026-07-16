@@ -128,7 +128,7 @@ interface Activity {
 
   ];
 
-const ActivityLeaderboard: React.FC<{ users: LeaderboardUser[] }> = ({ users }) => {
+const ActivityLeaderboard: React.FC<{ users: LeaderboardUser[]; activityName?: string }> = ({ users, activityName }) => {
 
   
 
@@ -183,7 +183,7 @@ const ActivityLeaderboard: React.FC<{ users: LeaderboardUser[] }> = ({ users }) 
       
       <div className="flex justify-between items-center mb-6">
         <h3 className="font-semibold text-lg ">
-          Top Players for Drawing
+          Top Players for {activityName || "this activity"}
         </h3>
         <p className="text-sm font-medium" style={{ color: "var(--muted)" }}>
           2220 Overall
@@ -1181,7 +1181,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 {!sessionsLoading && friendsSessions.length > 0 && (
             <>
             <div className="flex justify-between">
-            <h2 className="text-xl font-bold my-6 text-foreground dark:text-[var(--foreground)]">Friends&apos; Drawing Sessions</h2>
+            <h2 className="text-xl font-bold my-6 text-foreground dark:text-[var(--foreground)]">Friends&apos; {activityData?.name} Sessions</h2>
             <button className='bg-transparent font-medium text-sm cursor-pointer active:opacity-80 hover:opacity-90' style={{color: activityColor}}>
               View more →
             </button>
@@ -1277,7 +1277,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
              
 
             </div>
-           <ActivityLeaderboard users={leaderboard} />
+           <ActivityLeaderboard users={leaderboard} activityName={activityData?.name} />
           </div>
           
         </div>
