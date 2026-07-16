@@ -54,30 +54,9 @@ function formToBackend(payload: SettingsFormState) {
 }
 
 
-function SkeletonRow() {
+function SkeletonValue() {
   return (
-    <div className="flex justify-between w-full mb-4 animate-pulse">
-      <div className="h-6 w-40 rounded bg-gray-200 dark:bg-dark-3" />
-      <div className="h-10 w-32 rounded bg-gray-200 border border-gray-300 dark:border-[var(--border)] dark:bg-dark-2" />
-    </div>
-  );
-}
-
-function SkeletonPanel() {
-  return (
-    <aside className="w-[420px] p-6 hidden md:block overflow-y-auto animate-pulse">
-      <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-[var(--border)]  flex flex-col gap-4">
-        <div className="h-6 w-24 rounded bg-gray-200 dark:bg-dark-3" />
-        <div className="h-5 w-40 rounded bg-gray-200 dark:bg-dark-3" />
-        <div className="h-5 w-44 rounded bg-gray-200 dark:bg-dark-3" />
-        <div className="h-5 w-36 rounded bg-gray-200 dark:bg-dark-3" />
-      </div>
-
-      <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-[var(--border)]  flex flex-col gap-4">
-        <div className="h-5 w-36 rounded bg-gray-200 dark:bg-dark-3" />
-        <div className="h-5 w-24 rounded bg-gray-200 dark:bg-dark-3" />
-      </div>
-    </aside>
+    <div className="h-10 w-32 rounded bg-gray-200 border border-gray-300 dark:border-[var(--border)] dark:bg-dark-2 animate-pulse" />
   );
 }
 
@@ -207,27 +186,6 @@ export default function SettingsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form]);
 
-  // ✅ skeleton screen while loading / form not ready
-  if (loadingSettings || !form) {
-    return (
-      <main className="flex overflow-y-auto w-full">
-        <div className="w-full md:w-[calc(100%-420px)] flex-1 overflow-y-auto py-8 px-6 md:px-12">
-          <div className="h-8 w-40 rounded bg-gray-200 dark:bg-[var(--dark-3)] mb-6 animate-pulse" />
-
-          <SkeletonRow />
-          <SkeletonRow />
-          <SkeletonRow />
-
-          <div className="flex justify-end md:justify-start mt-8 animate-pulse">
-            <div className="h-10 w-32 rounded bg-gray-200 dark:bg-[var(--dark-3)]" />
-          </div>
-        </div>
-
-        <SkeletonPanel />
-      </main>
-    );
-  }
-
   return (
     <main className="flex overflow-y-auto w-full">
       <div className="w-full md:w-[calc(100%-420px)] flex-1 overflow-y-auto py-8 px-6 md:px-12">
@@ -241,39 +199,43 @@ export default function SettingsPage() {
             Account Type
           </h2>
 
-          <div className="relative inline-block w-32">
-            <select
-              value={form.account_type}
-              onChange={(e) =>
-                setForm((prev) =>
-                  prev
-                    ? { ...prev, account_type: e.target.value as AccountType }
-                    : prev,
-                )
-              }
-              className="cursor-pointer text-sm md:text-base block appearance-none w-full bg-white dark:bg-[var(--dark-1)] border border-gray-800 dark:border-[var(--border)] hover:border-gray-500 dark:hover:border-[var(--border)] px-4 py-2 pr-8 rounded leading-tight text-black dark:text-[var(--foreground)]"
-            >
-              <option value="Private">Private</option>
-              <option value="Public">Public</option>
-            </select>
-
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 dark:text-[var(--muted)]">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth="1.5"
-                stroke="currentColor"
-                className="h-4"
+          {form ? (
+            <div className="relative inline-block w-32">
+              <select
+                value={form.account_type}
+                onChange={(e) =>
+                  setForm((prev) =>
+                    prev
+                      ? { ...prev, account_type: e.target.value as AccountType }
+                      : prev,
+                  )
+                }
+                className="cursor-pointer text-sm md:text-base block appearance-none w-full bg-white dark:bg-[var(--dark-1)] border border-gray-800 dark:border-[var(--border)] hover:border-gray-500 dark:hover:border-[var(--border)] px-4 py-2 pr-8 rounded leading-tight text-black dark:text-[var(--foreground)]"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="m19.5 8.25-7.5 7.5-7.5-7.5"
-                />
-              </svg>
+                <option value="Private">Private</option>
+                <option value="Public">Public</option>
+              </select>
+
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 dark:text-[var(--muted)]">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth="1.5"
+                  stroke="currentColor"
+                  className="h-4"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="m19.5 8.25-7.5 7.5-7.5-7.5"
+                  />
+                </svg>
+              </div>
             </div>
-          </div>
+          ) : (
+            <SkeletonValue />
+          )}
         </div>
 
         {/* Notifications */}
@@ -282,42 +244,46 @@ export default function SettingsPage() {
             Notifications
           </h2>
 
-          <div className="relative inline-block w-32">
-            <select
-              value={form.notifications}
-              onChange={(e) =>
-                setForm((prev) =>
-                  prev
-                    ? {
-                        ...prev,
-                        notifications: e.target.value as Notifications,
-                      }
-                    : prev,
-                )
-              }
-              className="cursor-pointer text-sm md:text-base block appearance-none w-full bg-white dark:bg-[var(--dark-1)] border border-gray-800 dark:border-[var(--border)] hover:border-gray-500 dark:hover:border-[var(--border)] px-4 py-2 pr-8 rounded leading-tight text-black dark:text-[var(--foreground)]"
-            >
-              <option value="On">On</option>
-              <option value="Off">Off</option>
-            </select>
-
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 dark:text-[var(--muted)]">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth="1.5"
-                stroke="currentColor"
-                className="h-4"
+          {form ? (
+            <div className="relative inline-block w-32">
+              <select
+                value={form.notifications}
+                onChange={(e) =>
+                  setForm((prev) =>
+                    prev
+                      ? {
+                          ...prev,
+                          notifications: e.target.value as Notifications,
+                        }
+                      : prev,
+                  )
+                }
+                className="cursor-pointer text-sm md:text-base block appearance-none w-full bg-white dark:bg-[var(--dark-1)] border border-gray-800 dark:border-[var(--border)] hover:border-gray-500 dark:hover:border-[var(--border)] px-4 py-2 pr-8 rounded leading-tight text-black dark:text-[var(--foreground)]"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="m19.5 8.25-7.5 7.5-7.5-7.5"
-                />
-              </svg>
+                <option value="On">On</option>
+                <option value="Off">Off</option>
+              </select>
+
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 dark:text-[var(--muted)]">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth="1.5"
+                  stroke="currentColor"
+                  className="h-4"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="m19.5 8.25-7.5 7.5-7.5-7.5"
+                  />
+                </svg>
+              </div>
             </div>
-          </div>
+          ) : (
+            <SkeletonValue />
+          )}
         </div>
 
         {/* Appearance */}
@@ -326,45 +292,49 @@ export default function SettingsPage() {
             Appearance
           </h2>
 
-          <div className="relative inline-block w-32">
-            <select
-              value={form.appearance}
-              onChange={(e) =>
-                setForm((prev) =>
-                  prev
-                    ? { ...prev, appearance: e.target.value as Appearance }
-                    : prev,
-                )
-              }
-              className="cursor-pointer text-sm md:text-base block appearance-none w-full bg-white dark:bg-[var(--dark-1)] border border-gray-800 dark:border-[var(--border)] hover:border-gray-500 dark:hover:border-[var(--border)] px-4 py-2 pr-8 rounded leading-tight text-black dark:text-[var(--foreground)]"
-            >
-              <option value="Dark">Dark</option>
-              <option value="Light">Light</option>
-            </select>
-
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 dark:text-[var(--muted)]">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth="1.5"
-                stroke="currentColor"
-                className="h-4"
+          {form ? (
+            <div className="relative inline-block w-32">
+              <select
+                value={form.appearance}
+                onChange={(e) =>
+                  setForm((prev) =>
+                    prev
+                      ? { ...prev, appearance: e.target.value as Appearance }
+                      : prev,
+                  )
+                }
+                className="cursor-pointer text-sm md:text-base block appearance-none w-full bg-white dark:bg-[var(--dark-1)] border border-gray-800 dark:border-[var(--border)] hover:border-gray-500 dark:hover:border-[var(--border)] px-4 py-2 pr-8 rounded leading-tight text-black dark:text-[var(--foreground)]"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="m19.5 8.25-7.5 7.5-7.5-7.5"
-                />
-              </svg>
+                <option value="Dark">Dark</option>
+                <option value="Light">Light</option>
+              </select>
+
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 dark:text-[var(--muted)]">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth="1.5"
+                  stroke="currentColor"
+                  className="h-4"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="m19.5 8.25-7.5 7.5-7.5-7.5"
+                  />
+                </svg>
+              </div>
             </div>
-          </div>
+          ) : (
+            <SkeletonValue />
+          )}
         </div>
 
         {/* Save button */}
         <button
-          onClick={() => saveSettings(form)}
-          disabled={saving || loadingSettings || isUnchanged}
+          onClick={() => form && saveSettings(form)}
+          disabled={saving || loadingSettings || !form || isUnchanged}
           className="flex float-right md:float-left items-center p-2 rounded-lg cursor-pointer px-12 disabled:opacity-50 disabled:cursor-not-allowed"
           style={{ backgroundColor: "#4168e2", color: "white" }}
         >
