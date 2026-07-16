@@ -6,9 +6,10 @@ import { NavigationItem } from "./NavigationItem";
 
 interface NavigationProps {
   accentColor?: string;
+  onNavigate?: () => void;
 }
 
-export function Navigation({ accentColor }: NavigationProps) {
+export function Navigation({ accentColor, onNavigate }: NavigationProps) {
   const { me, supabaseUser } = useAuth();
 
   // Prefer the Django Player username; fall back to the username captured in
@@ -63,7 +64,12 @@ export function Navigation({ accentColor }: NavigationProps) {
     <nav className="px-2 py-2 flex-1">
       <div className="space-y-4">
         {NAV_ITEMS.map((item) => (
-          <NavigationItem key={item.href} {...item} accentColor={accentColor} />
+          <NavigationItem
+            key={item.href}
+            {...item}
+            accentColor={accentColor}
+            onNavigate={onNavigate}
+          />
         ))}
       </div>
     </nav>

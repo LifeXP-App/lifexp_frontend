@@ -38,12 +38,14 @@ export default function RootLayout({
           <AuthProvider>
             <AuthGuard>
               <PopupProvider>
-                <div className="flex h-screen overflow-hidden bg-gray-100 dark:bg-dark-1">
+                <div className="flex h-[100dvh] overflow-hidden bg-gray-100 dark:bg-dark-1">
                   {/* ✅ Client wrapper handles state */}
                   <MasteryPopupWrapper />
 
                   <Sidebar />
-                  <main className="flex-1 overflow-y-auto">{children}</main>
+                  <main className="flex-1 overflow-y-auto pt-16 md:pt-0">
+                    {children}
+                  </main>
                 </div>
               </PopupProvider>
             </AuthGuard>

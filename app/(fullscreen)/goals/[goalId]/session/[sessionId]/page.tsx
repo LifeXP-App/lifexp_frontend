@@ -276,7 +276,6 @@ export default function SessionTimer({ params }: SessionTimerProps) {
 
     Promise.resolve()
       .then(async () => {
-        const startedAt = new Date().toISOString();
         const id = await startMutation({
           userId: String(me.id),
           username: me.username,
@@ -303,11 +302,8 @@ export default function SessionTimer({ params }: SessionTimerProps) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               session_id: id,
-              user_id: me.id,
               ...(isEmptySession ? {} : { goal: goalIntId }),
               activity: activityIdStr,
-              status: "active",
-              started_at: startedAt,
               device_platform: "web",
             }),
           });
