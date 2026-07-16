@@ -333,13 +333,19 @@ export default function SessionTimer({ params }: SessionTimerProps) {
             const r = data.xp_increase_rate_per_second;
             const djangoRates =
               r && typeof r === "object" ? normalizeRates(r) : undefined;
+            // Django nests activity metadata (as `activity: { name, emoji, type }`,
+            // same shape used by the session-history endpoints) or returns it flat
+            // as snake_case — accept either rather than assuming camelCase, which
+            // Django never sends and left these fields silently undefined.
+            const activityInfo =
+              data.activity && typeof data.activity === "object" ? data.activity : data;
             await updateInitialRatesMutation({
               sessionId: id,
               activityId: activityUid,
               activity_uid: activityUid,
-              activityName: data.activityName,
-              activityEmoji: data.activityEmoji,
-              activityType: data.activityType,
+              activityName: activityInfo.name ?? activityInfo.activity_name,
+              activityEmoji: activityInfo.emoji ?? activityInfo.activity_emoji,
+              activityType: activityInfo.type ?? activityInfo.activity_type,
               rates: djangoRates,
             });
           } else {
