@@ -75,16 +75,20 @@ async function syncSessionToDjango(
   stats: SessionFinalStats,
   completedReason: "manual" | "abandoned",
 ) {
+  // Convex is the source of truth for session timing and XP (it tracks pauses,
+  // breaks, and per-second accrual live — what the player actually watched
+  // during the session); Django persists these numbers rather than
+  // recomputing them from its own clock.
   const res = await authedFetch(`/api/sessions/${sessionId}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      status: "completed",
+      status: completedReason === "abandoned" ? "abandoned" : "completed",
       ended_at: new Date(stats.endedAt).toISOString(),
       total_duration_seconds: Math.floor(stats.totalDurationSeconds),
       focused_duration_seconds: Math.floor(stats.focusedDurationSeconds),
       // Django stores xp_* as integers; the Convex breakdown is fractional
-      // (rate × seconds), so round before sending or the PUT 400s.
+      // (rate × seconds), so round before sending.
       xp_total: Math.round(stats.xpTotal),
       xp_physique: Math.round(stats.xpBreakdown.physique),
       xp_energy: Math.round(stats.xpBreakdown.energy),
