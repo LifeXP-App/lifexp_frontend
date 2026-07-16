@@ -3,7 +3,6 @@
 import {
   Cog6ToothIcon,
   MagnifyingGlassIcon,
-  PlusIcon,
   TrophyIcon,
   UserCircleIcon,
   XCircleIcon,
@@ -35,6 +34,7 @@ interface NavigationItemProps {
   active: string[];
   icon: string;
   accentColor?: string;
+  onNavigate?: () => void;
 }
 
 /* ---------------- COMPONENT ---------------- */
@@ -45,6 +45,7 @@ export function NavigationItem({
   active,
   icon,
   accentColor = "#4168e2",
+  onNavigate,
 }: NavigationItemProps) {
   const pathname = usePathname();
   const isActive = active.some(
@@ -53,11 +54,10 @@ export function NavigationItem({
 
   const IconComponent = ICON_MAP[icon] || XCircleIcon;
 
-  const masteryTitle = "Rookie"
-
   return (
     <Link
       href={href}
+      onClick={onNavigate}
       className="flex items-center gap-3  cursor-pointer px-4 py-2 rounded-lg transition-all duration-200"
       style={
         isActive

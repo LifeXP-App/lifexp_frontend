@@ -282,11 +282,8 @@ export default function GoalDetailPage() {
         },
         body: JSON.stringify({
           session_id: convexId,
-          user_id: me.id,
           goal: parseInt(goal?.id ?? "0", 10),
           activity: activityId,
-          status: "live",
-          started_at: new Date().toISOString(),
           device_platform: "web",
         }),
       });

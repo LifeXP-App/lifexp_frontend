@@ -1019,31 +1019,28 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
             <div className="h-px" style={{ backgroundColor: 'var(--border)' }} />
 
-            <div className="flex  flex-col items-center justify-between">
-              <span className="text-sm" style={{ color: 'var(--muted)' }}>Likes</span>
-              <div className="flex items-center gap-2">
-                <div className="flex -space-x-2">
-                  {stats.likeAvatars.slice(0, 3).map((color, i) => (
-                    <div 
-                      key={i}
-                      className="w-6 h-6 rounded-full border-2 border-white dark:border-dark-2"
-                      style={{ backgroundColor: color }}
-                    />
-                  ))}
-                </div>
-                <span className="text-md font-semibold text-foreground dark:text-[var(--foreground)]">+{stats.likes}</span>
-              </div>
+            <div className="flex flex-col items-center justify-between">
+              <span className="text-sm" style={{ color: 'var(--muted)' }}>Sessions</span>
+              <span className="text-lg font-bold text-foreground dark:text-[var(--foreground)]">{totalSessions}</span>
             </div>
           </div>
-         
+
+          {/* Radar */}
+          <div className="mb-6 bg-white dark:bg-dark-2 rounded-2xl p-6 border" style={{ borderColor: 'var(--border)' }}>
+            <div className="w-full h-[220px]">
+              <RadarChart
+                data={radarData}
+                masteryTitle={user.masteryTitle}
+                username={user.username}
+                color={activityColor}
+              />
+            </div>
+          </div>
 
           {/* Description */}
           <p className="text-base mb-6 text-foreground dark:text-[var(--foreground)]">
-            {description}
+            {activityData?.description}
           </p>
-
-          
-          
 
           {/* Aspect Chips */}
           <div className="mb-6">
@@ -1051,44 +1048,96 @@ const [isModalOpen, setIsModalOpen] = useState(false);
               Life Aspects
             </h3>
             <div className="flex  justify-around gap-2">
-              <AspectChip icon={<BiDumbbell className="w-4 h-4" />} value={341} tint="physique" />
-              <AspectChip icon={<BoltIcon className="w-4 h-4" />} value={432} tint="energy" />
-              <AspectChip icon={<UsersIcon className="w-4 h-4" />} value={234} tint="social" />
-              <AspectChip icon={<FaBrain className="w-4 h-4" />} value={324} tint="creativity" />
-              <AspectChip icon={<FaHammer className="w-4 h-4" />} value={234} tint="logic" />
+              <AspectChip icon={<BiDumbbell className="w-4 h-4" />} value={activityData?.xp_distribution.physique ?? 0} tint="physique" />
+              <AspectChip icon={<BoltIcon className="w-4 h-4" />} value={activityData?.xp_distribution.energy ?? 0} tint="energy" />
+              <AspectChip icon={<UsersIcon className="w-4 h-4" />} value={activityData?.xp_distribution.social ?? 0} tint="social" />
+              <AspectChip icon={<FaBrain className="w-4 h-4" />} value={activityData?.xp_distribution.creativity ?? 0} tint="creativity" />
+              <AspectChip icon={<FaHammer className="w-4 h-4" />} value={activityData?.xp_distribution.logic ?? 0} tint="logic" />
             </div>
           </div>
 
-<h2 className="text-xl font-bold my-4 text-foreground dark:text-[var(--foreground)]">Your Recent Sessions</h2>
-            <div className="space-y-3">
-            {todaySessions.map((session) => (
-                <SessionItem
-                  key={session.id}
-                  {...session}
-                  accentColor={activityColor}
-                  onClick={() => handleOpenSessionPopup(session)}
-                />
-              ))}
-            </div>
+          {liveSessions && liveSessions.length > 0 && (
+            <>
+              <div className="flex justify-between">
+                <h2 className="text-xl font-bold my-4 text-foreground dark:text-[var(--foreground)]">Currently Live</h2>
+              </div>
+              <div className="flex flex-wrap mb-6 gap-3">
+                {liveSessions.map((session) => (
+                  <LiveSessionCard
+                    key={session._id}
+                    status={session.status}
+                    goalTitle={session.goalTitle}
+                    activityType={session.activityType}
+                    activityEmoji={session.activityEmoji}
+                    username={session.username}
+                    userProfile={session.userProfile}
+                    totalDurationSeconds={session.totalDurationSeconds}
+                    onClick={() =>
+                      router.push(`/goals/${session.goalId}/session/${session._id}`)
+                    }
+                  />
+                ))}
+              </div>
+            </>
+          )}
 
+          {!sessionsLoading &&
+            leaderboard.length === 0 &&
+            mySessions.length === 0 &&
+            friendsSessions.length === 0 && (
+              <div
+                className="flex flex-col items-center justify-center text-center py-24 px-6 my-6 rounded-2xl "
+                style={{ borderColor: "var(--border)" }}
+              >
+                <div className="flex flex-col items-center text-center">
+                  <div className="text-5xl">🌱</div>
+                  <div className="h-3" />
+                  <h3 className="text-sm font-bold">No sessions yet</h3>
+                  <div className="h-1.5" />
+                  <p className="text-sm text-gray-500">
+                    Be the first to log a session for this activity.
+                  </p>
+                </div>
+              </div>
+          )}
 
-           <h2 className="text-xl font-bold my-4 text-foreground dark:text-[var(--foreground)]">Your Recent Sessions</h2>
-            <div className="space-y-3">
-            {todaySessions.map((session) => (
-                <SessionItem
-                  key={session.id}
-                  {...session}
-                  accentColor={activityColor}
-                  onClick={() => handleOpenSessionPopup(session)}
-                />
-              ))}
-            </div>
+          {!sessionsLoading && friendsSessions.length > 0 && (
+            <>
+              <div className="flex justify-between">
+                <h2 className="text-xl font-bold my-4 text-foreground dark:text-[var(--foreground)]">Friends&apos; {activityData?.name} Sessions</h2>
+              </div>
+              <div className="space-y-3 mb-6">
+                {friendsSessions.map((session) => (
+                  <FriendSessionItem
+                    key={session.id}
+                    {...session}
+                    accentColor={activityColor}
+                    onClick={() => handleOpenSessionPopup(session, false)}
+                  />
+                ))}
+              </div>
+            </>
+          )}
 
-            
-        
-        
+          {!sessionsLoading && mySessions.length > 0 && (
+            <>
+              <div className="flex justify-between">
+                <h2 className="text-xl font-bold my-4 text-foreground dark:text-[var(--foreground)]">Your Sessions</h2>
+              </div>
+              <div className="space-y-3 mb-6">
+                {mySessions.map((session) => (
+                  <SessionItem
+                    key={session.id}
+                    {...session}
+                    accentColor={activityColor}
+                    onClick={() => handleOpenSessionPopup(session)}
+                  />
+                ))}
+              </div>
+            </>
+          )}
 
-
+          <ActivityLeaderboard users={leaderboard} activityName={activityData?.name} />
         </div>
 
         {/* Desktop Layout - Two Column */}
