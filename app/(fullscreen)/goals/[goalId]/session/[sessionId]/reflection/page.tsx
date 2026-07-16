@@ -137,9 +137,8 @@ const DayCompletePage = () => {
         })
         if (!res.ok) return false
 
-        // Django recomputes duration/XP itself from started_at + the
-        // activity's rate table (see complete_session in progression.py) —
-        // it only needs to know the terminal state, not Convex's numbers.
+        // Convex is the source of truth for timing/XP; pass its numbers
+        // through as-is rather than letting Django recompute them.
         if (convexSession.status === "completed") {
           try {
             await authedFetch(`/api/sessions/${uid}`, {
@@ -147,6 +146,16 @@ const DayCompletePage = () => {
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 status: convexSession.completedReason === "abandoned" ? "abandoned" : "completed",
+                ended_at: new Date(convexSession.endedAt ?? Date.now()).toISOString(),
+                total_duration_seconds: Math.floor(convexSession.totalDurationSeconds),
+                focused_duration_seconds: Math.floor(convexSession.focusedDurationSeconds),
+                xp_total: Math.round(convexSession.xpTotal),
+                xp_physique: Math.round(convexSession.xpBreakdown.physique),
+                xp_energy: Math.round(convexSession.xpBreakdown.energy),
+                xp_logic: Math.round(convexSession.xpBreakdown.logic),
+                xp_creativity: Math.round(convexSession.xpBreakdown.creativity),
+                xp_social: Math.round(convexSession.xpBreakdown.social),
+                completed_reason: convexSession.completedReason ?? "manual",
                 device_platform: convexSession.deviceContext?.platform ?? "web",
               }),
             })

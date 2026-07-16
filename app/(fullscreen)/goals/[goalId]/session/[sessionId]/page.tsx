@@ -72,17 +72,30 @@ function normalizeRates(r: Record<string, unknown> | null | undefined): XpRates 
 
 async function syncSessionToDjango(
   sessionId: string,
+  stats: SessionFinalStats,
   completedReason: "manual" | "abandoned",
 ) {
-  // Django recomputes duration/XP itself from started_at + the activity's rate
-  // table (see complete_session in progression.py) — it is the authoritative
-  // source and rejects any client-supplied timing/XP fields outright (400).
-  // Convex's `stats` are for the live UI only; don't send them here.
+  // Convex is the source of truth for session timing and XP (it tracks pauses,
+  // breaks, and per-second accrual live — what the player actually watched
+  // during the session); Django persists these numbers rather than
+  // recomputing them from its own clock.
   const res = await authedFetch(`/api/sessions/${sessionId}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       status: completedReason === "abandoned" ? "abandoned" : "completed",
+      ended_at: new Date(stats.endedAt).toISOString(),
+      total_duration_seconds: Math.floor(stats.totalDurationSeconds),
+      focused_duration_seconds: Math.floor(stats.focusedDurationSeconds),
+      // Django stores xp_* as integers; the Convex breakdown is fractional
+      // (rate × seconds), so round before sending.
+      xp_total: Math.round(stats.xpTotal),
+      xp_physique: Math.round(stats.xpBreakdown.physique),
+      xp_energy: Math.round(stats.xpBreakdown.energy),
+      xp_logic: Math.round(stats.xpBreakdown.logic),
+      xp_creativity: Math.round(stats.xpBreakdown.creativity),
+      xp_social: Math.round(stats.xpBreakdown.social),
+      completed_reason: completedReason,
       device_platform: "web",
     }),
   });
@@ -589,7 +602,7 @@ useEffect(() => {
 
       if (!sessionSynced) {
         try {
-          await syncSessionToDjango(sessionId, "manual");
+          await syncSessionToDjango(sessionId, finalStats, "manual");
           await markSyncedMutation({ sessionId });
         } catch (err) {
           console.error("Failed to sync completed session to Django:", err);
@@ -634,7 +647,7 @@ useEffect(() => {
 
       if (!sessionSynced) {
         try {
-          await syncSessionToDjango(sessionId, "abandoned");
+          await syncSessionToDjango(sessionId, finalStats, "abandoned");
           await markSyncedMutation({ sessionId });
         } catch (err) {
           console.error("Failed to sync abandoned session to Django:", err);
