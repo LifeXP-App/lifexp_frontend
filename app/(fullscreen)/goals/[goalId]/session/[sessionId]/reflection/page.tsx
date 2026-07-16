@@ -44,6 +44,7 @@ const DayCompletePage = () => {
 
   const [reflection, setReflection] = useState<ReflectionResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [progressWidth, setProgressWidth] = useState(0);
 
@@ -110,8 +111,8 @@ const DayCompletePage = () => {
         const data = await res.json()
 
         setReflection(data)
-        if (reflection?.completion_picture) {
-          setImagePreview(reflection.completion_picture)
+        if (data.completion_picture) {
+          setImagePreview(data.completion_picture)
         }
         posthog.capture("reflection_viewed", {
           session_id: uid,
@@ -125,6 +126,7 @@ const DayCompletePage = () => {
       } catch (err) {
         console.error("Failed to fetch reflection", err)
         posthog.captureException(err);
+        setError(err instanceof Error ? err.message : "Failed to load session summary")
       } finally {
         setLoading(false)
       }
@@ -210,7 +212,37 @@ const DayCompletePage = () => {
     )
   }
 
-  if (!reflection || !reflection.activity) return null
+  // Never render a blank screen — any fetch failure (500, 404 from a missed
+  // session sync, expired auth) lands here with a way back out.
+  if (error || !reflection || !reflection.activity) {
+    return (
+      <div
+        className="min-h-screen w-full flex items-center justify-center"
+        style={{ backgroundColor: 'var(--background)' }}
+      >
+        <div className="text-center flex flex-col items-center space-y-4 px-6">
+
+          <div className="text-5xl">😕</div>
+
+          <p className="font-semibold text-lg">
+            Couldn&apos;t load your session summary
+          </p>
+
+          <p className="text-sm text-gray-500 max-w-sm">
+            {error ?? "Session data is missing or incomplete."} Your session was
+            still saved — you can head back to your goal.
+          </p>
+
+          <a href={isEmptySession ? "/goals" : `/goals/${goalId}`}>
+            <button className="px-6 py-3 cursor-pointer rounded-2xl font-semibold text-white bg-gray-800 hover:bg-gray-700 transition">
+              Back to goal
+            </button>
+          </a>
+
+        </div>
+      </div>
+    )
+  }
 
   const activity = {
     name: reflection.activity.name,
