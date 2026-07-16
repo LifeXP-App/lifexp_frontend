@@ -512,6 +512,15 @@ export const updateInitialRates = mutation({
   },
 });
 
+export const deleteSession = mutation({
+  args: { sessionId: v.id("sessions") },
+  handler: async (ctx, args) => {
+    const session = await ctx.db.get(args.sessionId);
+    if (!session) return;
+    await ctx.db.delete(args.sessionId);
+  },
+});
+
 export const markSyncedToDjango = mutation({
   args: { sessionId: v.id("sessions") },
   handler: async (ctx, args) => {

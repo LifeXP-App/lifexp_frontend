@@ -100,3 +100,30 @@ export async function PUT(
     return NextResponse.json({ detail: text }, { status: res.status });
   }
 }
+
+// Delete a session
+export async function DELETE(
+  req: Request,
+  context: { params: Promise<{ sessionId: string }> },
+) {
+  const { sessionId } = await context.params;
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
+
+  const res = await authedFetch(req, `${baseUrl}/api/v1/sessions/${sessionId}/`, {
+    method: "DELETE",
+  });
+
+  if (res instanceof NextResponse) return res;
+
+  if (res.status === 204) {
+    return new NextResponse(null, { status: 204 });
+  }
+
+  const text = await res.text();
+  try {
+    const data = JSON.parse(text);
+    return NextResponse.json(data, { status: res.status });
+  } catch {
+    return NextResponse.json({ detail: text }, { status: res.status });
+  }
+}

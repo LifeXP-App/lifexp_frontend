@@ -865,7 +865,7 @@ export default function GoalsPage() {
                   <RocketLaunchIcon className="w-8 h-8 text-gray-500 dark:text-[var(--muted)]" />
                 </div>
                 <h3 className="text-lg font-bold text-black dark:text-[var(--foreground)] mb-1">
-                  No goals yet — let&apos;s change that
+                  No goals yet? let&apos;s change that
                 </h3>
                 <p className="text-sm text-gray-500 dark:text-[var(--muted)] max-w-xs">
                   Every big achievement starts with a single goal. Create your first one and start earning XP today.

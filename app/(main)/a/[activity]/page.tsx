@@ -10,8 +10,9 @@ import {BiDumbbell} from "react-icons/bi";
 import CompleteGoalPopup from '@/src/components/goals/CompleteGoalPopup';
 import { useEffect } from 'react';
 import { supabase } from "@/src/lib/supabase";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
 
 import {
 
@@ -588,10 +589,34 @@ export default function ActivityDetailPage({
 
   const [isSessionPopupOpen, setIsSessionPopupOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+  const [selectedSessionIsMine, setSelectedSessionIsMine] = useState(true);
 
-  const handleOpenSessionPopup = (session: Session) => {
+  const handleOpenSessionPopup = (session: Session, isMine: boolean = true) => {
     setSelectedSession(session);
+    setSelectedSessionIsMine(isMine);
     setIsSessionPopupOpen(true);
+  };
+
+  const deleteConvexSessionMutation = useMutation(api.sessions.deleteSession);
+  const [isDeletingSession, setIsDeletingSession] = useState(false);
+
+  const handleDeleteSession = async () => {
+    if (!selectedSession) return;
+    setIsDeletingSession(true);
+    try {
+      await GoalsService.deleteSession(selectedSession.id);
+      await deleteConvexSessionMutation({
+        sessionId: selectedSession.id as Id<"sessions">,
+      });
+      setMySessions((prev) => prev.filter((s) => s.id !== selectedSession.id));
+      setIsSessionPopupOpen(false);
+      setSelectedSession(null);
+    } catch (err) {
+      console.error("Failed to delete session:", err);
+      alert(err instanceof Error ? err.message : "Failed to delete session");
+    } finally {
+      setIsDeletingSession(false);
+    }
   };
 
 
@@ -935,6 +960,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                 emoji: "🎨",
                 color: activityColor,
               }}
+              onDelete={selectedSessionIsMine ? handleDeleteSession : undefined}
+              deleting={isDeletingSession}
             />
 
 
@@ -1167,7 +1194,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                       key={session.id}
                       {...session}
                       accentColor={activityColor}
-                      onClick={() => handleOpenSessionPopup(session)}
+                      onClick={() => handleOpenSessionPopup(session, false)}
                     />
                   ))}
                 </div>
