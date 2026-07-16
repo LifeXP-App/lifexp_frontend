@@ -860,7 +860,7 @@ export default function GoalsPage() {
             </div>
 
             {!showGoalsSkeleton && goals.length === 0 ? (
-              <div className="mt-12 flex flex-col items-center justify-center text-center py-16 px-6 rounded-2xl bg-gray-50 dark:bg-dark-2 border border-dashed border-gray-300 dark:border-[var(--border)]">
+              <div className="mt-12 flex flex-col items-center justify-center text-center py-16 px-6 ">
                 <div className="w-16 h-16 rounded-full bg-gray-200 dark:bg-dark-3 flex items-center justify-center mb-4">
                   <RocketLaunchIcon className="w-8 h-8 text-gray-500 dark:text-[var(--muted)]" />
                 </div>
@@ -873,7 +873,7 @@ export default function GoalsPage() {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(true)}
-                  className="mt-5 flex items-center gap-2 rounded-2xl bg-black dark:bg-white text-white dark:text-black font-semibold py-3 px-6 hover:opacity-90 transition cursor-pointer"
+                  className="mt-5 flex items-center gap-2 rounded-2xl bg-[var(--rookie-primary)]  text-white font-semibold py-3 px-6 hover:opacity-90 transition cursor-pointer"
                 >
                   <PlusIcon className="w-5 h-5" />
                   <span>Create Your First Goal</span>
