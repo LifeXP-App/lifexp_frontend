@@ -8,6 +8,8 @@ export interface Goal {
   description: string | null;
   finish_by: string | null;
 
+  username: string | null;
+
   category: {
     name: string;
     color: string;
@@ -205,6 +207,9 @@ function normalizeGoal(item: unknown): Goal | null {
           : null,
 
     finish_by: typeof goal.finish_by === "string" ? goal.finish_by : null,
+
+    username:
+      typeof goal.user_username === "string" ? goal.user_username : null,
 
     category:
       category &&

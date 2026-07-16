@@ -16,6 +16,7 @@ import { GoalsService, Session } from "@/src/lib/services/goals";
 import { ActivityType } from "@/src/lib/types/activityMeta";
 import { BoltIcon, UsersIcon } from "@heroicons/react/24/solid";
 import { useMutation } from "convex/react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import React, { useCallback, useState } from "react";
 import { BiDumbbell } from "react-icons/bi";
@@ -646,6 +647,7 @@ export default function GoalDetailPage() {
     );
   }
 
+  const isOwner = !goal.username || goal.username === me?.username;
   const goalCompleted = goal.status === "completed";
   const goalDescription = goal.description || "";
   const statusText = `${goal.days_completed} / ${goal.days_total} days completed`;
@@ -836,6 +838,14 @@ export default function GoalDetailPage() {
             </button>
 
             <h1 className="text-xl font-bold flex-1 ml-2 text-foreground dark:text-[var(--foreground)]">
+              {goal.username && goal.username !== me?.username ? (
+                <>
+                  <Link href={`/u/${goal.username}`} className="hover:underline">
+                    {goal.username}
+                  </Link>
+                  {" / "}
+                </>
+              ) : null}
               {goal.title}
             </h1>
 
@@ -1007,7 +1017,7 @@ export default function GoalDetailPage() {
           </div>
 
           {/* Action Buttons */}
-          {!goalCompleted && (
+          {!goalCompleted && isOwner && (
             <div className="grid grid-cols-2 gap-3 mb-8">
               {goal.last_activity && (
                 <button
@@ -1102,7 +1112,7 @@ export default function GoalDetailPage() {
           {/* Left Column - Main Content */}
           <div className="flex-1">
             {/* Action Buttons */}
-            {!goalCompleted && (
+            {!goalCompleted && isOwner && (
               <div className="grid grid-cols-2 gap-3 mb-8">
                 <button
                   className="py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80  cursor-pointer"

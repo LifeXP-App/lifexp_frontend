@@ -48,6 +48,7 @@ export interface Activity {
   description?: string;
   activity_type: "physique" | "creativity" | "social" | "energy" | "logic";
   emoji: string;
+  verified?: boolean;
   total_xp: number;
   xp_distribution?: Record<string, number>;
   created_by?: {

@@ -208,8 +208,21 @@ export default function SessionTimer({ params }: SessionTimerProps) {
   }, [goalId, isEmptySession]);
 
   const [showStats, setShowStats] = useState(false);
+  const statsRef = useRef<HTMLDivElement>(null);
   const [ratesError, setRatesError] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+
+  // Collapse the XP stats dropdown when clicking outside of it
+  useEffect(() => {
+    if (!showStats) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (statsRef.current && !statsRef.current.contains(e.target as Node)) {
+        setShowStats(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showStats]);
 
   // ── Convex subscription & mutations ──
   const session = useQuery(
@@ -541,31 +554,31 @@ useEffect(() => {
   const aspects = [
     {
       name: "Creativity",
-      icon: <FaBrain className="w-4 h-4" />,
+      icon: <FaBrain className="w-5 h-5" />,
       xp: Math.floor(localXpBreakdown.creativity),
       color: "#4187a2",
     },
     {
       name: "Physique",
-      icon: <DumbbellIcon className="w-4 h-4" />,
+      icon: <DumbbellIcon className="w-5 h-5" />,
       xp: Math.floor(localXpBreakdown.physique),
       color: "#8d2e2e",
     },
     {
       name: "Energy",
-      icon: <BoltIcon className="w-4 h-4" />,
+      icon: <BoltIcon className="w-5 h-5" />,
       xp: Math.floor(localXpBreakdown.energy),
       color: "#c49352",
     },
     {
       name: "Logic",
-      icon: <FaHammer className="w-4 h-4" />,
+      icon: <FaHammer className="w-5 h-5" />,
       xp: Math.floor(localXpBreakdown.logic),
       color: "#713599",
     },
     {
       name: "Social",
-      icon: <UsersIcon className="w-4 h-4" />,
+      icon: <UsersIcon className="w-5 h-5" />,
       xp: Math.floor(localXpBreakdown.social),
       color: "#31784e",
     },
@@ -685,6 +698,10 @@ useEffect(() => {
     setPhaseSecondsLeft(FOCUS_SECONDS);
   }, [sessionId, resumeMutation]);
 
+  const handleAdjustTime = useCallback((deltaSeconds: number) => {
+    setPhaseSecondsLeft((prev) => Math.max(0, prev + deltaSeconds));
+  }, []);
+
   // ── Keyboard shortcuts (owner only — spectators have no session controls) ──
   useEffect(() => {
     if (!isOwn) return;
@@ -755,13 +772,16 @@ useEffect(() => {
   }
 
   const activityType = session?.activityType;
-  const categoryColor =
-    activityType && activityTypeColors[activityType]
+  const isBreak = pomodoroPhase === "break";
+  const categoryColor = isBreak
+    ? "var(--rookie-primary)"
+    : activityType && activityTypeColors[activityType]
       ? activityTypeColors[activityType]
       : goalData.categoryColor;
-  const activityEmoji = session?.activityEmoji ?? goalData.emoji;
-  const activityLabel = session?.activityName ?? activityType ?? goalData.category;
-  const isBreak = pomodoroPhase === "break";
+  const activityEmoji = isBreak ? "⏰" : (session?.activityEmoji ?? goalData.emoji);
+  const activityLabel = isBreak
+    ? "Break"
+    : (session?.activityName ?? activityType ?? goalData.category);
 
   return (
     <div className="h-screen w-full bg-black relative overflow-hidden select-none">
@@ -776,7 +796,7 @@ useEffect(() => {
         {/* Goal info */}
         <div className="flex items-center gap-3 mb-8">
           <h1 className="text-5xl text-center text-white/40">
-            {pomodoroPhase === "break" ? "Break" : goalData.title}
+            {isBreak ? "Take some rest" : goalData.title}
           </h1>
         </div>
         <div className="flex flex-col items-center gap-4 mb-12">
@@ -803,37 +823,73 @@ useEffect(() => {
         </div>
 
         {/* XP indicator */}
-        <button
-          onClick={() => setShowStats(!showStats)}
-          className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors cursor-pointer mb-12"
-        >
-          <span
-            className="text-lg font-semibold"
-            style={{ color: categoryColor }}
+        <div className="relative mb-12" ref={statsRef}>
+          <button
+            onClick={() => setShowStats(!showStats)}
+            className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
           >
-            +{Math.floor(xpGained)} XP
-          </span>
-          <ChevronUpIcon
-            className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${showStats ? "rotate-180" : ""}`}
-          />
-        </button>
+            <span
+              className="text-lg font-semibold"
+              style={{ color: categoryColor }}
+            >
+              +{Math.floor(xpGained)} XP
+            </span>
+            <ChevronUpIcon
+              className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${showStats ? "rotate-180" : ""}`}
+            />
+          </button>
 
-        {/* Stats dropdown */}
-        {showStats && (
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 translate-y-8 bg-gray-900/90 backdrop-blur-xl rounded-2xl p-5 border border-gray-800 min-w-[280px]">
-            <div className="flex flex-wrap gap-3 justify-center">
-              {aspects.map((aspect, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-800/50"
-                >
-                  <span style={{ color: aspect.color }}>{aspect.icon}</span>
-                  <span className="text-sm text-gray-300">+{aspect.xp}</span>
-                </div>
-              ))}
+          {/* Stats dropdown */}
+          {showStats && (
+            <div
+              className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-96 backdrop-blur-2xl bg-black/70 rounded-3xl border border-white/10 shadow-2xl shadow-black/60 p-4 z-20"
+            >
+              {(() => {
+                const hasAnyXp = aspects.some((a) => a.xp > 0);
+                const maxXp = Math.max(1, ...aspects.map((a) => a.xp));
+                const visible = (hasAnyXp ? aspects.filter((a) => a.xp > 0) : aspects)
+                  .slice()
+                  .sort((a, b) => b.xp - a.xp);
+
+                return visible.map((aspect, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-4 px-3 py-3 rounded-2xl cursor-pointer hover:bg-white/5 transition-colors"
+                  >
+                    <span
+                      className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: `${aspect.color}26`, color: aspect.color }}
+                    >
+                      {aspect.icon}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-sm font-medium text-gray-300">
+                          {aspect.name}
+                        </span>
+                        <span
+                          className="text-sm font-semibold tabular-nums"
+                          style={{ color: aspect.color }}
+                        >
+                          +{aspect.xp}
+                        </span>
+                      </div>
+                      <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{
+                            width: `${(aspect.xp / maxXp) * 100}%`,
+                            backgroundColor: aspect.color,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ));
+              })()}
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Controls */}
         {!isOwn ? (
@@ -871,6 +927,15 @@ useEffect(() => {
             </button>
 
             <button
+              onClick={() => handleAdjustTime(-60)}
+              disabled={isSyncing}
+              title="Subtract 60 seconds"
+              className="h-16 w-16 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-medium transition-colors cursor-pointer disabled:opacity-40"
+            >
+              -60
+            </button>
+
+            <button
               onClick={handleToggle}
               disabled={isSyncing}
               className="w-20 h-20 rounded-full flex items-center justify-center transition-all cursor-pointer hover:scale-105 disabled:opacity-40"
@@ -882,6 +947,15 @@ useEffect(() => {
               ) : (
                 <PlayIcon className="w-8 h-8 text-white ml-1" />
               )}
+            </button>
+
+            <button
+              onClick={() => handleAdjustTime(60)}
+              disabled={isSyncing}
+              title="Add 60 seconds"
+              className="h-16 w-16 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-medium transition-colors cursor-pointer disabled:opacity-40"
+            >
+              +60
             </button>
 
             <button

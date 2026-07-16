@@ -21,6 +21,7 @@ import {
   PlayIcon,
   ClockIcon,
   PauseCircleIcon,
+  CheckBadgeIcon,
 } from "@heroicons/react/24/solid";
 import { RocketLaunchIcon } from "@heroicons/react/24/outline";
 import { FaBrain, FaHammer } from "react-icons/fa";
@@ -66,6 +67,7 @@ interface ActivityDataResponse {
   activity_type?: string;
   name?: string;
   description?: string;
+  verified?: boolean;
   xp_distribution: Record<string, number>;
 }
 
@@ -103,7 +105,8 @@ interface ActivityDetailProps {
 
 import { ACTIVITY_META, ActivityType } from "@/src/lib/types/activityMeta";
 import Link from "next/link";
-import { GoalsService } from "@/src/lib/services/goals";
+import { GoalsService, Goal } from "@/src/lib/services/goals";
+import GoalPickerPopup from "@/src/components/goals/GoalPickerPopup";
 
 
 interface Activity {
@@ -555,8 +558,29 @@ export default function ActivityDetailPage({
   const router = useRouter();
   const uid = params.activity as string;
 
-  const handleStartActivity = () => {
-    router.push(`/goals/${uid}/session/new`);
+  const [isGoalPickerOpen, setIsGoalPickerOpen] = useState(false);
+
+  const buildRatesParam = (dist: Record<string, number> | undefined) => {
+    const SECONDS_PER_HOUR = 3600;
+    const aspects = ['physique', 'energy', 'logic', 'creativity', 'social'] as const;
+    const distribution = dist ?? {};
+    const totalXp = aspects.reduce((s, k) => s + (distribution[k] ?? 0), 0);
+    if (totalXp <= 0) return '';
+    const rates = aspects.reduce((acc, k) => {
+      acc[k] = Math.round((distribution[k] ?? 0) / SECONDS_PER_HOUR * 10000) / 10000;
+      return acc;
+    }, {} as Record<string, number>);
+    return `&rates=${encodeURIComponent(JSON.stringify(rates))}`;
+  };
+
+  const handleSelectGoalForSession = (goal: Goal) => {
+    const ratesParam = buildRatesParam(activityData?.xp_distribution);
+    router.push(`/goals/${goal.uid}/session/new?activity=${uid}${ratesParam}`);
+  };
+
+  const handleStartFreeSession = () => {
+    const ratesParam = buildRatesParam(activityData?.xp_distribution);
+    router.push(`/goals/none/session/new?activity=${uid}${ratesParam}`);
   };
 
   const [isNewActivityModalOpen, setIsNewActivityModalOpen] = useState(false);
@@ -964,6 +988,15 @@ const [isModalOpen, setIsModalOpen] = useState(false);
               deleting={isDeletingSession}
             />
 
+        <GoalPickerPopup
+          isOpen={isGoalPickerOpen}
+          onClose={() => setIsGoalPickerOpen(false)}
+          activityName={activityData?.name || "Activity"}
+          accentColor={activityColor}
+          onSelectGoal={handleSelectGoalForSession}
+          onStartFree={handleStartFreeSession}
+        />
+
 
 
         {/* Header */}
@@ -978,7 +1011,12 @@ const [isModalOpen, setIsModalOpen] = useState(false);
               </svg>
             </button>
             
-            <h1 className="text-xl font-bold flex-1 ml-2 text-foreground dark:text-[var(--foreground)]">{activityData?.name || 'Activity'}</h1>
+            <h1 className="text-xl font-bold flex-1 ml-2 flex items-center gap-1.5 text-foreground dark:text-[var(--foreground)]">
+              {activityData?.name || ''}
+              {activityData?.verified && (
+                <CheckBadgeIcon className="w-5 h-5 mt-[2px] text-blue-500 shrink-0" />
+              )}
+            </h1>
             
             <div ref={moreMenuRef} className="relative">
             <button
@@ -986,7 +1024,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                 style={{
                   backgroundColor: activityColor,
                 }}
-                onClick={handleOpenCompleteGoal}
+                onClick={() => setIsGoalPickerOpen(true)}
               >
 
                 Start {activityData?.name && activityData.name.length > 12

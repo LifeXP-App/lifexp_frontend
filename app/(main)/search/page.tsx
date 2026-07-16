@@ -6,6 +6,7 @@ import { authedFetch } from "@/src/lib/api/authedFetch";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import posthog from "posthog-js";
+import { CheckBadgeIcon } from "@heroicons/react/24/solid";
 
 type FilterType = "posts" | "users" | "activities";
 
@@ -40,6 +41,7 @@ type DiscoverActivity = {
   description?: string;
   activity_type: string;
   emoji: string;
+  verified?: boolean;
   total_xp: number;
   created_by?: {
     username: string;
@@ -558,8 +560,11 @@ export default function SearchPage() {
                             </div>
 
                             <div className="flex-1">
-                              <p className="font-semibold text-gray-900 dark:text-[var(--foreground)]">
+                              <p className="font-semibold text-gray-900 dark:text-[var(--foreground)] flex items-center gap-1">
                                 {activity.name}
+                                {activity.verified && (
+                                  <CheckBadgeIcon className="w-4 h-4 text-blue-500 shrink-0" />
+                                )}
                               </p>
                               <p className="text-sm opacity-70 text-gray-600 dark:text-[var(--muted)] capitalize">
                                 {activity.activity_type}
