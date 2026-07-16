@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, type ComponentProps } from "react";
 import {
   Legend,
   PolarAngleAxis,
@@ -69,15 +69,33 @@ export default function RadarChart({
   comparisonUsername,
   color = "#4f7df3",
 }: RadarChartProps) {
-  // Radius domain based on fullMark
+  // Radius domain based on fullMark, rounded up to a multiple of the tick
+  // step count so the 5 rings (0..max) land on evenly-spaced whole numbers.
+  // Without this, an arbitrary max (e.g. 10) produces uneven ticks like
+  // 0, 3, 6, 9, 10 — the last ring bunched up right next to the previous one.
+  const RADIAL_TICK_STEPS = 4;
+
   const maxMark = useMemo(() => {
-  const values = data.flatMap((d) => [
+    const values = data.flatMap((d) => [
       d.value,
       d.comparisonValue ?? 0,
       d.fullMark ?? 0,
     ]);
-    return Math.max(...values, 10);
+    const rawMax = Math.max(...values, 10);
+    return Math.ceil(rawMax / RADIAL_TICK_STEPS) * RADIAL_TICK_STEPS;
   }, [data]);
+
+  // Recharts' typings for `ticks` expect internally-computed TickItem objects,
+  // but at runtime it accepts (and maps through the scale) plain numbers —
+  // passing them explicitly guarantees exactly RADIAL_TICK_STEPS even
+  // divisions instead of trusting the "nice tick" heuristic to land evenly.
+  const radialTicks = useMemo(
+    () =>
+      Array.from({ length: RADIAL_TICK_STEPS + 1 }, (_, i) =>
+        Math.round((i * maxMark) / RADIAL_TICK_STEPS),
+      ) as unknown as ComponentProps<typeof PolarRadiusAxis>["ticks"],
+    [maxMark],
+  );
 
 
 
@@ -112,7 +130,7 @@ export default function RadarChart({
           <PolarRadiusAxis
             angle={90}
             domain={[0, maxMark]}
-            tickCount={5}
+            ticks={radialTicks}
             axisLine={false}
             tickLine={false}
             tick={{
