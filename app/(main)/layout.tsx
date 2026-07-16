@@ -19,7 +19,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "LifeXP",
+  title: "GamiLife",
   description: "Redefine your Life",
 };
 

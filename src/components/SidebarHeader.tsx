@@ -28,7 +28,7 @@ export function SidebarHeader() {
           <>
             <Image
               src={logoSrc}
-              alt="LifeXP"
+              alt="GamiLife"
               width={100}
               height={100}
               unoptimized
@@ -36,7 +36,7 @@ export function SidebarHeader() {
               className="w-16 h-16"
             />
             <span className="text-xl font-semibold text-gray-900 dark:text-[var(--foreground)]">
-              LifeXP
+              GamiLife
             </span>
           </>
         ) : (

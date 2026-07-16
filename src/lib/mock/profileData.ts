@@ -162,7 +162,7 @@ export const mockProfileStats = {
   posts: 8,
   followers: 6,
   following: 5,
-  bio: "Founder @LifeXP",
+  bio: "Founder @GamiLife",
   tagline: "eat sleep code 💻",
   streakCount: 0,
   memberSince: "July 12, 2025",
