@@ -298,6 +298,13 @@ export default function GoalDetailPage() {
           djangoData.activity_uid === undefined
             ? undefined
             : String(djangoData.activity_uid);
+        // Django nests activity metadata (`activity: { name, emoji, type }`,
+        // same shape as the session-history endpoints) or returns it flat as
+        // snake_case — never as camelCase, so read either shape instead.
+        const djangoActivityInfo =
+          djangoData.activity && typeof djangoData.activity === "object"
+            ? djangoData.activity
+            : djangoData;
         if (
           r &&
           typeof r.physique === "number" &&
@@ -317,18 +324,18 @@ export default function GoalDetailPage() {
             },
             activityId: djangoActivityUid,
             activity_uid: djangoActivityUid,
-            activityName: djangoData.activityName,
-            activityEmoji: djangoData.activityEmoji,
-            activityType: djangoData.activityType,
+            activityName: djangoActivityInfo.name ?? djangoActivityInfo.activity_name,
+            activityEmoji: djangoActivityInfo.emoji ?? djangoActivityInfo.activity_emoji,
+            activityType: djangoActivityInfo.type ?? djangoActivityInfo.activity_type,
           });
         } else {
           await updateInitialRatesMutation({
             sessionId: convexId,
             activityId: djangoActivityUid,
             activity_uid: djangoActivityUid,
-            activityName: djangoData.activityName,
-            activityEmoji: djangoData.activityEmoji,
-            activityType: djangoData.activityType,
+            activityName: djangoActivityInfo.name ?? djangoActivityInfo.activity_name,
+            activityEmoji: djangoActivityInfo.emoji ?? djangoActivityInfo.activity_emoji,
+            activityType: djangoActivityInfo.type ?? djangoActivityInfo.activity_type,
           });
         }
       }
