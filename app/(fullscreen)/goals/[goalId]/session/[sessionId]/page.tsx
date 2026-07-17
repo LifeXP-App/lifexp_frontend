@@ -21,12 +21,16 @@ import posthog from "posthog-js";
 
 // ── Types ──
 
+// A Goal has no category/aspect of its own — only its activities do (via
+// Activity.activity_type) — so this only carries what a Goal actually has.
 type GoalDisplayData = {
   title: string;
   emoji: string;
-  category: string;
-  categoryColor: string;
 };
+
+// Shown before the session's real activityType has loaded (e.g. very first
+// paint). Not tied to any specific aspect, unlike activityTypeColors.
+const DEFAULT_ACCENT_COLOR = "var(--rookie-primary)";
 
 type XpRates = {
   physique: number;
@@ -192,8 +196,6 @@ export default function SessionTimer({ params }: SessionTimerProps) {
       setGoalData({
         title: "Free Session",
         emoji: "⚡",
-        category: "",
-        categoryColor: "#4187a2",
       });
       return;
     }
@@ -203,8 +205,6 @@ export default function SessionTimer({ params }: SessionTimerProps) {
         setGoalData({
           title: goal.title,
           emoji: goal.emoji,
-          category: goal.category?.name ?? "",
-          categoryColor: goal.category?.color ?? "#4187a2",
         });
         setGoalIntId(parseInt(goal.id, 10));
       })
@@ -333,19 +333,16 @@ export default function SessionTimer({ params }: SessionTimerProps) {
             const r = data.xp_increase_rate_per_second;
             const djangoRates =
               r && typeof r === "object" ? normalizeRates(r) : undefined;
-            // Django nests activity metadata (as `activity: { name, emoji, type }`,
-            // same shape used by the session-history endpoints) or returns it flat
-            // as snake_case — accept either rather than assuming camelCase, which
-            // Django never sends and left these fields silently undefined.
-            const activityInfo =
-              data.activity && typeof data.activity === "object" ? data.activity : data;
+            // SessionCreateView returns activity metadata flat and camelCase
+            // (activityName/activityEmoji/activityType) — it does not nest
+            // under an `activity` key like SessionListSerializer does.
             await updateInitialRatesMutation({
               sessionId: id,
               activityId: activityUid,
               activity_uid: activityUid,
-              activityName: activityInfo.name ?? activityInfo.activity_name,
-              activityEmoji: activityInfo.emoji ?? activityInfo.activity_emoji,
-              activityType: activityInfo.type ?? activityInfo.activity_type,
+              activityName: data.activityName,
+              activityEmoji: data.activityEmoji,
+              activityType: data.activityType,
               rates: djangoRates,
             });
           } else {
@@ -787,11 +784,11 @@ useEffect(() => {
     ? "var(--rookie-primary)"
     : activityType && activityTypeColors[activityType]
       ? activityTypeColors[activityType]
-      : goalData.categoryColor;
+      : DEFAULT_ACCENT_COLOR;
   const activityEmoji = isBreak ? "⏰" : (session?.activityEmoji ?? goalData.emoji);
   const activityLabel = isBreak
     ? "Break"
-    : (session?.activityName ?? activityType ?? goalData.category);
+    : (session?.activityName ?? activityType ?? "Activity");
 
   return (
     <div className="h-screen w-full bg-black relative overflow-hidden select-none">
