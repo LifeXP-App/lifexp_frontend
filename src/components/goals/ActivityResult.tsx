@@ -1,12 +1,16 @@
 import React from "react";
-import { PlayIcon, SparklesIcon } from "@heroicons/react/24/solid";
+import { CheckBadgeIcon, PlayIcon, SparklesIcon } from "@heroicons/react/24/solid";
 import { ACTIVITY_META, ActivityType } from "@/src/lib/types/activityMeta";
+
+const VERIFIED_TITLE =
+  "Verified Activities have reliable XP distributions reviewed and approved by the developers and the community";
 
 interface Activity {
   id: string;
   uid?: string;
   name: string;
   type: ActivityType;
+  verified?: boolean;
 }
 
 interface ActivitySelectButtonProps {
@@ -55,10 +59,17 @@ export default function ActivitySelectButton({
                     </div>
                     <div className="flex flex-col items-start ">
                       <span
-                        className="text-sm font-bold tracking-tight"
+                        className="text-sm font-bold tracking-tight flex items-center gap-1"
                         style={{ color: meta.cssColorVar }}
                       >
                         {activity.name}
+                        {activity.verified && (
+                          <CheckBadgeIcon
+                            className="w-4 h-4 shrink-0"
+                            style={{ color: meta.cssColorVar }}
+                            title={VERIFIED_TITLE}
+                          />
+                        )}
                       </span>
                       <span
                         className="text-[10px] font-semibold opacity-60 uppercase tracking-widest mt-0.5"
