@@ -5,6 +5,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import RadarChart from "@/src/components/RadarChart";
 import AspectChip from "@/src/components/goals/AspectChip";
 import CompleteGoalPopup from "@/src/components/goals/CompleteGoalPopup";
+import DeleteSessionConfirmationModal from "@/src/components/goals/DeleteSessionConfirmationModal";
 import NewActivityModal from "@/src/components/goals/NewActivityModel";
 import NewGoalModal from "@/src/components/goals/NewGoalModal";
 import NewSessionPopup from "@/src/components/goals/NewSessionPopup";
@@ -51,6 +52,7 @@ interface SessionItemProps {
   thumbnail?: string;
   emoji?: string;
   onClick?: () => void;
+  onDelete?: () => void;
   color?: string;
 }
 
@@ -64,7 +66,8 @@ const SessionItem: React.FC<SessionItemProps> = ({
   duration,
   thumbnail,
   emoji,
-  onClick, 
+  onClick,
+  onDelete,
   color
 }) => {
   const [open, setOpen] = React.useState(false);
@@ -179,7 +182,7 @@ const SessionItem: React.FC<SessionItemProps> = ({
                 className="w-full   cursor-pointer font-medium text-left py-3 px-4 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-dark-3 transition-colors"
                 onClick={() => {
                   setOpen(false);
-                  console.log("Delete Session", sessionNumber);
+                  onDelete?.();
                 }}
               >
                 Delete Session
@@ -397,17 +400,19 @@ export default function GoalDetailPage() {
   };
 
   const [isDeletingSession, setIsDeletingSession] = useState(false);
+  const [rowDeleteSession, setRowDeleteSession] = useState<Session | null>(null);
 
-  const handleDeleteSession = async () => {
-    if (!selectedSession) return;
+  const handleDeleteSession = async (session: Session | null = selectedSession) => {
+    if (!session) return;
     setIsDeletingSession(true);
     try {
-      await GoalsService.deleteSession(selectedSession.id);
+      await GoalsService.deleteSession(session.id);
       await deleteConvexSessionMutation({
-        sessionId: selectedSession.id as Id<"sessions">,
+        sessionId: session.id as Id<"sessions">,
       });
       setIsSessionPopupOpen(false);
       setSelectedSession(null);
+      setRowDeleteSession(null);
       refetch();
     } catch (err) {
       console.error("Failed to delete session:", err);
@@ -794,6 +799,13 @@ export default function GoalDetailPage() {
           deleting={isDeletingSession}
         />
 
+        <DeleteSessionConfirmationModal
+          isOpen={!!rowDeleteSession}
+          onClose={() => setRowDeleteSession(null)}
+          onConfirm={() => handleDeleteSession(rowDeleteSession)}
+          xpEarned={rowDeleteSession?.xp_total ?? 0}
+        />
+
         <CompleteGoalPopup
           isOpen={isCompleteGoalOpen}
           onClose={handleCloseCompleteGoal}
@@ -1061,6 +1073,7 @@ export default function GoalDetailPage() {
                 duration={formatDuration(session.total_duration_seconds)}
                 emoji={session.activity?.emoji}
                 onClick={() => handleOpenSessionPopup(session)}
+                onDelete={() => setRowDeleteSession(session)}
                 color={aspectColors[session?.activity?.type ?? "muted"] || "#9ca3af"}
               />
             ))}
@@ -1085,6 +1098,7 @@ export default function GoalDetailPage() {
                 duration={formatDuration(session.total_duration_seconds)}
                 emoji={session.activity?.emoji}
                 onClick={() => handleOpenSessionPopup(session)}
+                onDelete={() => setRowDeleteSession(session)}
                 color={aspectColors[session?.activity?.type ?? "muted"] || "#9ca3af"}
               />
             ))}
@@ -1156,6 +1170,7 @@ export default function GoalDetailPage() {
                   duration={formatDuration(session.total_duration_seconds)}
                   emoji={session.activity?.emoji}
                   onClick={() => handleOpenSessionPopup(session)}
+                onDelete={() => setRowDeleteSession(session)}
                   color={aspectColors[session?.activity?.type ?? "muted"] || "#9ca3af"}
                 />
               ))}
@@ -1180,6 +1195,7 @@ export default function GoalDetailPage() {
                   duration={formatDuration(session.total_duration_seconds)}
                   emoji={session.activity?.emoji}
                   onClick={() => handleOpenSessionPopup(session)}
+                onDelete={() => setRowDeleteSession(session)}
                   color={aspectColors[session?.activity?.type ?? "muted"] || "#9ca3af"}
                 />
               ))}
