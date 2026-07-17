@@ -19,7 +19,7 @@ import { BoltIcon, UsersIcon } from "@heroicons/react/24/solid";
 import { useMutation } from "convex/react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { BiDumbbell } from "react-icons/bi";
 import { FaBrain, FaHammer } from "react-icons/fa";
 
@@ -205,8 +205,18 @@ export default function GoalDetailPage() {
   const updateInitialRatesMutation = useMutation(api.sessions.updateInitialRates);
   const deleteConvexSessionMutation = useMutation(api.sessions.deleteSession);
 
-  const { goal, sessions, loading, error, refetch } = useGoal(goalId);
-  console.log("GoalDetailPage render", { goal, sessions, loading, error });
+  const { goal, sessions: rawSessions, loading, error, refetch } = useGoal(goalId);
+  console.log("GoalDetailPage render", { goal, sessions: rawSessions, loading, error });
+
+  // Sessions the user just deleted, hidden immediately (before the delete
+  // request even resolves) rather than waiting on a refetch to disappear.
+  const [deletedSessionIds, setDeletedSessionIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const sessions = useMemo(
+    () => rawSessions.filter((s) => !deletedSessionIds.has(s.id)),
+    [rawSessions, deletedSessionIds],
+  );
 
   // Helper to format duration seconds into HH:MM:SS
   const formatDuration = (seconds: number | null) => {
@@ -399,26 +409,34 @@ export default function GoalDetailPage() {
     setIsSessionPopupOpen(true);
   };
 
-  const [isDeletingSession, setIsDeletingSession] = useState(false);
   const [rowDeleteSession, setRowDeleteSession] = useState<Session | null>(null);
 
   const handleDeleteSession = async (session: Session | null = selectedSession) => {
     if (!session) return;
-    setIsDeletingSession(true);
+    const sessionId = session.id;
+
+    // Hide it immediately — don't wait on the network round-trip to make
+    // the list feel like it responded.
+    setDeletedSessionIds((prev) => new Set(prev).add(sessionId));
+    setIsSessionPopupOpen(false);
+    setSelectedSession(null);
+    setRowDeleteSession(null);
+
     try {
-      await GoalsService.deleteSession(session.id);
+      await GoalsService.deleteSession(sessionId);
       await deleteConvexSessionMutation({
-        sessionId: session.id as Id<"sessions">,
+        sessionId: sessionId as Id<"sessions">,
       });
-      setIsSessionPopupOpen(false);
-      setSelectedSession(null);
-      setRowDeleteSession(null);
       refetch();
     } catch (err) {
       console.error("Failed to delete session:", err);
       alert(err instanceof Error ? err.message : "Failed to delete session");
-    } finally {
-      setIsDeletingSession(false);
+      // Roll back — the delete didn't actually happen, so bring it back.
+      setDeletedSessionIds((prev) => {
+        const next = new Set(prev);
+        next.delete(sessionId);
+        return next;
+      });
     }
   };
 
@@ -796,7 +814,6 @@ export default function GoalDetailPage() {
             color: `var(--aspect-${selectedSession?.activity?.type || "muted"})`,
           }}
           onDelete={handleDeleteSession}
-          deleting={isDeletingSession}
         />
 
         <DeleteSessionConfirmationModal

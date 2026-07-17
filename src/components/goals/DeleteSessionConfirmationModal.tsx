@@ -34,10 +34,13 @@ export default function DeleteSessionConfirmationModal({
         {/* Content */}
         <div className="px-6 py-6">
           <p className="text-gray-600 dark:text-[var(--muted)]">
-            {xpEarned > 0
-              ? `This will permanently delete this session and remove the ${xpEarned} XP it earned. This cannot be undone.`
-              : "This will permanently delete this session. This cannot be undone."}
+            This will permanently delete this session. This cannot be undone.
           </p>
+          {xpEarned > 0 && (
+            <p className="mt-3 text-sm font-semibold text-red-600 dark:text-red-400">
+              You will permanently lose the {xpEarned} XP this session earned — it cannot be recovered.
+            </p>
+          )}
         </div>
 
         {/* Actions */}

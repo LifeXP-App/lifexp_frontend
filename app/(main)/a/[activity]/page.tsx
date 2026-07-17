@@ -622,24 +622,28 @@ export default function ActivityDetailPage({
   };
 
   const deleteConvexSessionMutation = useMutation(api.sessions.deleteSession);
-  const [isDeletingSession, setIsDeletingSession] = useState(false);
 
   const handleDeleteSession = async () => {
     if (!selectedSession) return;
-    setIsDeletingSession(true);
+    const sessionId = selectedSession.id;
+    const deletedSession = selectedSession;
+
+    // Hide it immediately — don't wait on the network round-trip to make
+    // the list feel like it responded.
+    setMySessions((prev) => prev.filter((s) => s.id !== sessionId));
+    setIsSessionPopupOpen(false);
+    setSelectedSession(null);
+
     try {
-      await GoalsService.deleteSession(selectedSession.id);
+      await GoalsService.deleteSession(sessionId);
       await deleteConvexSessionMutation({
-        sessionId: selectedSession.id as Id<"sessions">,
+        sessionId: sessionId as Id<"sessions">,
       });
-      setMySessions((prev) => prev.filter((s) => s.id !== selectedSession.id));
-      setIsSessionPopupOpen(false);
-      setSelectedSession(null);
     } catch (err) {
       console.error("Failed to delete session:", err);
       alert(err instanceof Error ? err.message : "Failed to delete session");
-    } finally {
-      setIsDeletingSession(false);
+      // Roll back — the delete didn't actually happen, so bring it back.
+      setMySessions((prev) => [...prev, deletedSession]);
     }
   };
 
@@ -985,7 +989,6 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                 color: activityColor,
               }}
               onDelete={selectedSessionIsMine ? handleDeleteSession : undefined}
-              deleting={isDeletingSession}
             />
 
         <GoalPickerPopup
