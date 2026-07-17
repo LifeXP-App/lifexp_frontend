@@ -40,7 +40,7 @@ function backendToForm(data: BackendSettings): SettingsFormState {
   return {
     account_type: data.account_type === "Public" ? "Public" : "Private",
     notifications: data.notifications ? "On" : "Off",
-    appearance: data.appearance === "Dark" ? "Dark" : "Light",
+    appearance: data.appearance === "Light" ? "Light" : "Dark",
   };
 }
 
