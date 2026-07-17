@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "convex:dev": "convex dev --url https://mellow-jackal-323.convex.cloud"
+    "convex:dev": "convex dev --url https://capable-orca-880.convex.cloud"
   },
   "dependencies": {
     "@fortawesome/free-regular-svg-icons": "^7.1.0",
