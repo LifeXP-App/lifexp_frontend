@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { Goal, GoalsService, Session } from "../services/goals";
 import { useConvexSessionsByGoal } from "./useConvexSessions";
 
@@ -7,6 +7,12 @@ export function useGoal(goalId: string) {
   const [djangoSessions, setDjangoSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Tracks which goalId we've successfully shown data for, so a manual
+  // `refetch()` (e.g. after deleting a session) can re-fetch quietly in the
+  // background instead of flashing the loading skeleton over content
+  // that's already on screen. Only a genuinely new goalId re-arms it.
+  const loadedGoalIdRef = useRef<string | null>(null);
 
   // Real-time sessions from Convex (live + recently completed)
   const { sessions: convexSessions, loading: sessionsLoading } = useConvexSessionsByGoal(goalId);
@@ -51,7 +57,10 @@ export function useGoal(goalId: string) {
   const fetchGoalData = useCallback(async () => {
     if (!goalId) return;
 
-    setLoading(true);
+    const isFreshGoal = loadedGoalIdRef.current !== goalId;
+    if (isFreshGoal) {
+      setLoading(true);
+    }
     setError(null);
 
     try {
@@ -63,6 +72,7 @@ export function useGoal(goalId: string) {
       if (sessionData?.results) {
         setDjangoSessions(sessionData.results);
       }
+      loadedGoalIdRef.current = goalId;
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to fetch goal data",
