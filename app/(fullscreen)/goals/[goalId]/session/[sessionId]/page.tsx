@@ -122,6 +122,96 @@ function formatTime(seconds: number) {
   return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
 }
 
+// Chime played whenever a focus or break phase ends. Generated via Web Audio
+// instead of a bundled asset — no file to host, works everywhere. Same 4
+// notes both directions, different arrangement: focus->break rises (E5 up to
+// A6) for an energizing "break time" lift; break->focus falls back down to
+// the root (A6 down to E5) so it settles/resolves into "let's focus now".
+function playPhaseEndChime(nextPhase: "focus" | "break") {
+  if (typeof window === "undefined") return;
+
+  try {
+    const AudioContextClass =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext?: typeof AudioContext })
+        .webkitAudioContext;
+
+    if (!AudioContextClass) return;
+
+    const ctx = new AudioContextClass();
+
+    function playNote(
+      freq: number,
+      start: number,
+      duration: number,
+      volume = 0.18
+    ) {
+      // Warm triangle layer
+      const tri = ctx.createOscillator();
+      tri.type = "triangle";
+      tri.frequency.value = freq;
+
+      // Soft sine layer
+      const sine = ctx.createOscillator();
+      sine.type = "sine";
+      sine.frequency.value = freq * 2;
+
+      const gain = ctx.createGain();
+
+      // Smooth attack
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(volume, start + 0.015);
+
+      // Gentle decay
+      gain.gain.exponentialRampToValueAtTime(
+        volume * 0.55,
+        start + duration * 0.45
+      );
+
+      // Long release
+      gain.gain.exponentialRampToValueAtTime(
+        0.0001,
+        start + duration
+      );
+
+      tri.connect(gain);
+      sine.connect(gain);
+      gain.connect(ctx.destination);
+
+      tri.start(start);
+      sine.start(start);
+
+      tri.stop(start + duration);
+      sine.stop(start + duration);
+    }
+
+    const now = ctx.currentTime;
+
+    // LifeXP signature — same 4 notes, arranged to match the mood of what's
+    // starting next.
+    if (nextPhase === "break") {
+      // Rising: E5 -> B5 -> C#6 -> A6, lifts up into break time.
+      playNote(659.25, now, 0.22);          // E5
+      playNote(987.77, now + 0.10, 0.24);   // B5
+      playNote(1108.73, now + 0.22, 0.28);  // C#6
+      playNote(1760.00, now + 0.36, 0.60);  // A6
+    } else {
+      // Falling: A6 -> C#6 -> B5 -> E5, settles back down to the root — "ok, let's focus now".
+      playNote(1760.00, now, 0.18);          // A6
+      playNote(1108.73, now + 0.10, 0.20);   // C#6
+      playNote(987.77, now + 0.20, 0.22);    // B5
+      playNote(659.25, now + 0.32, 0.55);    // E5
+    }
+
+    setTimeout(() => {
+      ctx.close();
+    }, 1500);
+
+  } catch (err) {
+    console.error("Failed to play phase-end chime:", err);
+  }
+}
+
 // Shown instead of the normal owner controls when viewing someone else's live
 // session: no pause/discard/finish, just a one-shot nudge + a way back out.
 function SpectatorControls({
@@ -382,21 +472,24 @@ export default function SessionTimer({ params }: SessionTimerProps) {
 
   // ── Pomodoro timer ──
   // During focus: countdown ticks only while the Convex session is live.
-  // During break: countdown always ticks (Convex session is auto-paused so
-  // focused duration doesn't accumulate during break time).
+  // During break: countdown ticks only while the user has explicitly started
+  // it (isBreakRunning) — breaks aren't tracked by Convex (no XP accrues), so
+  // this is purely a local play/pause flag, separate from isRunning/isPaused.
   const [pomodoroPhase, setPomodoroPhase] = useState<"focus" | "break">("focus");
   const [phaseSecondsLeft, setPhaseSecondsLeft] = useState(FOCUS_SECONDS);
+  const [isBreakRunning, setIsBreakRunning] = useState(false);
 
   useEffect(() => {
     // Only the owner runs the local pomodoro state machine — a spectator's
     // countdown is unrelated to the actual session and must never pause it.
     if (!isOwn) return;
     if (pomodoroPhase === "focus" && !isRunning) return;
+    if (pomodoroPhase === "break" && !isBreakRunning) return;
     const id = setInterval(() => {
       setPhaseSecondsLeft((prev) => Math.max(0, prev - 1));
     }, 1000);
     return () => clearInterval(id);
-  }, [isRunning, pomodoroPhase, isOwn]);
+  }, [isRunning, isBreakRunning, pomodoroPhase, isOwn]);
 
   // ── Spectator elapsed-time ticker ──
   // Non-owners see a plain elapsed-time counter (mirrors Convex's
@@ -428,6 +521,7 @@ useEffect(() => {
   if (phaseSecondsLeft > 0) return;
 
   const sid = sessionIdRef.current;
+  playPhaseEndChime(pomodoroPhase === "focus" ? "break" : "focus");
 
   if (pomodoroPhase === "focus") {
     // pause when focus ends
@@ -440,12 +534,15 @@ useEffect(() => {
 
     setPomodoroPhase("break");
     setPhaseSecondsLeft(BREAK_SECONDS);
+    // DO NOT auto-start the break countdown — wait for the user to press play
+    setIsBreakRunning(false);
 
   } else {
     // switch back to focus
     // DO NOT auto resume
     setPomodoroPhase("focus");
     setPhaseSecondsLeft(FOCUS_SECONDS);
+    setIsBreakRunning(false);
   }
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -492,6 +589,32 @@ useEffect(() => {
     rateSocial,
     heartbeatMutation,
   ]);
+
+  // ── Foreground ping ──
+  // Mobile browsers throttle/suspend setInterval while the tab is backgrounded
+  // or the screen is locked, so the regular 5s heartbeat above can go silent
+  // for a while. Convex's cleanupStaleSessions cron abandons any "live"
+  // session whose heartbeat is more than 5 minutes stale — sending a
+  // zero-XP/zero-duration heartbeat the instant the tab is visible again
+  // refreshes lastHeartbeatAt immediately, so a short interruption (a phone
+  // call, switching apps for a few minutes) doesn't get the session killed
+  // before the normal interval resumes.
+  useEffect(() => {
+    if (!isOwn || !isRunning || !sessionId) return;
+
+    const pingOnForeground = () => {
+      if (document.visibilityState !== "visible") return;
+      heartbeatMutation({
+        sessionId,
+        elapsedSeconds: 0,
+        xpDelta: { physique: 0, energy: 0, logic: 0, creativity: 0, social: 0 },
+      }).catch(console.error);
+    };
+
+    document.addEventListener("visibilitychange", pingOnForeground);
+    return () => document.removeEventListener("visibilitychange", pingOnForeground);
+  }, [isOwn, isRunning, sessionId, heartbeatMutation]);
+
   // ── Auto-redirect for already-completed+synced sessions (e.g. page refresh) ──
   const sessionStatus = session?.status;
   useEffect(() => {
@@ -499,6 +622,62 @@ useEffect(() => {
       router.push(`/goals/${goalId}/session/${sessionId}/reflection`);
     }
   }, [sessionStatus, sessionSynced, sessionId, goalId, isSyncing, router]);
+
+  // ── Recover from a session the server abandoned while we were away ──
+  // If cleanupStaleSessions (Convex cron) marked this session completed due
+  // to a heartbeat timeout — e.g. the phone was locked/backgrounded for long
+  // enough that even the foreground ping above never got a chance to run —
+  // isActive flips to false and every control (play, discard, finish) starts
+  // no-op'ing silently, since they all guard on `isActive`. Detect that exact
+  // signature (interruptionReason set only by the cron, never by user
+  // actions) and finish the job client-side instead of leaving a dead screen:
+  // sync it to Django as abandoned and route back to the goal.
+  useEffect(() => {
+    if (!isOwn || !session || !sessionId) return;
+    if (session.status !== "completed") return;
+    if (session.interruptionReason !== "heartbeat_timeout") return;
+    if (sessionSynced || isSyncing) return;
+
+    let cancelled = false;
+
+    (async () => {
+      setIsSyncing(true);
+      try {
+        const finalStats: SessionFinalStats = {
+          endedAt: session.endedAt ?? Date.now(),
+          totalDurationSeconds: session.totalDurationSeconds,
+          focusedDurationSeconds: session.focusedDurationSeconds,
+          xpTotal: session.xpTotal,
+          xpBreakdown: session.xpBreakdown,
+        };
+        await syncSessionToDjango(sessionId, finalStats, "abandoned");
+        await markSyncedMutation({ sessionId });
+      } catch (err) {
+        console.error("Failed to sync stale-abandoned session to Django:", err);
+      } finally {
+        if (!cancelled) {
+          alert(
+            "Your session ended because the app was inactive for too long. It's been saved as abandoned.",
+          );
+          router.push(isEmptySession ? "/goals" : `/goals/${goalId}`);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    isOwn,
+    session,
+    sessionId,
+    sessionSynced,
+    isSyncing,
+    goalId,
+    isEmptySession,
+    router,
+    markSyncedMutation,
+  ]);
 
   // ── Local XP projection (ticks every second, grounded in Convex session data) ──
   // Convex heartbeats keep server state accurate every 5s; this mirrors the same
@@ -703,7 +882,12 @@ useEffect(() => {
     }
     setPomodoroPhase("focus");
     setPhaseSecondsLeft(FOCUS_SECONDS);
+    setIsBreakRunning(false);
   }, [sessionId, resumeMutation]);
+
+  const handleToggleBreak = useCallback(() => {
+    setIsBreakRunning((prev) => !prev);
+  }, []);
 
   const handleAdjustTime = useCallback((deltaSeconds: number) => {
     setPhaseSecondsLeft((prev) => Math.max(0, prev + deltaSeconds));
@@ -905,73 +1089,103 @@ useEffect(() => {
             categoryColor={categoryColor}
             onClose={() => router.back()}
           />
-        ) : isBreak ? (
-          <div className="flex items-center gap-4">
-            <button
-              onClick={handleSkipBreak}
-              disabled={isSyncing}
-              className="h-14 w-24 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-medium transition-colors cursor-pointer disabled:opacity-40"
-            >
-              Skip
-            </button>
-
-            <button
-              onClick={handleFinish}
-              disabled={isSyncing}
-              className="px-6 h-14 w-24 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-medium transition-colors cursor-pointer disabled:opacity-40"
-            >
-              {isSyncing ? "Saving…" : "Finish"}
-            </button>
-          </div>
         ) : (
-          <div className="flex items-center gap-4">
-            <button
-              onClick={handleDiscard}
-              disabled={isSyncing}
-              className="h-14 w-24 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-medium transition-colors cursor-pointer disabled:opacity-40"
+          <div className="flex flex-col items-center gap-4">
+            {/* Time adjustment — shown for both focus and break; kept in
+                place (not unmounted) while paused so the layout doesn't
+                shift, just faded out and made non-interactive */}
+            <div
+              className={`flex items-center gap-4 transition-opacity duration-200 ${
+                (isBreak ? isBreakRunning : isRunning)
+                  ? "opacity-100"
+                  : "opacity-0 pointer-events-none"
+              }`}
+              aria-hidden={!(isBreak ? isBreakRunning : isRunning)}
             >
-              Discard
-            </button>
+              <button
+                onClick={() => handleAdjustTime(-60)}
+                disabled={isSyncing}
+                title="Subtract 60 seconds"
+                className="h-16 w-16 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-medium transition-colors cursor-pointer disabled:opacity-40"
+              >
+                -60
+              </button>
 
-            <button
-              onClick={() => handleAdjustTime(-60)}
-              disabled={isSyncing}
-              title="Subtract 60 seconds"
-              className="h-16 w-16 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-medium transition-colors cursor-pointer disabled:opacity-40"
-            >
-              -60
-            </button>
+              <button
+                onClick={() => handleAdjustTime(60)}
+                disabled={isSyncing}
+                title="Add 60 seconds"
+                className="h-16 w-16 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-medium transition-colors cursor-pointer disabled:opacity-40"
+              >
+                +60
+              </button>
+            </div>
 
-            <button
-              onClick={handleToggle}
-              disabled={isSyncing}
-              className="w-20 h-20 rounded-full flex items-center justify-center transition-all cursor-pointer hover:scale-105 disabled:opacity-40"
-              style={{ backgroundColor: categoryColor }}
-              title={isRunning ? "Pause" : "Resume"}
-            >
-              {isRunning ? (
-                <PauseIcon className="w-8 h-8 text-white" />
-              ) : (
-                <PlayIcon className="w-8 h-8 text-white ml-1" />
-              )}
-            </button>
+            {isBreak ? (
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={handleSkipBreak}
+                  disabled={isSyncing}
+                  className="h-14 w-24 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-medium transition-colors cursor-pointer disabled:opacity-40"
+                >
+                  Skip
+                </button>
 
-            <button
-              onClick={() => handleAdjustTime(60)}
-              disabled={isSyncing}
-              title="Add 60 seconds"
-              className="h-16 w-16 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-medium transition-colors cursor-pointer disabled:opacity-40"
-            >
-              +60
-            </button>
+                <button
+                  onClick={handleToggleBreak}
+                  disabled={isSyncing}
+                  className="w-20 h-20 rounded-full flex items-center justify-center transition-all cursor-pointer hover:scale-105 disabled:opacity-40"
+                  style={{ backgroundColor: categoryColor }}
+                  title={isBreakRunning ? "Pause" : "Start"}
+                >
+                  {isBreakRunning ? (
+                    <PauseIcon className="w-8 h-8 text-white" />
+                  ) : (
+                    <PlayIcon className="w-8 h-8 text-white ml-1" />
+                  )}
+                </button>
 
-            <button
-              onClick={handleFinish}
-              disabled={isSyncing}
-              className="px-6 h-14 w-24 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-medium transition-colors cursor-pointer disabled:opacity-40"
-            >
-              {isSyncing ? "Saving…" : "Finish"}
-            </button>
+                <button
+                  onClick={handleFinish}
+                  disabled={isSyncing}
+                  className="px-6 h-14 w-24 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-medium transition-colors cursor-pointer disabled:opacity-40"
+                >
+                  {isSyncing ? "Saving…" : "Finish"}
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={handleDiscard}
+                  disabled={isSyncing}
+                  className="h-14 w-24 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-medium transition-colors cursor-pointer disabled:opacity-40"
+                >
+                  Discard
+                </button>
+
+                <button
+                  onClick={handleToggle}
+                  disabled={isSyncing}
+                  className="w-20 h-20 rounded-full flex items-center justify-center transition-all cursor-pointer hover:scale-105 disabled:opacity-40"
+                  style={{ backgroundColor: categoryColor }}
+                  title={isRunning ? "Pause" : "Resume"}
+                >
+                  {isRunning ? (
+                    <PauseIcon className="w-8 h-8 text-white" />
+                  ) : (
+                    <PlayIcon className="w-8 h-8 text-white ml-1" />
+                  )}
+                </button>
+
+                <button
+                  onClick={handleFinish}
+                  disabled={isSyncing}
+                  className="px-6 h-14 w-24 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-medium transition-colors cursor-pointer disabled:opacity-40"
+                >
+                  {isSyncing ? "Saving…" : "Finish"}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
