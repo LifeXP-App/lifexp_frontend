@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 
 import AspectChip from "@/src/components/goals/AspectChip";
+import DeleteSessionConfirmationModal from "@/src/components/goals/DeleteSessionConfirmationModal";
 import { BoltIcon, UsersIcon } from "@heroicons/react/24/solid";
 import { FaBrain, FaHammer } from "react-icons/fa";
 import { BiDumbbell } from "react-icons/bi";
@@ -73,6 +74,7 @@ const SessionInfoPopup: React.FC<SessionInfoPopupProps> = ({
   deleting = false,
 }) => {
   const [isAnimating, setIsAnimating] = useState(true);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -286,10 +288,7 @@ const SessionInfoPopup: React.FC<SessionInfoPopupProps> = ({
               <button
                 type="button"
                 disabled={deleting}
-                onClick={() => {
-                  if (!confirm("Delete this session? This cannot be undone.")) return;
-                  onDelete();
-                }}
+                onClick={() => setIsConfirmingDelete(true)}
                 className="w-full cursor-pointer font-medium text-sm text-red-600 py-3 rounded-xl hover:bg-red-50 dark:hover:bg-dark-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {deleting ? "Deleting..." : "Delete Session"}
@@ -298,6 +297,13 @@ const SessionInfoPopup: React.FC<SessionInfoPopupProps> = ({
           )}
         </div>
       </div>
+
+      <DeleteSessionConfirmationModal
+        isOpen={isConfirmingDelete}
+        onClose={() => setIsConfirmingDelete(false)}
+        onConfirm={() => onDelete?.()}
+        xpEarned={xpEarned ?? 0}
+      />
     </>
   );
 };
