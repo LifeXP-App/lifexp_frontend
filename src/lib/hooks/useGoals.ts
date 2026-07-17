@@ -1,18 +1,35 @@
-import { useCallback, useEffect, useRef, useState, useMemo } from "react";
-import { Goal, GoalsService, Session } from "../services/goals";
+import { useCallback, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { GoalsService, Session } from "../services/goals";
 import { useConvexSessionsByGoal } from "./useConvexSessions";
 
 export function useGoal(goalId: string) {
-  const [goal, setGoal] = useState<Goal | null>(null);
-  const [djangoSessions, setDjangoSessions] = useState<Session[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  // Tracks which goalId we've successfully shown data for, so a manual
-  // `refetch()` (e.g. after deleting a session) can re-fetch quietly in the
-  // background instead of flashing the loading skeleton over content
-  // that's already on screen. Only a genuinely new goalId re-arms it.
-  const loadedGoalIdRef = useRef<string | null>(null);
+  // React Query's `isLoading` (no cached data yet + fetching) vs `isFetching`
+  // (any fetch in flight, including background revalidation) is exactly the
+  // distinction we need: a genuinely new goalId blocks on the skeleton, but a
+  // manual `refetch()` after e.g. deleting a session — where we already have
+  // data — updates quietly without flashing the loading state again.
+  const {
+    data: goal = null,
+    isLoading: goalLoading,
+    error: goalQueryError,
+  } = useQuery({
+    queryKey: ["goal", goalId],
+    queryFn: () => GoalsService.getGoal(goalId),
+    enabled: !!goalId,
+  });
+
+  const { data: sessionsResponse } = useQuery({
+    queryKey: ["goal", goalId, "sessions"],
+    queryFn: () => GoalsService.getGoalSessions(goalId).catch(() => null),
+    enabled: !!goalId,
+  });
+  const djangoSessions = useMemo(
+    () => sessionsResponse?.results ?? [],
+    [sessionsResponse],
+  );
 
   // Real-time sessions from Convex (live + recently completed)
   const { sessions: convexSessions, loading: sessionsLoading } = useConvexSessionsByGoal(goalId);
@@ -54,46 +71,25 @@ export function useGoal(goalId: string) {
     );
   }, [convexMapped, djangoSessions]);
 
-  const fetchGoalData = useCallback(async () => {
-    if (!goalId) return;
+  const refetch = useCallback(() => {
+    // Partial key match invalidates both ["goal", goalId] and
+    // ["goal", goalId, "sessions"] in one call.
+    queryClient.invalidateQueries({ queryKey: ["goal", goalId] });
+  }, [queryClient, goalId]);
 
-    const isFreshGoal = loadedGoalIdRef.current !== goalId;
-    if (isFreshGoal) {
-      setLoading(true);
-    }
-    setError(null);
+  const isLoading = goalLoading || (sessionsLoading && sessions.length === 0);
 
-    try {
-      const [goalData, sessionData] = await Promise.all([
-        GoalsService.getGoal(goalId),
-        GoalsService.getGoalSessions(goalId).catch(() => null),
-      ]);
-      setGoal(goalData);
-      if (sessionData?.results) {
-        setDjangoSessions(sessionData.results);
-      }
-      loadedGoalIdRef.current = goalId;
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to fetch goal data",
-      );
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [goalId]);
-
-  useEffect(() => {
-    fetchGoalData();
-  }, [fetchGoalData]);
-
-  const isLoading = loading || (sessionsLoading && sessions.length === 0);
+  const error = goalQueryError
+    ? goalQueryError instanceof Error
+      ? goalQueryError.message
+      : "Failed to fetch goal data"
+    : null;
 
   return {
     goal,
     sessions,
     loading: isLoading,
     error,
-    refetch: fetchGoalData,
+    refetch,
   };
 }

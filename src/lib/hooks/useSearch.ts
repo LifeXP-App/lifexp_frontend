@@ -4,12 +4,15 @@ import {
   searchActivities,
   searchPosts,
   searchUsers,
-  type Activity,
+  type ActivitiesSearchResult,
   type Pagination,
   type Post,
+  type PostsSearchResult,
   type User,
+  type UsersSearchResult,
 } from "@/lib/api/search";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type SearchType = "global" | "posts" | "users" | "activities";
 
@@ -24,6 +27,48 @@ type SearchUserWithImageFallback = User & {
 
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
+}
+
+// Global search and posts/users search each normalize alternative image field
+// names the backend sends — same normalization the old hook applied.
+function normalizePosts(posts: Post[]): Post[] {
+  return posts.map((post) => {
+    const p = post as SearchPostWithImageFallback;
+    return {
+      ...p,
+      post_image: p.post_image ?? p.post_image_url ?? undefined,
+    };
+  });
+}
+
+function normalizeUsers(users: User[]): User[] {
+  return users.map((user) => {
+    const u = user as SearchUserWithImageFallback;
+    return {
+      ...u,
+      profile_picture:
+        u.profile_picture ?? u.profile_pic ?? u.profile_picture_url ?? undefined,
+    };
+  });
+}
+
+// Debounces `value`, except clearing to empty is applied immediately (so the
+// results list clears the instant the query is cleared, matching the old
+// hook's `if (!trimmedQuery) performSearch("", 1)` fast path).
+function useDebouncedSearchValue(value: string, delayMs: number): string {
+  const [debounced, setDebounced] = useState(value);
+
+  useEffect(() => {
+    if (!value.trim()) {
+      /* eslint-disable-next-line react-hooks/set-state-in-effect */
+      setDebounced(value);
+      return;
+    }
+    const timer = setTimeout(() => setDebounced(value), delayMs);
+    return () => clearTimeout(timer);
+  }, [value, delayMs]);
+
+  return debounced;
 }
 
 interface UseSearchOptions {
@@ -44,289 +89,129 @@ export function useSearch(options: UseSearchOptions) {
     autoSaveHistory = true,
     accessToken = null,
   } = options;
-  const [results, setResults] = useState<{
-    posts: Post[];
-    users: User[];
-    activities: Activity[];
-  }>({ posts: [], users: [], activities: [] });
-  const [counts, setCounts] = useState<{
-    posts: number;
-    users: number;
-    activities: number;
-  }>({ posts: 0, users: 0, activities: 0 });
-  const [pagination, setPagination] = useState<Pagination | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
 
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const activeSearchIdRef = useRef(0);
+  const trimmedQuery = query.trim();
+  const debouncedQuery = useDebouncedSearchValue(trimmedQuery, debounceMs);
+  const isDebouncing = trimmedQuery !== "" && trimmedQuery !== debouncedQuery;
 
-  const clearSearchResults = useCallback(() => {
-    setResults({ posts: [], users: [], activities: [] });
-    setCounts({ posts: 0, users: 0, activities: 0 });
-    setPagination(null);
-  }, []);
+  const queryClient = useQueryClient();
+  const enabled = Boolean(debouncedQuery && accessToken);
 
-  const performSearch = useCallback(
-    async (searchQuery: string, pageNum: number) => {
-      const trimmedQuery = searchQuery.trim();
+  // ── Global search: single fetch across posts/users/activities, no pagination ──
+  const globalQuery = useQuery({
+    queryKey: ["search", "global", debouncedQuery, limit],
+    queryFn: ({ signal }) =>
+      globalSearch(debouncedQuery, limit, signal, accessToken),
+    enabled: enabled && searchType === "global",
+  });
 
-      if (!trimmedQuery) {
-        activeSearchIdRef.current += 1;
-        abortControllerRef.current?.abort();
-        clearSearchResults();
-        setError(null);
-        setIsLoading(false);
-        return;
+  // ── Single-domain paginated search (posts/users/activities) ──
+  const infiniteQuery = useInfiniteQuery<
+    PostsSearchResult | UsersSearchResult | ActivitiesSearchResult
+  >({
+    queryKey: ["search", searchType, debouncedQuery, limit],
+    queryFn: ({ pageParam, signal }) => {
+      const page = pageParam as number;
+      if (searchType === "posts") {
+        return searchPosts(debouncedQuery, page, limit, signal, accessToken);
       }
-
-      if (!accessToken) {
-        activeSearchIdRef.current += 1;
-        abortControllerRef.current?.abort();
-        clearSearchResults();
-        setError(null);
-        setIsLoading(false);
-        return;
+      if (searchType === "users") {
+        return searchUsers(debouncedQuery, page, limit, signal, accessToken);
       }
-
-      const searchId = ++activeSearchIdRef.current;
-
-      // Cancel previous request
-      abortControllerRef.current?.abort();
-      const abortController = new AbortController();
-      abortControllerRef.current = abortController;
-
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        if (searchType === "global") {
-          const data = await globalSearch(
-            trimmedQuery,
-            limit,
-            abortController.signal,
-            accessToken,
-          );
-
-          if (searchId !== activeSearchIdRef.current) {
-            return;
-          }
-
-          // Normalize post images and user profile pictures for global search
-          const normalizedResults = {
-            ...data.results,
-            posts: data.results.posts.map((post) => {
-              const normalizedPost = post as SearchPostWithImageFallback;
-
-              return {
-                ...normalizedPost,
-                post_image:
-                  normalizedPost.post_image ??
-                  normalizedPost.post_image_url ??
-                  undefined,
-              };
-            }),
-            users: data.results.users.map((user) => {
-              const normalizedUser = user as SearchUserWithImageFallback;
-
-              return {
-                ...normalizedUser,
-                profile_picture:
-                  normalizedUser.profile_picture ??
-                  normalizedUser.profile_pic ??
-                  normalizedUser.profile_picture_url ??
-                  undefined,
-              };
-            }),
-          };
-
-          setResults(normalizedResults);
-          setCounts(data.counts);
-          setPagination(null);
-        } else if (searchType === "posts") {
-          const data = await searchPosts(
-            trimmedQuery,
-            pageNum,
-            limit,
-            abortController.signal,
-            accessToken,
-          );
-
-          if (searchId !== activeSearchIdRef.current) {
-            return;
-          }
-
-          const normalizedPosts = data.posts.map((post) => {
-            const normalizedPost = post as SearchPostWithImageFallback;
-
-            return {
-              ...normalizedPost,
-              post_image:
-                normalizedPost.post_image ??
-                normalizedPost.post_image_url ??
-                undefined,
-            };
-          });
-
-          setResults((prev) => ({
-            posts:
-              pageNum === 1
-                ? normalizedPosts
-                : [...prev.posts, ...normalizedPosts],
-            users: [],
-            activities: [],
-          }));
-          setPagination(data.pagination);
-        } else if (searchType === "users") {
-          const data = await searchUsers(
-            trimmedQuery,
-            pageNum,
-            limit,
-            abortController.signal,
-            accessToken,
-          );
-
-          if (searchId !== activeSearchIdRef.current) {
-            return;
-          }
-
-          const normalizedUsers = data.users.map((user) => {
-            const normalizedUser = user as SearchUserWithImageFallback;
-
-            return {
-              ...normalizedUser,
-              profile_picture:
-                normalizedUser.profile_picture ??
-                normalizedUser.profile_pic ??
-                normalizedUser.profile_picture_url ??
-                undefined,
-            };
-          });
-
-          setResults((prev) => ({
-            posts: [],
-            users:
-              pageNum === 1
-                ? normalizedUsers
-                : [...prev.users, ...normalizedUsers],
-            activities: [],
-          }));
-          setPagination(data.pagination);
-        } else if (searchType === "activities") {
-          const data = await searchActivities(
-            trimmedQuery,
-            undefined,
-            pageNum,
-            limit,
-            abortController.signal,
-            accessToken,
-          );
-
-          if (searchId !== activeSearchIdRef.current) {
-            return;
-          }
-
-          setResults((prev) => ({
-            posts: [],
-            users: [],
-            activities:
-              pageNum === 1
-                ? data.activities
-                : [...prev.activities, ...data.activities],
-          }));
-          setPagination(data.pagination);
-        }
-
-        // Save to search history (only on first page)
-        if (autoSaveHistory && pageNum === 1) {
-          saveSearchHistory(trimmedQuery, searchType, accessToken).catch(() => {
-            // Silently fail if history save fails
-          });
-        }
-      } catch (err: unknown) {
-        if (
-          searchId === activeSearchIdRef.current &&
-          !(err instanceof Error && err.name === "AbortError")
-        ) {
-          setError(getErrorMessage(err, "Search failed"));
-        }
-      } finally {
-        if (searchId === activeSearchIdRef.current) {
-          setIsLoading(false);
-        }
-      }
+      return searchActivities(debouncedQuery, undefined, page, limit, signal, accessToken);
     },
-    [searchType, limit, autoSaveHistory, clearSearchResults, accessToken],
-  );
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage.pagination.has_more ? allPages.length + 1 : undefined,
+    enabled: enabled && searchType !== "global",
+  });
 
-  const debouncedSearch = useCallback(
-    (searchQuery: string) => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-
-      if (!accessToken) {
-        activeSearchIdRef.current += 1;
-        abortControllerRef.current?.abort();
-        clearSearchResults();
-        setError(null);
-        setIsLoading(false);
-        return;
-      }
-
-      if (!searchQuery.trim()) {
-        void performSearch("", 1);
-        return;
-      }
-
-      setIsLoading(true);
-
-      debounceTimerRef.current = setTimeout(() => {
-        setPage(1);
-        void performSearch(searchQuery, 1);
-      }, debounceMs);
-    },
-    [performSearch, debounceMs, accessToken, clearSearchResults],
-  );
-
+  // Save to history once per (searchType, query) pair, only after results land —
+  // mirrors the old hook's "only save on first page success" behavior.
+  const historySavedForRef = useRef<string | null>(null);
   useEffect(() => {
-    debouncedSearch(query);
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-      activeSearchIdRef.current += 1;
-      abortControllerRef.current?.abort();
-    };
-  }, [query, debouncedSearch]);
+    if (!autoSaveHistory || !debouncedQuery || !accessToken) return;
 
-  // Reset results when search type changes
-  useEffect(() => {
-    clearSearchResults();
-    setPage(1);
-    if (query) {
-      void performSearch(query, 1);
+    const hasData =
+      searchType === "global" ? globalQuery.data !== undefined : infiniteQuery.data !== undefined;
+    if (!hasData) return;
+
+    const key = `${searchType}:${debouncedQuery}`;
+    if (historySavedForRef.current === key) return;
+    historySavedForRef.current = key;
+
+    saveSearchHistory(debouncedQuery, searchType, accessToken).catch(() => {
+      // Silently fail if history save fails
+    });
+  }, [autoSaveHistory, debouncedQuery, accessToken, searchType, globalQuery.data, infiniteQuery.data]);
+
+  const results = useMemo(() => {
+    if (!debouncedQuery) {
+      return { posts: [], users: [], activities: [] };
     }
-  }, [searchType, query, performSearch, clearSearchResults]);
+
+    if (searchType === "global") {
+      const data = globalQuery.data;
+      if (!data) return { posts: [], users: [], activities: [] };
+      return {
+        posts: normalizePosts(data.results.posts),
+        users: normalizeUsers(data.results.users),
+        activities: data.results.activities,
+      };
+    }
+
+    const pages = infiniteQuery.data?.pages ?? [];
+    if (searchType === "posts") {
+      return {
+        posts: normalizePosts(pages.flatMap((p) => ("posts" in p ? p.posts : []))),
+        users: [],
+        activities: [],
+      };
+    }
+    if (searchType === "users") {
+      return {
+        posts: [],
+        users: normalizeUsers(pages.flatMap((p) => ("users" in p ? p.users : []))),
+        activities: [],
+      };
+    }
+    return {
+      posts: [],
+      users: [],
+      activities: pages.flatMap((p) => ("activities" in p ? p.activities : [])),
+    };
+  }, [debouncedQuery, searchType, globalQuery.data, infiniteQuery.data]);
+
+  const counts =
+    searchType === "global" && globalQuery.data
+      ? globalQuery.data.counts
+      : { posts: 0, users: 0, activities: 0 };
+
+  const pagination: Pagination | null =
+    searchType === "global"
+      ? null
+      : (infiniteQuery.data?.pages[infiniteQuery.data.pages.length - 1]?.pagination ?? null);
+
+  // Loading covers the debounce window too (the old hook set isLoading the
+  // instant a keystroke happened, not just once the network request began),
+  // plus initial fetch and "load more" fetches.
+  const isLoading =
+    isDebouncing || (searchType === "global" ? globalQuery.isFetching : infiniteQuery.isFetching);
+
+  const queryError = searchType === "global" ? globalQuery.error : infiniteQuery.error;
+  const error = debouncedQuery && queryError ? getErrorMessage(queryError, "Search failed") : null;
 
   const loadMore = useCallback(() => {
-    if (pagination?.has_more && !isLoading) {
-      const nextPage = page + 1;
-      setPage(nextPage);
-      void performSearch(query, nextPage);
+    if (searchType === "global") return;
+    if (infiniteQuery.hasNextPage && !infiniteQuery.isFetchingNextPage) {
+      infiniteQuery.fetchNextPage();
     }
-  }, [pagination, isLoading, page, query, performSearch]);
+  }, [searchType, infiniteQuery]);
 
   const reset = useCallback(() => {
-    activeSearchIdRef.current += 1;
-    abortControllerRef.current?.abort();
-    clearSearchResults();
-    setPage(1);
-    setError(null);
-    setIsLoading(false);
-  }, [clearSearchResults]);
+    queryClient.removeQueries({ queryKey: ["search"] });
+    historySavedForRef.current = null;
+  }, [queryClient]);
 
   return {
     results,

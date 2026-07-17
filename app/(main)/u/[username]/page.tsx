@@ -13,6 +13,7 @@ import { FireIcon, LockClosedIcon } from "@heroicons/react/24/solid";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { use, useEffect, useRef, useState } from "react";
 import { FaLinkedin, FaSquareWhatsapp } from "react-icons/fa6";
 import { toggleFollow } from "@/lib/api/users";
@@ -62,14 +63,9 @@ export default function ProfilePage({ params }: PageProps) {
   const router = useRouter();
   const { me, session, loading: authLoading } = useAuth();
 
-  const [profileUser, setProfileUser] = useState<UserProfile | null>(null);
-  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [userPosts, setUserPosts] = useState<UserPost[]>([]);
-  const [postsLoading, setPostsLoading] = useState(false);
   const [isFollowingLoading, setIsFollowingLoading] = useState(false);
 
   // Dynamic data state
@@ -104,11 +100,6 @@ export default function ProfilePage({ params }: PageProps) {
     status: string;
   };
 
-  const [weeklyXP, setWeeklyXP] = useState<{ date: string; xp: number }[]>([]);
-  const [topActivities, setTopActivities] = useState<Activity[]>([]);
-  const [recentSessions, setRecentSessions] = useState<Session[]>([]);
-  const [ongoingGoals, setOngoingGoals] = useState<Goal[]>([]);
-  const [dataLoading, setDataLoading] = useState(false);
   const [isXlViewport, setIsXlViewport] = useState(false);
 
   const [showShare, setShowShare] = useState(false);
@@ -121,100 +112,73 @@ export default function ProfilePage({ params }: PageProps) {
   const abortControllerRef = useRef<AbortController | null>(null);
   const isMountedRef = useRef(true);
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      if (authLoading) return;
-      if (!me?.username) {
-        setIsLoading(false);
-        return;
-      }
+  const { data: usersData, isLoading: usersQueryLoading } = useQuery({
+    queryKey: ["profile-users", username, me?.username],
+    queryFn: async () => {
+      const authHeaders = session?.access_token
+        ? { Authorization: `Bearer ${session.access_token}` }
+        : undefined;
 
-      setIsLoading(true);
-
-      try {
-        const authHeaders = session?.access_token
-          ? { Authorization: `Bearer ${session.access_token}` }
-          : undefined;
-
-        const [profileResponse, currentResponse] = await Promise.all([
-          fetch(`/api/users/profile/${username}`, {
-            method: "GET",
-            headers: {
-              ...authHeaders,
-              "Content-Type": "application/json",
-            },
-            cache: "no-store",
-          }),
-          fetch(`/api/users/profile/${me.username}`, {
-            method: "GET",
-            headers: {
-              ...authHeaders,
-              "Content-Type": "application/json",
-            },
-            cache: "no-store",
-          }),
-        ]);
-
-        if (profileResponse.ok) {
-          const profileData = await profileResponse.json();
-          setProfileUser(profileData as UserProfile);
-          setIsFollowing(profileData.isFollowing ?? false);
-          setFollowersCount(profileData.followers_count ?? 0);
-          setFollowingCount(profileData.following_count ?? 0);
-        } else {
-          setProfileUser(null);
-        }
-
-        if (currentResponse.ok) {
-          const currentData = await currentResponse.json();
-          setCurrentUser(currentData as UserProfile);
-        } else {
-          setCurrentUser(null);
-        }
-      } catch (err) {
-        console.error("Failed to fetch users:", err);
-        setProfileUser(null);
-        setCurrentUser(null);
-      }
-
-      setIsLoading(false);
-    };
-
-    fetchUsers();
-  }, [authLoading, username, me?.username, session?.access_token]);
-
-  useEffect(() => {
-    const fetchUserPosts = async () => {
-      if (!username) return;
-
-      setPostsLoading(true);
-
-      try {
-        const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1`;
-        const response = await fetch(`${apiUrl}/users/${username}/posts/`, {
+      const [profileResponse, currentResponse] = await Promise.all([
+        fetch(`/api/users/profile/${username}`, {
           method: "GET",
           headers: {
+            ...authHeaders,
             "Content-Type": "application/json",
           },
           cache: "no-store",
-        });
+        }),
+        fetch(`/api/users/profile/${me?.username}`, {
+          method: "GET",
+          headers: {
+            ...authHeaders,
+            "Content-Type": "application/json",
+          },
+          cache: "no-store",
+        }),
+      ]);
 
-        if (response.ok) {
-          const data = await response.json();
-          setUserPosts(data.results || []);
-        } else {
-          setUserPosts([]);
-        }
-      } catch (err) {
-        console.error("Failed to fetch user posts:", err);
-        setUserPosts([]);
-      } finally {
-        setPostsLoading(false);
-      }
-    };
+      const profileData = profileResponse.ok ? await profileResponse.json() : null;
+      const currentData = currentResponse.ok ? await currentResponse.json() : null;
 
-    fetchUserPosts();
-  }, [username]);
+      return { profileData, currentData };
+    },
+    enabled: !authLoading && !!me?.username,
+  });
+
+  const profileUser = (usersData?.profileData as UserProfile | null) ?? null;
+  const currentUser = (usersData?.currentData as UserProfile | null) ?? null;
+  const isLoading = authLoading || usersQueryLoading;
+
+  // isFollowing/followersCount/followingCount are optimistically mutated by
+  // handleFollow/handleUnfollow below, so they stay local state — re-synced
+  // from the query whenever fresh profile data lands (initial load or
+  // navigating to a different user).
+  useEffect(() => {
+    if (!usersData?.profileData) return;
+    setIsFollowing(usersData.profileData.isFollowing ?? false);
+    setFollowersCount(usersData.profileData.followers_count ?? 0);
+    setFollowingCount(usersData.profileData.following_count ?? 0);
+  }, [usersData]);
+
+  const { data: userPosts = [], isLoading: postsLoading } = useQuery({
+    queryKey: ["profile-posts", username],
+    queryFn: async () => {
+      const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1`;
+      const response = await fetch(`${apiUrl}/users/${username}/posts/`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+      });
+
+      if (!response.ok) return [] as UserPost[];
+      const data = await response.json();
+      return (data.results || []) as UserPost[];
+    },
+    enabled: !!username,
+  });
 
   // Cleanup on unmount
   useEffect(() => {
@@ -246,115 +210,101 @@ export default function ProfilePage({ params }: PageProps) {
     };
   }, []);
 
-  // Fetch weekly XP, top activities, recent sessions, and ongoing goals
-  useEffect(() => {
-    const fetchProfileData = async () => {
-      if (!username || authLoading || !session?.access_token) return;
+  // Fetch weekly XP, recent sessions, and ongoing goals
+  const { data: profileStatsData, isLoading: dataLoading } = useQuery({
+    queryKey: ["profile-stats", username],
+    queryFn: async () => {
+      const authHeaders = {
+        Authorization: `Bearer ${session?.access_token}`,
+      };
+      const [weeklyRes, sessionsRes, goalsRes] = await Promise.all([
+        fetch(`/api/stats/weekly?username=${username}`, {
+          headers: authHeaders,
+          cache: "no-store",
+        }),
+        fetch(`/api/users/${username}/sessions?limit=5`, {
+          headers: authHeaders,
+          cache: "no-store",
+        }),
+        fetch(`/api/users/${username}/goals?status=ongoing`, {
+          headers: authHeaders,
+          cache: "no-store",
+        }),
+      ]);
 
-      setDataLoading(true);
+      // Process weekly XP
+      let weeklyXP: { date: string; xp: number }[] = [];
+      if (weeklyRes.ok) {
+        const weeklyData = await weeklyRes.json();
+        // Transform the daily_breakdown into array format for the chart
+        const dailyBreakdown = weeklyData.daily_breakdown || {};
+        const dates = Object.keys(dailyBreakdown).sort();
+        weeklyXP = dates.map((date) => {
+          const dateObj = new Date(date);
+          const today = new Date();
+          const isToday = dateObj.toDateString() === today.toDateString();
 
-      try {
-        const authHeaders = {
-          Authorization: `Bearer ${session.access_token}`,
-        };
-        const [weeklyRes, sessionsRes, goalsRes] =
-          await Promise.all([
-            fetch(`/api/stats/weekly?username=${username}`, {
-              headers: authHeaders,
-              cache: "no-store",
-            }),
-            fetch(`/api/users/${username}/sessions?limit=5`, {
-              headers: authHeaders,
-              cache: "no-store",
-            }),
-            fetch(`/api/users/${username}/goals?status=ongoing`, {
-              headers: authHeaders,
-              cache: "no-store",
-            }),
-          ]);
-
-        // Process weekly XP
-        if (weeklyRes.ok) {
-          const weeklyData = await weeklyRes.json();
-          // Transform the daily_breakdown into array format for the chart
-          const dailyBreakdown = weeklyData.daily_breakdown || {};
-          const dates = Object.keys(dailyBreakdown).sort();
-          const chartData = dates.map((date) => {
-            const dateObj = new Date(date);
-            const today = new Date();
-            const isToday = dateObj.toDateString() === today.toDateString();
-
-            return {
-              date: isToday
-                ? "Today"
-                : dateObj.toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                  }),
-              xp: dailyBreakdown[date].xp || 0,
-            };
-          });
-          setWeeklyXP(chartData);
-        }
-
-        // Process recent sessions
-        if (sessionsRes.ok) {
-          const sessionsData = await sessionsRes.json();
-          setRecentSessions(
-            Array.isArray(sessionsData)
-              ? sessionsData
-              : Array.isArray(sessionsData.results)
-                ? sessionsData.results
-                : [],
-          );
-        }
-
-        // Process ongoing goals
-        if (goalsRes.ok) {
-          const goalsData = await goalsRes.json();
-          setOngoingGoals(
-            Array.isArray(goalsData)
-              ? goalsData
-              : Array.isArray(goalsData.results)
-                ? goalsData.results
-                : [],
-          );
-        }
-      } catch (err) {
-        console.error("Failed to fetch profile data:", err);
-      } finally {
-        setDataLoading(false);
+          return {
+            date: isToday
+              ? "Today"
+              : dateObj.toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                }),
+            xp: dailyBreakdown[date].xp || 0,
+          };
+        });
       }
-    };
 
-    fetchProfileData();
-  }, [username, authLoading, session?.access_token]);
+      // Process recent sessions
+      let recentSessions: Session[] = [];
+      if (sessionsRes.ok) {
+        const sessionsData = await sessionsRes.json();
+        recentSessions = Array.isArray(sessionsData)
+          ? sessionsData
+          : Array.isArray(sessionsData.results)
+            ? sessionsData.results
+            : [];
+      }
+
+      // Process ongoing goals
+      let ongoingGoals: Goal[] = [];
+      if (goalsRes.ok) {
+        const goalsData = await goalsRes.json();
+        ongoingGoals = Array.isArray(goalsData)
+          ? goalsData
+          : Array.isArray(goalsData.results)
+            ? goalsData.results
+            : [];
+      }
+
+      return { weeklyXP, recentSessions, ongoingGoals };
+    },
+    enabled: !!username && !authLoading && !!session?.access_token,
+  });
+
+  const weeklyXP = profileStatsData?.weeklyXP ?? [];
+  const recentSessions = profileStatsData?.recentSessions ?? [];
+  const ongoingGoals = profileStatsData?.ongoingGoals ?? [];
 
   // Fetch top activities (requires the numeric profile user id)
-  useEffect(() => {
-    const fetchTopActivities = async () => {
-      if (authLoading || !profileUser?.id || !session?.access_token) return;
+  const { data: topActivities = [] } = useQuery({
+    queryKey: ["profile-top-activities", profileUser?.id],
+    queryFn: async () => {
+      const res = await fetch(
+        `/api/users/${profileUser?.id}/top-activities?limit=5`,
+        {
+          headers: { Authorization: `Bearer ${session?.access_token}` },
+          cache: "no-store",
+        },
+      );
 
-      try {
-        const res = await fetch(
-          `/api/users/${profileUser.id}/top-activities?limit=5`,
-          {
-            headers: { Authorization: `Bearer ${session.access_token}` },
-            cache: "no-store",
-          },
-        );
-
-        if (res.ok) {
-          const data = await res.json();
-          setTopActivities(data.top_activities || []);
-        }
-      } catch (err) {
-        console.error("Failed to fetch top activities:", err);
-      }
-    };
-
-    fetchTopActivities();
-  }, [profileUser?.id, authLoading, session?.access_token]);
+      if (!res.ok) return [] as Activity[];
+      const data = await res.json();
+      return (data.top_activities || []) as Activity[];
+    },
+    enabled: !authLoading && !!profileUser?.id && !!session?.access_token,
+  });
 
   // Format member since date
   const formatMemberSince = (dateString: string) => {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Post, type PostType } from "@/src/components/homepage/Post";
 import { SessionPost, type ApiSessionPost } from "@/src/components/homepage/SessionPost";
 import { UserStatus } from "@/src/components/homepage/UserStatus";
@@ -389,8 +390,6 @@ export default function Home() {
 
   const { me, session } = useAuth();
 
-  const [userData, setUserData] = useState<UserApiResponse | null>(null);
-
   type ApiFriendStatus = {
     id: number;
     username: string;
@@ -410,43 +409,29 @@ export default function Home() {
     } | null;
   };
 
-  const [friendsStatus, setFriendsStatus] = useState<ApiFriendStatus[]>([]);
-  const [friendsStatusLoading, setFriendsStatusLoading] = useState(false);
-
-  useEffect(() => {
-    const fetchFriendsStatus = async () => {
-      if (!session?.access_token) {
-        return;
-      }
-
-      setFriendsStatusLoading(true);
-
+  const { data: friendsStatus = [], isLoading: friendsStatusLoading } = useQuery({
+    queryKey: ["friends-status"],
+    queryFn: async () => {
       try {
         const res = await fetch("/api/users/friends-status", {
           method: "GET",
           headers: {
-            "Authorization": `Bearer ${session.access_token}`,
+            "Authorization": `Bearer ${session?.access_token}`,
           },
           cache: "no-store",
         });
 
-        if (!res.ok) {
-          setFriendsStatus([]);
-          return;
-        }
+        if (!res.ok) return [] as ApiFriendStatus[];
 
         const data = await res.json();
-        setFriendsStatus(Array.isArray(data) ? data : []);
+        return (Array.isArray(data) ? data : []) as ApiFriendStatus[];
       } catch (err) {
         console.error("Failed to fetch friends status:", err);
-        setFriendsStatus([]);
-      } finally {
-        setFriendsStatusLoading(false);
+        return [] as ApiFriendStatus[];
       }
-    };
-
-    fetchFriendsStatus();
-  }, [session?.access_token]);
+    },
+    enabled: !!session?.access_token,
+  });
 
   type ApiNotification = {
     id: number | string;
@@ -462,42 +447,30 @@ export default function Home() {
     image?: string | null;
   };
 
-  const [notificationsData, setNotificationsData] = useState<
-    {
-      id: string;
-      image: string;
-      sender: string;
-      text: string;
-      date: string;
-      href: string;
-      rounded?: boolean;
-    }[]
-  >([]);
+  type NotificationDisplay = {
+    id: string;
+    image: string;
+    sender: string;
+    text: string;
+    date: string;
+    href: string;
+    rounded?: boolean;
+  };
 
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [notificationsLoading, setNotificationsLoading] = useState(false);
-
-  useEffect(() => {
-    const fetchNotifications = async () => {
-      if (!session?.access_token) {
-        return;
-      }
-
-      setNotificationsLoading(true);
-
+  const { data: notificationsResult, isLoading: notificationsLoading } = useQuery({
+    queryKey: ["notifications"],
+    queryFn: async () => {
       try {
         const res = await fetch("/api/notifications", {
           method: "GET",
           headers: {
-            "Authorization": `Bearer ${session.access_token}`,
+            "Authorization": `Bearer ${session?.access_token}`,
           },
           cache: "no-store",
         });
 
         if (!res.ok) {
-          setNotificationsData([]);
-          setUnreadCount(0);
-          return;
+          return { notifications: [] as NotificationDisplay[], unreadCount: 0 };
         }
 
         const raw = await res.json();
@@ -520,19 +493,19 @@ export default function Home() {
           rounded: n.notification_type === "follow",
         }));
 
-        setNotificationsData(mapped);
-        setUnreadCount(list.filter((n: ApiNotification) => !n.is_read).length);
+        return {
+          notifications: mapped as NotificationDisplay[],
+          unreadCount: list.filter((n: ApiNotification) => !n.is_read).length,
+        };
       } catch (err) {
         console.error("Failed to fetch notifications:", err);
-        setNotificationsData([]);
-        setUnreadCount(0);
-      } finally {
-        setNotificationsLoading(false);
+        return { notifications: [] as NotificationDisplay[], unreadCount: 0 };
       }
-    };
-
-    fetchNotifications();
-  }, [session?.access_token]);
+    },
+    enabled: !!session?.access_token,
+  });
+  const notificationsData = notificationsResult?.notifications ?? [];
+  const unreadCount = notificationsResult?.unreadCount ?? 0;
 
   // Posts (your existing behavior)
   type ApiGoalPost = {
@@ -628,88 +601,73 @@ export default function Home() {
     };
   }
 
-const [posts, setPosts] = useState<ApiFeedItem[]>([]);
-const [postsPage, setPostsPage] = useState(1);
-const [postsHasMore, setPostsHasMore] = useState(true);
-const [postsLoading, setPostsLoading] = useState(false);
-
-const loadPosts = async (pageToLoad: number) => {
-  if (postsLoading) return;
-  if (!postsHasMore && pageToLoad !== 1) return;
-
-  setPostsLoading(true);
-
-  try {
-    if (!session?.access_token) {
-      console.error("❌ No access token available");
-      return;
-    }
-
-    const res = await fetch(`/api/feed?page=${pageToLoad}&limit=10`, {
+const {
+  data: postsData,
+  isLoading: postsInitialLoading,
+  isFetchingNextPage: postsFetchingNextPage,
+  hasNextPage: postsHasMore,
+  fetchNextPage: loadMorePosts,
+} = useInfiniteQuery({
+  queryKey: ["feed"],
+  queryFn: async ({ pageParam }) => {
+    const res = await fetch(`/api/feed?page=${pageParam}&limit=10`, {
       method: "GET",
       headers: {
-        "Authorization": `Bearer ${session.access_token}`,
+        "Authorization": `Bearer ${session?.access_token}`,
       },
       cache: "no-store",
     });
 
     if (!res.ok) {
-      console.error("❌ Failed loading posts:", await res.text());
-      return;
+      throw new Error(`Failed loading posts: ${await res.text()}`);
     }
 
     const data = await res.json();
+    return {
+      list: (Array.isArray(data?.posts) ? data.posts : []) as ApiFeedItem[],
+      hasMore: !!data?.has_more,
+    };
+  },
+  initialPageParam: 1,
+  getNextPageParam: (lastPage, allPages) =>
+    lastPage.hasMore ? allPages.length + 1 : undefined,
+  enabled: !!session?.access_token,
+});
 
-    const list: ApiFeedItem[] = Array.isArray(data?.posts) ? data.posts : [];
-    const hasMore = !!data?.has_more;
-
-    setPosts((prev) => (pageToLoad === 1 ? list : [...prev, ...list]));
-    setPostsHasMore(hasMore);
-    setPostsPage(pageToLoad);
-  } catch (err) {
-    console.error("❌ Failed loading discover posts:", err);
-  } finally {
-    setPostsLoading(false);
-  }
-};
-
-// ✅ initial load
-useEffect(() => {
-  loadPosts(1);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, []);
+const posts = useMemo(
+  () => postsData?.pages.flatMap((p) => p.list) ?? [],
+  [postsData],
+);
+// The "loading" flag shown by the skeleton (first load, no posts yet) vs. the
+// one shown by the infinite-scroll trigger (loading page N+1) are genuinely
+// different states — kept separate rather than one flag doing double duty.
+const postsLoading = postsInitialLoading;
 
 
-  // ✅ Fetch user profile ONCE when we have username
-  useEffect(() => {
-    const fetchUser = async () => {
-      if (!me?.username) return;
-
+  // ✅ Fetch user profile when we have username
+  const { data: userData = null } = useQuery({
+    queryKey: ["user-profile-widget", me?.username],
+    queryFn: async () => {
       try {
         const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-        if (!baseUrl) return;
+        if (!baseUrl) return null;
 
-        const res = await fetch(`${baseUrl}/api/v1/users/${me.username}/`, {
+        const res = await fetch(`${baseUrl}/api/v1/users/${me?.username}/`, {
           method: "GET",
           headers: { "Content-Type": "application/json" },
           cache: "no-store",
         });
 
-        if (!res.ok) {
-          setUserData(null);
-          return;
-        }
+        if (!res.ok) return null;
 
-        const data = await res.json();
-        setUserData(data);
+        return (await res.json()) as UserApiResponse;
       } catch (err) {
         console.error("Failed to fetch homepage user:", err);
-        setUserData(null);
+        return null;
       }
-    };
-
-    fetchUser();
-  }, [me?.username]);
+    },
+    enabled: !!me?.username,
+  });
 
   // ✅ only build once data exists
   const player = useMemo(() => {
@@ -781,27 +739,16 @@ useEffect(() => {
   isFollowing: boolean;
 };
 
-const [discoverUsers, setDiscoverUsers] = useState<SuggestedUser[]>([]);
-const [discoverLoading, setDiscoverLoading] = useState(false);
-
-useEffect(() => {
-  const fetchDiscoverUsers = async () => {
-    if (!session?.access_token) {
-      return;
-    }
-
-    setDiscoverLoading(true);
-
+const { data: discoverUsers = [], isLoading: discoverLoading } = useQuery({
+  queryKey: ["discover-users"],
+  queryFn: async () => {
     try {
       const res = await authedFetch("/api/discover/users", {
         method: "GET",
         cache: "no-store",
       });
 
-      if (!res.ok) {
-        setDiscoverUsers([]);
-        return;
-      }
+      if (!res.ok) return [] as SuggestedUser[];
 
       const data = await res.json();
 
@@ -812,7 +759,7 @@ useEffect(() => {
           ? data.users
           : [];
 
-      const mapped = list.map((u: {
+      return list.map((u: {
         id: number;
         username: string;
         fullname: string;
@@ -829,19 +776,14 @@ useEffect(() => {
           "https://res.cloudinary.com/dfohn9dcz/image/upload/Screenshot_2025-03-25_at_10.40.01_PM_vugdxk",
         lifelevel: u.lifelevel || u.life_level, // Handle both field names
         isFollowing: u.isFollowing ?? false,
-      }));
-
-      setDiscoverUsers(mapped);
+      })) as SuggestedUser[];
     } catch (err) {
       console.error("Failed to fetch discover users:", err);
-      setDiscoverUsers([]);
-    } finally {
-      setDiscoverLoading(false);
+      return [] as SuggestedUser[];
     }
-  };
-
-  fetchDiscoverUsers();
-}, [session?.access_token]);
+  },
+  enabled: !!session?.access_token,
+});
 
 
   return (
@@ -901,9 +843,9 @@ useEffect(() => {
 
             {/* infinite scroll trigger */}
             <FeedLoadMore
-              loading={postsLoading}
-              hasMore={postsHasMore}
-              onLoadMore={() => loadPosts(postsPage + 1)}
+              loading={postsFetchingNextPage}
+              hasMore={!!postsHasMore}
+              onLoadMore={() => loadMorePosts()}
             />
           </div>
         </div>

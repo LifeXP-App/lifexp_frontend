@@ -9,8 +9,9 @@ import { ActivityType } from "@/src/lib/types/activityMeta";
 import { BoltIcon, PlayIcon, PlusIcon, UsersIcon } from "@heroicons/react/24/solid";
 import FireIcon from "@heroicons/react/24/solid/FireIcon";
 import { RocketLaunchIcon } from "@heroicons/react/24/outline";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState } from "react";
 import { FaBrain, FaHammer } from "react-icons/fa";
 
 type AspectKey = "physique" | "energy" | "social" | "creativity" | "logic";
@@ -397,6 +398,7 @@ function RightSidebarInfoSkeleton() {
 
 export default function GoalsPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
@@ -406,10 +408,7 @@ export default function GoalsPage() {
   const username = me?.username;
   const accessToken = session?.access_token;
 
-  const [goals, setGoals] = useState<GoalPost[]>([]);
-  const [goalsLoading, setGoalsLoading] = useState(false);
   const [isEmptySession, setIsEmptySession] = useState(false);
-  const fetchedGoalsForUsername = useRef<string | null>(null);
 
   const [isStatusConfirmOpen, setIsStatusConfirmOpen] = useState(false);
   const [pendingStatusChange, setPendingStatusChange] = useState<{
@@ -419,35 +418,23 @@ export default function GoalsPage() {
     goalTitle: string;
   } | null>(null);
 
-  useEffect(() => {
-    if (authLoading || !username || !accessToken) return;
-    if (fetchedGoalsForUsername.current === username) return;
+  const { data: goals = [], isLoading: goalsLoading } = useQuery({
+    queryKey: ["goals"],
+    queryFn: async () => {
+      const res = await fetch(`/api/goals`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        cache: "no-store",
+      });
 
-    const fetchGoals = async () => {
-      try {
-        setGoalsLoading(true);
+      if (!res.ok) throw new Error("Failed to fetch goals");
 
-        const res = await fetch(`/api/goals`, {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-          cache: "no-store",
-        });
-
-        if (!res.ok) throw new Error("Failed to fetch goals");
-
-        const data = await res.json();
-        setGoals(Array.isArray(data.results) ? data.results : []);
-        fetchedGoalsForUsername.current = username;
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setGoalsLoading(false);
-      }
-    };
-
-    fetchGoals();
-  }, [authLoading, username, accessToken]);
+      const data = await res.json();
+      return (Array.isArray(data.results) ? data.results : []) as GoalPost[];
+    },
+    enabled: !authLoading && !!username && !!accessToken,
+  });
 
   const plannedGoals = goals.filter((p) => p.status === "planned");
   const ongoingGoals = goals.filter((p) => p.status === "ongoing");
@@ -457,42 +444,27 @@ export default function GoalsPage() {
   const getGoalDescription = (goal: GoalPost) =>
     goal.description || goal.content || "";
 
-  const [sidebarInfo, setSidebarInfo] = useState<UserGoalsInfo | null>(null);
-  const [sidebarLoading, setSidebarLoading] = useState(false);
-  const fetchedSidebarForUsername = useRef<string | null>(null);
+  const { data: sidebarInfo = null, isLoading: sidebarLoading } = useQuery({
+    queryKey: ["goals", "sidebar", username],
+    queryFn: async () => {
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+      const res = await fetch(`${baseUrl}/api/v1/goals/info/${username}/`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        cache: "no-store",
+      });
+
+      if (!res.ok) throw new Error("Failed to fetch sidebar info");
+
+      return (await res.json()) as UserGoalsInfo;
+    },
+    enabled: !!username && !!accessToken,
+  });
+
   const showGoalsSkeleton = goalsLoading && goals.length === 0;
   const showSidebarSkeleton = sidebarLoading && !sidebarInfo;
-
-  useEffect(() => {
-    if (!username || !accessToken) return;
-    if (fetchedSidebarForUsername.current === username) return;
-
-    const fetchSidebarInfo = async () => {
-      try {
-        setSidebarLoading(true);
-        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-
-        const res = await fetch(`${baseUrl}/api/v1/goals/info/${username}/`, {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-          cache: "no-store",
-        });
-
-        if (!res.ok) throw new Error("Failed to fetch sidebar info");
-
-        const data = await res.json();
-        setSidebarInfo(data);
-        fetchedSidebarForUsername.current = username;
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setSidebarLoading(false);
-      }
-    };
-
-    fetchSidebarInfo();
-  }, [username, accessToken]);
 
   const handleCreateGoal = async (goal: {
     title: string;
@@ -510,7 +482,10 @@ export default function GoalsPage() {
       emoji: "🎯",
     };
 
-    setGoals((currentGoals) => [optimisticGoal, ...currentGoals]);
+    queryClient.setQueryData<GoalPost[]>(["goals"], (currentGoals = []) => [
+      optimisticGoal,
+      ...currentGoals,
+    ]);
     setIsModalOpen(false);
 
     try {
@@ -566,7 +541,7 @@ export default function GoalsPage() {
             ? "ongoing"
             : "planned";
 
-      setGoals((currentGoals) =>
+      queryClient.setQueryData<GoalPost[]>(["goals"], (currentGoals = []) =>
         currentGoals.map((existingGoal) =>
           existingGoal.id === tempId
             ? {
@@ -599,7 +574,7 @@ export default function GoalsPage() {
       );
       posthog.capture("goal_created", { goal_id: createdId, goal_title: goal.title, status: createdStatus });
     } catch (error) {
-      setGoals((currentGoals) =>
+      queryClient.setQueryData<GoalPost[]>(["goals"], (currentGoals = []) =>
         currentGoals.filter((existingGoal) => existingGoal.id !== tempId),
       );
       console.error("Failed to create goal:", error);
@@ -607,21 +582,8 @@ export default function GoalsPage() {
       return;
     }
 
-    try {
-      const res = await fetch(`/api/goals`, {
-        headers: {
-          Authorization: `Bearer ${session?.access_token ?? ""}`,
-        },
-        cache: "no-store",
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setGoals(Array.isArray(data.results) ? data.results : []);
-      }
-    } catch (error) {
-      console.error("Failed to refresh goals after create:", error);
-    }
+    // Refetch to reconcile with the server's authoritative shape.
+    queryClient.invalidateQueries({ queryKey: ["goals"] });
   };
 
   const getPreferredGoalId = () => {
@@ -703,7 +665,9 @@ export default function GoalsPage() {
 
       // Optimistically remove from UI
       const goalToDelete = goals.find(g => g.uid === goalUid);
-      setGoals(prev => prev.filter(g => g.uid !== goalUid));
+      queryClient.setQueryData<GoalPost[]>(["goals"], (prev = []) =>
+        prev.filter(g => g.uid !== goalUid),
+      );
 
       const res = await fetch(`/api/goals/${goalUid}`, {
         method: "DELETE",
@@ -715,7 +679,10 @@ export default function GoalsPage() {
       if (!res.ok) {
         // Restore goal on error
         if (goalToDelete) {
-          setGoals(prev => [...prev, goalToDelete]);
+          queryClient.setQueryData<GoalPost[]>(["goals"], (prev = []) => [
+            ...prev,
+            goalToDelete,
+          ]);
         }
 
         if (res.status === 401) {
@@ -737,18 +704,7 @@ export default function GoalsPage() {
       alert("An error occurred while deleting the goal");
 
       // Refresh goals list on error
-      if (me?.username) {
-        const res = await fetch(`/api/goals/u/${me.username}`, {
-          headers: {
-            Authorization: `Bearer ${session?.access_token ?? ""}`,
-          },
-          cache: "no-store",
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setGoals(Array.isArray(data.results) ? data.results : []);
-        }
-      }
+      queryClient.invalidateQueries({ queryKey: ["goals"] });
     } finally {
       setDeletingGoalId(null);
     }
@@ -780,7 +736,7 @@ export default function GoalsPage() {
 
     try {
       // Optimistic update
-      setGoals((prev) =>
+      queryClient.setQueryData<GoalPost[]>(["goals"], (prev = []) =>
         prev.map((g) =>
           g.uid === pendingStatusChange.goalId
             ? { ...g, status: pendingStatusChange.newStatus as GoalStatus }
@@ -800,31 +756,13 @@ export default function GoalsPage() {
       });
 
       // Refetch to ensure consistency
-      const res = await fetch(`/api/goals`, {
-        headers: {
-          Authorization: `Bearer ${session?.access_token ?? ""}`,
-        },
-        cache: "no-store",
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setGoals(Array.isArray(data.results) ? data.results : []);
-      }
+      queryClient.invalidateQueries({ queryKey: ["goals"] });
     } catch (error) {
       console.error("Failed to update goal status:", error);
       alert("Failed to update goal status. Please try again.");
 
       // Revert optimistic update on error
-      const res = await fetch(`/api/goals`, {
-        headers: {
-          Authorization: `Bearer ${session?.access_token ?? ""}`,
-        },
-        cache: "no-store",
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setGoals(Array.isArray(data.results) ? data.results : []);
-      }
+      queryClient.invalidateQueries({ queryKey: ["goals"] });
     } finally {
       setPendingStatusChange(null);
       setIsStatusConfirmOpen(false);

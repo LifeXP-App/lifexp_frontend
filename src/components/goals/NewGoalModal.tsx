@@ -140,7 +140,7 @@ export default function NewGoalModal({
            
             <div className="mb-6">
               <label className="block text-sm font-semibold mb-2 text-black dark:text-[var(--foreground)]">
-                What {goalCompleted ? "did you" : "What do you want to"} achieve?
+                What {goalCompleted ? "did you" : "do you want to"} achieve?
               </label>
               <input
                 type="text"
@@ -193,7 +193,7 @@ export default function NewGoalModal({
                       flex items-center  justify-center
                       ${
                         selectedPeriod === period.value
-                          ? "bg-black dark:bg-[var(--dark-3)] text-white"
+                          ? "bg-black dark:bg-[var(--rookie-primary)] text-white"
                           : "bg-gray-200 dark:bg-dark-3 text-black dark:text-[var(--foreground)] hover:bg-gray-300 dark:hover:bg-[var(--dark-2)]"
                       }
                     `}
