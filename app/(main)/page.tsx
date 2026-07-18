@@ -2,9 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useQuery as useConvexQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { Post, type PostType } from "@/src/components/homepage/Post";
 import { SessionPost, type ApiSessionPost } from "@/src/components/homepage/SessionPost";
 import { UserStatus } from "@/src/components/homepage/UserStatus";
+import { LiveSessionStatus } from "@/src/components/homepage/LiveSessionStatus";
 import { RightSidebarInfo } from "@/src/components/homepage/RightSidebarInfo";
 import { RightSidebarNotifications } from "@/src/components/homepage/RightSidebarNotifications";
 import { DiscoverUsers } from "@/src/components/homepage/DiscoverUsers";
@@ -409,15 +412,15 @@ export default function Home() {
     } | null;
   };
 
+  // Real-time live/paused sessions from Convex, shown between own profile and friends
+  const liveSessions = useConvexQuery(api.sessions.getLiveSessions) ?? [];
+
   const { data: friendsStatus = [], isLoading: friendsStatusLoading } = useQuery({
     queryKey: ["friends-status"],
     queryFn: async () => {
       try {
         const res = await fetch("/api/users/friends-status", {
           method: "GET",
-          headers: {
-            "Authorization": `Bearer ${session?.access_token}`,
-          },
           cache: "no-store",
         });
 
@@ -463,9 +466,6 @@ export default function Home() {
       try {
         const res = await fetch("/api/notifications", {
           method: "GET",
-          headers: {
-            "Authorization": `Bearer ${session?.access_token}`,
-          },
           cache: "no-store",
         });
 
@@ -612,9 +612,6 @@ const {
   queryFn: async ({ pageParam }) => {
     const res = await fetch(`/api/feed?page=${pageParam}&limit=10`, {
       method: "GET",
-      headers: {
-        "Authorization": `Bearer ${session?.access_token}`,
-      },
       cache: "no-store",
     });
 
@@ -803,20 +800,57 @@ const { data: discoverUsers = [], isLoading: discoverLoading } = useQuery({
                 <UserStatusSkeleton />
               </>
             ) : (
-              friendsStatus.map((friend) => (
-                <UserStatus
-                  key={friend.id}
-                  player={{
-                    username: friend.username,
-                    fullname: friend.fullname,
-                    lifelevel: friend.life_level,
-                    streak_count: friend.streak_count,
-                    streak_active: friend.streak_active,
-                    profile_picture: friend.profile_picture,
-                    last_activity: friend.last_activity,
-                  }}
-                />
-              ))
+              <>
+                {friendsStatus
+                  .filter((friend) => friend.is_self)
+                  .map((friend) => (
+                    <UserStatus
+                      key={friend.id}
+                      player={{
+                        username: friend.username,
+                        fullname: friend.fullname,
+                        lifelevel: friend.life_level,
+                        streak_count: friend.streak_count,
+                        streak_active: friend.streak_active,
+                        profile_picture: friend.profile_picture,
+                        last_activity: friend.last_activity,
+                      }}
+                    />
+                  ))}
+                {liveSessions.map((liveSession) => (
+                  <LiveSessionStatus
+                    key={liveSession._id}
+                    session={{
+                      sessionId: liveSession._id,
+                      goalId: liveSession.goalId,
+                      goalTitle: liveSession.goalTitle,
+                      username: liveSession.username,
+                      userProfile: liveSession.userProfile,
+                      activityName: liveSession.activityName,
+                      activityEmoji: liveSession.activityEmoji,
+                      activityType: liveSession.activityType,
+                      status: liveSession.status === "paused" ? "paused" : "live",
+                      totalDurationSeconds: liveSession.totalDurationSeconds,
+                    }}
+                  />
+                ))}
+                {friendsStatus
+                  .filter((friend) => !friend.is_self)
+                  .map((friend) => (
+                    <UserStatus
+                      key={friend.id}
+                      player={{
+                        username: friend.username,
+                        fullname: friend.fullname,
+                        lifelevel: friend.life_level,
+                        streak_count: friend.streak_count,
+                        streak_active: friend.streak_active,
+                        profile_picture: friend.profile_picture,
+                        last_activity: friend.last_activity,
+                      }}
+                    />
+                  ))}
+              </>
             )}
           </div>
 

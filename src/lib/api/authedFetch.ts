@@ -1,14 +1,13 @@
 import { supabase } from "@/src/lib/supabase";
 
 /**
- * Browser-side fetch wrapper that attaches the current Supabase access token
- * as an `Authorization: Bearer <token>` header.
+ * Browser-side fetch wrapper for local API proxies and direct API calls.
  *
- * Auth in this app is Supabase-based and lives client-side (localStorage), so
- * the local `/api/*` proxy routes read the token from the Authorization header
- * via `getAuthToken`. Plain `fetch` calls that omit the header get a 401 before
- * the request ever reaches Django. Use this helper for any authenticated call
- * to a local `/api/*` route from a client component.
+ * Local `/api/*` routes authenticate with the HttpOnly `sb-access-token`
+ * cookie. Repeating the same JWT in an Authorization header needlessly grows
+ * every request and can push Node over its header-size limit when localhost
+ * has cookies from several projects. Only direct, cross-origin API calls need
+ * the browser SDK token attached.
  *
  * Mirrors `goalsFetch` in `src/lib/services/goals.ts`.
  */
@@ -16,6 +15,28 @@ export async function authedFetch(
   input: RequestInfo | URL,
   init: RequestInit = {},
 ): Promise<Response> {
+  const inputValue =
+    typeof input === "string"
+      ? input
+      : input instanceof URL
+        ? input.toString()
+        : input.url;
+  const target = new URL(inputValue, window.location.origin);
+  const isSameOriginApi =
+    target.origin === window.location.origin &&
+    target.pathname.startsWith("/api/");
+
+  if (isSameOriginApi) {
+    const headers = new Headers(init.headers);
+    headers.delete("Authorization");
+
+    return fetch(input, {
+      ...init,
+      headers,
+      cache: init.cache ?? "no-store",
+    });
+  }
+
   const {
     data: { session },
     error: getSessionError,

@@ -532,6 +532,25 @@ export const markSyncedToDjango = mutation({
 });
 
 
+export const getLiveSessions = query({
+  args: {},
+  handler: async (ctx) => {
+    const [live, paused] = await Promise.all([
+      ctx.db
+        .query("sessions")
+        .withIndex("by_heartbeat", (q) => q.eq("status", "live"))
+        .order("desc")
+        .collect(),
+      ctx.db
+        .query("sessions")
+        .withIndex("by_heartbeat", (q) => q.eq("status", "paused"))
+        .order("desc")
+        .collect(),
+    ]);
+    return [...live, ...paused];
+  },
+});
+
 export const getLiveSessionsForActivity = query({
   args: {
     activityId: v.string(),

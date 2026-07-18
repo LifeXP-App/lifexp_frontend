@@ -115,15 +115,10 @@ export default function ProfilePage({ params }: PageProps) {
   const { data: usersData, isLoading: usersQueryLoading } = useQuery({
     queryKey: ["profile-users", username, me?.username],
     queryFn: async () => {
-      const authHeaders = session?.access_token
-        ? { Authorization: `Bearer ${session.access_token}` }
-        : undefined;
-
       const [profileResponse, currentResponse] = await Promise.all([
         fetch(`/api/users/profile/${username}`, {
           method: "GET",
           headers: {
-            ...authHeaders,
             "Content-Type": "application/json",
           },
           cache: "no-store",
@@ -131,7 +126,6 @@ export default function ProfilePage({ params }: PageProps) {
         fetch(`/api/users/profile/${me?.username}`, {
           method: "GET",
           headers: {
-            ...authHeaders,
             "Content-Type": "application/json",
           },
           cache: "no-store",
@@ -214,20 +208,14 @@ export default function ProfilePage({ params }: PageProps) {
   const { data: profileStatsData, isLoading: dataLoading } = useQuery({
     queryKey: ["profile-stats", username],
     queryFn: async () => {
-      const authHeaders = {
-        Authorization: `Bearer ${session?.access_token}`,
-      };
       const [weeklyRes, sessionsRes, goalsRes] = await Promise.all([
         fetch(`/api/stats/weekly?username=${username}`, {
-          headers: authHeaders,
           cache: "no-store",
         }),
         fetch(`/api/users/${username}/sessions?limit=5`, {
-          headers: authHeaders,
           cache: "no-store",
         }),
         fetch(`/api/users/${username}/goals?status=ongoing`, {
-          headers: authHeaders,
           cache: "no-store",
         }),
       ]);
@@ -294,7 +282,6 @@ export default function ProfilePage({ params }: PageProps) {
       const res = await fetch(
         `/api/users/${profileUser?.id}/top-activities?limit=5`,
         {
-          headers: { Authorization: `Bearer ${session?.access_token}` },
           cache: "no-store",
         },
       );

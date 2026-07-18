@@ -55,8 +55,8 @@ export async function GET(req: Request) {
           { detail: "SESSION_EXPIRED" },
           { status: 401 }
         );
-        out.cookies.set("access", "", { path: "/", maxAge: 0 });
-        out.cookies.set("refresh", "", { path: "/", maxAge: 0 });
+        out.cookies.set("sb-access-token", "", { path: "/", maxAge: 0 });
+        out.cookies.set("sb-refresh-token", "", { path: "/", maxAge: 0 });
         return out;
       }
 
@@ -76,7 +76,7 @@ export async function GET(req: Request) {
       const out = NextResponse.json(data, { status: res.status });
 
       // update access cookie
-      out.cookies.set("access", tokens.access, {
+      out.cookies.set("sb-access-token", tokens.access, {
         httpOnly: true,
         sameSite: "lax",
         secure: process.env.NODE_ENV === "production",
@@ -85,7 +85,7 @@ export async function GET(req: Request) {
 
       // rotate refresh if returned
       if (tokens.refresh) {
-        out.cookies.set("refresh", tokens.refresh, {
+        out.cookies.set("sb-refresh-token", tokens.refresh, {
           httpOnly: true,
           sameSite: "lax",
           secure: process.env.NODE_ENV === "production",
