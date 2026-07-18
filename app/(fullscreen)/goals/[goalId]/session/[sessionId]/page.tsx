@@ -591,6 +591,50 @@ useEffect(() => {
     heartbeatMutation,
   ]);
 
+  // ── Screen Wake Lock ──
+  // Keep the phone's screen awake while the timer is actually counting
+  // (focus running, or a break the user started). Without this, mobile
+  // screens auto-lock after ~30s–2min of no touch, the browser suspends JS,
+  // heartbeats stop, and the stale-session cron kills the session. The lock
+  // is auto-released by the browser when the tab is hidden or the user locks
+  // the phone manually, so re-acquire on visibilitychange when we return.
+  const holdWakeLock = isOwn && (isRunning || (pomodoroPhase === "break" && isBreakRunning));
+  useEffect(() => {
+    if (!holdWakeLock) return;
+    if (!("wakeLock" in navigator)) return;
+
+    let lock: WakeLockSentinel | null = null;
+    let cancelled = false;
+
+    const acquire = async () => {
+      if (document.visibilityState !== "visible") return;
+      try {
+        const acquired = await navigator.wakeLock.request("screen");
+        if (cancelled) {
+          acquired.release().catch(() => {});
+        } else {
+          lock = acquired;
+        }
+      } catch (err) {
+        // NotAllowedError (e.g. battery saver) — non-fatal, session just
+        // falls back to the existing foreground-ping + recovery behavior.
+        console.warn("Screen wake lock unavailable:", err);
+      }
+    };
+
+    acquire();
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") acquire();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", onVisibility);
+      lock?.release().catch(() => {});
+    };
+  }, [holdWakeLock]);
+
   // ── Foreground ping ──
   // Mobile browsers throttle/suspend setInterval while the tab is backgrounded
   // or the screen is locked, so the regular 5s heartbeat above can go silent
