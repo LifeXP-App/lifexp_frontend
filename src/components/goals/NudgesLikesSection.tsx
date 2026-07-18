@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabase } from "@/src/lib/supabase";
+import { LiveAvatar } from "@/src/components/LiveAvatar";
 
 type InteractionType = "nudge" | "like";
 
@@ -115,14 +116,16 @@ export function NudgesLikesSection() {
                 <li className="cursor-pointer">
                   <div className="flex gap-4">
                     <div className="relative w-12 h-12 flex-shrink-0">
-                      <img
-                        src={i.image}
-                        className={`h-12 w-12 object-cover aspect-square ${
-                          i.rounded ? "rounded-full" : "rounded-md"
-                        }`}
-                        loading="lazy"
-                        alt="profile"
-                      />
+                      <LiveAvatar username={i.rounded ? i.username : undefined}>
+                        <img
+                          src={i.image}
+                          className={`h-12 w-12 object-cover aspect-square ${
+                            i.rounded ? "rounded-full" : "rounded-md"
+                          }`}
+                          loading="lazy"
+                          alt="profile"
+                        />
+                      </LiveAvatar>
 
                       {/* Emoji badge bottom-left */}
                       <div

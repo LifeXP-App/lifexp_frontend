@@ -1,6 +1,7 @@
 "use client";
 
 import { FireIcon, InformationCircleIcon } from "@heroicons/react/24/solid";
+import { LiveAvatar } from "@/src/components/LiveAvatar";
 import Link from "next/link";
 type RightSidebarInfoProps = {
   user: {
@@ -34,12 +35,14 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
             href={`/u/${user.username}`}
             className="flex flex-col items-center gap-2"
           >
-            <img
-              src={user.profile_picture}
-              className="h-24 w-24 object-cover aspect-square p-[1.5px] rounded-full"
-              loading="lazy"
-              alt="Profile"
-            />
+            <LiveAvatar username={user.username}>
+              <img
+                src={user.profile_picture}
+                className="h-24 w-24 object-cover aspect-square p-[1.5px] rounded-full"
+                loading="lazy"
+                alt="Profile"
+              />
+            </LiveAvatar>
             <h3 className="font-semibold">{user.fullname}</h3>
           </Link>
 

@@ -386,6 +386,7 @@ export default function SessionTimer({ params }: SessionTimerProps) {
         const id = await startMutation({
           userId: String(me.id),
           username: me.username,
+          userFullname: me.fullname ?? undefined,
           userProfile: me.profile_picture ?? undefined,
           goalId,
           goalTitle: goalData.title,

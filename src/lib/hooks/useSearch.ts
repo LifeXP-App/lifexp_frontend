@@ -31,8 +31,8 @@ function getErrorMessage(error: unknown, fallback: string) {
 
 // Global search and posts/users search each normalize alternative image field
 // names the backend sends — same normalization the old hook applied.
-function normalizePosts(posts: Post[]): Post[] {
-  return posts.map((post) => {
+function normalizePosts(posts: Post[] | undefined | null): Post[] {
+  return (posts ?? []).map((post) => {
     const p = post as SearchPostWithImageFallback;
     return {
       ...p,
@@ -41,8 +41,8 @@ function normalizePosts(posts: Post[]): Post[] {
   });
 }
 
-function normalizeUsers(users: User[]): User[] {
-  return users.map((user) => {
+function normalizeUsers(users: User[] | undefined | null): User[] {
+  return (users ?? []).map((user) => {
     const u = user as SearchUserWithImageFallback;
     return {
       ...u,
@@ -109,7 +109,7 @@ export function useSearch(options: UseSearchOptions) {
   const infiniteQuery = useInfiniteQuery<
     PostsSearchResult | UsersSearchResult | ActivitiesSearchResult
   >({
-    queryKey: ["search", searchType, debouncedQuery, limit],
+    queryKey: ["search", "paginated", searchType, debouncedQuery, limit],
     queryFn: ({ pageParam, signal }) => {
       const page = pageParam as number;
       if (searchType === "posts") {
@@ -156,7 +156,7 @@ export function useSearch(options: UseSearchOptions) {
       return {
         posts: normalizePosts(data.results.posts),
         users: normalizeUsers(data.results.users),
-        activities: data.results.activities,
+        activities: data.results.activities ?? [],
       };
     }
 

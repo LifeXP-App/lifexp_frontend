@@ -3,6 +3,7 @@ import { useAuth } from "@/src/context/AuthContext";
 import { useSearch } from "@/src/lib/hooks/useSearch";
 import { useSearchHistory } from "@/src/lib/hooks/useSearchHistory";
 import { authedFetch } from "@/src/lib/api/authedFetch";
+import { LiveAvatar } from "@/src/components/LiveAvatar";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import posthog from "posthog-js";
@@ -517,11 +518,13 @@ export default function SearchPage() {
                             className="flex items-center gap-4 p-3 hover:bg-gray-100 dark:hover:bg-[var(--dark-1)] rounded-lg transition-colors"
                           >
                             {user.profile_picture && (
-                              <img
-                                src={user.profile_picture}
-                                alt={user.fullname}
-                                className="w-12 h-12 rounded-full object-cover"
-                              />
+                              <LiveAvatar username={user.username}>
+                                <img
+                                  src={user.profile_picture}
+                                  alt={user.fullname}
+                                  className="w-12 h-12 rounded-full object-cover"
+                                />
+                              </LiveAvatar>
                             )}
                             <div>
                               <p className="font-semibold text-gray-900 dark:text-[var(--foreground)]">

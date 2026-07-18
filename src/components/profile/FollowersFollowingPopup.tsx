@@ -2,6 +2,7 @@
 
 import { toggleFollow } from "@/lib/api/users";
 import getAccentColors from "@/src/components/UserAccent";
+import { LiveAvatar } from "@/src/components/LiveAvatar";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
@@ -250,24 +251,26 @@ export default function FollowersFollowingPopup({
                       href={`/u/${user.username}`}
                       className="flex items-center gap-3 flex-1"
                     >
-                      {user.profile_picture ? (
-                        <img
-                          src={user.profile_picture}
-                          alt={user.username}
-                          className="h-12 w-12 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div
-                          className="h-12 w-12 rounded-full flex items-center justify-center"
-                          style={{
-                            backgroundImage: `linear-gradient(135deg, ${accent.gradStart}, ${accent.gradEnd})`,
-                          }}
-                        >
-                          <span className="text-white text-lg font-bold">
-                            {user.username[0].toUpperCase()}
-                          </span>
-                        </div>
-                      )}
+                      <LiveAvatar username={user.username}>
+                        {user.profile_picture ? (
+                          <img
+                            src={user.profile_picture}
+                            alt={user.username}
+                            className="h-12 w-12 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div
+                            className="h-12 w-12 rounded-full flex items-center justify-center"
+                            style={{
+                              backgroundImage: `linear-gradient(135deg, ${accent.gradStart}, ${accent.gradEnd})`,
+                            }}
+                          >
+                            <span className="text-white text-lg font-bold">
+                              {user.username[0].toUpperCase()}
+                            </span>
+                          </div>
+                        )}
+                      </LiveAvatar>
                       <div className="flex flex-col">
                         <p className="text-sm font-semibold dark:text-[var(--foreground)]">
                           {user.fullname}

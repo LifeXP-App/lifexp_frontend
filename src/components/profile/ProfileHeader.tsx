@@ -2,6 +2,7 @@
 
 import getAccentColors from "@/src/components/UserAccent";
 import { UserProfile } from "@/src/lib/types";
+import { LiveAvatar } from "@/src/components/LiveAvatar";
 import { LockClosedIcon } from "@heroicons/react/24/solid";
 import Image from "next/image";
 
@@ -32,26 +33,28 @@ export default function ProfileHeader({
     <div className="pt-2 sm:p-2 mb-4 flex flex-col gap-2 w-full">
       <div className="flex flex-row items-center gap-4 sm:gap-8 w-full mb-4">
         <div className="shrink-0">
-          {user.avatar ? (
-            <Image
-              src={user.avatar}
-              width={96}
-              height={96}
-              alt={user.username}
-              className="h-20 w-20 sm:h-24 sm:w-24 rounded-full object-cover"
-            />
-          ) : (
-            <div
-              className="h-20 w-20 sm:h-24 sm:w-24 rounded-full flex items-center justify-center"
-              style={{
-                backgroundImage: `linear-gradient(135deg, ${accent.gradStart}, ${accent.gradEnd})`,
-              }}
-            >
-              <span className="text-white text-2xl font-bold">
-                {user.username[0].toUpperCase()}
-              </span>
-            </div>
-          )}
+          <LiveAvatar username={user.username}>
+            {user.avatar ? (
+              <Image
+                src={user.avatar}
+                width={96}
+                height={96}
+                alt={user.username}
+                className="h-20 w-20 sm:h-24 sm:w-24 rounded-full object-cover"
+              />
+            ) : (
+              <div
+                className="h-20 w-20 sm:h-24 sm:w-24 rounded-full flex items-center justify-center"
+                style={{
+                  backgroundImage: `linear-gradient(135deg, ${accent.gradStart}, ${accent.gradEnd})`,
+                }}
+              >
+                <span className="text-white text-2xl font-bold">
+                  {user.username[0].toUpperCase()}
+                </span>
+              </div>
+            )}
+          </LiveAvatar>
         </div>
         <div className="flex flex-col w-full">
           <span className="flex items-center gap-2 mb-1">

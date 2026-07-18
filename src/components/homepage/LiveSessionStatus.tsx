@@ -13,6 +13,7 @@ export type LiveSessionStatusProps = {
     goalId: string;
     goalTitle?: string;
     username?: string;
+    userFullname?: string;
     userProfile?: string;
     activityName?: string;
     activityEmoji?: string;
@@ -101,7 +102,7 @@ export function LiveSessionStatus({ session }: LiveSessionStatusProps) {
 
         <div className="flex flex-col justify-between flex-1 min-w-0">
           <h1 className="text-md font-semibold truncate">
-            {session.username ?? "Someone"}
+            {session.userFullname || session.username || "Someone"}
           </h1>
 
           <p className="text-xs font-medium text-black/40 dark:text-[var(--foreground)]/40 truncate">
