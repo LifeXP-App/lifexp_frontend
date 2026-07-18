@@ -68,6 +68,51 @@ function EditProfileSkeleton() {
   );
 }
 
+function resizeImage(file: File, maxDimension = 512, quality = 0.85): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image();
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      img.src = e.target?.result as string;
+    };
+
+    img.onload = () => {
+      let { width, height } = img;
+
+      if (width > height && width > maxDimension) {
+        height = Math.round(height * (maxDimension / width));
+        width = maxDimension;
+      } else if (height > maxDimension) {
+        width = Math.round(width * (maxDimension / height));
+        height = maxDimension;
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext("2d")?.drawImage(img, 0, 0, width, height);
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) return reject(new Error("Canvas is empty"));
+          resolve(
+            new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), {
+              type: "image/jpeg",
+            })
+          );
+        },
+        "image/jpeg",
+        quality
+      );
+    };
+
+    img.onerror = reject;
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function EditProfilePage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const router = useRouter();
@@ -164,14 +209,20 @@ export default function EditProfilePage() {
 
   /* ---------------- IMAGE HANDLERS ---------------- */
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
   const file = e.target.files?.[0];
   if (!file) return;
 
-  setProfileFile(file); // store file
+  try {
+    const resizedFile = await resizeImage(file, 512, 0.85);
+    setProfileFile(resizedFile);
 
-  const url = URL.createObjectURL(file);
-  setProfilePreview(url);
+    const url = URL.createObjectURL(resizedFile);
+    setProfilePreview(url);
+  } catch (err) {
+    console.error("Failed to resize image:", err);
+    setSaveError("Could not process that image. Try a different file.");
+  }
 };
 
   const removeProfile = () => {
