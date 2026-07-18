@@ -64,9 +64,21 @@ export function useGoal(goalId: string) {
 
   // Merge: Convex wins for sessions in both (has live state); Django fills in historical ones
   const sessions = useMemo<Session[]>(() => {
+    const djangoById = new Map(djangoSessions.map((s) => [s.id, s]));
     const convexIds = new Set(convexMapped.map((s) => s.id));
     const historicalOnly = djangoSessions.filter((s) => !convexIds.has(s.id));
-    return [...convexMapped, ...historicalOnly].sort(
+
+    // Convex has no completionPicture writer anywhere (it's uploaded via the
+    // reflection page straight to Django/Cloudinary), so convexMapped's copy
+    // is always null. Without this, "Convex wins" would clobber a real
+    // completion picture Django already has with null on every render.
+    const convexWithPictures = convexMapped.map((s) =>
+      s.completion_picture
+        ? s
+        : { ...s, completion_picture: djangoById.get(s.id)?.completion_picture ?? null },
+    );
+
+    return [...convexWithPictures, ...historicalOnly].sort(
       (a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime()
     );
   }, [convexMapped, djangoSessions]);

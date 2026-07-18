@@ -1159,10 +1159,8 @@ export default function GoalDetailPage() {
                 </button>
 
                 <button
-                  className="py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80 cursor-pointer"
-                  style={{
-                    backgroundColor: "#4a4a4a",
-                  }}
+                  className="py-3 rounded-2xl text-md bg-gray-700 dark:bg-dark-3 font-medium text-white text-base transition-all active:opacity-80 cursor-pointer"
+                  
                   onClick={() => setIsNewActivityModalOpen(true)}
                 >
                   New Session

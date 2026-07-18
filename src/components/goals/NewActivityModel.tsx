@@ -13,6 +13,7 @@ interface Activity {
   type: ActivityType;
   total_xp?: number;
   xp_distribution?: Record<string, number>;
+  verified?: boolean;
 }
 
 interface ApiActivity {
@@ -32,6 +33,7 @@ interface ApiActivity {
   created_at?: string;
   used_count?: number;
   reasoning?: string;
+  verified?: boolean;
 }
 
 interface ActivitiesPayload {
@@ -64,6 +66,7 @@ const mapActivity = (activity: ApiActivity): Activity => ({
   type: activity.activity_type,
   total_xp: activity.total_xp,
   xp_distribution: activity.xp_distribution,
+  verified: activity.verified,
 });
 
 const getActivitiesFromPayload = (payload: unknown): ApiActivity[] => {

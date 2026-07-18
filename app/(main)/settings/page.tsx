@@ -331,7 +331,7 @@ export default function SettingsPage() {
           )}
         </div>
 
-        {/* Save button */}
+        {/* Save button
         <button
           onClick={() => form && saveSettings(form)}
           disabled={saving || loadingSettings || !form || isUnchanged}
@@ -339,7 +339,7 @@ export default function SettingsPage() {
           style={{ backgroundColor: "#4168e2", color: "white" }}
         >
           Save
-        </button>
+        </button> */}
       </div>
 
       {/* Desktop right panel */}
