@@ -48,7 +48,7 @@ export async function POST(
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
   const res = await authedFetch(
     req,
-    `${baseUrl}/api/v1/goals/${id}/complete`,
+    `${baseUrl}/api/v1/goals/${id}/complete/`,
     {
       method: "POST",
       body: formData,

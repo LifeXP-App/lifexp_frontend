@@ -5,7 +5,7 @@ import React, { useEffect, useRef, useState } from "react";
 interface CompleteGoalPopupProps {
   isOpen: boolean;
   onClose: () => void;
-  onPost?: (payload: { title: string; description: string; finishBy?: string; image?: File | null }) => void;
+  onPost?: (payload: { title: string; description: string; finishBy?: string; image?: File | null }) => void | Promise<void>;
   defaultFinishBy?: string;
 
   defaultTitle?: string;
@@ -33,6 +33,7 @@ export default function CompleteGoalPopup({
   const [finishBy, setFinishBy] = useState<string | undefined>(undefined);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [isPosting, setIsPosting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -43,6 +44,7 @@ export default function CompleteGoalPopup({
     setFinishBy(defaultFinishBy || undefined);
     setImagePreview(null);
     setImageFile(null);
+    setIsPosting(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
   }, [isOpen, defaultTitle, defaultDescription, defaultFinishBy]);
   /* eslint-enable react-hooks/set-state-in-effect */
@@ -224,11 +226,20 @@ export default function CompleteGoalPopup({
         <div className="flex items-center bg-white dark:bg-[var(--dark-1)] justify-between px-5 pt-5 pb-4 border-t border-gray-200 dark:border-[var(--border)]">
           <button
             type="button"
-            onClick={() => onPost?.({ title, description, finishBy, image: imageFile })}
-            className="w-full py-3 rounded-2xl font-semibold text-white transition-all active:opacity-80 cursor-pointer"
+            disabled={isPosting}
+            onClick={async () => {
+              if (!onPost || isPosting) return;
+              setIsPosting(true);
+              try {
+                await onPost({ title, description, finishBy, image: imageFile });
+              } finally {
+                setIsPosting(false);
+              }
+            }}
+            className="w-full py-3 rounded-2xl font-semibold text-white transition-all active:opacity-80 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
             style={{ backgroundColor: "var(--rookie-primary)" }}
           >
-            Post Achievement
+            {isPosting ? "Posting Achievement..." : "Post Achievement"}
           </button>
         </div>
       </div>
