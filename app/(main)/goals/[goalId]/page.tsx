@@ -15,6 +15,7 @@ import { supabase } from "@/src/lib/supabase";
 import { useGoal } from "@/src/lib/hooks/useGoals";
 import { GoalsService, Session } from "@/src/lib/services/goals";
 import { ActivityType } from "@/src/lib/types/activityMeta";
+import { compressImageForUpload, SANITY_CAP_BYTES } from "@/src/lib/utils/compressImage";
 import { BoltIcon, UsersIcon } from "@heroicons/react/24/solid";
 import { useMutation } from "convex/react";
 import Link from "next/link";
@@ -461,12 +462,19 @@ export default function GoalDetailPage() {
       return;
     }
 
+    if (image.size > SANITY_CAP_BYTES) {
+      alert("Image is too large. Please pick a smaller file.");
+      return;
+    }
+
     try {
+      const uploadFile = await compressImageForUpload(image);
+
       const formData = new FormData();
       formData.append("title", title);
       formData.append("description", description);
       if (finishBy) formData.append("finish_by", finishBy);
-      formData.append("image", image); // now guaranteed non-null
+      formData.append("completion_picture", uploadFile); // Django's GoalCompleteView reads this key, not "image"
 
       const res = await fetch(`/api/goals/${goalId}/complete/`, {
         method: "POST",
