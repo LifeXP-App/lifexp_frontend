@@ -1,4 +1,5 @@
 import { supabase } from "@/src/lib/supabase";
+import { report401 } from "@/src/lib/api/sessionExpiry";
 
 export interface Goal {
   id: string;
@@ -126,11 +127,13 @@ async function goalsFetch(input: RequestInfo | URL, init: RequestInit = {}) {
     headers.set("Authorization", `Bearer ${session.access_token}`);
   }
 
-  return fetch(input, {
+  const res = await fetch(input, {
     ...init,
     headers,
     cache: init.cache ?? "no-store",
   });
+  if (res.status === 401) report401();
+  return res;
 }
 
 function normalizeGoalStatus(status: unknown): GoalStatus {
