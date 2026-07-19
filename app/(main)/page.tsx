@@ -840,6 +840,7 @@ const { data: discoverUsers = [], isLoading: discoverLoading } = useQuery({
                       activityEmoji: liveSession.activityEmoji,
                       activityType: liveSession.activityType,
                       status: liveSession.status === "paused" ? "paused" : "live",
+                      onBreak: liveSession.onBreak,
                       totalDurationSeconds: liveSession.totalDurationSeconds,
                     }}
                   />
