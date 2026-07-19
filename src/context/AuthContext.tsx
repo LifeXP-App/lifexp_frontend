@@ -38,6 +38,7 @@ type AuthContextType = {
     } | null;
   }>;
   signInWithGoogle: () => Promise<{ error?: { message?: string } | null }>;
+  requestPasswordReset: (email: string) => Promise<{ error?: { message?: string } | null; message?: string }>;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -175,6 +176,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   /**
+   * Request a Supabase password-reset email via the Django backend.
+   * Public endpoint (like signUp) - called directly against Django rather
+   * than through a Next proxy since there's no session to attach.
+   */
+  const requestPasswordReset = async (email: string) => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/auth/password-reset/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        return { error: { message: data.error || "Failed to send reset email." } };
+      }
+
+      return { error: null, message: data.message as string };
+    } catch (err) {
+      console.error("Password reset request error:", err);
+      return { error: { message: "Failed to send reset email." } };
+    }
+  };
+
+  /**
    * Logout user
    */
   const logout = async () => {
@@ -250,6 +277,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signIn,
         signUp,
         signInWithGoogle,
+        requestPasswordReset,
       }}
     >
       {children}

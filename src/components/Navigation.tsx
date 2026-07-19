@@ -65,7 +65,7 @@ export function Navigation({ accentColor, onNavigate }: NavigationProps) {
       <div className="space-y-4">
         {NAV_ITEMS.map((item) => (
           <NavigationItem
-            key={item.href}
+            key={item.label}
             {...item}
             accentColor={accentColor}
             onNavigate={onNavigate}

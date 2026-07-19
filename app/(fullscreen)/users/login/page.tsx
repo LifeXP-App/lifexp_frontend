@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, Suspense } from "react";
 import { useAuth } from "@/src/context/AuthContext";
@@ -16,6 +17,7 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(
     searchParams.get("error") || null
   );
+  const [message] = useState<string | null>(searchParams.get("message") || null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -81,6 +83,12 @@ function LoginForm() {
         <div className="w-full max-w-md rounded-2xl bg-black/50 p-8 shadow-lg backdrop-blur-lg">
           <h2 className="mb-6 text-center text-3xl font-bold">Welcome Back</h2>
 
+          {message && (
+            <div className="mb-4 rounded-lg border border-green-500/30 bg-green-500/10 p-3 text-sm text-green-200">
+              {message}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-gray-400">Email</label>
@@ -95,7 +103,15 @@ function LoginForm() {
             </div>
 
             <div>
-              <label className="block text-gray-400">Password</label>
+              <div className="flex items-center justify-between">
+                <label className="block text-gray-400">Password</label>
+                <Link
+                  href="/users/forgot-password"
+                  className="text-sm text-gray-400 hover:text-gray-200 underline"
+                >
+                  Forgot password?
+                </Link>
+              </div>
               <input
                 type="password"
                 name="password"
@@ -125,7 +141,7 @@ function LoginForm() {
               type="button"
               onClick={handleGoogleSignIn}
               disabled={loading}
-              className="flex w-full items-center justify-center gap-3 rounded-lg border border-gray-700 bg-transparent py-3 font-semibold transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex w-full items-center cursor-pointer justify-center gap-3 rounded-lg border border-gray-700 bg-transparent py-3 font-semibold transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <svg className="h-5 w-5" viewBox="0 0 24 24">
                 <path

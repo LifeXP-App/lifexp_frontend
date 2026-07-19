@@ -3,7 +3,10 @@
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/src/context/AuthContext";
+import { supabase } from "@/src/lib/supabase";
+import DeleteAccountModal from "@/src/components/settings/DeleteAccountModal";
 
 type AccountType = "Private" | "Public";
 type Notifications = "On" | "Off";
@@ -61,23 +64,113 @@ function SkeletonValue() {
 }
 
 export default function SettingsPage() {
-  const { session, loading: authLoading } = useAuth();
+  const { session, me, loading: authLoading, requestPasswordReset } = useAuth();
+  const queryClient = useQueryClient();
 
+  const [changePasswordStatus, setChangePasswordStatus] = useState<
+    "idle" | "sending" | "sent" | "error"
+  >("idle");
+  const [changePasswordMessage, setChangePasswordMessage] = useState<string | null>(null);
+
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const [saving, setSaving] = useState(false);
+
+  // Cached so revisiting this page (or coming back from another tab) serves
+  // the settings instantly from the cache instead of skeleton-loading again
+  // every time — only a genuinely first-ever load, or an explicit
+  // invalidation, hits the network and blocks on isLoading.
+  const { data: settingsData, isLoading: loadingSettings } = useQuery({
+    queryKey: ["settings"],
+    queryFn: async () => {
+      const res = await fetch("/api/users/settings", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        cache: "no-store",
+      });
+
+      if (!res.ok) {
+        throw new Error(await res.text());
+      }
+
+      const data: BackendSettings = await res.json();
+      return backendToForm(data);
+    },
+    enabled: !authLoading && !!session?.access_token,
+  });
+
+  // `form` is the user's editable draft (diverges from the cached/server
+  // value while they're picking new options, before Save commits it);
+  // `initialForm` tracks the last known-saved value so Save can disable
+  // itself when nothing has changed. Both re-sync whenever fresh settings
+  // data lands — initial load, or a background revalidation.
   const [form, setForm] = useState<SettingsFormState | null>(null);
-
-  // ✅ keep initial form so Save disables when unchanged
   const [initialForm, setInitialForm] = useState<SettingsFormState | null>(
     null,
   );
 
-  const [saving, setSaving] = useState(false);
-  const [loadingSettings, setLoadingSettings] = useState(true);
+  useEffect(() => {
+    if (!settingsData) return;
+    setForm(settingsData);
+    setInitialForm(settingsData);
+  }, [settingsData]);
 
   async function handleLogout() {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
     } finally {
       window.location.href = "/users/login";
+    }
+  }
+
+  async function handleChangePassword() {
+    if (!me?.email) return;
+
+    setChangePasswordStatus("sending");
+
+    const { error, message } = await requestPasswordReset(me.email);
+
+    if (error) {
+      setChangePasswordStatus("error");
+      setChangePasswordMessage(error.message || "Failed to send reset email.");
+      return;
+    }
+
+    setChangePasswordStatus("sent");
+    setChangePasswordMessage(message || "Check your email for a link to reset your password.");
+  }
+
+  async function handleDeleteAccount() {
+    setDeleting(true);
+    setDeleteError(null);
+
+    try {
+      const res = await fetch("/api/auth/account", { method: "DELETE" });
+
+      if (res.status !== 204) {
+        const data = await res.json().catch(() => null);
+        setDeleteError(data?.error || data?.detail || "Failed to delete account. Please try again.");
+        setDeleting(false);
+        return;
+      }
+
+      // Best-effort local cleanup - the account is already gone server-side.
+      try {
+        await fetch("/api/auth/logout-supabase", { method: "POST" });
+        await supabase.auth.signOut();
+      } catch (err) {
+        console.error("❌ Failed to clear local session after account deletion:", err);
+      }
+
+      window.location.href = "/users/login";
+    } catch (err) {
+      console.error("❌ Failed to delete account:", err);
+      setDeleteError("Failed to delete account. Please try again.");
+      setDeleting(false);
     }
   }
 
@@ -90,37 +183,6 @@ export default function SettingsPage() {
     const nextTheme = appearance === "Dark" ? "dark" : "light";
     setTheme(nextTheme);
   }, [appearance, setTheme]);
-
-  const loadSettings = useCallback(async () => {
-    if (!session?.access_token) return;
-
-    setLoadingSettings(true);
-
-    try {
-      const res = await fetch("/api/users/settings", {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        cache: "no-store",
-      });
-
-      if (!res.ok) {
-        console.error("❌ Failed to load settings:", await res.text());
-        return;
-      }
-
-      const data: BackendSettings = await res.json();
-      const newForm = backendToForm(data);
-
-      setForm(newForm);
-      setInitialForm(newForm);
-    } catch (err) {
-      console.error("❌ Failed to load settings:", err);
-    } finally {
-      setLoadingSettings(false);
-    }
-  }, [session?.access_token]);
 
   const saveSettings = useCallback(async (payload: SettingsFormState) => {
     try {
@@ -147,23 +209,16 @@ export default function SettingsPage() {
         return;
       }
 
-      // ✅ mark as saved so button disables again
+      // ✅ mark as saved so button disables again, and update the cache in
+      // place — no need to refetch, we already know what was just saved.
       setInitialForm(payload);
-
-      // ✅ optional: reload to stay fully in sync
-      await loadSettings();
+      queryClient.setQueryData(["settings"], payload);
     } catch (err) {
       console.error("❌ Failed saving settings:", err);
     } finally {
       setSaving(false);
     }
-  }, [initialForm, loadSettings, session?.access_token]);
-
-  // ✅ initial load ONCE
-  useEffect(() => {
-    if (authLoading || !session?.access_token) return;
-    loadSettings();
-  }, [authLoading, session?.access_token, loadSettings]);
+  }, [initialForm, queryClient, session?.access_token]);
 
   // ✅ unchanged check
   const isUnchanged = useMemo(() => {
@@ -356,23 +411,41 @@ export default function SettingsPage() {
             Edit Profile
           </Link>
 
-          <Link
-            href="/change-password"
-            className="cursor-pointer active:opacity-80 text-l font-semibold text-left text-gray-800 dark:text-[var(--foreground)] hover:text-gray-600 dark:hover:text-[var(--muted)]"
+          <button
+            onClick={handleChangePassword}
+            disabled={changePasswordStatus === "sending" || !me?.email}
+            className="cursor-pointer active:opacity-80 text-l font-semibold text-left text-gray-800 dark:text-[var(--foreground)] hover:text-gray-600 dark:hover:text-[var(--muted)] disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Change Password
-          </Link>
+            {changePasswordStatus === "sending" ? "Sending..." : "Change Password"}
+          </button>
+          {changePasswordMessage && (
+            <p
+              className={`text-sm -mt-2 ${
+                changePasswordStatus === "error"
+                  ? "text-red-600 dark:text-red-400"
+                  : "text-green-600 dark:text-green-400"
+              }`}
+            >
+              {changePasswordMessage}
+            </p>
+          )}
 
-          <button className="cursor-pointer active:opacity-80 text-l font-semibold text-left text-red-700 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300">
+          <button
+            onClick={() => {
+              setDeleteError(null);
+              setDeleteModalOpen(true);
+            }}
+            className="cursor-pointer active:opacity-80 text-l font-semibold text-left text-red-700 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
+          >
             Delete Account
           </button>
         </div>
 
         <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-[var(--border)] flex flex-col gap-4">
           
-          <button className="cursor-pointer active:opacity-80 text-l font-semibold text-left text-gray-800 dark:text-[var(--foreground)] hover:text-gray-600 dark:hover:text-[var(--muted)]">
+          <a target="__blank" href="https://www.gamilife.com/community" className="cursor-pointer active:opacity-80 text-l font-semibold text-left text-gray-800 dark:text-[var(--foreground)] hover:text-gray-600 dark:hover:text-[var(--muted)]">
             Send Review
-          </button>
+          </a>
 
           <button
             onClick={handleLogout}
@@ -382,6 +455,14 @@ export default function SettingsPage() {
           </button>
         </div>
       </aside>
+
+      <DeleteAccountModal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={handleDeleteAccount}
+        deleting={deleting}
+        error={deleteError}
+      />
     </main>
   );
 }
