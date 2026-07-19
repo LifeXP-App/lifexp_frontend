@@ -2,6 +2,7 @@
 
 import { MASTERY_COLORS } from "../lib/constants/aspects";
 import { UserProfile as UserProfileType } from "../lib/types";
+import { LiveAvatar } from "./LiveAvatar";
 import getAccentColors from "./UserAccent";
 
 interface UserProfileProps {
@@ -19,24 +20,26 @@ export function UserProfile({ user }: UserProfileProps) {
     >
       <div className="flex items-center gap-3">
         <div className="shrink-0">
-          {user.avatar ? (
-            <img
-              src={user.avatar}
-              alt={user.username}
-              className="w-12 h-12 rounded-full object-cover"
-            />
-          ) : (
-            <div
-              className="w-12 h-12 rounded-full flex items-center justify-center"
-              style={{
-                backgroundImage: `linear-gradient(135deg, ${accent.gradStart}, ${accent.gradEnd})`,
-              }}
-            >
-              <span className="text-white text-sm font-bold">
-                {user.username[0].toUpperCase()}
-              </span>
-            </div>
-          )}
+          <LiveAvatar username={user.username}>
+            {user.avatar ? (
+              <img
+                src={user.avatar}
+                alt={user.username}
+                className="w-12 h-12 rounded-full object-cover"
+              />
+            ) : (
+              <div
+                className="w-12 h-12 rounded-full flex items-center justify-center"
+                style={{
+                  backgroundImage: `linear-gradient(135deg, ${accent.gradStart}, ${accent.gradEnd})`,
+                }}
+              >
+                <span className="text-white text-sm font-bold">
+                  {user.username[0].toUpperCase()}
+                </span>
+              </div>
+            )}
+          </LiveAvatar>
         </div>
 
         <div className="flex-1 min-w-0">

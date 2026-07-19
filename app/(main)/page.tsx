@@ -412,8 +412,17 @@ export default function Home() {
     } | null;
   };
 
-  // Real-time live/paused sessions from Convex, shown between own profile and friends
-  const liveSessions = useConvexQuery(api.sessions.getLiveSessions) ?? [];
+  // Real-time live/paused sessions from Convex, shown between own profile and friends.
+  // Own session is excluded (the self status card already shows the live ring), and
+  // users with a live card are dropped from the did-session-today cards below so
+  // nobody appears twice in the row.
+  const allLiveSessions = useConvexQuery(api.sessions.getLiveSessions) ?? [];
+  const liveSessions = allLiveSessions.filter(
+    (s) => !me?.username || s.username !== me.username
+  );
+  const liveUsernames = new Set(
+    allLiveSessions.map((s) => s.username).filter(Boolean)
+  );
 
   const { data: friendsStatus = [], isLoading: friendsStatusLoading } = useQuery({
     queryKey: ["friends-status"],
@@ -825,17 +834,22 @@ const { data: discoverUsers = [], isLoading: discoverLoading } = useQuery({
                       goalId: liveSession.goalId,
                       goalTitle: liveSession.goalTitle,
                       username: liveSession.username,
+                      userFullname: liveSession.userFullname,
                       userProfile: liveSession.userProfile,
                       activityName: liveSession.activityName,
                       activityEmoji: liveSession.activityEmoji,
                       activityType: liveSession.activityType,
                       status: liveSession.status === "paused" ? "paused" : "live",
+                      onBreak: liveSession.onBreak,
                       totalDurationSeconds: liveSession.totalDurationSeconds,
                     }}
                   />
                 ))}
                 {friendsStatus
-                  .filter((friend) => !friend.is_self)
+                  .filter(
+                    (friend) =>
+                      !friend.is_self && !liveUsernames.has(friend.username)
+                  )
                   .map((friend) => (
                     <UserStatus
                       key={friend.id}

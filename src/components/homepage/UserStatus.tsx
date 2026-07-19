@@ -3,6 +3,7 @@
 import { FireIcon } from "@heroicons/react/24/solid";
 import Image from "next/image";
 import Link from "next/link";
+import { LiveAvatar } from "@/src/components/LiveAvatar";
 import { ACTIVITY_META, type ActivityType } from "@/src/lib/types/activityMeta";
 
 /* ---------------- TYPES ---------------- */
@@ -33,14 +34,16 @@ export function UserStatus({ player }: UserStatusProps) {
   return (
     <Link href={`/u/${player.username}`}>
       <div className="bg-white dark:bg-dark-2 border-2 border-gray-200 dark:border-[var(--border)] flex p-3 rounded-xl gap-3 min-w-[220px] max-w-[220px] items-center cursor-pointer flex-shrink-0">
-        <Image
-          src={player.profile_picture}
-          width={56}
-          height={56}
-          alt="User"
-          className="border-opacity-50 p-[1.5px] rounded-full h-14 w-14 aspect-square object-cover"
-          unoptimized
-        />
+        <LiveAvatar username={player.username}>
+          <Image
+            src={player.profile_picture}
+            width={56}
+            height={56}
+            alt="User"
+            className="border-opacity-50 p-[1.5px] rounded-full h-14 w-14 aspect-square object-cover"
+            unoptimized
+          />
+        </LiveAvatar>
 
         <div className="flex flex-col justify-between flex-1 min-w-0">
           <h1 className="text-md font-semibold truncate">{player.fullname}</h1>

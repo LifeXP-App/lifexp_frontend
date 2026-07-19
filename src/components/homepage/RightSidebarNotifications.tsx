@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { LiveAvatar } from "@/src/components/LiveAvatar";
 
 type Notification = {
   id: string;
@@ -64,13 +65,15 @@ export function RightSidebarNotifications({
                 <Link key={n.id} href={n.href}>
                   <li>
                     <div className="flex gap-4">
-                      <img
-                        src={n.image}
-                        className={`h-12 w-12 object-cover ${
-                          n.rounded ? "rounded-full" : "rounded-md"
-                        }`}
-                        loading="lazy"
-                      />
+                      <LiveAvatar username={n.rounded ? n.sender : undefined}>
+                        <img
+                          src={n.image}
+                          className={`h-12 w-12 object-cover ${
+                            n.rounded ? "rounded-full" : "rounded-md"
+                          }`}
+                          loading="lazy"
+                        />
+                      </LiveAvatar>
                       <div className="flex flex-col">
                         <p className="text-md font-medium text-gray-900 dark:text-[var(--foreground)]">
                           <span className="font-bold">{n.sender}</span>{" "}

@@ -14,6 +14,7 @@ export default defineSchema({
     // ── Ownership ──
     userId: v.string(), // Django user UUID
     username: v.optional(v.string()),
+    userFullname: v.optional(v.string()), // display name for live-session cards
     userProfile: v.optional(v.string()), // profile picture URL
   
     goalId: v.string(), // Django goal UUID

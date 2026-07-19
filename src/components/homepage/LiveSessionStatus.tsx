@@ -13,11 +13,13 @@ export type LiveSessionStatusProps = {
     goalId: string;
     goalTitle?: string;
     username?: string;
+    userFullname?: string;
     userProfile?: string;
     activityName?: string;
     activityEmoji?: string;
     activityType?: string;
     status: "live" | "paused";
+    onBreak?: boolean;
     totalDurationSeconds: number;
   };
 };
@@ -62,7 +64,8 @@ export function LiveSessionStatus({ session }: LiveSessionStatusProps) {
     ? `${session.activityEmoji ?? "✦"} ${session.activityName}`
     : `${session.activityEmoji ?? "✦"} In session`;
   const initial = session.username?.[0]?.toUpperCase() ?? "?";
-  const liveColor = isPaused ? "#f59e0b" : "#22c55e";
+  const onBreak = isPaused && session.onBreak;
+  const liveColor = !isPaused ? "#22c55e" : onBreak ? "#3b82f6" : "#f59e0b";
 
   return (
     <Link href={`/goals/${session.goalId}/session/${session.sessionId}`}>
@@ -90,7 +93,7 @@ export function LiveSessionStatus({ session }: LiveSessionStatusProps) {
             className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 rounded-full border-2 border-white dark:border-dark-2"
             style={{ backgroundColor: liveColor }}
           >
-            {!isPaused && (
+            {(!isPaused || onBreak) && (
               <span
                 className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"
                 style={{ backgroundColor: liveColor }}
@@ -101,7 +104,7 @@ export function LiveSessionStatus({ session }: LiveSessionStatusProps) {
 
         <div className="flex flex-col justify-between flex-1 min-w-0">
           <h1 className="text-md font-semibold truncate">
-            {session.username ?? "Someone"}
+            {session.userFullname || session.username || "Someone"}
           </h1>
 
           <p className="text-xs font-medium text-black/40 dark:text-[var(--foreground)]/40 truncate">
@@ -119,7 +122,11 @@ export function LiveSessionStatus({ session }: LiveSessionStatusProps) {
               className="font-semibold text-xs ml-1 tabular-nums flex-shrink-0"
               style={{ color: liveColor }}
             >
-              {isPaused ? "Paused" : formatElapsed(elapsedSeconds)}
+              {onBreak
+                ? "On break"
+                : isPaused
+                ? "Paused"
+                : formatElapsed(elapsedSeconds)}
             </p>
           </div>
         </div>

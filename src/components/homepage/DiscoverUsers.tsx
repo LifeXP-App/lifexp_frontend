@@ -1,5 +1,6 @@
 "use client";
 import { toggleFollow } from "@/lib/api/users";
+import { LiveAvatar } from "@/src/components/LiveAvatar";
 import Link from "next/link";
 import { useRef, useState } from "react";
 
@@ -99,10 +100,12 @@ export function DiscoverUsers({ suggestedUsers }: DiscoverUsersProps) {
               className="flex justify-between items-center p-2 rounded-lg bg-white dark:bg-dark-2"
             >
               <Link href={`/u/${u.username}`} className="flex gap-2">
-                <img
-                  src={u.profile_picture}
-                  className="h-12 w-12 rounded-full object-cover"
-                />
+                <LiveAvatar username={u.username}>
+                  <img
+                    src={u.profile_picture}
+                    className="h-12 w-12 rounded-full object-cover"
+                  />
+                </LiveAvatar>
                 <div className="flex flex-col">
                  <p className="text-sm dark:text-[var(--foreground)]">
                       {(u.fullname || "").length > 15

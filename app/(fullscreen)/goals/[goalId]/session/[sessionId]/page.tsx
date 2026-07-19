@@ -386,6 +386,7 @@ export default function SessionTimer({ params }: SessionTimerProps) {
         const id = await startMutation({
           userId: String(me.id),
           username: me.username,
+          userFullname: me.fullname ?? undefined,
           userProfile: me.profile_picture ?? undefined,
           goalId,
           goalTitle: goalData.title,
@@ -590,14 +591,59 @@ useEffect(() => {
     heartbeatMutation,
   ]);
 
+  // ── Screen Wake Lock ──
+  // Keep the phone's screen awake while the timer is actually counting
+  // (focus running, or a break the user started). Without this, mobile
+  // screens auto-lock after ~30s–2min of no touch, the browser suspends JS,
+  // heartbeats stop, and the stale-session cron auto-pauses the session
+  // after 5 minutes — resumable, but the timer stops accruing. The lock
+  // is auto-released by the browser when the tab is hidden or the user locks
+  // the phone manually, so re-acquire on visibilitychange when we return.
+  const holdWakeLock = isOwn && (isRunning || (pomodoroPhase === "break" && isBreakRunning));
+  useEffect(() => {
+    if (!holdWakeLock) return;
+    if (!("wakeLock" in navigator)) return;
+
+    let lock: WakeLockSentinel | null = null;
+    let cancelled = false;
+
+    const acquire = async () => {
+      if (document.visibilityState !== "visible") return;
+      try {
+        const acquired = await navigator.wakeLock.request("screen");
+        if (cancelled) {
+          acquired.release().catch(() => {});
+        } else {
+          lock = acquired;
+        }
+      } catch (err) {
+        // NotAllowedError (e.g. battery saver) — non-fatal, session just
+        // falls back to the existing foreground-ping + recovery behavior.
+        console.warn("Screen wake lock unavailable:", err);
+      }
+    };
+
+    acquire();
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") acquire();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", onVisibility);
+      lock?.release().catch(() => {});
+    };
+  }, [holdWakeLock]);
+
   // ── Foreground ping ──
   // Mobile browsers throttle/suspend setInterval while the tab is backgrounded
   // or the screen is locked, so the regular 5s heartbeat above can go silent
-  // for a while. Convex's cleanupStaleSessions cron abandons any "live"
+  // for a while. Convex's cleanupStaleSessions cron auto-pauses any "live"
   // session whose heartbeat is more than 5 minutes stale — sending a
   // zero-XP/zero-duration heartbeat the instant the tab is visible again
   // refreshes lastHeartbeatAt immediately, so a short interruption (a phone
-  // call, switching apps for a few minutes) doesn't get the session killed
+  // call, switching apps for a few minutes) doesn't get the session paused
   // before the normal interval resumes.
   useEffect(() => {
     if (!isOwn || !isRunning || !sessionId) return;
@@ -624,18 +670,23 @@ useEffect(() => {
   }, [sessionStatus, sessionSynced, sessionId, goalId, isSyncing, router]);
 
   // ── Recover from a session the server abandoned while we were away ──
-  // If cleanupStaleSessions (Convex cron) marked this session completed due
-  // to a heartbeat timeout — e.g. the phone was locked/backgrounded for long
-  // enough that even the foreground ping above never got a chance to run —
-  // isActive flips to false and every control (play, discard, finish) starts
-  // no-op'ing silently, since they all guard on `isActive`. Detect that exact
+  // If cleanupStaleSessions (Convex cron) marked this session completed —
+  // "pause_timeout" when it sat paused for over 24h (including sessions the
+  // cron auto-paused after heartbeats went silent), or "heartbeat_timeout"
+  // from sessions killed by the older cron behavior — isActive flips to
+  // false and every control (play, discard, finish) starts no-op'ing
+  // silently, since they all guard on `isActive`. Detect that exact
   // signature (interruptionReason set only by the cron, never by user
   // actions) and finish the job client-side instead of leaving a dead screen:
   // sync it to Django as abandoned and route back to the goal.
   useEffect(() => {
     if (!isOwn || !session || !sessionId) return;
     if (session.status !== "completed") return;
-    if (session.interruptionReason !== "heartbeat_timeout") return;
+    if (
+      session.interruptionReason !== "heartbeat_timeout" &&
+      session.interruptionReason !== "pause_timeout"
+    )
+      return;
     if (sessionSynced || isSyncing) return;
 
     let cancelled = false;

@@ -1,6 +1,7 @@
 "use client";
 
 import { CommentSection } from "@/src/components/homepage/CommentSection";
+import { LiveAvatar } from "@/src/components/LiveAvatar";
 import { supabase } from "@/src/lib/supabase";
 import {
   ChatBubbleOvalLeftIcon,
@@ -157,18 +158,20 @@ export function SessionPost({ session }: { session: ApiSessionPost }) {
       <div className="flex px-2 md:px-0 items-center mb-4">
         <Link href={`/u/${user.username}`}>
           <div className="flex items-center cursor-pointer">
-            <img
-              src={user.profile_picture.replace(
-                "/upload/",
-                "/upload/f_auto,q_auto,w_800,c_fill/",
-              )}
-              className={`rounded-full w-10 h-10 object-cover aspect-square 
-               
-              `}
-              // isMastery ? "p-[1.5px] border-opacity-50 border-2" : ""
-              // style={isMastery ? { borderColor: user.primary_color } : {}}
-              alt="User"
-            />
+            <LiveAvatar username={user.username}>
+              <img
+                src={user.profile_picture.replace(
+                  "/upload/",
+                  "/upload/f_auto,q_auto,w_800,c_fill/",
+                )}
+                className={`rounded-full w-10 h-10 object-cover aspect-square
+
+                `}
+                // isMastery ? "p-[1.5px] border-opacity-50 border-2" : ""
+                // style={isMastery ? { borderColor: user.primary_color } : {}}
+                alt="User"
+              />
+            </LiveAvatar>
             <div className="ml-3">
               <span className="flex items-center gap-2">
                 <p className="text-sm md:text-base font-semibold">

@@ -6,6 +6,7 @@ import getAccentColors, {
 } from "@/src/components/UserAccent";
 import XPChart from "@/src/components/XPChart";
 import PrivateProfileNotice from "@/src/components/profile/PrivateProfileNotice";
+import { LiveAvatar } from "@/src/components/LiveAvatar";
 import { useAuth } from "@/src/context/AuthContext";
 // Mock data removed - using real API data now
 import { UserProfile } from "@/src/lib/types";
@@ -839,23 +840,25 @@ export default function ProfilePage({ params }: PageProps) {
           <div className="pt-2 sm:p-2 mb-4 flex flex-col gap-2 w-full">
             <div className="flex flex-row items-center gap-4 sm:gap-8 w-full mb-4">
               <div className="shrink-0">
-                {profileUser.avatar ? (
-                  <Image
-                    src={profileUser.avatar}
-                    width={96}
-                    height={96}
-                    alt={profileUser.username}
-                    className="h-20 w-20 sm:h-24 sm:w-24 rounded-full object-cover"
-                  />
-                ) : (
-                  <DefaultUserProfilePicture
-                    username={profileUser.username}
-                    accent={{
-                      gradStart: accent.gradStart,
-                      gradEnd: accent.gradEnd,
-                    }}
-                  />
-                )}
+                <LiveAvatar username={profileUser.username}>
+                  {profileUser.avatar ? (
+                    <Image
+                      src={profileUser.avatar}
+                      width={96}
+                      height={96}
+                      alt={profileUser.username}
+                      className="h-20 w-20 sm:h-24 sm:w-24 rounded-full object-cover"
+                    />
+                  ) : (
+                    <DefaultUserProfilePicture
+                      username={profileUser.username}
+                      accent={{
+                        gradStart: accent.gradStart,
+                        gradEnd: accent.gradEnd,
+                      }}
+                    />
+                  )}
+                </LiveAvatar>
               </div>
               <div className="flex flex-col w-full">
                 <span className="flex items-center gap-2 mb-1">
@@ -1131,26 +1134,28 @@ export default function ProfilePage({ params }: PageProps) {
             <div className="p-4 sm:p-6 my-4 bg-white dark:bg-dark-2 dark:border-[var(--border)] border-2 border-gray-200 rounded-2xl w-full">
               <div className="flex justify-between items-center mb-4">
                 <span className="flex gap-3 items-center">
-                  {profileUser.avatar ? (
-                    <Image
-                      src={profileUser.avatar}
-                      width={32}
-                      height={32}
-                      alt={profileUser.username}
-                      className="h-8 w-8 aspect-square rounded-full object-cover"
-                    />
-                  ) : (
-                    <div
-                      className="h-8 w-8 rounded-full flex items-center justify-center"
-                      style={{
-                        backgroundImage: `linear-gradient(135deg, ${accent.gradStart}, ${accent.gradEnd})`,
-                      }}
-                    >
-                      <span className="text-white text-sm font-bold">
-                        {profileUser.username[0].toUpperCase()}
-                      </span>
-                    </div>
-                  )}
+                  <LiveAvatar username={profileUser.username}>
+                    {profileUser.avatar ? (
+                      <Image
+                        src={profileUser.avatar}
+                        width={32}
+                        height={32}
+                        alt={profileUser.username}
+                        className="h-8 w-8 aspect-square rounded-full object-cover"
+                      />
+                    ) : (
+                      <div
+                        className="h-8 w-8 rounded-full flex items-center justify-center"
+                        style={{
+                          backgroundImage: `linear-gradient(135deg, ${accent.gradStart}, ${accent.gradEnd})`,
+                        }}
+                      >
+                        <span className="text-white text-sm font-bold">
+                          {profileUser.username[0].toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+                  </LiveAvatar>
                   <h2 className="opacity-50 dark:opacity-70 text-lg sm:text-xl font-regular dark:text-[var(--muted)]">
                     {totalWeeklyXP.toLocaleString()} XP this week
                   </h2>

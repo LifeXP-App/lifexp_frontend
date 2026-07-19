@@ -1,6 +1,7 @@
 "use client";
 
 import LeaderboardSwitcher from "@/src/components/LeaderboardSwitcher";
+import { LiveAvatar } from "@/src/components/LiveAvatar";
 import { useAuth } from "@/src/context/AuthContext";
 import {
   MASTERY_TYPES,
@@ -650,18 +651,20 @@ export default function MasteryLeaderboard() {
 
                       {/* Profile picture with ring for top 3 */}
                       <div className="relative">
-                        <img
-                          className="h-12 w-12 rounded-full object-cover aspect-square"
-                          style={
-                            isTopThree && currentMastery
-                              ? {
-                                  boxShadow: `0 0 0 2px white, 0 0 0 4px ${currentMastery.color}`,
-                                }
-                              : undefined
-                          }
-                          src={u.profile_picture}
-                          alt={u.fullname}
-                        />
+                        <LiveAvatar username={u.username}>
+                          <img
+                            className="h-12 w-12 rounded-full object-cover aspect-square"
+                            style={
+                              isTopThree && currentMastery
+                                ? {
+                                    boxShadow: `0 0 0 2px white, 0 0 0 4px ${currentMastery.color}`,
+                                  }
+                                : undefined
+                            }
+                            src={u.profile_picture}
+                            alt={u.fullname}
+                          />
+                        </LiveAvatar>
                         {isFirst && currentMastery && (
                           <div
                             className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center"
@@ -858,11 +861,13 @@ export default function MasteryLeaderboard() {
           <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border border-gray-200 dark:border-[var(--border)]">
             <div className="text-center flex flex-col items-center">
               <Link href={`/u/${currentUser.username}`}>
-                <img
-                  src={currentUser.profile_picture}
-                  className="h-24 w-24 object-cover aspect-square p-[1.5px] rounded-full"
-                  alt={currentUser.fullname}
-                />
+                <LiveAvatar username={currentUser.username}>
+                  <img
+                    src={currentUser.profile_picture}
+                    className="h-24 w-24 object-cover aspect-square p-[1.5px] rounded-full"
+                    alt={currentUser.fullname}
+                  />
+                </LiveAvatar>
                 <h3 className="font-semibold mt-2 dark:text-[var(--foreground)]">
                   {currentUser.fullname}
                 </h3>

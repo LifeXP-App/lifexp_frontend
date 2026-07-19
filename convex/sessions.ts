@@ -71,8 +71,10 @@ function getTotalPauseDurationMs(
 }
 
 // ── Time & XP Recalculation Helper ──
+// Also used by sessionJobs.ts (cron) so auto-pause/auto-abandon write the
+// exact same totals a user-initiated pause/complete would.
 
-function recalculate(
+export function recalculate(
   session: {
     startedAt: number;
     pauseIntervals: { pausedAt: number; resumedAt?: number }[];
@@ -109,6 +111,7 @@ export const startSession = mutation({
   userId: v.string(),
 
   username: v.optional(v.string()),
+  userFullname: v.optional(v.string()),
   userProfile: v.optional(v.string()),
 
   goalId: v.string(),
@@ -163,6 +166,7 @@ const now = Date.now();
 const sessionId = await ctx.db.insert("sessions", {
   userId: args.userId,
   username: args.username,
+  userFullname: args.userFullname,
   userProfile: args.userProfile,
 
   goalId: args.goalId,
@@ -547,7 +551,18 @@ export const getLiveSessions = query({
         .order("desc")
         .collect(),
     ]);
-    return [...live, ...paused];
+    // A pomodoro break pauses the session with reason "break_started" — surface
+    // that as its own display state so the UI can distinguish break from a
+    // manual pause.
+    return [...live, ...paused].map((s) => {
+      const openInterval = s.pauseIntervals[s.pauseIntervals.length - 1];
+      const onBreak =
+        s.status === "paused" &&
+        openInterval !== undefined &&
+        openInterval.resumedAt === undefined &&
+        openInterval.reason === "break_started";
+      return { ...s, onBreak };
+    });
   },
 });
 

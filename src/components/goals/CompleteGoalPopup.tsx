@@ -5,7 +5,7 @@ import React, { useEffect, useRef, useState } from "react";
 interface CompleteGoalPopupProps {
   isOpen: boolean;
   onClose: () => void;
-  onPost?: (payload: { title: string; description: string; finishBy?: string; image?: File | null }) => void;
+  onPost?: (payload: { title: string; description: string; finishBy?: string; image?: File | null }) => void | Promise<void>;
   defaultFinishBy?: string;
 
   defaultTitle?: string;
@@ -33,6 +33,7 @@ export default function CompleteGoalPopup({
   const [finishBy, setFinishBy] = useState<string | undefined>(undefined);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [isPosting, setIsPosting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -43,6 +44,7 @@ export default function CompleteGoalPopup({
     setFinishBy(defaultFinishBy || undefined);
     setImagePreview(null);
     setImageFile(null);
+    setIsPosting(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
   }, [isOpen, defaultTitle, defaultDescription, defaultFinishBy]);
   /* eslint-enable react-hooks/set-state-in-effect */
@@ -61,7 +63,7 @@ export default function CompleteGoalPopup({
       >
         {/* Header */}
         <div
-          className="flex items-center bg-white justify-between px-6 pt-4 pb-4 border-b"
+          className="flex items-center bg-white dark:bg-[var(--dark-1)] justify-between px-6 pt-4 pb-4 border-b"
           style={{ borderColor: "var(--border)" }}
         >
           <h2 className="text-xl font-bold text-foreground dark:text-[var(--foreground)]">
@@ -108,7 +110,7 @@ export default function CompleteGoalPopup({
                 setImageFile(file);
               }}
               style={{ borderColor: "var(--border)" }}
-              className="relative w-full h-[220px] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer overflow-hidden bg-white transition-all hover:scale-[1.01] active:scale-[0.99]"
+              className="relative w-full h-[220px] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer overflow-hidden bg-white dark:bg-dark-3 transition-all hover:scale-[1.01] active:scale-[0.99]"
             >
               {imagePreview ? (
                 <>
@@ -130,13 +132,13 @@ export default function CompleteGoalPopup({
                 <>
                   <div className="text-5xl mb-3">📸</div>
 
-                  <p className="font-semibold text-lg mb-1">Upload an achievement image</p>
+                  <p className="font-semibold text-lg mb-1 text-foreground dark:text-[var(--foreground)]">Upload an achievement image</p>
 
-                  <p className="text-sm mb-4 text-center px-6 text-gray-500">Drag & drop your image here or upload a snapshot.</p>
+                  <p className="text-sm mb-4 text-center px-6 text-gray-500 dark:text-[var(--muted)]">Drag & drop your image here or upload a snapshot.</p>
 
-                  <div className="px-4 py-2 rounded-xl text-sm font-medium bg-gray-200">Browse Image</div>
+                  <div className="px-4 py-2 rounded-xl text-sm font-medium bg-gray-200 dark:bg-dark-2 text-foreground dark:text-[var(--foreground)]">Browse Image</div>
 
-                  <p className="text-xs mt-3 text-gray-500">PNG or JPG</p>
+                  <p className="text-xs mt-3 text-gray-500 dark:text-[var(--muted)]">PNG or JPG</p>
                 </>
               )}
             </div>
@@ -189,7 +191,7 @@ export default function CompleteGoalPopup({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <p className="text-xs font-semibold" style={{ color: "var(--muted)" }}>Finish by</p>
-              <p className="text-xs text-gray-500">optional</p>
+              <p className="text-xs text-gray-500 dark:text-[var(--muted)]">optional</p>
             </div>
             <input
               type="date"
@@ -221,14 +223,23 @@ export default function CompleteGoalPopup({
         </div>
 
         {/* Post Button */}
-        <div className="flex items-center bg-white justify-between px-5 pt-5 pb-4 border-t border-gray-200 dark:border-[var(--border)]">
+        <div className="flex items-center bg-white dark:bg-[var(--dark-1)] justify-between px-5 pt-5 pb-4 border-t border-gray-200 dark:border-[var(--border)]">
           <button
             type="button"
-            onClick={() => onPost?.({ title, description, finishBy, image: imageFile })}
-            className="w-full py-3 rounded-2xl font-semibold text-white transition-all active:opacity-80 cursor-pointer"
+            disabled={isPosting}
+            onClick={async () => {
+              if (!onPost || isPosting) return;
+              setIsPosting(true);
+              try {
+                await onPost({ title, description, finishBy, image: imageFile });
+              } finally {
+                setIsPosting(false);
+              }
+            }}
+            className="w-full py-3 rounded-2xl font-semibold text-white transition-all active:opacity-80 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
             style={{ backgroundColor: "var(--rookie-primary)" }}
           >
-            Post Achievement
+            {isPosting ? "Posting Achievement..." : "Post Achievement"}
           </button>
         </div>
       </div>

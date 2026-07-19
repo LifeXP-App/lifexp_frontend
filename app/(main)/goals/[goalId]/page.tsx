@@ -273,6 +273,7 @@ export default function GoalDetailPage() {
       const convexId = await startSessionMutation({
         userId: String(me.id),
         username: me.username,
+        userFullname: me.fullname ?? undefined,
         userProfile: me.profile_picture ?? undefined,
         goalId,
         goalTitle: goal?.title,
@@ -490,7 +491,8 @@ export default function GoalDetailPage() {
       }
 
       setIsCompleteGoalOpen(false);
-      router.push("/feed");
+      router.push("/");
+      router.refresh();
     } catch (err) {
       console.error("Failed to complete goal", err);
       alert("Failed to complete goal. Please try again.");

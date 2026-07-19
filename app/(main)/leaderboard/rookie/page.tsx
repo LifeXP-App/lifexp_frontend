@@ -1,6 +1,7 @@
 "use client";
 
 import LeaderboardSwitcher from "@/src/components/LeaderboardSwitcher";
+import { LiveAvatar } from "@/src/components/LiveAvatar";
 import { useAuth } from "@/src/context/AuthContext";
 import { FireIcon } from "@heroicons/react/24/solid";
 import Link from "next/link";
@@ -314,11 +315,13 @@ export default function RookieLeaderboard() {
                         <RankBadge rank={u.rank} />
                       </div>
 
-                      <img
-                        src={u.profile_picture}
-                        className="h-10 w-10 rounded-full object-cover ring-2 ring-gray-100 dark:ring-gray-800"
-                        alt={u.fullname}
-                      />
+                      <LiveAvatar username={u.username}>
+                        <img
+                          src={u.profile_picture}
+                          className="h-10 w-10 rounded-full object-cover ring-2 ring-gray-100 dark:ring-gray-800"
+                          alt={u.fullname}
+                        />
+                      </LiveAvatar>
 
                       <p className="text-base font-semibold dark:text-[var(--foreground)]">
                         {u.fullname}
@@ -342,11 +345,13 @@ export default function RookieLeaderboard() {
           <div className="bg-white dark:bg-dark-2 p-6 rounded-xl border border-gray-200 dark:border-[var(--border)] mb-4">
             <div className="text-center flex flex-col items-center">
               <Link href={`/u/${currentUser.username}`}>
-                <img
-                  src={currentUser.profile_picture}
-                  className="h-24 w-24 rounded-full object-cover"
-                  alt={currentUser.fullname}
-                />
+                <LiveAvatar username={currentUser.username}>
+                  <img
+                    src={currentUser.profile_picture}
+                    className="h-24 w-24 rounded-full object-cover"
+                    alt={currentUser.fullname}
+                  />
+                </LiveAvatar>
                 <h3 className="font-semibold mt-2 dark:text-[var(--foreground)]">
                   {currentUser.fullname}
                 </h3>

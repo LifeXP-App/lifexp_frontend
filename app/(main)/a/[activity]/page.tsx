@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import { LiveAvatar } from '@/src/components/LiveAvatar';
 import { useParams, useRouter } from 'next/navigation';
 import RadarChart from "@/src/components/RadarChart";
 import AspectChip from '@/src/components/goals/AspectChip';
@@ -204,11 +205,13 @@ const ActivityLeaderboard: React.FC<{ users: LeaderboardUser[]; activityName?: s
                         <RankBadge rank={user.rank} />
                       </div>
 
-                      <img
-                        src={user.avatar}
-                        className="h-10 w-10 rounded-full object-cover ring-2 ring-gray-100 dark:ring-gray-800"
-                        alt={user.name}
-                      />
+                      <LiveAvatar userId={user.id}>
+                        <img
+                          src={user.avatar}
+                          className="h-10 w-10 rounded-full object-cover ring-2 ring-gray-100 dark:ring-gray-800"
+                          alt={user.name}
+                        />
+                      </LiveAvatar>
 
                       <p className="text-base font-semibold dark:text-[var(--foreground)]">
                         {`${user.name} ${user.isYou ? "(You)" : ""}`} 

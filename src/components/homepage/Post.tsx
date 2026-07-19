@@ -10,6 +10,7 @@ import {
 } from "@heroicons/react/24/solid";
 import { useEffect, useRef, useState } from "react";
 import { CommentSection } from "./CommentSection"; // ADD THIS
+import { LiveAvatar } from "@/src/components/LiveAvatar";
 
 /* ---------------- HELPERS (ported 1:1) ---------------- */
 
@@ -305,23 +306,25 @@ export function Post({ post }: { post: PostType }) {
       <div className="flex px-2 md:px-0 items-center mb-4">
         <Link href={`/u/${post.username}`}>
           <div className="flex items-center cursor-pointer">
-            <img
-              src={post.profile_picture.replace(
-                "/upload/",
-                "/upload/f_auto,q_auto,w_800,c_fill/",
-              )}
-              className={`rounded-full w-10 h-10 object-cover aspect-square ${
-                post.masterytitle === "Rookie"
-                  ? ""
-                  : "p-[1.5px] border-opacity-50 border-2"
-              }`}
-              style={
-                post.masterytitle !== "Rookie"
-                  ? { borderColor: post.primary }
-                  : {}
-              }
-              alt="User"
-            />
+            <LiveAvatar username={post.username}>
+              <img
+                src={post.profile_picture.replace(
+                  "/upload/",
+                  "/upload/f_auto,q_auto,w_800,c_fill/",
+                )}
+                className={`rounded-full w-10 h-10 object-cover aspect-square ${
+                  post.masterytitle === "Rookie"
+                    ? ""
+                    : "p-[1.5px] border-opacity-50 border-2"
+                }`}
+                style={
+                  post.masterytitle !== "Rookie"
+                    ? { borderColor: post.primary }
+                    : {}
+                }
+                alt="User"
+              />
+            </LiveAvatar>
 
             <div className="ml-3">
               <span className="flex items-center gap-2">
