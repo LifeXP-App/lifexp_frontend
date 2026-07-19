@@ -468,7 +468,7 @@ export default function GoalDetailPage() {
       if (finishBy) formData.append("finish_by", finishBy);
       formData.append("image", image); // now guaranteed non-null
 
-      const res = await fetch(`/api/goals/${goalId}/complete`, {
+      const res = await fetch(`/api/goals/${goalId}/complete/`, {
         method: "POST",
         body: formData,
         credentials: "same-origin",
