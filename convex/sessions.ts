@@ -71,8 +71,10 @@ function getTotalPauseDurationMs(
 }
 
 // ── Time & XP Recalculation Helper ──
+// Also used by sessionJobs.ts (cron) so auto-pause/auto-abandon write the
+// exact same totals a user-initiated pause/complete would.
 
-function recalculate(
+export function recalculate(
   session: {
     startedAt: number;
     pauseIntervals: { pausedAt: number; resumedAt?: number }[];
@@ -549,7 +551,18 @@ export const getLiveSessions = query({
         .order("desc")
         .collect(),
     ]);
-    return [...live, ...paused];
+    // A pomodoro break pauses the session with reason "break_started" — surface
+    // that as its own display state so the UI can distinguish break from a
+    // manual pause.
+    return [...live, ...paused].map((s) => {
+      const openInterval = s.pauseIntervals[s.pauseIntervals.length - 1];
+      const onBreak =
+        s.status === "paused" &&
+        openInterval !== undefined &&
+        openInterval.resumedAt === undefined &&
+        openInterval.reason === "break_started";
+      return { ...s, onBreak };
+    });
   },
 });
 

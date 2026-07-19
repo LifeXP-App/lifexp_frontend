@@ -1,4 +1,5 @@
 import { supabase } from "@/src/lib/supabase";
+import { report401 } from "@/src/lib/api/sessionExpiry";
 
 /**
  * Browser-side fetch wrapper for local API proxies and direct API calls.
@@ -30,11 +31,13 @@ export async function authedFetch(
     const headers = new Headers(init.headers);
     headers.delete("Authorization");
 
-    return fetch(input, {
+    const res = await fetch(input, {
       ...init,
       headers,
       cache: init.cache ?? "no-store",
     });
+    if (res.status === 401) report401();
+    return res;
   }
 
   const {
@@ -57,9 +60,11 @@ export async function authedFetch(
   // TEMP DEBUG — remove after diagnosing prod auth-header loss
   console.log("[DEBUG authedFetch] Authorization header set on outgoing request:", headers.has("Authorization"));
 
-  return fetch(input, {
+  const res = await fetch(input, {
     ...init,
     headers,
     cache: init.cache ?? "no-store",
   });
+  if (res.status === 401) report401();
+  return res;
 }

@@ -1,68 +1,72 @@
 import { internalMutation } from "./_generated/server";
+import { recalculate } from "./sessions";
 
 const STALE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
+const ABANDON_PAUSED_AFTER_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export const cleanupStaleSessions = internalMutation({
   handler: async (ctx) => {
-    const cutoff = Date.now() - STALE_THRESHOLD_MS;
+    const now = Date.now();
 
-    // Find live sessions with stale heartbeats
-    const staleSessions = await ctx.db
+    // ── 1. Auto-pause live sessions with stale heartbeats ──
+    // Mobile browsers suspend JS when the screen locks or the tab is
+    // backgrounded, so heartbeats going silent usually means the user just
+    // put their phone down — not that they abandoned the session. Pause
+    // instead of killing it, backdating the pause to the last heartbeat so
+    // the dead air counts as pause time (no focused time, no XP). When the
+    // user comes back, the session is sitting there paused and resumable.
+    const staleLive = await ctx.db
       .query("sessions")
       .withIndex("by_heartbeat", (q) =>
-        q.eq("status", "live").lt("lastHeartbeatAt", cutoff)
+        q.eq("status", "live").lt("lastHeartbeatAt", now - STALE_THRESHOLD_MS)
       )
       .collect();
 
-    for (const session of staleSessions) {
-      const now = Date.now();
-      const intervals = [...session.pauseIntervals];
+    for (const session of staleLive) {
+      const intervals = [
+        ...session.pauseIntervals,
+        { pausedAt: session.lastHeartbeatAt, reason: "heartbeat_timeout" },
+      ];
+      const updates = recalculate({ ...session, pauseIntervals: intervals }, now);
 
-      // Close any open pause interval
+      await ctx.db.patch(session._id, {
+        status: "paused",
+        lastHeartbeatAt: now,
+        pauseIntervals: intervals,
+        ...updates,
+      });
+    }
+
+    // ── 2. Abandon sessions left paused for too long ──
+    // Covers both user-paused sessions that were forgotten and sessions
+    // auto-paused above whose owner never came back. lastHeartbeatAt is set
+    // to the pause time by pauseSession and by the auto-pause above, so this
+    // effectively measures time spent paused.
+    const stalePaused = await ctx.db
+      .query("sessions")
+      .withIndex("by_heartbeat", (q) =>
+        q
+          .eq("status", "paused")
+          .lt("lastHeartbeatAt", now - ABANDON_PAUSED_AFTER_MS)
+      )
+      .collect();
+
+    for (const session of stalePaused) {
+      const intervals = [...session.pauseIntervals];
       const lastInterval = intervals[intervals.length - 1];
       if (lastInterval && lastInterval.resumedAt === undefined) {
         intervals[intervals.length - 1] = { ...lastInterval, resumedAt: now };
       }
 
-      const totalDurationSeconds = (now - session.startedAt) / 1000;
-      let pauseDurationMs = 0;
-      for (const interval of intervals) {
-        pauseDurationMs += (interval.resumedAt ?? now) - interval.pausedAt;
-      }
-      const focusedDurationSeconds = Math.max(
-        0,
-        totalDurationSeconds - pauseDurationMs / 1000
-      );
-
-      // Recalculate XP
-      const breakdown = { physique: 0, energy: 0, logic: 0, creativity: 0, social: 0 };
-      for (let i = 0; i < session.rateSegments.length; i++) {
-        const segment = session.rateSegments[i];
-        if (segment.atSecond >= focusedDurationSeconds) break;
-        const segmentEnd =
-          i + 1 < session.rateSegments.length
-            ? session.rateSegments[i + 1].atSecond
-            : focusedDurationSeconds;
-        const effectiveEnd = Math.min(segmentEnd, focusedDurationSeconds);
-        const duration = effectiveEnd - segment.atSecond;
-        for (const dim of ["physique", "energy", "logic", "creativity", "social"] as const) {
-          breakdown[dim] += segment.rates[dim] * duration;
-        }
-      }
-      const xpTotal = Math.floor(
-        Object.values(breakdown).reduce((a, b) => a + b, 0)
-      );
+      const updates = recalculate({ ...session, pauseIntervals: intervals }, now);
 
       await ctx.db.patch(session._id, {
         status: "completed",
         endedAt: now,
         completedReason: "abandoned",
-        interruptionReason: "heartbeat_timeout",
+        interruptionReason: "pause_timeout",
         pauseIntervals: intervals,
-        totalDurationSeconds,
-        focusedDurationSeconds,
-        xpTotal,
-        xpBreakdown: breakdown,
+        ...updates,
       });
     }
   },

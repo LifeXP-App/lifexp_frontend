@@ -46,8 +46,13 @@ export function LiveAvatar({
     );
   }
 
+  // Three states: focusing (green), on a pomodoro break (blue — around and
+  // interactable), manually paused (amber). Pulse for green/blue since the
+  // person is present; static dot for a manual pause.
   const isPaused = live.status === "paused";
-  const color = isPaused ? "#f59e0b" : "#22c55e";
+  const onBreak = isPaused && live.onBreak;
+  const color = !isPaused ? "#22c55e" : onBreak ? "#3b82f6" : "#f59e0b";
+  const pulse = !isPaused || onBreak;
 
   const goToSession = (e: MouseEvent) => {
     e.preventDefault();
@@ -59,7 +64,13 @@ export function LiveAvatar({
     <span
       className={`relative inline-block cursor-pointer ${className ?? ""}`}
       onClick={goToSession}
-      title={isPaused ? "Session paused" : "Watch live session"}
+      title={
+        onBreak
+          ? "On a break"
+          : isPaused
+          ? "Session paused"
+          : "Watch live session"
+      }
     >
       {children}
       <span
@@ -70,7 +81,7 @@ export function LiveAvatar({
         className="absolute -bottom-0.5 -right-0.5 flex h-3 w-3 rounded-full border-2 border-white dark:border-dark-2"
         style={{ backgroundColor: color }}
       >
-        {!isPaused && (
+        {pulse && (
           <span
             className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"
             style={{ backgroundColor: color }}
