@@ -524,6 +524,10 @@ export default function Home() {
     title: string;
     content: string;
     post_image: string | null;
+    post_image_url?: string | null;
+    completion_picture?: string | null;
+    achievement_image?: string | null;
+    image?: string | null;
     created_at: string;
     duration: string | null;
     tags: unknown;
@@ -573,6 +577,10 @@ export default function Home() {
   type ApiFeedItem = ApiGoalPost | ApiSessionPost;
 
   function mapGoalToPostType(p: ApiGoalPost): PostType {
+    const legacyPostImage = p.post_image || p.post_image_url || "";
+    const completionPicture =
+      p.completion_picture || p.achievement_image || p.image || "";
+
     return {
       id: p.id,
       uid: p.uid,
@@ -583,7 +591,8 @@ export default function Home() {
       started_at: p.created_at,
       title: p.title,
       content: p.content,
-      post_image: p.post_image || "",
+      post_image: legacyPostImage,
+      completion_picture: completionPicture,
       duration: p.duration || "",
       likes: p.like_count || 0,
       masterytitle: (p.user.mastery_title || "").trim(),
