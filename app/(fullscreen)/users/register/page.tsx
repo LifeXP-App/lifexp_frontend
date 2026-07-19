@@ -3,13 +3,13 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/src/context/AuthContext";
 import { useSearchParams } from "next/navigation";
 
 type FieldName = "displayname" | "username" | "email" | "password1" | "password2";
 
-export default function RegisterPage() {
+function RegisterForm() {
   const { signUp } = useAuth();
   const [values, setValues] = useState({
     displayname: "",
@@ -434,5 +434,13 @@ const [loading, setLoading] = useState(false);
         </div>
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <RegisterForm />
+    </Suspense>
   );
 }
