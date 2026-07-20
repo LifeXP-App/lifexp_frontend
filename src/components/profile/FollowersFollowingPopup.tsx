@@ -19,6 +19,7 @@ type User = {
   lifelevel: number;
   totalxp: number;
   is_following?: boolean;
+  is_self?: boolean;
   is_current_user?: boolean;
   is_own_profile?: boolean;
 };
@@ -27,6 +28,8 @@ interface FollowersFollowingPopupProps {
   isOpen: boolean;
   onClose: () => void;
   userId: string | number;
+  requestUserId?: string | number;
+  requestUsername?: string;
   type: "followers" | "following";
   initialCount: number;
 }
@@ -35,6 +38,8 @@ export default function FollowersFollowingPopup({
   isOpen,
   onClose,
   userId,
+  requestUserId,
+  requestUsername,
   type,
   initialCount,
 }: FollowersFollowingPopupProps) {
@@ -55,6 +60,17 @@ export default function FollowersFollowingPopup({
   // Race condition handling
   const lastClickTimeRef = useRef<Record<number, number>>({});
   const abortControllersRef = useRef<Record<number, AbortController>>({});
+
+  const isRequestUser = (user: User) =>
+    user.is_self === true ||
+    user.is_current_user === true ||
+    user.is_own_profile === true ||
+    (requestUserId != null && String(user.id) === String(requestUserId)) ||
+    (me?.id != null && String(user.id) === String(me.id)) ||
+    (!!requestUsername &&
+      user.username.toLowerCase() === requestUsername.toLowerCase()) ||
+    (!!me?.username &&
+      user.username.toLowerCase() === me.username.toLowerCase());
 
   useEffect(() => {
     if (isOpen) {
@@ -143,13 +159,7 @@ export default function FollowersFollowingPopup({
   };
 
   const handleFollowToggle = async (user: User) => {
-    const isCurrentUser =
-      user.id === me?.id ||
-      user.username === me?.username ||
-      user.is_current_user ||
-      user.is_own_profile;
-
-    if (isCurrentUser) return;
+    if (isRequestUser(user)) return;
 
     const now = Date.now();
     if (now - (lastClickTimeRef.current[user.id] || 0) < 500) {
@@ -266,11 +276,7 @@ export default function FollowersFollowingPopup({
                 const masteryTitle =
                   user.mastery_title || user.masterytitle || "Novice";
                 const accent = getAccentColors(masteryTitle);
-                const isCurrentUser =
-                  user.id === me?.id ||
-                  user.username === me?.username ||
-                  user.is_current_user ||
-                  user.is_own_profile;
+                const isCurrentUser = isRequestUser(user);
                 return (
                   <div
                     key={user.id}

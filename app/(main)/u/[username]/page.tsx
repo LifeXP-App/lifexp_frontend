@@ -852,6 +852,8 @@ export default function ProfilePage({ params }: PageProps) {
           isOpen={showFollowersPopup}
           onClose={() => setShowFollowersPopup(false)}
           userId={profileUser.id}
+          requestUserId={currentUser.id}
+          requestUsername={currentUser.username}
           type="followers"
           initialCount={followersCount}
         />
@@ -863,6 +865,8 @@ export default function ProfilePage({ params }: PageProps) {
           isOpen={showFollowingPopup}
           onClose={() => setShowFollowingPopup(false)}
           userId={profileUser.id}
+          requestUserId={currentUser.id}
+          requestUsername={currentUser.username}
           type="following"
           initialCount={followingCount}
         />
