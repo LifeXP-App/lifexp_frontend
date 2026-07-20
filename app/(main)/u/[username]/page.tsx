@@ -1134,28 +1134,26 @@ export default function ProfilePage({ params }: PageProps) {
             <div className="p-4 sm:p-6 my-4 bg-white dark:bg-dark-2 dark:border-[var(--border)] border-2 border-gray-200 rounded-2xl w-full">
               <div className="flex justify-between items-center mb-4">
                 <span className="flex gap-3 items-center">
-                  <LiveAvatar username={profileUser.username}>
-                    {profileUser.avatar ? (
-                      <Image
-                        src={profileUser.avatar}
-                        width={32}
-                        height={32}
-                        alt={profileUser.username}
-                        className="h-8 w-8 aspect-square rounded-full object-cover"
-                      />
-                    ) : (
-                      <div
-                        className="h-8 w-8 rounded-full flex items-center justify-center"
-                        style={{
-                          backgroundImage: `linear-gradient(135deg, ${accent.gradStart}, ${accent.gradEnd})`,
-                        }}
-                      >
-                        <span className="text-white text-sm font-bold">
-                          {profileUser.username[0].toUpperCase()}
-                        </span>
-                      </div>
-                    )}
-                  </LiveAvatar>
+                  {profileUser.avatar ? (
+                    <Image
+                      src={profileUser.avatar}
+                      width={32}
+                      height={32}
+                      alt={profileUser.username}
+                      className="h-8 w-8 aspect-square rounded-full object-cover"
+                    />
+                  ) : (
+                    <div
+                      className="h-8 w-8 rounded-full flex items-center justify-center"
+                      style={{
+                        backgroundImage: `linear-gradient(135deg, ${accent.gradStart}, ${accent.gradEnd})`,
+                      }}
+                    >
+                      <span className="text-white text-sm font-bold">
+                        {profileUser.username[0].toUpperCase()}
+                      </span>
+                    </div>
+                  )}
                   <h2 className="opacity-50 dark:opacity-70 text-lg sm:text-xl font-regular dark:text-[var(--muted)]">
                     {totalWeeklyXP.toLocaleString()} XP this week
                   </h2>
