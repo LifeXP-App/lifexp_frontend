@@ -1410,6 +1410,7 @@ export default function GoalDetailPage() {
         onSelectActivity={handleSelectActivity}
         onGenerateNew={handleGenerateNew}
         onStartDrawing={handleStartDrawing}
+        goalUid={goalId}
       />
     </>
   );

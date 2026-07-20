@@ -1061,6 +1061,7 @@ export default function GoalsPage() {
         onSelectActivity={handleSelectActivity}
         onGenerateNew={handleGenerateNewActivity}
         onStartDrawing={handleStartDrawing}
+        goalUid={selectedGoalId}
       />
 
       {/* Status Change Confirmation Modal */}

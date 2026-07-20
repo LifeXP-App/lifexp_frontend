@@ -54,6 +54,8 @@ interface NewActivityModalProps {
   /** @deprecated Custom activities are now generated inline via the AI button. Kept for backwards compatibility. */
   onGenerateNew?: (query: string) => void;
   onStartDrawing: () => void;
+  /** Goal uid to scope the default activity list to, when the picker is opened for a specific goal. */
+  goalUid?: string | null;
 }
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
@@ -110,6 +112,7 @@ export default function NewActivityModal({
   onClose,
   onSelectActivity,
   onStartDrawing,
+  goalUid,
 }: NewActivityModalProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -178,8 +181,11 @@ export default function NewActivityModal({
       setLoading(true);
 
       try {
+        const params = new URLSearchParams({ page: String(pageNumber) });
+        if (goalUid) params.set("goal", goalUid);
+
         const res = await fetch(
-          `${baseUrl}/api/v1/activities/?page=${pageNumber}`,
+          `${baseUrl}/api/v1/activities/?${params.toString()}`,
         );
 
         const data = await res.json();
@@ -205,7 +211,7 @@ export default function NewActivityModal({
         }
       }
     },
-    [],
+    [goalUid],
   );
 
   const searchActivities = useCallback(

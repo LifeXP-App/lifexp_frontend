@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/src/lib/supabase";
-import { report401 } from "@/src/lib/api/sessionExpiry";
 import type { Session, User } from "@supabase/supabase-js";
 import posthog from "posthog-js";
 
@@ -68,11 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (!res.ok) {
-        if (res.status === 401) {
-          // The proxy already tried a server-side token refresh, so this 401
-          // means the session is dead — count it toward the forced logout.
-          report401();
-        } else {
+        if (res.status !== 401) {
           console.error("Failed to fetch player data:", res.status);
         }
         setMe(null);
