@@ -444,7 +444,14 @@ export default function GoalDetailPage() {
 
   const [isCompleteGoalOpen, setIsCompleteGoalOpen] = useState(false);
 
-  const handleOpenCompleteGoal = () => setIsCompleteGoalOpen(true);
+  const handleOpenCompleteGoal = () => {
+    if (!goal || goal.status === "completed") return;
+    const ownsGoal =
+      goal.is_owner === true ||
+      (!!me?.username && goal.username === me.username);
+    if (!ownsGoal) return;
+    setIsCompleteGoalOpen(true);
+  };
   const handleCloseCompleteGoal = () => setIsCompleteGoalOpen(false);
   const handlePostAchievement = async ({
     title,
@@ -683,7 +690,9 @@ export default function GoalDetailPage() {
     );
   }
 
-  const isOwner = !goal.username || goal.username === me?.username;
+  const isOwner =
+    goal.is_owner === true ||
+    (!!me?.username && goal.username === me.username);
   const goalCompleted = goal.status === "completed";
   const goalDescription = goal.description || "";
   const statusText = `${goal.days_completed} / ${goal.days_total} days completed`;
@@ -1136,7 +1145,7 @@ export default function GoalDetailPage() {
 
           {/* Complete Goal Button - Mobile */}
 
-          {!goalCompleted && (
+          {!goalCompleted && isOwner && (
             <div className="mb-6">
               <button
                 className="w-full py-3 rounded-2xl font-medium text-white text-md transition-all active:scale-95 cursor-pointer"
@@ -1379,7 +1388,7 @@ export default function GoalDetailPage() {
               </div>
 
               {/* Complete Goal Button */}
-              {!goalCompleted && (
+              {!goalCompleted && isOwner && (
                 <button
                   className="w-full py-3 rounded-2xl font-medium text-white text-md transition-all active:scale-95 cursor-pointer"
                   style={{
