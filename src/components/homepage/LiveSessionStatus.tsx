@@ -99,16 +99,17 @@ export function LiveSessionStatus({ session }: LiveSessionStatusProps) {
             style={{ borderColor: liveColor }}
           />
           {/* Discord-style status dot, centered exactly on the ring's
-              circumference at its 45°/bottom-right point — see LiveAvatar for
-              why percentage position + centering transform is used here
-              instead of corner-relative offsets. The small fixed px term
-              accounts for the ring sitting 3px outside the avatar. */}
+              circumference at its bottom-left point — kept on this side
+              consistently everywhere the dot is used, see LiveAvatar for the
+              full reasoning and why percentage position + centering transform
+              is used here instead of corner-relative offsets. The small fixed
+              px term accounts for the ring sitting 3px outside the avatar. */}
           <span
             className="absolute flex h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white dark:border-dark-2"
             style={{
               backgroundColor: liveColor,
               top: "calc(85.36% + 2.12px)",
-              left: "calc(85.36% + 2.12px)",
+              left: "calc(14.64% - 2.12px)",
             }}
           >
             {(!isPaused || onBreak) && (

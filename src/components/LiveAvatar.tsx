@@ -89,12 +89,14 @@ export function LiveAvatar({
         style={{ borderColor: color }}
       />
       {/* Discord-style status dot, centered exactly on the ring's circumference
-          at its 45°/bottom-right point (a circle inscribed in a square never
-          reaches the box's corner, so corner-relative offsets like `-bottom-0
-          -right-0` leave a gap — percentage position + centering transform
-          puts it precisely on the curve regardless of avatar size). The small
-          fixed px term accounts for the ring now sitting 3px outside the
-          avatar rather than flush against it. */}
+          at its bottom-left point (kept on this side consistently everywhere
+          the dot is used, so it never collides with a same-corner badge like
+          the interaction-type emoji on interaction rows). A circle inscribed
+          in a square never reaches the box's corner, so corner-relative
+          offsets like `-bottom-0 -left-0` leave a gap — percentage position +
+          centering transform puts it precisely on the curve regardless of
+          avatar size. The small fixed px term accounts for the ring sitting
+          3px outside the avatar rather than flush against it. */}
       <span
         className="absolute flex h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white dark:border-dark-2"
         style={{

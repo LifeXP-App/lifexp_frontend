@@ -71,6 +71,7 @@ type GoalPost = {
 };
 
 import { NudgesLikesSection } from "@/src/components/goals/NudgesLikesSection";
+import { LiveAvatar } from "@/src/components/LiveAvatar";
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
@@ -1148,13 +1149,15 @@ function RightSidebar({ user }: { user: UserGoalsInfo }) {
       <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-[var(--border)]">
         <div className="text-center flex flex-col items-center">
           <div className="flex flex-col items-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={user.profile_picture}
-              className="h-24 w-24 object-cover aspect-square p-[1.5px] rounded-full"
-              loading="lazy"
-              alt="Profile"
-            />
+            <LiveAvatar username={user.username}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={user.profile_picture}
+                className="h-24 w-24 object-cover aspect-square p-[1.5px] rounded-full"
+                loading="lazy"
+                alt="Profile"
+              />
+            </LiveAvatar>
             <h3 className="font-semibold mt-2 dark:text-[var(--foreground)]">
               {user.fullname}
             </h3>
