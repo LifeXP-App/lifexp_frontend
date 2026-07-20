@@ -9,6 +9,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { authedFetch } from "@/src/lib/api/authedFetch";
+import { useToast } from "@/src/context/ToastContext";
 import { compressImageForUpload, SANITY_CAP_BYTES } from "@/src/lib/utils/compressImage";
 
 interface ReflectionResponse {
@@ -41,6 +42,7 @@ interface ReflectionResponse {
 const DayCompletePage = () => {
 
   const params = useParams();
+  const toast = useToast();
   const uid = params?.sessionId as string;
 
   const goalId = params?.goalId as string;
@@ -83,12 +85,12 @@ const DayCompletePage = () => {
   const uploadImage = async (file: File) => {
   try {
     if (!file.type.startsWith("image/")) {
-      alert("Only images allowed")
+      toast.error("Only images are allowed.")
       return
     }
 
     if (file.size > SANITY_CAP_BYTES) {
-      alert("Image is too large. Please pick a smaller file.")
+      toast.error("That image is too large. Please pick a smaller file.")
       return
     }
 
@@ -105,7 +107,7 @@ const DayCompletePage = () => {
   })
 } catch (err) {
     console.error("Failed to upload image", err)
-    alert("Failed to upload image")
+    toast.error("Failed to upload image. Please try again.")
 }
   }
 

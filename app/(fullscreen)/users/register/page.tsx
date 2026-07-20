@@ -5,12 +5,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/src/context/AuthContext";
+import { useToast } from "@/src/context/ToastContext";
 import { useSearchParams } from "next/navigation";
 
 type FieldName = "displayname" | "username" | "email" | "password1" | "password2";
 
 function RegisterForm() {
   const { signUp } = useAuth();
+  const toast = useToast();
   const [values, setValues] = useState({
     displayname: "",
     username: "",
@@ -154,7 +156,7 @@ async function onSubmit(e: React.FormEvent) {
   e.preventDefault();
 
   if (!canSubmit) {
-    alert("Please fill all fields correctly before submitting.");
+    toast.error("Please fill all fields correctly before submitting.");
     return;
   }
 
@@ -182,7 +184,7 @@ async function onSubmit(e: React.FormEvent) {
         setFieldError("password1", Array.isArray(error.password) ? error.password : [error.password]);
       }
 
-      alert(error.message || error.detail || "Registration failed.");
+      toast.error(error.message || error.detail || "Registration failed.");
       return;
     }
 
@@ -191,7 +193,7 @@ async function onSubmit(e: React.FormEvent) {
 
   } catch (err) {
     console.error(err);
-    alert("Something went wrong.");
+    toast.error("Something went wrong. Please try again.");
   }
 }
 

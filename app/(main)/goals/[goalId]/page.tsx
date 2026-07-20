@@ -11,6 +11,7 @@ import NewGoalModal from "@/src/components/goals/NewGoalModal";
 import NewSessionPopup from "@/src/components/goals/NewSessionPopup";
 import SessionInfoPopup from "@/src/components/goals/SessionInfoPopup";
 import { useAuth } from "@/src/context/AuthContext";
+import { useToast, useConfirm } from "@/src/context/ToastContext";
 import { supabase } from "@/src/lib/supabase";
 import { useGoal } from "@/src/lib/hooks/useGoals";
 import { GoalsService, Session } from "@/src/lib/services/goals";
@@ -204,6 +205,8 @@ export default function GoalDetailPage() {
   const feedOwner = searchParams.get("owner");
 
   const { me } = useAuth();
+  const toast = useToast();
+  const confirm = useConfirm();
   const startSessionMutation = useMutation(api.sessions.startSession);
   const updateInitialRatesMutation = useMutation(api.sessions.updateInitialRates);
   const deleteConvexSessionMutation = useMutation(api.sessions.deleteSession);
@@ -251,7 +254,7 @@ export default function GoalDetailPage() {
     xpDistribution?: Record<string, number>,
   ) => {
     if (!me) {
-      alert("You must be logged in to start a session");
+      toast.error("You must be logged in to start a session.");
       return;
     }
 
@@ -357,10 +360,10 @@ export default function GoalDetailPage() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.includes("already has a live") || msg.includes("already has a paused")) {
-        alert("You already have an active session. Please finish it first.");
+        toast.info("You already have an active session. Please finish it first.");
       } else {
         console.error("Failed to start session:", err);
-        alert("Failed to start session. Please try again.");
+        toast.error("Failed to start session. Please try again.");
       }
     }
   }, [me, startSessionMutation, updateInitialRatesMutation, goalId, goal?.id, goal?.title, router]);
@@ -392,7 +395,7 @@ export default function GoalDetailPage() {
       await createAndNavigate(activity.uid ?? activity.id, query, activity.xp_distribution);
     } catch (error) {
       console.error("Failed to generate activity:", error);
-      alert("Failed to create activity. Please try again.");
+      toast.error("Failed to create activity. Please try again.");
     }
   }, [createAndNavigate]);
 
@@ -434,7 +437,7 @@ export default function GoalDetailPage() {
       refetch();
     } catch (err) {
       console.error("Failed to delete session:", err);
-      alert(err instanceof Error ? err.message : "Failed to delete session");
+      toast.error(err instanceof Error ? err.message : "Failed to delete session.");
       // Roll back — the delete didn't actually happen, so bring it back.
       setDeletedSessionIds((prev) => {
         const next = new Set(prev);
@@ -456,6 +459,35 @@ export default function GoalDetailPage() {
     setIsCompleteGoalOpen(true);
   };
   const handleCloseCompleteGoal = () => setIsCompleteGoalOpen(false);
+
+  // Turn a failed complete-goal response into a short, human-readable message.
+  // Never surface raw server bodies (nginx/Django HTML error pages) to the user.
+  const messageForCompleteError = (statusCode: number, body: string): string => {
+    if (statusCode === 413) {
+      return "That photo is too large to upload. Please pick a smaller image and try again.";
+    }
+    if (statusCode === 401 || statusCode === 403) {
+      return "You don't have permission to complete this goal.";
+    }
+    if (statusCode === 404) {
+      return "This goal could not be found. It may have been deleted.";
+    }
+    // Try to pull a clean message out of a JSON error, ignoring HTML payloads.
+    try {
+      const data = JSON.parse(body);
+      const detail = data?.error ?? data?.detail ?? data?.message;
+      if (typeof detail === "string" && detail.trim() && !detail.trim().startsWith("<")) {
+        return detail.trim();
+      }
+    } catch {
+      // not JSON — fall through to a generic message
+    }
+    if (statusCode >= 500) {
+      return "Something went wrong on our end. Please try again in a moment.";
+    }
+    return "Couldn't complete your goal. Please try again.";
+  };
+
   const handlePostAchievement = async ({
     title,
     description,
@@ -469,54 +501,58 @@ export default function GoalDetailPage() {
   }) => {
     // --- Guard: a goal cannot be completed without an image ---
     if (!image) {
-      alert("Please add a photo before posting your achievement.");
-      return;
+      throw new Error("Please add a photo before posting your achievement.");
     }
 
     if (image.size > SANITY_CAP_BYTES) {
-      alert("Image is too large. Please pick a smaller file.");
-      return;
+      throw new Error("That image is too large. Please pick a smaller file.");
     }
 
+    const uploadFile = await compressImageForUpload(image);
+
+    const formData = new FormData();
+    formData.append("title", title);
+    formData.append("description", description);
+    if (finishBy) formData.append("finish_by", finishBy);
+    formData.append("completion_picture", uploadFile); // Django's GoalCompleteView reads this key, not "image"
+
+    let res: Response;
     try {
-      const uploadFile = await compressImageForUpload(image);
-
-      const formData = new FormData();
-      formData.append("title", title);
-      formData.append("description", description);
-      if (finishBy) formData.append("finish_by", finishBy);
-      formData.append("completion_picture", uploadFile); // Django's GoalCompleteView reads this key, not "image"
-
-      const res = await fetch(`/api/goals/${goalId}/complete/`, {
+      res = await fetch(`/api/goals/${goalId}/complete/`, {
         method: "POST",
         body: formData,
         credentials: "same-origin",
       });
-
-      if (!res.ok) {
-        const body = await res.text();
-        console.error("Complete goal failed:", res.status, body);
-        alert(`Failed to complete goal (${res.status}): ${body}`);
-        return;
-      }
-
-      setIsCompleteGoalOpen(false);
-      router.push("/");
-      router.refresh();
     } catch (err) {
-      console.error("Failed to complete goal", err);
-      alert("Failed to complete goal. Please try again.");
+      console.error("Failed to complete goal (network)", err);
+      throw new Error("Network error. Check your connection and try again.");
     }
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      console.error("Complete goal failed:", res.status, body);
+      throw new Error(messageForCompleteError(res.status, body));
+    }
+
+    setIsCompleteGoalOpen(false);
+    router.push("/");
+    router.refresh();
   };
   const handleDeleteGoal = async () => {
-    if (confirm("Are you sure you want to delete this goal?")) {
-      try {
-        await GoalsService.deleteGoal(goalId);
-        router.push("/goals");
-      } catch (err) {
-        console.error("Failed to delete goal:", err);
-        alert("Failed to delete goal");
-      }
+    const ok = await confirm({
+      title: "Delete goal",
+      message: "Are you sure you want to delete this goal? This cannot be undone.",
+      confirmText: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      await GoalsService.deleteGoal(goalId);
+      toast.success("Goal deleted.");
+      router.push("/goals");
+    } catch (err) {
+      console.error("Failed to delete goal:", err);
+      toast.error("Failed to delete goal. Please try again.");
     }
   };
 
@@ -552,7 +588,7 @@ export default function GoalDetailPage() {
       await refetch();
     } catch (err) {
       console.error("Failed to update goal:", err);
-      alert("Failed to update goal");
+      toast.error("Failed to update goal. Please try again.");
     }
     setIsModalOpen(false);
   };

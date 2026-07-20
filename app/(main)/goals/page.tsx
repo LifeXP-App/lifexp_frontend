@@ -4,6 +4,7 @@ import NewActivityModal from "@/src/components/goals/NewActivityModel";
 import GoalStatusMenu from "@/src/components/goals/GoalStatusMenu";
 import StatusChangeConfirmationModal from "@/src/components/goals/StatusChangeConfirmationModal";
 import { useAuth } from "@/src/context/AuthContext";
+import { useToast, useConfirm } from "@/src/context/ToastContext";
 import { usePopup } from "@/src/context/PopupContext";
 import { ActivityType } from "@/src/lib/types/activityMeta";
 import { BoltIcon, PlayIcon, PlusIcon, UsersIcon } from "@heroicons/react/24/solid";
@@ -398,6 +399,8 @@ function RightSidebarInfoSkeleton() {
 
 export default function GoalsPage() {
   const router = useRouter();
+  const toast = useToast();
+  const confirm = useConfirm();
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
@@ -578,7 +581,7 @@ export default function GoalsPage() {
         currentGoals.filter((existingGoal) => existingGoal.id !== tempId),
       );
       console.error("Failed to create goal:", error);
-      alert("Failed to create goal. Please try again.");
+      toast.error("Failed to create goal. Please try again.");
       return;
     }
 
@@ -637,7 +640,7 @@ export default function GoalsPage() {
 
     const goalId = selectedGoalId ?? getPreferredGoalId();
     if (!goalId) {
-      alert("Create a goal first to start a session.");
+      toast.info("Create a goal first to start a session.");
       return;
     }
 
@@ -686,13 +689,13 @@ export default function GoalsPage() {
         }
 
         if (res.status === 401) {
-          alert("Session expired. Please log in again.");
+          toast.error("Session expired. Please log in again.");
           router.push("/users/login");
           return;
         }
 
         const errorData = await res.json().catch(() => ({ detail: "Failed to delete goal" }));
-        alert(errorData.detail || "Failed to delete goal");
+        toast.error(errorData.detail || "Failed to delete goal.");
         return;
       }
 
@@ -701,7 +704,7 @@ export default function GoalsPage() {
     } catch (error) {
       console.error("Error deleting goal:", error);
       posthog.captureException(error);
-      alert("An error occurred while deleting the goal");
+      toast.error("An error occurred while deleting the goal.");
 
       // Refresh goals list on error
       queryClient.invalidateQueries({ queryKey: ["goals"] });
@@ -710,10 +713,16 @@ export default function GoalsPage() {
     }
   };
 
-  const handleDeleteGoalRequest = (goalId: string) => {
+  const handleDeleteGoalRequest = async (goalId: string) => {
     if (deletingGoalId) return; // Prevent multiple clicks
     const goal = goals.find((g) => g.uid === goalId);
-    if (window.confirm(`Are you sure you want to delete "${goal?.title ?? "this goal"}"? This cannot be undone.`)) {
+    const ok = await confirm({
+      title: "Delete goal",
+      message: `Are you sure you want to delete "${goal?.title ?? "this goal"}"? This cannot be undone.`,
+      confirmText: "Delete",
+      destructive: true,
+    });
+    if (ok) {
       handleDeleteGoal(goalId);
     }
   };
@@ -759,7 +768,7 @@ export default function GoalsPage() {
       queryClient.invalidateQueries({ queryKey: ["goals"] });
     } catch (error) {
       console.error("Failed to update goal status:", error);
-      alert("Failed to update goal status. Please try again.");
+      toast.error("Failed to update goal status. Please try again.");
 
       // Revert optimistic update on error
       queryClient.invalidateQueries({ queryKey: ["goals"] });
@@ -895,9 +904,15 @@ export default function GoalsPage() {
                       }}
                       secondaryCta={{
                         label: deletingGoalId === goal.uid ? "Deleting..." : "Discard",
-                        onClick: () => {
+                        onClick: async () => {
                           if (deletingGoalId) return; // Prevent multiple clicks
-                          if (window.confirm(`Are you sure you want to discard "${goal.title}"?`)) {
+                          const ok = await confirm({
+                            title: "Discard goal",
+                            message: `Are you sure you want to discard "${goal.title}"?`,
+                            confirmText: "Discard",
+                            destructive: true,
+                          });
+                          if (ok) {
                             handleDeleteGoal(goal.uid);
                           }
                         },

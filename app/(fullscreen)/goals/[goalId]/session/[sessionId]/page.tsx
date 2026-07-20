@@ -3,6 +3,7 @@
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useAuth } from "@/src/context/AuthContext";
+import { useToast, useConfirm } from "@/src/context/ToastContext";
 import { authedFetch } from "@/src/lib/api/authedFetch";
 import { GoalsService } from "@/src/lib/services/goals";
 import {
@@ -266,6 +267,8 @@ export default function SessionTimer({ params }: SessionTimerProps) {
   const { goalId, sessionId: sessionIdStr } = use(params);
   const searchParams = useSearchParams();
   const router = useRouter();
+  const toast = useToast();
+  const confirm = useConfirm();
   const { me } = useAuth();
 
   const isNew = sessionIdStr === "new";
@@ -707,7 +710,7 @@ useEffect(() => {
         console.error("Failed to sync stale-abandoned session to Django:", err);
       } finally {
         if (!cancelled) {
-          alert(
+          toast.info(
             "Your session ended because the app was inactive for too long. It's been saved as abandoned.",
           );
           router.push(isEmptySession ? "/goals" : `/goals/${goalId}`);
@@ -882,7 +885,13 @@ useEffect(() => {
 
   const handleDiscard = useCallback(async () => {
     if (!sessionId || !isActive || isSyncing) return;
-    if (!confirm("Discard this session?")) return;
+    const ok = await confirm({
+      title: "Discard session",
+      message: "Discard this session? Your progress in it won't be saved.",
+      confirmText: "Discard",
+      destructive: true,
+    });
+    if (!ok) return;
     setIsSyncing(true);
 
     try {
