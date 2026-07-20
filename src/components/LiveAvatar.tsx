@@ -40,7 +40,7 @@ export function LiveAvatar({
 
   if (!live) {
     return (
-      <span className={`relative inline-block ${className ?? ""}`}>
+      <span className={`relative inline-flex ${className ?? ""}`}>
         {children}
       </span>
     );
@@ -62,7 +62,7 @@ export function LiveAvatar({
 
   return (
     <span
-      className={`relative inline-block cursor-pointer ${className ?? ""}`}
+      className={`relative inline-flex cursor-pointer ${className ?? ""}`}
       onClick={goToSession}
       title={
         onBreak
