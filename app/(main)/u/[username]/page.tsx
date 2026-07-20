@@ -8,6 +8,7 @@ import getAccentColors, {
 import PrivateProfileNotice from "@/src/components/profile/PrivateProfileNotice";
 import { LiveAvatar } from "@/src/components/LiveAvatar";
 import { useAuth } from "@/src/context/AuthContext";
+import { usePopup } from "@/src/context/PopupContext";
 // Mock data removed - using real API data now
 import { UserProfile } from "@/src/lib/types";
 import { FireIcon, LockClosedIcon } from "@heroicons/react/24/solid";
@@ -63,6 +64,7 @@ export default function ProfilePage({ params }: PageProps) {
   const { username } = use(params);
   const router = useRouter();
   const { me, session, loading: authLoading } = useAuth();
+  const { openMasteryPopup } = usePopup();
   const queryClient = useQueryClient();
 
   // Follow state itself is optimistic local state (see handleFollow /
@@ -919,6 +921,7 @@ export default function ProfilePage({ params }: PageProps) {
                   </p>
                   <button
                     type="button"
+                    onClick={openMasteryPopup}
                     className="mastery-info flex float-right cursor-pointer"
                   >
                     <svg

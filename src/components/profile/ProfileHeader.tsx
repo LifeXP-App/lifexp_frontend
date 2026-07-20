@@ -3,6 +3,7 @@
 import getAccentColors from "@/src/components/UserAccent";
 import { UserProfile } from "@/src/lib/types";
 import { LiveAvatar } from "@/src/components/LiveAvatar";
+import { usePopup } from "@/src/context/PopupContext";
 import { LockClosedIcon } from "@heroicons/react/24/solid";
 import Image from "next/image";
 
@@ -27,6 +28,7 @@ export default function ProfileHeader({
   onFollow,
   onUnfollow,
 }: ProfileHeaderProps) {
+  const { openMasteryPopup } = usePopup();
   const accent = getAccentColors(user.masteryTitle);
 
   return (
@@ -75,6 +77,7 @@ export default function ProfileHeader({
             </p>
             <button
               type="button"
+              onClick={openMasteryPopup}
               className="mastery-info flex float-right cursor-pointer"
             >
               <svg
