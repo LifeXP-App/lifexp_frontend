@@ -99,6 +99,7 @@ export type PostType = {
 /* ---------------- COMPONENT ---------------- */
 
 export function Post({ post }: { post: PostType }) {
+  const goalHref = `/goals/${post.uid}?owner=${encodeURIComponent(post.username)}`;
   const dark =
     typeof document !== "undefined" &&
     document.documentElement.classList.contains("dark");
@@ -357,7 +358,7 @@ export function Post({ post }: { post: PostType }) {
           >
             {post.uid && (
                <a
-              href={`/goals/${post.uid}`}
+              href={goalHref}
               target="_blank"
               rel="noopener noreferrer"
               className="block cursor-pointer w-full text-left font-medium py-3 px-4 text-sm
@@ -406,7 +407,7 @@ export function Post({ post }: { post: PostType }) {
 
       {/* IMAGE */}
       {post.post_image?.trim() ? (
-        <a href={`/goals/${post.uid}`} className="block">
+        <a href={goalHref} className="block">
           <div className="w-full my-4">
             <img
               className="w-[100vw] max-w-none md:w-full cursor-pointer md:rounded-lg"
@@ -452,7 +453,7 @@ export function Post({ post }: { post: PostType }) {
           </div>
 
           {post.completion_picture?.trim() ? (
-            <Link href={`/goals/${post.uid}`} className="shrink-0">
+            <Link href={goalHref} className="shrink-0">
               <img
                 className="h-24 w-24 rounded-lg object-cover md:h-28 md:w-28"
                 src={post.completion_picture.replace(

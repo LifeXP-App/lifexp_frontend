@@ -19,7 +19,7 @@ import { compressImageForUpload, SANITY_CAP_BYTES } from "@/src/lib/utils/compre
 import { BoltIcon, UsersIcon } from "@heroicons/react/24/solid";
 import { useMutation } from "convex/react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import React, { useCallback, useMemo, useState } from "react";
 import { BiDumbbell } from "react-icons/bi";
 import { FaBrain, FaHammer } from "react-icons/fa";
@@ -199,7 +199,9 @@ const SessionItem: React.FC<SessionItemProps> = ({
 export default function GoalDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const goalId = params.goalId as string;
+  const feedOwner = searchParams.get("owner");
 
   const { me } = useAuth();
   const startSessionMutation = useMutation(api.sessions.startSession);
@@ -446,9 +448,10 @@ export default function GoalDetailPage() {
 
   const handleOpenCompleteGoal = () => {
     if (!goal || goal.status === "completed") return;
-    const ownsGoal =
-      goal.is_owner === true ||
-      (!!me?.username && goal.username === me.username);
+    const ownsGoal = feedOwner
+      ? !!me?.username && feedOwner === me.username
+      : goal.is_owner === true ||
+        (!!me?.username && goal.username === me.username);
     if (!ownsGoal) return;
     setIsCompleteGoalOpen(true);
   };
@@ -690,9 +693,10 @@ export default function GoalDetailPage() {
     );
   }
 
-  const isOwner =
-    goal.is_owner === true ||
-    (!!me?.username && goal.username === me.username);
+  const isOwner = feedOwner
+    ? !!me?.username && feedOwner === me.username
+    : goal.is_owner === true ||
+      (!!me?.username && goal.username === me.username);
   const goalCompleted = goal.status === "completed";
   const goalDescription = goal.description || "";
   const statusText = `${goal.days_completed} / ${goal.days_total} days completed`;
