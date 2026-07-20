@@ -4,6 +4,7 @@ import type { MouseEvent, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { ACTIVITY_META, type ActivityType } from "@/src/lib/types/activityMeta";
 
 /**
  * Wraps any avatar <img>/<Image> and overlays a live indicator (green ring +
@@ -46,12 +47,20 @@ export function LiveAvatar({
     );
   }
 
-  // Three states: focusing (green), on a pomodoro break (blue — around and
-  // interactable), manually paused (amber). Pulse for green/blue since the
-  // person is present; static dot for a manual pause.
+  // Three states: focusing (the activity's aspect color — e.g. purple for
+  // logic, so the ring hints what they're doing), on a pomodoro break (blue —
+  // around and interactable), manually paused (amber). Pulse for
+  // focusing/break since the person is present; static dot for a manual pause.
   const isPaused = live.status === "paused";
   const onBreak = isPaused && live.onBreak;
-  const color = !isPaused ? "#22c55e" : onBreak ? "#3b82f6" : "#f59e0b";
+  const activityColor = live.activityType
+    ? ACTIVITY_META[live.activityType as ActivityType]?.cssColorVar
+    : undefined;
+  const color = !isPaused
+    ? activityColor ?? "#22c55e"
+    : onBreak
+    ? "#3b82f6"
+    : "#f59e0b";
   const pulse = !isPaused || onBreak;
 
   const goToSession = (e: MouseEvent) => {

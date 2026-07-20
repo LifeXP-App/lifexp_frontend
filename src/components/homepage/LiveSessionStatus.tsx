@@ -65,7 +65,14 @@ export function LiveSessionStatus({ session }: LiveSessionStatusProps) {
     : `${session.activityEmoji ?? "✦"} In session`;
   const initial = session.username?.[0]?.toUpperCase() ?? "?";
   const onBreak = isPaused && session.onBreak;
-  const liveColor = !isPaused ? "#22c55e" : onBreak ? "#3b82f6" : "#f59e0b";
+  // Focusing uses the activity's aspect color (e.g. purple for logic) so the
+  // ring hints what the person is doing; break/paused are presence states,
+  // not activity-tied, so they keep their fixed colors.
+  const liveColor = !isPaused
+    ? activityColor ?? "#22c55e"
+    : onBreak
+    ? "#3b82f6"
+    : "#f59e0b";
 
   return (
     <Link href={`/goals/${session.goalId}/session/${session.sessionId}`}>
