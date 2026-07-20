@@ -4,6 +4,7 @@ import { ConvexProvider, ConvexReactClient } from 'convex/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
 import { ReactNode, useState } from 'react';
+import { ToastProvider } from '@/src/context/ToastContext';
 
 const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
@@ -29,7 +30,7 @@ export function Providers({ children }: { children: ReactNode }) {
     <ConvexProvider client={convex}>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          {children}
+          <ToastProvider>{children}</ToastProvider>
         </ThemeProvider>
       </QueryClientProvider>
     </ConvexProvider>

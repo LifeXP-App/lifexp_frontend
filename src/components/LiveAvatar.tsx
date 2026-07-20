@@ -1,9 +1,10 @@
 "use client";
 
-import type { MouseEvent, ReactNode } from "react";
-import { useRouter } from "next/navigation";
-import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { ACTIVITY_META, type ActivityType } from "@/src/lib/types/activityMeta";
+import { useQuery } from "convex/react";
+import { useRouter } from "next/navigation";
+import type { MouseEvent, ReactNode } from "react";
 
 /**
  * Wraps any avatar <img>/<Image> and overlays a live indicator (green ring +
@@ -34,24 +35,32 @@ export function LiveAvatar({
       ? sessions?.find(
           (s) =>
             (username && s.username === username) ||
-            (userId != null && s.userId === String(userId))
+            (userId != null && s.userId === String(userId)),
         )
       : undefined;
 
   if (!live) {
     return (
-      <span className={`relative inline-block ${className ?? ""}`}>
+      <span className={`relative inline-flex ${className ?? ""}`}>
         {children}
       </span>
     );
   }
 
-  // Three states: focusing (green), on a pomodoro break (blue — around and
-  // interactable), manually paused (amber). Pulse for green/blue since the
-  // person is present; static dot for a manual pause.
+  // Three states: focusing (the activity's aspect color — e.g. purple for
+  // logic, so the ring hints what they're doing), on a pomodoro break (blue —
+  // around and interactable), manually paused (amber). Pulse for
+  // focusing/break since the person is present; static dot for a manual pause.
   const isPaused = live.status === "paused";
   const onBreak = isPaused && live.onBreak;
-  const color = !isPaused ? "#22c55e" : onBreak ? "#3b82f6" : "#f59e0b";
+  const activityColor = live.activityType
+    ? ACTIVITY_META[live.activityType as ActivityType]?.cssColorVar
+    : undefined;
+  const color = !isPaused
+    ? (activityColor ?? "#22c55e")
+    : onBreak
+      ? "#3b82f6"
+      : "#f59e0b";
   const pulse = !isPaused || onBreak;
 
   const goToSession = (e: MouseEvent) => {
@@ -62,24 +71,39 @@ export function LiveAvatar({
 
   return (
     <span
-      className={`relative inline-block cursor-pointer ${className ?? ""}`}
+      className={`relative inline-flex cursor-pointer ${className ?? ""}`}
       onClick={goToSession}
       title={
         onBreak
           ? "On a break"
           : isPaused
-          ? "Session paused"
-          : "Watch live session"
+            ? "Session paused"
+            : "Watch live session"
       }
     >
       {children}
+      {/* Ring sits a hair outside the avatar's edge (small gap) rather than
+          flush against it. */}
       <span
-        className="pointer-events-none absolute inset-0 rounded-full border-2"
+        className="pointer-events-none absolute -inset-0.75 rounded-full border-3"
         style={{ borderColor: color }}
       />
+      {/* Discord-style status dot, centered exactly on the ring's circumference
+          at its bottom-left point (kept on this side consistently everywhere
+          the dot is used, so it never collides with a same-corner badge like
+          the interaction-type emoji on interaction rows). A circle inscribed
+          in a square never reaches the box's corner, so corner-relative
+          offsets like `-bottom-0 -left-0` leave a gap — percentage position +
+          centering transform puts it precisely on the curve regardless of
+          avatar size. The small fixed px term accounts for the ring sitting
+          3px outside the avatar rather than flush against it. */}
       <span
-        className="absolute -bottom-0.5 -right-0.5 flex h-3 w-3 rounded-full border-2 border-white dark:border-dark-2"
-        style={{ backgroundColor: color }}
+        className="absolute flex h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white dark:border-dark-2"
+        style={{
+          backgroundColor: color,
+          top: "calc(85.36% + 2.12px)",
+          left: "calc(85.36% + 2.12px)",
+        }}
       >
         {pulse && (
           <span

@@ -65,7 +65,14 @@ export function LiveSessionStatus({ session }: LiveSessionStatusProps) {
     : `${session.activityEmoji ?? "✦"} In session`;
   const initial = session.username?.[0]?.toUpperCase() ?? "?";
   const onBreak = isPaused && session.onBreak;
-  const liveColor = !isPaused ? "#22c55e" : onBreak ? "#3b82f6" : "#f59e0b";
+  // Focusing uses the activity's aspect color (e.g. purple for logic) so the
+  // ring hints what the person is doing; break/paused are presence states,
+  // not activity-tied, so they keep their fixed colors.
+  const liveColor = !isPaused
+    ? activityColor ?? "#22c55e"
+    : onBreak
+    ? "#3b82f6"
+    : "#f59e0b";
 
   return (
     <Link href={`/goals/${session.goalId}/session/${session.sessionId}`}>
@@ -77,21 +84,33 @@ export function LiveSessionStatus({ session }: LiveSessionStatusProps) {
               width={56}
               height={56}
               alt={session.username ?? "User"}
-              className="rounded-full h-14 w-14 aspect-square object-cover p-[1.5px]"
-              style={{ border: `2px solid ${liveColor}` }}
+              className="rounded-full h-14 w-14 aspect-square object-cover"
               unoptimized
             />
           ) : (
-            <div
-              className="rounded-full h-14 w-14 flex items-center justify-center font-semibold text-lg bg-gray-200 dark:bg-dark-3 text-gray-600 dark:text-[var(--muted)]"
-              style={{ border: `2px solid ${liveColor}` }}
-            >
+            <div className="rounded-full h-14 w-14 flex items-center justify-center font-semibold text-lg bg-gray-200 dark:bg-dark-3 text-gray-600 dark:text-[var(--muted)]">
               {initial}
             </div>
           )}
+          {/* Ring sits a hair outside the avatar's edge (small gap) rather
+              than flush against it. */}
           <span
-            className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 rounded-full border-2 border-white dark:border-dark-2"
-            style={{ backgroundColor: liveColor }}
+            className="pointer-events-none absolute -inset-0.75 rounded-full border-2"
+            style={{ borderColor: liveColor }}
+          />
+          {/* Discord-style status dot, centered exactly on the ring's
+              circumference at its bottom-left point — kept on this side
+              consistently everywhere the dot is used, see LiveAvatar for the
+              full reasoning and why percentage position + centering transform
+              is used here instead of corner-relative offsets. The small fixed
+              px term accounts for the ring sitting 3px outside the avatar. */}
+          <span
+            className="absolute flex h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white dark:border-dark-2"
+            style={{
+              backgroundColor: liveColor,
+              top: "calc(85.36% + 2.12px)",
+              left: "calc(14.64% - 2.12px)",
+            }}
           >
             {(!isPaused || onBreak) && (
               <span

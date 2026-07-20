@@ -4,6 +4,7 @@ import React, { useMemo, useState } from 'react';
 import { LiveAvatar } from '@/src/components/LiveAvatar';
 import { useParams, useRouter } from 'next/navigation';
 import RadarChart from "@/src/components/RadarChart";
+import { useToast } from "@/src/context/ToastContext";
 import AspectChip from '@/src/components/goals/AspectChip';
 import { mockUser } from "@/src/lib/mock/userData";
 import SessionInfoPopup from "@/src/components/goals/SessionInfoPopup";
@@ -559,6 +560,7 @@ export default function ActivityDetailPage({
 }: ActivityDetailProps) {
   const params = useParams();
   const router = useRouter();
+  const toast = useToast();
   const uid = params.activity as string;
 
   const [isGoalPickerOpen, setIsGoalPickerOpen] = useState(false);
@@ -644,7 +646,7 @@ export default function ActivityDetailPage({
       });
     } catch (err) {
       console.error("Failed to delete session:", err);
-      alert(err instanceof Error ? err.message : "Failed to delete session");
+      toast.error(err instanceof Error ? err.message : "Failed to delete session.");
       // Roll back — the delete didn't actually happen, so bring it back.
       setMySessions((prev) => [...prev, deletedSession]);
     }
@@ -928,7 +930,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       router.push('/goals');
     } catch (error) {
       console.error("Failed to create goal:", error);
-      alert("Failed to create goal. Please try again.");
+      toast.error("Failed to create goal. Please try again.");
     }
   };
 

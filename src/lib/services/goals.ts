@@ -10,6 +10,7 @@ export interface Goal {
   finish_by: string | null;
 
   username: string | null;
+  is_owner?: boolean;
 
   category: {
     name: string;
@@ -193,6 +194,10 @@ function normalizeGoal(item: unknown): Goal | null {
     goal.last_activity && typeof goal.last_activity === "object"
       ? (goal.last_activity as Record<string, unknown>)
       : null;
+  const user =
+    goal.user && typeof goal.user === "object"
+      ? (goal.user as Record<string, unknown>)
+      : null;
 
   return {
     id: String(rawId),
@@ -212,7 +217,20 @@ function normalizeGoal(item: unknown): Goal | null {
     finish_by: typeof goal.finish_by === "string" ? goal.finish_by : null,
 
     username:
-      typeof goal.user_username === "string" ? goal.user_username : null,
+      typeof goal.user_username === "string"
+        ? goal.user_username
+        : typeof goal.username === "string"
+          ? goal.username
+          : user && typeof user.username === "string"
+            ? user.username
+            : null,
+
+    is_owner:
+      typeof goal.is_owner === "boolean"
+        ? goal.is_owner
+        : typeof goal.own_goal === "boolean"
+          ? goal.own_goal
+          : undefined,
 
     category:
       category &&

@@ -96,6 +96,9 @@ function formatSessionTime(dateString: string): string {
 
 export function SessionPost({ session }: { session: ApiSessionPost }) {
   const { user, goal, activity } = session;
+  const goalHref = goal?.uid
+    ? `/goals/${goal.uid}?owner=${encodeURIComponent(user.username)}`
+    : "#";
 
   const [showComments, setShowComments] = useState(false);
   const [commentCount] = useState(session.comment_count ?? 0);
@@ -202,7 +205,7 @@ export function SessionPost({ session }: { session: ApiSessionPost }) {
             style={{ borderColor: "var(--border)" }}
           >
             <a
-              href={goal?.uid ? `/goals/${goal.uid}` : "#"}
+              href={goalHref}
               target="_blank"
               rel="noopener noreferrer"
               className="block cursor-pointer w-full text-left font-medium py-3 px-4 text-sm
@@ -230,7 +233,7 @@ export function SessionPost({ session }: { session: ApiSessionPost }) {
         <div className="flex gap-4 ">
           {/* 1:1 image or emoji placeholder */}
 
-          <Link href={goal?.uid ? `/goals/${goal.uid}` : "#"} className="shrink-0">
+          <Link href={goalHref} className="shrink-0">
             {session.completion_picture ? (
               <img
                 className="w-24 h-24 object-cover rounded-lg cursor-pointer"
@@ -256,7 +259,7 @@ export function SessionPost({ session }: { session: ApiSessionPost }) {
               {activity.name}
             </p>
 
-            <Link href={goal?.uid ? `/goals/${goal.uid}` : "#"}>
+            <Link href={goalHref}>
               <p className="text-sm font-semibold text-gray-500 dark:text-[var(--muted)]">
                 Session {session.session_number} {goal?.title ?? ""}
               </p>

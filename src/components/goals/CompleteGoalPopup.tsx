@@ -34,6 +34,7 @@ export default function CompleteGoalPopup({
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isPosting, setIsPosting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -45,6 +46,7 @@ export default function CompleteGoalPopup({
     setImagePreview(null);
     setImageFile(null);
     setIsPosting(false);
+    setError(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   }, [isOpen, defaultTitle, defaultDescription, defaultFinishBy]);
   /* eslint-enable react-hooks/set-state-in-effect */
@@ -220,6 +222,16 @@ export default function CompleteGoalPopup({
             <StatBox label="XP gained" value={xpGained.toString()} />
             <StatBox label="Sessions" value={sessionsCount.toString()} />
           </div>
+
+          {/* Inline error */}
+          {error && (
+            <div
+              role="alert"
+              className="px-4 py-3 rounded-2xl text-sm font-medium border bg-red-50 text-red-600 border-red-200 dark:bg-red-950/40 dark:text-red-400 dark:border-red-900"
+            >
+              {error}
+            </div>
+          )}
         </div>
 
         {/* Post Button */}
@@ -229,9 +241,16 @@ export default function CompleteGoalPopup({
             disabled={isPosting}
             onClick={async () => {
               if (!onPost || isPosting) return;
+              setError(null);
               setIsPosting(true);
               try {
                 await onPost({ title, description, finishBy, image: imageFile });
+              } catch (err) {
+                setError(
+                  err instanceof Error && err.message
+                    ? err.message
+                    : "Something went wrong. Please try again."
+                );
               } finally {
                 setIsPosting(false);
               }

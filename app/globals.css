@@ -149,6 +149,24 @@ body {
 }
 
 
+/* Toast + confirm dialog animations */
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes toast-backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes toast-dialog-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-toast-in { animation: toast-in 0.22s cubic-bezier(0.16, 1, 0.3, 1); }
+.animate-backdrop-in { animation: toast-backdrop-in 0.18s ease-out; }
+.animate-dialog-in { animation: toast-dialog-in 0.22s cubic-bezier(0.16, 1, 0.3, 1); }
+
+
 .recharts-wrapper:focus,
 .recharts-wrapper:focus-visible,
 .recharts-surface:focus,
