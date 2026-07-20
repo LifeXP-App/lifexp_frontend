@@ -1,6 +1,5 @@
 "use client";
 
-import NewActivityModal from "@/src/components/goals/NewActivityModel";
 import GoalStatusMenu from "@/src/components/goals/GoalStatusMenu";
 import StatusChangeConfirmationModal from "@/src/components/goals/StatusChangeConfirmationModal";
 import { useAuth } from "@/src/context/AuthContext";
@@ -12,8 +11,14 @@ import FireIcon from "@heroicons/react/24/solid/FireIcon";
 import { RocketLaunchIcon } from "@heroicons/react/24/outline";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
+import dynamic from "next/dynamic";
 import React, { useState } from "react";
 import { FaBrain, FaHammer } from "react-icons/fa";
+
+const NewActivityModal = dynamic(
+  () => import("@/src/components/goals/NewActivityModel"),
+);
 
 type AspectKey = "physique" | "energy" | "social" | "creativity" | "logic";
 
@@ -438,6 +443,11 @@ export default function GoalsPage() {
       return (Array.isArray(data.results) ? data.results : []) as GoalPost[];
     },
     enabled: !authLoading && !!username && !!accessToken,
+    // Every create/update/delete/status-change mutation below explicitly
+    // invalidates ["goals"], so this can cache generously without risking
+    // stale data after a user's own edits.
+    staleTime: 2 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
   });
 
   const plannedGoals = goals.filter((p) => p.status === "planned");
@@ -465,6 +475,11 @@ export default function GoalsPage() {
       return (await res.json()) as UserGoalsInfo;
     },
     enabled: !!username && !!accessToken,
+    // Key is prefixed with "goals", so it's also invalidated by every goal
+    // mutation below; kept shorter than the list itself since XP/streak can
+    // still change from session completions on other pages.
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const showGoalsSkeleton = goalsLoading && goals.length === 0;
@@ -702,6 +717,13 @@ export default function GoalsPage() {
 
       // Success - goal already removed from UI
       posthog.capture("goal_deleted", { goal_id: goalUid });
+      // The goal detail page (and its session list) may still have this
+      // goal cached — a stale copy there would otherwise keep showing a
+      // goal that no longer exists.
+      queryClient.invalidateQueries({ queryKey: ["goal", goalUid] });
+      if (username) {
+        queryClient.invalidateQueries({ queryKey: ["profile-stats", username] });
+      }
     } catch (error) {
       console.error("Error deleting goal:", error);
       posthog.captureException(error);
@@ -767,6 +789,14 @@ export default function GoalsPage() {
 
       // Refetch to ensure consistency
       queryClient.invalidateQueries({ queryKey: ["goals"] });
+      // The goal detail page caches this same goal separately, and
+      // profile-stats' ongoingGoals list depends on status too.
+      queryClient.invalidateQueries({
+        queryKey: ["goal", pendingStatusChange.goalId],
+      });
+      if (username) {
+        queryClient.invalidateQueries({ queryKey: ["profile-stats", username] });
+      }
     } catch (error) {
       console.error("Failed to update goal status:", error);
       toast.error("Failed to update goal status. Please try again.");
@@ -1150,11 +1180,11 @@ function RightSidebar({ user }: { user: UserGoalsInfo }) {
         <div className="text-center flex flex-col items-center">
           <div className="flex flex-col items-center">
             <LiveAvatar username={user.username}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={user.profile_picture}
+              <Image
+                src={user.profile_picture || "/default_pfp.png"}
+                width={96}
+                height={96}
                 className="h-24 w-24 object-cover aspect-square p-[1.5px] rounded-full"
-                loading="lazy"
                 alt="Profile"
               />
             </LiveAvatar>

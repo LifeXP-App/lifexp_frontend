@@ -19,7 +19,6 @@ export async function POST(req: Request) {
       );
     } 
 
-    // TEMP DEBUG — remove after diagnosing prod 403
     let supabase;
     try {
       supabase = await createSupabaseServerClient();
@@ -33,10 +32,6 @@ export async function POST(req: Request) {
       email,
       password,
     });
-
-    // TEMP DEBUG — remove after diagnosing prod 403
-    console.log("[DEBUG login/supabase] signInWithPassword error:", error?.message ?? null);
-    console.log("[DEBUG login/supabase] session present:", !!data.session);
 
     if (error || !data.session) {
       return NextResponse.json(
@@ -52,11 +47,6 @@ export async function POST(req: Request) {
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
     const targetUrl = `${baseUrl}/api/v1/auth/me/`;
 
-    // TEMP DEBUG — remove after diagnosing prod 403
-    console.log("[DEBUG login/supabase] baseUrl:", baseUrl);
-    console.log("[DEBUG login/supabase] accessToken exists:", !!accessToken);
-    console.log("[DEBUG login/supabase] fetch URL:", targetUrl);
-
     let djangoRes: Response;
     try {
       djangoRes = await fetch(targetUrl, {
@@ -68,29 +58,17 @@ export async function POST(req: Request) {
         cache: "no-store",
       });
     } catch (fetchErr) {
-      // TEMP DEBUG — remove after diagnosing prod 403
-      console.error("[DEBUG login/supabase] fetch THREW instead of returning a Response:", fetchErr);
+      console.error("[/api/auth/login/supabase] fetch to Django threw:", fetchErr);
       return NextResponse.json(
         { error: "fetch to Django threw", debugFetchError: String(fetchErr) },
         { status: 502 }
       );
     }
 
-    // TEMP DEBUG — remove after diagnosing prod 403
-    console.log("[DEBUG login/supabase] fetch did not throw");
-    console.log("[DEBUG login/supabase] response status:", djangoRes.status);
-    console.log(
-      "[DEBUG login/supabase] response headers:",
-      JSON.stringify(Object.fromEntries(djangoRes.headers.entries()))
-    );
-
     // Read the body exactly once as text, then reuse it for both logging
     // and JSON parsing below — calling .json() a second time on the same
     // Response would throw "body already read".
     const bodyText = await djangoRes.text();
-
-    // TEMP DEBUG — remove after diagnosing prod 403
-    console.log("[DEBUG login/supabase] response body:", bodyText);
 
     if (!djangoRes.ok) {
       // TEMP: surface Django's actual response instead of a generic message
@@ -109,8 +87,7 @@ export async function POST(req: Request) {
     try {
       userData = JSON.parse(bodyText);
     } catch (parseErr) {
-      // TEMP DEBUG — remove after diagnosing prod 403
-      console.error("[DEBUG login/supabase] Django response was not valid JSON:", parseErr);
+      console.error("[/api/auth/login/supabase] Django response was not valid JSON:", parseErr);
       return NextResponse.json(
         { error: "Django response was not valid JSON", djangoBody: bodyText },
         { status: 502 }

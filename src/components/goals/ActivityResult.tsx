@@ -18,7 +18,7 @@ interface ActivitySelectButtonProps {
   onSelect: (activity: Activity) => void;
 }
 
-export default function ActivitySelectButton({
+function ActivitySelectButton({
   activity,
   onSelect,
 }: ActivitySelectButtonProps) {
@@ -94,6 +94,8 @@ export default function ActivitySelectButton({
                 </button>
   );
 }
+
+export default React.memo(ActivitySelectButton);
 
 interface AiSuggestionButtonProps {
   query: string;

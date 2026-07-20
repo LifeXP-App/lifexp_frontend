@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { PlayIcon } from "@heroicons/react/24/solid";
 
@@ -162,11 +163,13 @@ const SessionItem: React.FC<Session & { onClick?: () => void }> = ({
         {emoji ? (
           <span className="text-3xl">{emoji}</span>
         ) : thumbnail ? (
-          <img src={thumbnail} alt="Session" className="w-full h-full object-cover" />
+          <Image src={thumbnail} alt="Session" width={80} height={80} className="w-full h-full object-cover" />
         ) : (
-          <img
+          <Image
             src="https://res.cloudinary.com/dfohn9dcz/image/upload/f_auto,q_auto,w_800,c_fill/v1/posts/user_7/ske_20251115103836"
             alt="Session thumbnail"
+            width={80}
+            height={80}
             className="w-full h-full object-cover"
           />
         )}

@@ -1,11 +1,27 @@
 import type { NextConfig } from "next";
+import createBundleAnalyzer from "@next/bundle-analyzer";
+
+// Only wraps the webpack config with the analyzer plugin when ANALYZE=true;
+// a no-op otherwise, so normal `next dev`/`next build` runs are unaffected.
+const withBundleAnalyzer = createBundleAnalyzer({
+  enabled: process.env.ANALYZE === "true",
+});
 
 const nextConfig: NextConfig = {
+  productionBrowserSourceMaps: process.env.ANALYZE === "true",
+  experimental: {
+    optimizePackageImports: [
+      "@heroicons/react",
+      "react-icons",
+      "lucide-react",
+      "recharts",
+    ],
+  },
   images: {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "lifexp.live",
+        hostname: "gamilife.com",
       },
       {
         protocol: "https",
@@ -32,4 +48,4 @@ const nextConfig: NextConfig = {
   skipTrailingSlashRedirect: true,
 };
 
-export default nextConfig;
+export default withBundleAnalyzer(nextConfig);

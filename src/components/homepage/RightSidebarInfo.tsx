@@ -2,6 +2,7 @@
 
 import { FireIcon, InformationCircleIcon } from "@heroicons/react/24/solid";
 import { LiveAvatar } from "@/src/components/LiveAvatar";
+import Image from "next/image";
 import Link from "next/link";
 type RightSidebarInfoProps = {
   user: {
@@ -36,10 +37,11 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
             className="flex flex-col items-center gap-2"
           >
             <LiveAvatar username={user.username}>
-              <img
-                src={user.profile_picture}
+              <Image
+                src={user.profile_picture || "/default_pfp.png"}
+                width={96}
+                height={96}
                 className="h-24 w-24 object-cover aspect-square p-[1.5px] rounded-full"
-                loading="lazy"
                 alt="Profile"
               />
             </LiveAvatar>

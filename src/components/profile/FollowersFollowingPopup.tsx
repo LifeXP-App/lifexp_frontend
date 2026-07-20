@@ -3,6 +3,9 @@
 import { toggleFollow } from "@/lib/api/users";
 import getAccentColors from "@/src/components/UserAccent";
 import { LiveAvatar } from "@/src/components/LiveAvatar";
+import { useAuth } from "@/src/context/AuthContext";
+import { useQueryClient } from "@tanstack/react-query";
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
@@ -35,6 +38,8 @@ export default function FollowersFollowingPopup({
   type,
   initialCount,
 }: FollowersFollowingPopupProps) {
+  const { me } = useAuth();
+  const queryClient = useQueryClient();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -157,6 +162,14 @@ export default function FollowersFollowingPopup({
     try {
       const data = await toggleFollow(user.id);
       setFollowStates((prev) => ({ ...prev, [user.id]: data.following }));
+      queryClient.invalidateQueries({
+        queryKey: ["profile-users", user.username, me?.username],
+      });
+      if (me?.username) {
+        queryClient.invalidateQueries({
+          queryKey: ["profile-users", me.username, me.username],
+        });
+      }
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
         return;
@@ -253,9 +266,11 @@ export default function FollowersFollowingPopup({
                     >
                       <LiveAvatar username={user.username}>
                         {user.profile_picture ? (
-                          <img
+                          <Image
                             src={user.profile_picture}
                             alt={user.username}
+                            width={48}
+                            height={48}
                             className="h-12 w-12 rounded-full object-cover"
                           />
                         ) : (

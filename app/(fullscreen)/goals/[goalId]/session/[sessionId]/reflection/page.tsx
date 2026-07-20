@@ -1,14 +1,16 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import Image from "next/image";
 import { useParams } from "next/navigation";
-import confetti from "canvas-confetti";
 import { Link } from 'lucide-react';
 import posthog from "posthog-js";
 import { useQuery } from "convex/react";
+import { useQueryClient } from "@tanstack/react-query";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { authedFetch } from "@/src/lib/api/authedFetch";
+import { useAuth } from "@/src/context/AuthContext";
 import { useToast } from "@/src/context/ToastContext";
 import { compressImageForUpload, SANITY_CAP_BYTES } from "@/src/lib/utils/compressImage";
 
@@ -43,10 +45,34 @@ const DayCompletePage = () => {
 
   const params = useParams();
   const toast = useToast();
+  const { me } = useAuth();
+  const queryClient = useQueryClient();
   const uid = params?.sessionId as string;
 
   const goalId = params?.goalId as string;
   const isEmptySession = goalId === "none";
+
+  // Shared by the completion-picture upload and the Convex self-heal path
+  // below — both can be the mutation that actually persists this session's
+  // final state to Django, so both need to invalidate the same caches.
+  const invalidateSessionCaches = useCallback(() => {
+    if (!isEmptySession) {
+      queryClient.invalidateQueries({ queryKey: ["goal", goalId] });
+    }
+    queryClient.invalidateQueries({ queryKey: ["goals"] });
+    queryClient.invalidateQueries({ queryKey: ["feed"] });
+    if (me?.username) {
+      queryClient.invalidateQueries({
+        queryKey: ["user-profile-widget", me.username],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["profile-stats", me.username],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["profile-posts", me.username],
+      });
+    }
+  }, [queryClient, goalId, isEmptySession, me?.username]);
 
   const [reflection, setReflection] = useState<ReflectionResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -105,6 +131,7 @@ const DayCompletePage = () => {
     method: "POST",
     body: formData,
   })
+    invalidateSessionCaches()
 } catch (err) {
     console.error("Failed to upload image", err)
     toast.error("Failed to upload image. Please try again.")
@@ -165,6 +192,7 @@ const DayCompletePage = () => {
                 device_platform: convexSession.deviceContext?.platform ?? "web",
               }),
             })
+            invalidateSessionCaches()
           } catch (err) {
             console.error("Self-heal: failed to sync completion to Django", err)
           }
@@ -224,7 +252,7 @@ const DayCompletePage = () => {
 
     return () => { cancelled = true }
 
-  }, [uid, convexSession, goalId])
+  }, [uid, convexSession, goalId, invalidateSessionCaches])
 
   useEffect(() => {
     if (!reflection) return
@@ -254,31 +282,42 @@ const DayCompletePage = () => {
 
   if (!reflection) return;
 
+  let cancelled = false;
   const duration = 2500;
   const end = Date.now() + duration;
 
-  const frame = () => {
+  // Loaded on demand — confetti only ever fires once a reflection exists,
+  // so there's no reason to ship it in the page's initial JS chunk.
+  import("canvas-confetti").then(({ default: confetti }) => {
+    if (cancelled) return;
 
-    confetti({
-      particleCount: 2,
-      angle: 60,
-      spread: 70,
-      origin: { x: 0 },
-    });
+    const frame = () => {
 
-    confetti({
-      particleCount: 2,
-      angle: 120,
-      spread: 70,
-      origin: { x: 1 },
-    });
+      confetti({
+        particleCount: 2,
+        angle: 60,
+        spread: 70,
+        origin: { x: 0 },
+      });
 
-    if (Date.now() < end) {
-      requestAnimationFrame(frame);
-    }
+      confetti({
+        particleCount: 2,
+        angle: 120,
+        spread: 70,
+        origin: { x: 1 },
+      });
+
+      if (Date.now() < end) {
+        requestAnimationFrame(frame);
+      }
+    };
+
+    frame();
+  });
+
+  return () => {
+    cancelled = true;
   };
-
-  frame();
 
 }, [reflection]);
 
@@ -506,10 +545,11 @@ const DayCompletePage = () => {
 
                   {reflection.nudge_users.map(user => (
                     <a href={`/u/${user.username}`} key={user.id} className="relative">
-                    <img
-                      key={user.id}
-                      src={user.profile_picture}
+                    <Image
+                      src={user.profile_picture || "/default_pfp.png"}
                       alt={user.username}
+                      width={28}
+                      height={28}
                       className="w-7 h-7 rounded-full border-2 border-[var(--border)] object-cover"
                     />
                     </a>

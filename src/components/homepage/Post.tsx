@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 
 import { ClockIcon } from "@heroicons/react/24/outline";
@@ -8,7 +9,7 @@ import {
   EllipsisVerticalIcon,
   HeartIcon,
 } from "@heroicons/react/24/solid";
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { CommentSection } from "./CommentSection"; // ADD THIS
 import { LiveAvatar } from "@/src/components/LiveAvatar";
 
@@ -23,13 +24,9 @@ function copyPostLink(uid: string) {
   navigator.clipboard.writeText(`${window.location.origin}/post/?v=${uid}`);
 }
 
-function reportPost(id: number) {
-  console.log("report post", id);
-}
+function reportPost() {}
 
-function deletePost(id: number) {
-  console.log("delete post", id);
-}
+function deletePost() {}
 
 function hexToRgba(hex: string, alpha: number) {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -98,7 +95,7 @@ export type PostType = {
 
 /* ---------------- COMPONENT ---------------- */
 
-export function Post({ post }: { post: PostType }) {
+function PostComponent({ post }: { post: PostType }) {
   const goalHref = `/goals/${post.uid}?owner=${encodeURIComponent(post.username)}`;
   const dark =
     typeof document !== "undefined" &&
@@ -262,7 +259,6 @@ export function Post({ post }: { post: PostType }) {
       }
 
       const data = await res.json();
-      console.log(data)
 
       // Sync with server response (only if component is still mounted)
       if (isMountedRef.current) {
@@ -309,11 +305,17 @@ export function Post({ post }: { post: PostType }) {
         <Link href={`/u/${post.username}`}>
           <div className="flex items-center cursor-pointer">
             <LiveAvatar username={post.username}>
-              <img
-                src={post.profile_picture.replace(
-                  "/upload/",
-                  "/upload/f_auto,q_auto,w_800,c_fill/",
-                )}
+              <Image
+                src={
+                  post.profile_picture
+                    ? post.profile_picture.replace(
+                        "/upload/",
+                        "/upload/f_auto,q_auto,w_800,c_fill/",
+                      )
+                    : "/default_pfp.png"
+                }
+                width={40}
+                height={40}
                 className={`rounded-full w-10 h-10 object-cover aspect-square ${
                   post.masterytitle === "Rookie"
                     ? ""
@@ -384,7 +386,7 @@ export function Post({ post }: { post: PostType }) {
             {post.own_post ? (
               <button
                 type="button"
-                onClick={() => deletePost(post.id)}
+                onClick={() => deletePost()}
                 className="w-full cursor-pointer text-left font-medium py-3 px-4 text-sm text-red-600
                           hover:bg-gray-100 dark:hover:bg-dark-3 transition-colors"
               >
@@ -393,7 +395,7 @@ export function Post({ post }: { post: PostType }) {
             ) : (
               <button
                 type="button"
-                onClick={() => reportPost(post.id)}
+                onClick={() => reportPost()}
                 className="w-full cursor-pointer text-left font-medium py-3 px-4 text-sm
                           hover:bg-gray-100 dark:hover:bg-dark-3 transition-colors
                           dark:text-[#a5a5a6]"
@@ -409,13 +411,16 @@ export function Post({ post }: { post: PostType }) {
       {post.post_image?.trim() ? (
         <a href={goalHref} className="block">
           <div className="w-full my-4">
-            <img
+            <Image
+              width={800}
+              height={419}
               className="w-[100vw] max-w-none md:w-full cursor-pointer md:rounded-lg"
               style={{ aspectRatio: "1.91 / 1", objectFit: "cover" }}
               src={post.post_image.replace(
                 "/upload/",
                 "/upload/f_auto,q_auto,w_800,c_fill/",
               )}
+              alt={post.title || "Post image"}
             />
           </div>
         </a>
@@ -454,7 +459,9 @@ export function Post({ post }: { post: PostType }) {
 
           {post.completion_picture?.trim() ? (
             <Link href={goalHref} className="shrink-0">
-              <img
+              <Image
+                width={112}
+                height={112}
                 className="h-24 w-24 rounded-lg object-cover md:h-28 md:w-28"
                 src={post.completion_picture.replace(
                   "/upload/",
@@ -470,13 +477,16 @@ export function Post({ post }: { post: PostType }) {
           <div className="border border-gray-200 dark:border-[var(--border)] rounded-lg flex gap-4 bg-white dark:bg-dark-3 mt-4 p-2">
             {post.session.session_post_image_url &&
             post.session.session_post_image_url.trim() !== "" ? (
-              <img
+              <Image
+                width={96}
+                height={96}
                 className="w-24 cursor-pointer md:rounded-lg"
                 style={{ aspectRatio: "1 / 1", objectFit: "cover" }}
                 src={post.session.session_post_image_url?.replace(
                   "/upload/",
                   "/upload/f_auto,q_auto,w_150,c_fill/",
                 )}
+                alt={`Session ${post.session.number}`}
               />
             ) : (
               <div className="w-24 h-24 shrink-0 bg-gray-100 dark:bg-[var(--dark-2)] flex items-center justify-center rounded-lg">
@@ -560,3 +570,5 @@ export function Post({ post }: { post: PostType }) {
     </div>
   );
 }
+
+export const Post = memo(PostComponent);

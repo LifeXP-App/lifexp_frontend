@@ -1,10 +1,10 @@
 "use client";
 
-import RadarChart, { RadarDataPoint } from "@/src/components/RadarChart";
+import type { RadarDataPoint } from "@/src/components/RadarChart";
+import { RadarChart, XPChart } from "@/src/components/charts/LazyCharts";
 import getAccentColors, {
   hexToRgba as hexToRgbaUtil,
 } from "@/src/components/UserAccent";
-import XPChart from "@/src/components/XPChart";
 import PrivateProfileNotice from "@/src/components/profile/PrivateProfileNotice";
 import { LiveAvatar } from "@/src/components/LiveAvatar";
 import { useAuth } from "@/src/context/AuthContext";
@@ -14,8 +14,8 @@ import { FireIcon, LockClosedIcon } from "@heroicons/react/24/solid";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
-import { use, useEffect, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { use, useCallback, useEffect, useRef, useState } from "react";
 import { FaLinkedin, FaSquareWhatsapp } from "react-icons/fa6";
 import { toggleFollow } from "@/lib/api/users";
 import posthog from "posthog-js";
@@ -63,6 +63,27 @@ export default function ProfilePage({ params }: PageProps) {
   const { username } = use(params);
   const router = useRouter();
   const { me, session, loading: authLoading } = useAuth();
+  const queryClient = useQueryClient();
+
+  // Follow state itself is optimistic local state (see handleFollow /
+  // handleUnfollow below), but the underlying counts are also embedded in
+  // both this profile's cache and the signed-in user's own — without this,
+  // navigating away and back inside the cache's staleTime window re-syncs
+  // the optimistic state right back to the pre-toggle numbers.
+  const invalidateFollowCaches = useCallback(
+    (targetUsername: string) => {
+      queryClient.invalidateQueries({
+        queryKey: ["profile-users", targetUsername, me?.username],
+      });
+      if (me?.username) {
+        queryClient.invalidateQueries({
+          queryKey: ["profile-users", me.username, me.username],
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ["discover-users"] });
+    },
+    [queryClient, me?.username],
+  );
 
   const [isFollowing, setIsFollowing] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
@@ -139,6 +160,10 @@ export default function ProfilePage({ params }: PageProps) {
       return { profileData, currentData };
     },
     enabled: !authLoading && !!me?.username,
+    // Profile header + follow counts — optimistic local state handles the
+    // follow/unfollow UI regardless, so this can cache generously.
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const profileUser = (usersData?.profileData as UserProfile | null) ?? null;
@@ -173,6 +198,8 @@ export default function ProfilePage({ params }: PageProps) {
       return (data.results || []) as UserPost[];
     },
     enabled: !!username,
+    staleTime: 3 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
   });
 
   // Cleanup on unmount
@@ -270,6 +297,8 @@ export default function ProfilePage({ params }: PageProps) {
       return { weeklyXP, recentSessions, ongoingGoals };
     },
     enabled: !!username && !authLoading && !!session?.access_token,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const weeklyXP = profileStatsData?.weeklyXP ?? [];
@@ -292,6 +321,9 @@ export default function ProfilePage({ params }: PageProps) {
       return (data.top_activities || []) as Activity[];
     },
     enabled: !authLoading && !!profileUser?.id && !!session?.access_token,
+    // Top-activities ranking changes rarely — safe to cache generously.
+    staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
   });
 
   // Format member since date
@@ -347,6 +379,7 @@ export default function ProfilePage({ params }: PageProps) {
         setFollowingCount(data.following_count);
         posthog.capture("user_followed", { target_user: profileUser.username, action: "follow" });
       }
+      invalidateFollowCaches(profileUser.username);
     } catch (error) {
       // Don't show error if request was aborted intentionally
       if (error instanceof Error && error.name === "AbortError") {
@@ -405,6 +438,7 @@ export default function ProfilePage({ params }: PageProps) {
         setFollowingCount(data.following_count);
         posthog.capture("user_followed", { target_user: profileUser.username, action: "unfollow" });
       }
+      invalidateFollowCaches(profileUser.username);
     } catch (error) {
       // Don't show error if request was aborted intentionally
       if (error instanceof Error && error.name === "AbortError") {

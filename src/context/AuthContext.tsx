@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/src/lib/supabase";
 import type { Session, User } from "@supabase/supabase-js";
 import posthog from "posthog-js";
@@ -52,7 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   /**
    * Fetch Player data from Django backend using Supabase session token
    */
-  const refreshMe = async () => {
+  const refreshMe = useCallback(async () => {
     try {
       // Fetch Player data via the same-origin proxy route. The proxy reads the
       // httpOnly `sb-access-token` cookie (the source of truth for auth in prod)
@@ -86,12 +86,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error("refreshMe failed:", err);
       setMe(null);
     }
-  };
+  }, []);
 
   /**
    * Sign in with email and password
    */
-  const signIn = async (email: string, password: string) => {
+  const signIn = useCallback(async (email: string, password: string) => {
     // Call the server-side route handler so it can set the httpOnly sb-access-token cookie.
     // The browser SDK alone only puts the token in localStorage, which server route handlers can't read.
     const res = await fetch("/api/auth/login/supabase", {
@@ -120,12 +120,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     return { error: sessionError ?? null };
-  };
+  }, [refreshMe]);
 
   /**
    * Sign up with email and password
    */
-  const signUp = async (email: string, password: string, username: string, fullname?: string) => {
+  const signUp = useCallback(async (email: string, password: string, username: string, fullname?: string) => {
     // First, register via Django (which creates user in Supabase)
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/auth/register/`, {
@@ -155,12 +155,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       posthog.captureException(err);
       return { error: { message: "Registration failed" } };
     }
-  };
+  }, []);
 
   /**
    * Sign in with Google OAuth
    */
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = useCallback(async () => {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -173,14 +173,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     return { error };
-  };
+  }, []);
 
   /**
    * Request a Supabase password-reset email via the Django backend.
    * Public endpoint (like signUp) - called directly against Django rather
    * than through a Next proxy since there's no session to attach.
    */
-  const requestPasswordReset = async (email: string) => {
+  const requestPasswordReset = useCallback(async (email: string) => {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/auth/password-reset/`, {
         method: "POST",
@@ -199,12 +199,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error("Password reset request error:", err);
       return { error: { message: "Failed to send reset email." } };
     }
-  };
+  }, []);
 
   /**
    * Logout user
    */
-  const logout = async () => {
+  const logout = useCallback(async () => {
     posthog.capture("user_logged_out");
     posthog.reset();
     await supabase.auth.signOut();
@@ -212,22 +212,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setSession(null);
     setSupabaseUser(null);
     window.location.href = "/users/login";
-  };
+  }, []);
 
   /**
    * Initialize auth state and listen for changes
    */
   useEffect(() => {
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session: initialSession }, error: getSessionError }) => {
-      // TEMP DEBUG — remove after diagnosing prod auth-header loss
-      console.log("[DEBUG AuthContext] initial getSession() session present:", !!initialSession);
-      console.log("[DEBUG AuthContext] initial getSession() access_token present:", !!initialSession?.access_token);
-      console.log("[DEBUG AuthContext] initial getSession() error:", getSessionError?.message ?? null);
-      if (initialSession) {
-        console.log("[DEBUG AuthContext] initial session expires_at:", initialSession.expires_at);
-      }
-
+    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
       setSession(initialSession);
       setSupabaseUser(initialSession?.user ?? null);
 
@@ -240,10 +232,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, currentSession) => {
-        console.log("Auth state changed:", _event);
-        // TEMP DEBUG — remove after diagnosing prod auth-header loss
-        console.log("[DEBUG AuthContext] onAuthStateChange session present:", !!currentSession);
-        console.log("[DEBUG AuthContext] onAuthStateChange access_token present:", !!currentSession?.access_token);
         setSession(currentSession);
         setSupabaseUser(currentSession?.user ?? null);
 
@@ -263,25 +251,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [refreshMe]);
+
+  const value = useMemo<AuthContextType>(
+    () => ({
+      me,
+      session,
+      supabaseUser,
+      loading,
+      refreshMe,
+      logout,
+      signIn,
+      signUp,
+      signInWithGoogle,
+      requestPasswordReset,
+    }),
+    [
+      me,
+      session,
+      supabaseUser,
+      loading,
+      refreshMe,
+      logout,
+      signIn,
+      signUp,
+      signInWithGoogle,
+      requestPasswordReset,
+    ],
+  );
 
   return (
-    <AuthContext.Provider
-      value={{
-        me,
-        session,
-        supabaseUser,
-        loading,
-        refreshMe,
-        logout,
-        signIn,
-        signUp,
-        signInWithGoogle,
-        requestPasswordReset,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+    <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
   );
 }
 

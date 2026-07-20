@@ -1,6 +1,9 @@
 "use client";
 import { toggleFollow } from "@/lib/api/users";
 import { LiveAvatar } from "@/src/components/LiveAvatar";
+import { useAuth } from "@/src/context/AuthContext";
+import { useQueryClient } from "@tanstack/react-query";
+import Image from "next/image";
 import Link from "next/link";
 import { useRef, useState } from "react";
 
@@ -18,6 +21,9 @@ type DiscoverUsersProps = {
 };
 
 export function DiscoverUsers({ suggestedUsers }: DiscoverUsersProps) {
+  const { me } = useAuth();
+  const queryClient = useQueryClient();
+
   // Track follow state for each user
   const [followStates, setFollowStates] = useState<
     Record<string | number, boolean>
@@ -72,6 +78,14 @@ export function DiscoverUsers({ suggestedUsers }: DiscoverUsersProps) {
 
       // Sync with server response
       setFollowStates((prev) => ({ ...prev, [userId]: data.following }));
+      queryClient.invalidateQueries({
+        queryKey: ["profile-users", user.username, me?.username],
+      });
+      if (me?.username) {
+        queryClient.invalidateQueries({
+          queryKey: ["profile-users", me.username, me.username],
+        });
+      }
     } catch (error) {
       // Don't show error if request was aborted intentionally
       if (error instanceof Error && error.name === "AbortError") {
@@ -101,8 +115,11 @@ export function DiscoverUsers({ suggestedUsers }: DiscoverUsersProps) {
             >
               <Link href={`/u/${u.username}`} className="flex gap-2">
                 <LiveAvatar username={u.username}>
-                  <img
-                    src={u.profile_picture}
+                  <Image
+                    src={u.profile_picture || "/default_pfp.png"}
+                    alt={u.username}
+                    width={48}
+                    height={48}
                     className="h-12 w-12 rounded-full object-cover"
                   />
                 </LiveAvatar>

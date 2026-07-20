@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
 
 type PopupContextType = {
   masteryPopupOpen: boolean;
@@ -14,21 +14,22 @@ const PopupContext = createContext<PopupContextType | null>(null);
 export function PopupProvider({ children }: { children: React.ReactNode }) {
   const [masteryPopupOpen, setMasteryPopupOpen] = useState(false);
 
-  const openMasteryPopup = () => setMasteryPopupOpen(true);
-  const closeMasteryPopup = () => setMasteryPopupOpen(false);
-  const toggleMasteryPopup = () => setMasteryPopupOpen((p) => !p);
+  const openMasteryPopup = useCallback(() => setMasteryPopupOpen(true), []);
+  const closeMasteryPopup = useCallback(() => setMasteryPopupOpen(false), []);
+  const toggleMasteryPopup = useCallback(() => setMasteryPopupOpen((p) => !p), []);
+
+  const value = useMemo<PopupContextType>(
+    () => ({
+      masteryPopupOpen,
+      openMasteryPopup,
+      closeMasteryPopup,
+      toggleMasteryPopup,
+    }),
+    [masteryPopupOpen, openMasteryPopup, closeMasteryPopup, toggleMasteryPopup],
+  );
 
   return (
-    <PopupContext.Provider
-      value={{
-        masteryPopupOpen,
-        openMasteryPopup,
-        closeMasteryPopup,
-        toggleMasteryPopup,
-      }}
-    >
-      {children}
-    </PopupContext.Provider>
+    <PopupContext.Provider value={value}>{children}</PopupContext.Provider>
   );
 }
 

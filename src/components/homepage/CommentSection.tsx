@@ -3,6 +3,7 @@
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { PaperAirplaneIcon } from "@heroicons/react/24/solid";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { supabase } from "@/src/lib/supabase";
 import { LiveAvatar } from "@/src/components/LiveAvatar";
 
@@ -239,11 +240,17 @@ export function CommentSection({ commentsEndpoint, initialComments, onClose }: C
               comments.map((comment) => (
                 <div key={comment.id} className="flex gap-3">
                   <LiveAvatar username={comment.username} className="self-start">
-                    <img
-                      src={comment.profile_picture.replace(
-                        "/upload/",
-                        "/upload/f_auto,q_auto,w_80,c_fill/"
-                      )}
+                    <Image
+                      src={
+                        comment.profile_picture
+                          ? comment.profile_picture.replace(
+                              "/upload/",
+                              "/upload/f_auto,q_auto,w_80,c_fill/"
+                            )
+                          : "/default_pfp.png"
+                      }
+                      width={40}
+                      height={40}
                       alt={`${comment.fullname} profile picture`}
                       className="w-10 h-10 rounded-full object-cover"
                     />

@@ -28,7 +28,7 @@ export async function GET(request: Request) {
 
     let res = await fetch(target, {
       headers: { Authorization: `Bearer ${access}` },
-      cache: "no-store",
+      next: { revalidate: 60 },
     });
 
     if (res.status === 401) {
@@ -44,7 +44,7 @@ export async function GET(request: Request) {
 
       res = await fetch(target, {
         headers: { Authorization: `Bearer ${access}` },
-        cache: "no-store",
+        next: { revalidate: 60 },
       });
     }
 

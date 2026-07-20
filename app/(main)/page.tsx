@@ -443,6 +443,10 @@ export default function Home() {
       }
     },
     enabled: !!session?.access_token,
+    // "Did a friend do a session today" — live-ness itself comes from the
+    // separate Convex subscription above, this is just the daily summary.
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   type ApiNotification = {
@@ -512,6 +516,9 @@ export default function Home() {
       }
     },
     enabled: !!session?.access_token,
+    // Notifications must stay near-real-time — always revalidate on mount
+    // rather than inheriting the global staleTime used elsewhere.
+    staleTime: 0,
   });
   const notificationsData = notificationsResult?.notifications ?? [];
   const unreadCount = notificationsResult?.unreadCount ?? 0;
@@ -647,6 +654,10 @@ const {
   getNextPageParam: (lastPage, allPages) =>
     lastPage.hasMore ? allPages.length + 1 : undefined,
   enabled: !!session?.access_token,
+  // Avoid a full refetch on quick back-navigation to the feed; still fresh
+  // enough that new posts show up within a minute.
+  staleTime: 60 * 1000,
+  gcTime: 10 * 60 * 1000,
 });
 
 const posts = useMemo(
@@ -682,6 +693,11 @@ const postsLoading = postsInitialLoading;
       }
     },
     enabled: !!me?.username,
+    // Own XP/streak — no explicit invalidation hook exists for it (session
+    // completion happens on a different page), so kept close to the global
+    // default rather than cached aggressively.
+    staleTime: 60 * 1000,
+    gcTime: 5 * 60 * 1000,
   });
 
   // ✅ only build once data exists
@@ -798,6 +814,9 @@ const { data: discoverUsers = [], isLoading: discoverLoading } = useQuery({
     }
   },
   enabled: !!session?.access_token,
+  // Suggested-users widget — low volatility, safe to cache generously.
+  staleTime: 5 * 60 * 1000,
+  gcTime: 15 * 60 * 1000,
 });
 
 

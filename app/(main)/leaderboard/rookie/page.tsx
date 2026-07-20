@@ -4,9 +4,10 @@ import LeaderboardSwitcher from "@/src/components/LeaderboardSwitcher";
 import { LiveAvatar } from "@/src/components/LiveAvatar";
 import { useAuth } from "@/src/context/AuthContext";
 import { FireIcon } from "@heroicons/react/24/solid";
+import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 
 type Player = {
   username: string;
@@ -39,6 +40,83 @@ type UserApiResponse = {
   lifeLevel: number;
   masteryTitle: string;
 };
+function RankBadge({ rank }: { rank: number }) {
+  if (rank === 1)
+    return (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        className="w-[17px] fill-[#D4AF37]"
+        viewBox="0 0 576 512"
+      >
+        <path d="M309 106c11.4-7 19-19.7 19-34c0-22.1-17.9-40-40-40s-40 17.9-40 40c0 14.4 7.6 27 19 34L209.7 220.6c-9.1 18.2-32.7 23.4-48.6 10.7L72 160c5-6.7 8-15 8-24c0-22.1-17.9-40-40-40S0 113.9 0 136s17.9 40 40 40c.2 0 .5 0 .7 0L86.4 427.4c5.5 30.4 32 52.6 63 52.6l277.2 0c30.9 0 57.4-22.1 63-52.6L535.3 176c.2 0 .5 0 .7 0c22.1 0 40-17.9 40-40s-17.9-40-40-40s-40 17.9-40 40c0 9 3 17.3 8 24l-89.1 71.3c-15.9 12.7-39.5 7.5-48.6-10.7L309 106z" />
+      </svg>
+    );
+
+  if (rank === 2)
+    return (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        className="w-[17px] fill-[#C0C0C0]"
+        viewBox="0 0 576 512"
+      >
+        <path d="M309 106c11.4-7 19-19.7 19-34c0-22.1-17.9-40-40-40s-40 17.9-40 40c0 14.4 7.6 27 19 34L209.7 220.6c-9.1 18.2-32.7 23.4-48.6 10.7L72 160c5-6.7 8-15 8-24c0-22.1-17.9-40-40-40S0 113.9 0 136s17.9 40 40 40c.2 0 .5 0 .7 0L86.4 427.4c5.5 30.4 32 52.6 63 52.6l277.2 0c30.9 0 57.4-22.1 63-52.6L535.3 176c.2 0 .5 0 .7 0c22.1 0 40-17.9 40-40s-17.9-40-40-40s-40 17.9-40 40c0 9 3 17.3 8 24l-89.1 71.3c-15.9 12.7-39.5 7.5-48.6-10.7L309 106z" />
+      </svg>
+    );
+
+  if (rank === 3)
+    return (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        className="w-[17px] fill-[#CD7F32]"
+        viewBox="0 0 576 512"
+      >
+        <path d="M309 106c11.4-7 19-19.7 19-34c0-22.1-17.9-40-40-40s-40 17.9-40 40c0 14.4 7.6 27 19 34L209.7 220.6c-9.1 18.2-32.7 23.4-48.6 10.7L72 160c5-6.7 8-15 8-24c0-22.1-17.9-40-40-40S0 113.9 0 136s17.9 40 40 40c.2 0 .5 0 .7 0L86.4 427.4c5.5 30.4 32 52.6 63 52.6l277.2 0c30.9 0 57.4-22.1 63-52.6L535.3 176c.2 0 .5 0 .7 0c22.1 0 40-17.9 40-40s-17.9-40-40-40s-40 17.9-40 40c0 9 3 17.3 8 24l-89.1 71.3c-15.9 12.7-39.5 7.5-48.6-10.7L309 106z" />
+      </svg>
+    );
+
+  return (
+    <p className="w-[17px] text-sm font-semibold text-left text-gray-600 dark:text-[var(--muted)]">
+      {rank}
+    </p>
+  );
+}
+
+const LeaderboardRow = memo(function LeaderboardRow({
+  player,
+}: {
+  player: Player;
+}) {
+  return (
+    <Link href={`/u/${player.username}`}>
+      <div className="flex hover:bg-white dark:hover:bg-dark-2 cursor-pointer justify-between items-center w-full px-5 py-4 rounded-xl transition-all bg-white/50 dark:bg-dark-1 border border-transparent hover:border-gray-200 dark:hover:border-[var(--border)]">
+        <div className="flex items-center gap-4">
+          <div className="w-5 flex justify-center">
+            <RankBadge rank={player.rank} />
+          </div>
+
+          <LiveAvatar username={player.username}>
+            <Image
+              src={player.profile_picture || "/default_pfp.png"}
+              width={40}
+              height={40}
+              className="h-10 w-10 rounded-full object-cover ring-2 ring-gray-100 dark:ring-gray-800"
+              alt={player.fullname}
+            />
+          </LiveAvatar>
+
+          <p className="text-base font-semibold dark:text-[var(--foreground)]">
+            {player.fullname}
+          </p>
+        </div>
+
+        <p className="text-base font-semibold dark:text-[var(--foreground)]">
+          {player.xp.toLocaleString()} XP
+        </p>
+      </div>
+    </Link>
+  );
+});
+
 function LeaderboardRowSkeleton() {
   return (
     <div className="flex justify-between items-center w-full px-5 py-4 rounded-xl bg-white dark:bg-dark-2 border-2 border-gray-200 dark:border-[var(--border)] animate-pulse">
@@ -244,47 +322,6 @@ export default function RookieLeaderboard() {
   const showSidebarSkeleton =
     authLoading || userLoading || !me?.username || !currentUser;
 
-  const RankBadge = ({ rank }: { rank: number }) => {
-    if (rank === 1)
-      return (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className="w-[17px] fill-[#D4AF37]"
-          viewBox="0 0 576 512"
-        >
-          <path d="M309 106c11.4-7 19-19.7 19-34c0-22.1-17.9-40-40-40s-40 17.9-40 40c0 14.4 7.6 27 19 34L209.7 220.6c-9.1 18.2-32.7 23.4-48.6 10.7L72 160c5-6.7 8-15 8-24c0-22.1-17.9-40-40-40S0 113.9 0 136s17.9 40 40 40c.2 0 .5 0 .7 0L86.4 427.4c5.5 30.4 32 52.6 63 52.6l277.2 0c30.9 0 57.4-22.1 63-52.6L535.3 176c.2 0 .5 0 .7 0c22.1 0 40-17.9 40-40s-17.9-40-40-40s-40 17.9-40 40c0 9 3 17.3 8 24l-89.1 71.3c-15.9 12.7-39.5 7.5-48.6-10.7L309 106z" />
-        </svg>
-      );
-
-    if (rank === 2)
-      return (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className="w-[17px] fill-[#C0C0C0]"
-          viewBox="0 0 576 512"
-        >
-          <path d="M309 106c11.4-7 19-19.7 19-34c0-22.1-17.9-40-40-40s-40 17.9-40 40c0 14.4 7.6 27 19 34L209.7 220.6c-9.1 18.2-32.7 23.4-48.6 10.7L72 160c5-6.7 8-15 8-24c0-22.1-17.9-40-40-40S0 113.9 0 136s17.9 40 40 40c.2 0 .5 0 .7 0L86.4 427.4c5.5 30.4 32 52.6 63 52.6l277.2 0c30.9 0 57.4-22.1 63-52.6L535.3 176c.2 0 .5 0 .7 0c22.1 0 40-17.9 40-40s-17.9-40-40-40s-40 17.9-40 40c0 9 3 17.3 8 24l-89.1 71.3c-15.9 12.7-39.5 7.5-48.6-10.7L309 106z" />
-        </svg>
-      );
-
-    if (rank === 3)
-      return (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className="w-[17px] fill-[#CD7F32]"
-          viewBox="0 0 576 512"
-        >
-          <path d="M309 106c11.4-7 19-19.7 19-34c0-22.1-17.9-40-40-40s-40 17.9-40 40c0 14.4 7.6 27 19 34L209.7 220.6c-9.1 18.2-32.7 23.4-48.6 10.7L72 160c5-6.7 8-15 8-24c0-22.1-17.9-40-40-40S0 113.9 0 136s17.9 40 40 40c.2 0 .5 0 .7 0L86.4 427.4c5.5 30.4 32 52.6 63 52.6l277.2 0c30.9 0 57.4-22.1 63-52.6L535.3 176c.2 0 .5 0 .7 0c22.1 0 40-17.9 40-40s-17.9-40-40-40s-40 17.9-40 40c0 9 3 17.3 8 24l-89.1 71.3c-15.9 12.7-39.5 7.5-48.6-10.7L309 106z" />
-        </svg>
-      );
-
-    return (
-      <p className="w-[17px] text-sm font-semibold text-left text-gray-600 dark:text-[var(--muted)]">
-        {rank}
-      </p>
-    );
-  };
-
   return (
     <main className="flex w-full overflow-hidden h-screen bg-gray-50 dark:bg-dark-1">
       {/* Main leaderboard */}
@@ -308,31 +345,7 @@ export default function RookieLeaderboard() {
                 <LeaderboardRowSkeleton key={i} />
               ))
             : players.map((u) => (
-                <Link key={u.username} href={`/u/${u.username}`}>
-                  <div className="flex hover:bg-white dark:hover:bg-dark-2 cursor-pointer justify-between items-center w-full px-5 py-4 rounded-xl transition-all bg-white/50 dark:bg-dark-1 border border-transparent hover:border-gray-200 dark:hover:border-[var(--border)]">
-                    <div className="flex items-center gap-4">
-                      <div className="w-5 flex justify-center">
-                        <RankBadge rank={u.rank} />
-                      </div>
-
-                      <LiveAvatar username={u.username}>
-                        <img
-                          src={u.profile_picture}
-                          className="h-10 w-10 rounded-full object-cover ring-2 ring-gray-100 dark:ring-gray-800"
-                          alt={u.fullname}
-                        />
-                      </LiveAvatar>
-
-                      <p className="text-base font-semibold dark:text-[var(--foreground)]">
-                        {u.fullname}
-                      </p>
-                    </div>
-
-                    <p className="text-base font-semibold dark:text-[var(--foreground)]">
-                      {u.xp.toLocaleString()} XP
-                    </p>
-                  </div>
-                </Link>
+                <LeaderboardRow key={u.username} player={u} />
               ))}
         </div>
       </div>
@@ -346,8 +359,10 @@ export default function RookieLeaderboard() {
             <div className="text-center flex flex-col items-center">
               <Link href={`/u/${currentUser.username}`}>
                 <LiveAvatar username={currentUser.username}>
-                  <img
-                    src={currentUser.profile_picture}
+                  <Image
+                    src={currentUser.profile_picture || "/default_pfp.png"}
+                    width={96}
+                    height={96}
                     className="h-24 w-24 rounded-full object-cover"
                     alt={currentUser.fullname}
                   />

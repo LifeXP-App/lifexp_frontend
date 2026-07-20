@@ -3,6 +3,7 @@
 import { MASTERY_TYPES } from "@/src/lib/mock/goalLeaderboardData";
 import { LiveAvatar } from "@/src/components/LiveAvatar";
 import { FireIcon } from "@heroicons/react/24/solid";
+import Image from "next/image";
 import Link from "next/link";
 import { useMemo } from "react";
 
@@ -94,8 +95,10 @@ export default function MasteryLeaderboardIndex() {
           <div className="text-center flex flex-col items-center">
             <Link href={`/u/${currentUser.username}`}>
               <LiveAvatar username={currentUser.username}>
-                <img
-                  src={currentUser.profile_picture}
+                <Image
+                  src={currentUser.profile_picture || "/default_pfp.png"}
+                  width={96}
+                  height={96}
                   className="h-24 w-24 object-cover aspect-square p-[1.5px] rounded-full"
                   alt={currentUser.fullname}
                 />

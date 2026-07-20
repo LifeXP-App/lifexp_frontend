@@ -29,16 +29,6 @@ export async function GET(request: Request) {
       cache: "no-store",
     });
 
-    // TEMP DEBUG — remove after diagnosing prod 403
-    console.log("[DEBUG discover/users] target:", target);
-    console.log("[DEBUG discover/users] res.url (final, after any redirects):", res.url);
-    console.log("[DEBUG discover/users] res.redirected:", res.redirected);
-    console.log("[DEBUG discover/users] res.status:", res.status);
-    console.log(
-      "[DEBUG discover/users] res.headers:",
-      JSON.stringify(Object.fromEntries(res.headers.entries()))
-    );
-
     if (res.status === 401) {
       const tokens = await sharedRefresh(refreshTokens);
       if (!tokens?.access) {

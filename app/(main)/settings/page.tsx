@@ -2,11 +2,15 @@
 
 import { useTheme } from "next-themes";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/src/context/AuthContext";
 import { supabase } from "@/src/lib/supabase";
-import DeleteAccountModal from "@/src/components/settings/DeleteAccountModal";
+
+const DeleteAccountModal = dynamic(
+  () => import("@/src/components/settings/DeleteAccountModal"),
+);
 
 type AccountType = "Private" | "Public";
 type Notifications = "On" | "Off";
@@ -101,6 +105,10 @@ export default function SettingsPage() {
       return backendToForm(data);
     },
     enabled: !authLoading && !!session?.access_token,
+    // Save writes straight through to the cache via setQueryData below, so
+    // this only needs a network hit on genuinely first-ever load.
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 
   // `form` is the user's editable draft (diverges from the cached/server

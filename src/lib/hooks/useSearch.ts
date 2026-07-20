@@ -103,6 +103,10 @@ export function useSearch(options: UseSearchOptions) {
     queryFn: ({ signal }) =>
       globalSearch(debouncedQuery, limit, signal, accessToken),
     enabled: enabled && searchType === "global",
+    // Keyed by exact query string already, so re-running/revisiting the same
+    // search within a minute is a cache hit instead of a new request.
+    staleTime: 60 * 1000,
+    gcTime: 5 * 60 * 1000,
   });
 
   // ── Single-domain paginated search (posts/users/activities) ──
@@ -124,6 +128,8 @@ export function useSearch(options: UseSearchOptions) {
     getNextPageParam: (lastPage, allPages) =>
       lastPage.pagination.has_more ? allPages.length + 1 : undefined,
     enabled: enabled && searchType !== "global",
+    staleTime: 60 * 1000,
+    gcTime: 5 * 60 * 1000,
   });
 
   // Save to history once per (searchType, query) pair, only after results land —

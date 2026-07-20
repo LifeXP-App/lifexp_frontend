@@ -14,6 +14,7 @@ import {
   UsersIcon,
 } from "@heroicons/react/24/solid";
 import { useMutation, useQuery } from "convex/react";
+import { useQueryClient } from "@tanstack/react-query";
 import { DumbbellIcon } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { use, useCallback, useEffect, useRef, useState } from "react";
@@ -270,6 +271,7 @@ export default function SessionTimer({ params }: SessionTimerProps) {
   const toast = useToast();
   const confirm = useConfirm();
   const { me } = useAuth();
+  const queryClient = useQueryClient();
 
   const isNew = sessionIdStr === "new";
   const isEmptySession = goalId === "none";
@@ -842,6 +844,31 @@ useEffect(() => {
     }
   }, [isRunning, isPaused, isActive, sessionId, goalId, pauseMutation, resumeMutation]);
 
+  // A logged session changes the goal's XP/session totals, the user's own
+  // XP/streak, and can surface as a new feed post — invalidate every cache
+  // that derives from those rather than letting them serve stale data until
+  // their staleTime window happens to expire on its own.
+  const invalidateAfterSessionSync = useCallback(() => {
+    if (!isEmptySession) {
+      // Partial key match also covers ["goal", goalId, "sessions"].
+      queryClient.invalidateQueries({ queryKey: ["goal", goalId] });
+    }
+    // Partial key match also covers ["goals", "sidebar", username].
+    queryClient.invalidateQueries({ queryKey: ["goals"] });
+    queryClient.invalidateQueries({ queryKey: ["feed"] });
+    if (me?.username) {
+      queryClient.invalidateQueries({
+        queryKey: ["user-profile-widget", me.username],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["profile-stats", me.username],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["profile-posts", me.username],
+      });
+    }
+  }, [queryClient, goalId, isEmptySession, me?.username]);
+
   const handleFinish = useCallback(async () => {
     if (!sessionId || !isActive || isSyncing) return;
     setIsSyncing(true);
@@ -853,6 +880,7 @@ useEffect(() => {
         try {
           await syncSessionToDjango(sessionId, finalStats, "manual");
           await markSyncedMutation({ sessionId });
+          invalidateAfterSessionSync();
         } catch (err) {
           console.error("Failed to sync completed session to Django:", err);
           // Don't block redirect — Convex session is complete; Django sync can be retried later
@@ -879,6 +907,7 @@ useEffect(() => {
     sessionSynced,
     completeMutation,
     markSyncedMutation,
+    invalidateAfterSessionSync,
     router,
     goalId,
   ]);
@@ -904,6 +933,7 @@ useEffect(() => {
         try {
           await syncSessionToDjango(sessionId, finalStats, "abandoned");
           await markSyncedMutation({ sessionId });
+          invalidateAfterSessionSync();
         } catch (err) {
           console.error("Failed to sync abandoned session to Django:", err);
         }
@@ -928,9 +958,11 @@ useEffect(() => {
     sessionSynced,
     abandonMutation,
     markSyncedMutation,
+    invalidateAfterSessionSync,
     router,
     goalId,
     isEmptySession,
+    confirm,
   ]);
 
   const handleSkipBreak = useCallback(async () => {

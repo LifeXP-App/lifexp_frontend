@@ -43,7 +43,7 @@ export async function GET(
       headers: {
         Authorization: `Bearer ${access}`,
       },
-      cache: "no-store",
+      next: { revalidate: 60 },
     });
 
     let refreshed = false;
@@ -72,7 +72,7 @@ export async function GET(
         headers: {
           Authorization: `Bearer ${access}`,
         },
-        cache: "no-store",
+        next: { revalidate: 60 },
       });
     }
 

@@ -43,7 +43,7 @@ export async function GET() {
         "Content-Type": "application/json",
       },
       credentials: "include",
-      cache: "no-store",
+      next: { revalidate: 60 },
     });
 
     // 2) if expired -> shared refresh -> retry once
@@ -69,7 +69,7 @@ export async function GET() {
           "Content-Type": "application/json",
         },
         credentials: "include",
-        cache: "no-store",
+        next: { revalidate: 60 },
       });
 
       const data = await safeJson(res);

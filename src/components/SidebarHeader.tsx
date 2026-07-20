@@ -15,12 +15,6 @@ export function SidebarHeader() {
   // Use logolight for dark mode, logodark for light mode
   const isDark = mounted && (resolvedTheme === "dark" || theme === "dark");
   const logoSrc = isDark ? "/logodark.png" : "/logolight.png";
-  console.log("SidebarHeader render:", {
-    theme,
-    resolvedTheme,
-    isDark,
-    logoSrc,
-  });
   return (
     <div className="py-4 px-2">
       <Link href="/" className="flex items-center">

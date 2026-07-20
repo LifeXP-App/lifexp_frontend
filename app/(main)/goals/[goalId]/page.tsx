@@ -2,11 +2,10 @@
 
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import RadarChart from "@/src/components/RadarChart";
+import Image from "next/image";
+import { RadarChart } from "@/src/components/charts/LazyCharts";
 import AspectChip from "@/src/components/goals/AspectChip";
-import CompleteGoalPopup from "@/src/components/goals/CompleteGoalPopup";
 import DeleteSessionConfirmationModal from "@/src/components/goals/DeleteSessionConfirmationModal";
-import NewActivityModal from "@/src/components/goals/NewActivityModel";
 import NewGoalModal from "@/src/components/goals/NewGoalModal";
 import NewSessionPopup from "@/src/components/goals/NewSessionPopup";
 import SessionInfoPopup from "@/src/components/goals/SessionInfoPopup";
@@ -19,11 +18,20 @@ import { ActivityType } from "@/src/lib/types/activityMeta";
 import { compressImageForUpload, SANITY_CAP_BYTES } from "@/src/lib/utils/compressImage";
 import { BoltIcon, UsersIcon } from "@heroicons/react/24/solid";
 import { useMutation } from "convex/react";
+import { useQueryClient } from "@tanstack/react-query";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import React, { useCallback, useMemo, useState } from "react";
 import { BiDumbbell } from "react-icons/bi";
 import { FaBrain, FaHammer } from "react-icons/fa";
+
+const CompleteGoalPopup = dynamic(
+  () => import("@/src/components/goals/CompleteGoalPopup"),
+);
+const NewActivityModal = dynamic(
+  () => import("@/src/components/goals/NewActivityModel"),
+);
 
 interface Activity {
   id: string;
@@ -59,7 +67,7 @@ interface SessionItemProps {
 }
 
 // Separate component for SessionItem to avoid re-renders of the list
-const SessionItem: React.FC<SessionItemProps> = ({
+const SessionItem = React.memo(function SessionItem({
   completion_picture,
   sessionNumber,
   activity,
@@ -71,7 +79,7 @@ const SessionItem: React.FC<SessionItemProps> = ({
   onClick,
   onDelete,
   color
-}) => {
+}: SessionItemProps) {
   const [open, setOpen] = React.useState(false);
   const menuRef = React.useRef<HTMLDivElement>(null);
 
@@ -93,26 +101,32 @@ const SessionItem: React.FC<SessionItemProps> = ({
     >
       <div className="w-20 h-20 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden bg-gray-100 dark:bg-dark-3">
         {completion_picture ? (
-        <img
+        <Image
             src={completion_picture}
             alt="Session thumbnail"
+            width={80}
+            height={80}
             className="w-full h-full object-cover"
           />
         )
-        
+
         :
         emoji ? (
           <span className="text-3xl">{emoji}</span>
         ) : thumbnail ? (
-          <img
+          <Image
             src={thumbnail}
             alt="Session"
+            width={80}
+            height={80}
             className="w-full h-full object-cover"
           />
         ) : (
-          <img
+          <Image
             src="https://res.cloudinary.com/dfohn9dcz/image/upload/f_auto,q_auto,w_800,c_fill/v1/posts/user_7/ske_20251115103836"
             alt="Session thumbnail"
+            width={80}
+            height={80}
             className="w-full h-full object-cover"
           />
         )}
@@ -173,7 +187,6 @@ const SessionItem: React.FC<SessionItemProps> = ({
                 className="w-full cursor-pointer font-medium text-left py-3 px-4 text-sm hover:bg-gray-100 dark:hover:bg-dark-3 transition-colors"
                 onClick={() => {
                   setOpen(false);
-                  console.log("Repeat Session", sessionNumber);
                 }}
               >
                 Repeat Session
@@ -195,7 +208,7 @@ const SessionItem: React.FC<SessionItemProps> = ({
       </div>
     </div>
   );
-};
+});
 
 export default function GoalDetailPage() {
   const params = useParams();
@@ -207,12 +220,32 @@ export default function GoalDetailPage() {
   const { me } = useAuth();
   const toast = useToast();
   const confirm = useConfirm();
+  const queryClient = useQueryClient();
   const startSessionMutation = useMutation(api.sessions.startSession);
   const updateInitialRatesMutation = useMutation(api.sessions.updateInitialRates);
   const deleteConvexSessionMutation = useMutation(api.sessions.deleteSession);
 
   const { goal, sessions: rawSessions, loading, error, refetch } = useGoal(goalId);
-  console.log("GoalDetailPage render", { goal, sessions: rawSessions, loading, error });
+
+  // Session/goal changes here ripple into the goals list, the home feed and
+  // dashboard widgets, and (when it's the signed-in user's own goal) their
+  // profile stats — `refetch()` above only covers this page's own
+  // ["goal", goalId] cache, so every other page needs an explicit nudge.
+  const invalidateRelatedCaches = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["goals"] });
+    queryClient.invalidateQueries({ queryKey: ["feed"] });
+    if (me?.username) {
+      queryClient.invalidateQueries({
+        queryKey: ["user-profile-widget", me.username],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["profile-stats", me.username],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["profile-posts", me.username],
+      });
+    }
+  }, [queryClient, me?.username]);
 
   // Sessions the user just deleted, hidden immediately (before the delete
   // request even resolves) rather than waiting on a refetch to disappear.
@@ -291,8 +324,6 @@ export default function GoalDetailPage() {
           locale: navigator.language,
         },
       });
-      console.log("Convex session created:", convexId);
-      console.log("Sending Django session request...");
       // 3. Register the session with Django and save the authoritative rates back to Convex
       const { data: { session: supaSession } } = await supabase.auth.getSession();
       const djangoRes = await fetch("/api/sessions", {
@@ -308,11 +339,8 @@ export default function GoalDetailPage() {
           device_platform: "web",
         }),
       });
-      console.log("Django response status:", djangoRes.status);
-
       if (djangoRes.ok) {
         const djangoData = await djangoRes.json();
-        console.log("Django returned:", djangoData);
         const r = djangoData.xp_increase_rate_per_second;
         const djangoActivityUid =
           djangoData.activity_uid === undefined
@@ -435,6 +463,7 @@ export default function GoalDetailPage() {
         sessionId: sessionId as Id<"sessions">,
       });
       refetch();
+      invalidateRelatedCaches();
     } catch (err) {
       console.error("Failed to delete session:", err);
       toast.error(err instanceof Error ? err.message : "Failed to delete session.");
@@ -535,6 +564,11 @@ export default function GoalDetailPage() {
     }
 
     setIsCompleteGoalOpen(false);
+    // Status flips to "completed" and an achievement post is created —
+    // this goal's own cache, the goals list, the feed, and (own) profile
+    // stats all need to drop their stale copy.
+    queryClient.invalidateQueries({ queryKey: ["goal", goalId] });
+    invalidateRelatedCaches();
     router.push("/");
     router.refresh();
   };
@@ -549,6 +583,10 @@ export default function GoalDetailPage() {
     try {
       await GoalsService.deleteGoal(goalId);
       toast.success("Goal deleted.");
+      // Without this, the goals list we're about to navigate to can still
+      // be serving its cached copy that includes the goal we just deleted.
+      queryClient.invalidateQueries({ queryKey: ["goal", goalId] });
+      invalidateRelatedCaches();
       router.push("/goals");
     } catch (err) {
       console.error("Failed to delete goal:", err);
@@ -586,6 +624,8 @@ export default function GoalDetailPage() {
         ...(data.finishBy ? { finish_by: data.finishBy } : {}),
       });
       await refetch();
+      // Title/description also render on the goals list cards.
+      queryClient.invalidateQueries({ queryKey: ["goals"] });
     } catch (err) {
       console.error("Failed to update goal:", err);
       toast.error("Failed to update goal. Please try again.");
@@ -974,7 +1014,6 @@ export default function GoalDetailPage() {
                     className="w-full cursor-pointer text-left font-medium py-3 px-4 text-sm hover:bg-gray-100 dark:hover:bg-dark-3 transition-colors"
                     onClick={() => {
                       setIsMoreMenuOpen(false);
-                      console.log("Reset Progress");
                     }}
                   >
                     Reset Progress
@@ -1052,8 +1091,11 @@ export default function GoalDetailPage() {
   <div className="flex -space-x-2">
     {goal.top_likes?.slice(0, 3).map((user) => (
       <a key={user.username} href={`/u/${user.username}`}>
-        <img
-          src={user.profile_picture ?? "/default-avatar.png"}
+        <Image
+          src={user.profile_picture ?? "/default_pfp.png"}
+          alt={user.username}
+          width={28}
+          height={28}
           className="w-7 h-7 rounded-full border-2 border-white object-cover"
         />
       </a>
@@ -1408,8 +1450,11 @@ export default function GoalDetailPage() {
   <div className="flex -space-x-2">
     {goal.top_likes?.slice(0, 3).map((user) => (
       <a key={user.username} href={`/u/${user.username}`}>
-        <img
-          src={user.profile_picture ?? "/default-avatar.png"}
+        <Image
+          src={user.profile_picture ?? "/default_pfp.png"}
+          alt={user.username}
+          width={28}
+          height={28}
           className="w-7 h-7 rounded-full border-2 border-white object-cover"
         />
       </a>

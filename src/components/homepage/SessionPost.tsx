@@ -7,8 +7,9 @@ import {
   ChatBubbleOvalLeftIcon,
   EllipsisVerticalIcon,
 } from "@heroicons/react/24/solid";
+import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { memo, useState } from "react";
 
 export type ApiSessionPost = {
   type: "session";
@@ -94,7 +95,7 @@ function formatSessionTime(dateString: string): string {
   return `${time} • ${day} ${month} ${year}`;
 }
 
-export function SessionPost({ session }: { session: ApiSessionPost }) {
+function SessionPostComponent({ session }: { session: ApiSessionPost }) {
   const { user, goal, activity } = session;
   const goalHref = goal?.uid
     ? `/goals/${goal.uid}?owner=${encodeURIComponent(user.username)}`
@@ -162,11 +163,17 @@ export function SessionPost({ session }: { session: ApiSessionPost }) {
         <Link href={`/u/${user.username}`}>
           <div className="flex items-center cursor-pointer">
             <LiveAvatar username={user.username}>
-              <img
-                src={user.profile_picture.replace(
-                  "/upload/",
-                  "/upload/f_auto,q_auto,w_800,c_fill/",
-                )}
+              <Image
+                src={
+                  user.profile_picture
+                    ? user.profile_picture.replace(
+                        "/upload/",
+                        "/upload/f_auto,q_auto,w_800,c_fill/",
+                      )
+                    : "/default_pfp.png"
+                }
+                width={40}
+                height={40}
                 className={`rounded-full w-10 h-10 object-cover aspect-square
 
                 `}
@@ -235,7 +242,9 @@ export function SessionPost({ session }: { session: ApiSessionPost }) {
 
           <Link href={goalHref} className="shrink-0">
             {session.completion_picture ? (
-              <img
+              <Image
+                width={96}
+                height={96}
                 className="w-24 h-24 object-cover rounded-lg cursor-pointer"
                 src={session.completion_picture.replace(
                   "/upload/",
@@ -317,3 +326,5 @@ export function SessionPost({ session }: { session: ApiSessionPost }) {
     </div>
   );
 }
+
+export const SessionPost = memo(SessionPostComponent);

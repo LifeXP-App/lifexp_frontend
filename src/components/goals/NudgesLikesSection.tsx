@@ -2,6 +2,7 @@
 
 import { LiveAvatar } from "@/src/components/LiveAvatar";
 import { supabase } from "@/src/lib/supabase";
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -52,8 +53,6 @@ export function NudgesLikesSection() {
         if (!res.ok) throw new Error("Failed to fetch interactions");
 
         const data = await res.json();
-
-        console.log("Fetched interactions:", data);
 
         const results = Array.isArray(data.results) ? data.results : [];
         const mapped: Interactions[] = results.map(
@@ -122,12 +121,13 @@ export function NudgesLikesSection() {
                   <div className="flex gap-4">
                     <div className="relative w-12 h-12 flex-shrink-0">
                       <LiveAvatar username={i.rounded ? i.username : undefined}>
-                        <img
-                          src={i.image}
+                        <Image
+                          src={i.image || "/default_pfp.png"}
+                          width={48}
+                          height={48}
                           className={`h-12 w-12 object-cover aspect-square ${
                             i.rounded ? "rounded-full" : "rounded-md"
                           }`}
-                          loading="lazy"
                           alt="profile"
                         />
                       </LiveAvatar>

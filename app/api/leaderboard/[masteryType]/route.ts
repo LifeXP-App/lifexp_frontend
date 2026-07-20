@@ -82,7 +82,7 @@ export async function GET(request: Request, context: Context) {
         "Authorization": `Bearer ${access}`,
         "Content-Type": "application/json",
       },
-      cache: "no-store",
+      next: { revalidate: 60 },
     });
 
     // 2) If expired -> shared refresh -> retry once
@@ -107,7 +107,7 @@ export async function GET(request: Request, context: Context) {
           "Authorization": `Bearer ${access}`,
           "Content-Type": "application/json",
         },
-        cache: "no-store",
+        next: { revalidate: 60 },
       });
 
       const data = await safeJson(res);

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { LiveAvatar } from "@/src/components/LiveAvatar";
 
@@ -66,12 +67,14 @@ export function RightSidebarNotifications({
                   <li>
                     <div className="flex gap-4">
                       <LiveAvatar username={n.rounded ? n.sender : undefined}>
-                        <img
-                          src={n.image}
+                        <Image
+                          src={n.image || "/default_pfp.png"}
+                          width={48}
+                          height={48}
+                          alt={n.sender}
                           className={`h-12 w-12 object-cover ${
                             n.rounded ? "rounded-full" : "rounded-md"
                           }`}
-                          loading="lazy"
                         />
                       </LiveAvatar>
                       <div className="flex flex-col">

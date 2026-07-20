@@ -42,23 +42,13 @@ export async function authedFetch(
 
   const {
     data: { session },
-    error: getSessionError,
   } = await supabase.auth.getSession();
-
-  // TEMP DEBUG — remove after diagnosing prod auth-header loss
-  console.log("[DEBUG authedFetch] url:", typeof input === "string" ? input : String(input));
-  console.log("[DEBUG authedFetch] session present:", !!session);
-  console.log("[DEBUG authedFetch] access_token present:", !!session?.access_token);
-  console.log("[DEBUG authedFetch] getSession error:", getSessionError?.message ?? null);
 
   const headers = new Headers(init.headers);
 
   if (session?.access_token && !headers.has("Authorization")) {
     headers.set("Authorization", `Bearer ${session.access_token}`);
   }
-
-  // TEMP DEBUG — remove after diagnosing prod auth-header loss
-  console.log("[DEBUG authedFetch] Authorization header set on outgoing request:", headers.has("Authorization"));
 
   const res = await fetch(input, {
     ...init,

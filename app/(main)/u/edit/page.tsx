@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/src/context/AuthContext";
+import { useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -116,7 +117,8 @@ function resizeImage(file: File, maxDimension = 512, quality = 0.85): Promise<Fi
 export default function EditProfilePage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const router = useRouter();
-  const { me, session, loading: authLoading } = useAuth();
+  const { me, session, loading: authLoading, refreshMe } = useAuth();
+  const queryClient = useQueryClient();
   const sessionRef = useRef(session);
 
   /* ---------------- STATE ---------------- */
@@ -292,12 +294,24 @@ export default function EditProfilePage() {
       });
 
       if (!res.ok) {
-        const text = await res.text();
-        console.log(text);
+        console.error("Failed to save profile:", await res.text());
         setSaveError("Could not save your profile. Please try again.");
         return;
       }
 
+      // AuthContext's own `me` (Sidebar/Navigation avatar) and every cached
+      // view of this profile (own profile page, home widget, goals sidebar)
+      // all need to drop their now-stale copy.
+      await refreshMe();
+      queryClient.invalidateQueries({
+        queryKey: ["profile-users", me.username, me.username],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["user-profile-widget", me.username],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["goals", "sidebar", me.username],
+      });
       router.push(`/u/${me.username}`);
     } catch (err) {
       console.error("Profile save failed:", err);

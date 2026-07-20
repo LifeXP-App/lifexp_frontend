@@ -2,9 +2,13 @@
 
 import React, { useMemo, useState } from 'react';
 import { LiveAvatar } from '@/src/components/LiveAvatar';
+import { RadarChart } from '@/src/components/charts/LazyCharts';
 import { useParams, useRouter } from 'next/navigation';
-import RadarChart from "@/src/components/RadarChart";
+import Image from 'next/image';
+import dynamic from 'next/dynamic';
 import { useToast } from "@/src/context/ToastContext";
+import { useAuth } from "@/src/context/AuthContext";
+import { useQueryClient } from "@tanstack/react-query";
 import AspectChip from '@/src/components/goals/AspectChip';
 import { mockUser } from "@/src/lib/mock/userData";
 import SessionInfoPopup from "@/src/components/goals/SessionInfoPopup";
@@ -27,9 +31,12 @@ import {
 } from "@heroicons/react/24/solid";
 import { RocketLaunchIcon } from "@heroicons/react/24/outline";
 import { FaBrain, FaHammer } from "react-icons/fa";
-import NewActivityModal from '@/src/components/goals/NewActivityModel';
 import NewSessionPopup from '@/src/components/goals/NewSessionPopup';
 import NewGoalModal from '@/src/components/goals/NewGoalModal';
+
+const NewActivityModal = dynamic(
+  () => import('@/src/components/goals/NewActivityModel'),
+);
 
 interface Session {
   id: string;
@@ -207,8 +214,10 @@ const ActivityLeaderboard: React.FC<{ users: LeaderboardUser[]; activityName?: s
                       </div>
 
                       <LiveAvatar userId={user.id}>
-                        <img
-                          src={user.avatar}
+                        <Image
+                          src={user.avatar || "/default_pfp.png"}
+                          width={40}
+                          height={40}
                           className="h-10 w-10 rounded-full object-cover ring-2 ring-gray-100 dark:ring-gray-800"
                           alt={user.name}
                         />
@@ -310,9 +319,11 @@ const LiveSessionCard: React.FC<LiveSessionCardProps> = ({
       {/* Avatar with activity-emoji badge overlapping bottom-right */}
       <div className="relative w-14 h-14 mb-3 shrink-0">
         {userProfile ? (
-          <img
+          <Image
             src={userProfile}
             alt={username ?? "User"}
+            width={56}
+            height={56}
             className="w-14 h-14 rounded-full object-cover"
           />
         ) : (
@@ -408,11 +419,13 @@ const SessionItem: React.FC<Session & { onClick?: () => void; accentColor?: stri
         {emoji ? (
           <span className="text-3xl">{emoji}</span>
         ) : thumbnail ? (
-          <img src={thumbnail} alt="Session" className="w-full h-full object-cover" />
+          <Image src={thumbnail} alt="Session" width={80} height={80} className="w-full h-full object-cover" />
         ) : (
-          <img
+          <Image
             src="https://res.cloudinary.com/dfohn9dcz/image/upload/f_auto,q_auto,w_800,c_fill/v1/posts/user_7/ske_20251115103836"
             alt="Session thumbnail"
+            width={80}
+            height={80}
             className="w-full h-full object-cover"
           />
         )}
@@ -482,11 +495,13 @@ const FriendSessionItem: React.FC<Session & { onClick?: () => void; accentColor?
         {emoji ? (
           <span className="text-3xl">{emoji}</span>
         ) : thumbnail ? (
-          <img src={thumbnail} alt="Session" className="w-full h-full object-cover" />
+          <Image src={thumbnail} alt="Session" width={80} height={80} className="w-full h-full object-cover" />
         ) : (
-          <img
+          <Image
             src="https://res.cloudinary.com/dfohn9dcz/image/upload/f_auto,q_auto,w_800,c_fill/v1/posts/user_7/ske_20251115103836"
             alt="Session thumbnail"
+            width={80}
+            height={80}
             className="w-full h-full object-cover"
           />
         )}
@@ -556,11 +571,13 @@ export default function ActivityDetailPage({
   ],
   
   onBack = () => window.history.back(),
-  onMore = () => console.log('More'),
+  onMore = () => {},
 }: ActivityDetailProps) {
   const params = useParams();
   const router = useRouter();
   const toast = useToast();
+  const { me } = useAuth();
+  const queryClient = useQueryClient();
   const uid = params.activity as string;
 
   const [isGoalPickerOpen, setIsGoalPickerOpen] = useState(false);
@@ -598,8 +615,7 @@ export default function ActivityDetailPage({
     router.push(`/goals/${uid}/session/new?activity=${activity.id}`);
   };
 
-  const handleGenerateNew = (query: string) => {
-    console.log('Generate new activity:', query);
+  const handleGenerateNew = () => {
     setIsNewActivityModalOpen(false);
     // TODO: This page needs a goal ID to properly start a session with AI-generated activity
   };
@@ -644,6 +660,22 @@ export default function ActivityDetailPage({
       await deleteConvexSessionMutation({
         sessionId: sessionId as Id<"sessions">,
       });
+      // This session's goal isn't known here (only its display title is),
+      // so the specific ["goal", goalId] cache can't be targeted from this
+      // page — only the goal detail page's own delete flow can do that.
+      queryClient.invalidateQueries({ queryKey: ["goals"] });
+      queryClient.invalidateQueries({ queryKey: ["feed"] });
+      if (me?.username) {
+        queryClient.invalidateQueries({
+          queryKey: ["user-profile-widget", me.username],
+        });
+        queryClient.invalidateQueries({
+          queryKey: ["profile-stats", me.username],
+        });
+        queryClient.invalidateQueries({
+          queryKey: ["profile-posts", me.username],
+        });
+      }
     } catch (err) {
       console.error("Failed to delete session:", err);
       toast.error(err instanceof Error ? err.message : "Failed to delete session.");
@@ -658,9 +690,7 @@ export default function ActivityDetailPage({
   const handleOpenCompleteGoal = () => setIsCompleteGoalOpen(true);
   const handleCloseCompleteGoal = () => setIsCompleteGoalOpen(false);
 
-  const handlePostAchievement = ({ title, description }: { title: string; description: string }) => {
-    console.log("POST ACHIEVEMENT:", { title, description });
-
+  const handlePostAchievement = () => {
     // close after post
     setIsCompleteGoalOpen(false);
   };
@@ -830,8 +860,7 @@ useEffect(() => {
             
       const data = await res.json();
 
-      console.log("leaderboard raw:", data);
-      // 🔥 map API → UI format
+      // map API → UI format
       const mapped = (data.leaderboard || []).map((item: RawLeaderboardEntryApi) => ({
         rank: item.rank,
         id: String(item.user.id),
@@ -890,7 +919,6 @@ useEffect(() => {
     }));
 
       setMySessions(mapped);
-      console.log("sessions raw:", data);
 
     } catch (e) {
       console.error("Sessions error:", e);

@@ -56,10 +56,7 @@ export async function POST(req: Request) {
 
   if (res instanceof NextResponse) return res;
 
-  console.log("status:", res.status);
-  console.log("headers:", Object.fromEntries(res.headers.entries()));
   const text = await res.text();
-  console.log("body:", text);
   try {
     const data = JSON.parse(text);
     return NextResponse.json(data, { status: res.status });

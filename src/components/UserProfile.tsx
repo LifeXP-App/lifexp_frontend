@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { MASTERY_COLORS } from "../lib/constants/aspects";
 import { UserProfile as UserProfileType } from "../lib/types";
 import { LiveAvatar } from "./LiveAvatar";
@@ -22,9 +23,11 @@ export function UserProfile({ user }: UserProfileProps) {
         <div className="shrink-0">
           <LiveAvatar username={user.username}>
             {user.avatar ? (
-              <img
+              <Image
                 src={user.avatar}
                 alt={user.username}
+                width={48}
+                height={48}
                 className="w-12 h-12 rounded-full object-cover"
               />
             ) : (

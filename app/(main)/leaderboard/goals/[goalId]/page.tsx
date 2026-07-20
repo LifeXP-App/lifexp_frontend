@@ -12,9 +12,10 @@ import {
   FireIcon,
   MagnifyingGlassIcon,
 } from "@heroicons/react/24/solid";
+import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 
 type MasteryLeaderboardPlayer = {
   rank: number;
@@ -245,6 +246,106 @@ function MasteryIcon({
 
   return <>{icons[type] || null}</>;
 }
+
+const GoalLeaderboardRow = memo(function GoalLeaderboardRow({
+  player,
+  currentMastery,
+}: {
+  player: MasteryLeaderboardPlayer;
+  currentMastery: MasteryInfo | null;
+}) {
+  const isTopThree = player.rank <= 3;
+  const isFirst = player.rank === 1;
+
+  return (
+    <Link href={`/u/${player.username}`} className="block mb-1">
+      <div
+        className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all bg-white dark:bg-dark-2 ${
+          isTopThree
+            ? "border"
+            : "border border-gray-100 dark:border-[var(--border)] hover:border-gray-200 dark:hover:border-[var(--border)]"
+        }`}
+        style={
+          isTopThree
+            ? {
+                borderColor: "#66666680",
+              }
+            : undefined
+        }
+      >
+        {/* Rank badge */}
+        <RankBadge
+          rank={player.rank}
+          color={currentMastery?.color || "#666"}
+        />
+
+        {/* Profile picture with ring for top 3 */}
+        <div className="relative">
+          <LiveAvatar username={player.username}>
+            <Image
+              className="h-12 w-12 rounded-full object-cover aspect-square"
+              style={
+                isTopThree && currentMastery
+                  ? {
+                      boxShadow: `0 0 0 2px white, 0 0 0 4px ${currentMastery.color}`,
+                    }
+                  : undefined
+              }
+              src={player.profile_picture || "/default_pfp.png"}
+              alt={player.fullname}
+              width={48}
+              height={48}
+            />
+          </LiveAvatar>
+          {isFirst && currentMastery && (
+            <div
+              className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center"
+              style={{ backgroundColor: currentMastery.color }}
+            >
+              <CrownIcon color="#fff" />
+            </div>
+          )}
+        </div>
+
+        {/* Name */}
+        <div className="flex-1 min-w-0 ">
+          <p
+            className={`font-semibold truncate dark:text-[var(--foreground)] ${
+              isFirst ? "text-lg" : ""
+            }`}
+          >
+            {player.fullname}
+          </p>
+          {isTopThree && currentMastery && (
+            <p
+              className="text-xs font-bold mt-1"
+              style={{ color: currentMastery.color }}
+            >
+              Top {player.rank} {currentMastery.name}
+            </p>
+          )}
+        </div>
+
+        {/* XP */}
+        <div className="text-right flex items-center gap-2">
+          <p
+            className={`font-bold ${isFirst ? "text-xl" : "text-lg"}`}
+            style={
+              isTopThree && currentMastery
+                ? { color: currentMastery.color }
+                : { color: "#6b7280" }
+            }
+          >
+            {player.xp}
+          </p>
+          <p className="text-xs text-gray-500 dark:text-[var(--muted)]">
+            XP
+          </p>
+        </div>
+      </div>
+    </Link>
+  );
+});
 
 export default function MasteryLeaderboard() {
   const params = useParams();
@@ -619,103 +720,13 @@ export default function MasteryLeaderboard() {
                 loading ? "opacity-50" : "opacity-100"
               }`}
             >
-              {players.map((u, index) => {
-                const isTopThree = u.rank <= 3;
-                const isFirst = u.rank === 1;
-
-                return (
-                  <Link
-                    key={u.username}
-                    href={`/u/${u.username}`}
-                    className="block mb-1"
-                  >
-                    <div
-                      className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all bg-white dark:bg-dark-2 ${
-                        isTopThree
-                          ? "border"
-                          : "border border-gray-100 dark:border-[var(--border)] hover:border-gray-200 dark:hover:border-[var(--border)]"
-                      }`}
-                      style={
-                        isTopThree
-                          ? {
-                              borderColor: "#66666680",
-                            }
-                          : undefined
-                      }
-                    >
-                      {/* Rank badge */}
-                      <RankBadge
-                        rank={u.rank}
-                        color={currentMastery?.color || "#666"}
-                      />
-
-                      {/* Profile picture with ring for top 3 */}
-                      <div className="relative">
-                        <LiveAvatar username={u.username}>
-                          <img
-                            className="h-12 w-12 rounded-full object-cover aspect-square"
-                            style={
-                              isTopThree && currentMastery
-                                ? {
-                                    boxShadow: `0 0 0 2px white, 0 0 0 4px ${currentMastery.color}`,
-                                  }
-                                : undefined
-                            }
-                            src={u.profile_picture}
-                            alt={u.fullname}
-                          />
-                        </LiveAvatar>
-                        {isFirst && currentMastery && (
-                          <div
-                            className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center"
-                            style={{ backgroundColor: currentMastery.color }}
-                          >
-                            <CrownIcon color="#fff" />
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Name */}
-                      <div className="flex-1 min-w-0 ">
-                        <p
-                          className={`font-semibold truncate dark:text-[var(--foreground)] ${
-                            isFirst ? "text-lg" : ""
-                          }`}
-                        >
-                          {u.fullname}
-                        </p>
-                        {isTopThree && currentMastery && (
-                          <p
-                            className="text-xs font-bold mt-1"
-                            style={{ color: currentMastery.color }}
-                          >
-                            Top {u.rank} {currentMastery.name}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* XP */}
-                      <div className="text-right flex items-center gap-2">
-                        <p
-                          className={`font-bold ${
-                            isFirst ? "text-xl" : "text-lg"
-                          }`}
-                          style={
-                            isTopThree && currentMastery
-                              ? { color: currentMastery.color }
-                              : { color: "#6b7280" }
-                          }
-                        >
-                          {u.xp}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-[var(--muted)]">
-                          XP
-                        </p>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
+              {players.map((u) => (
+                <GoalLeaderboardRow
+                  key={u.username}
+                  player={u}
+                  currentMastery={currentMastery}
+                />
+              ))}
 
               {!loading && players.length === 0 && (
                 <div className="text-center py-16">
@@ -862,8 +873,10 @@ export default function MasteryLeaderboard() {
             <div className="text-center flex flex-col items-center">
               <Link href={`/u/${currentUser.username}`}>
                 <LiveAvatar username={currentUser.username}>
-                  <img
-                    src={currentUser.profile_picture}
+                  <Image
+                    src={currentUser.profile_picture || "/default_pfp.png"}
+                    width={96}
+                    height={96}
                     className="h-24 w-24 object-cover aspect-square p-[1.5px] rounded-full"
                     alt={currentUser.fullname}
                   />

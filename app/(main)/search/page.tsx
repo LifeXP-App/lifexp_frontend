@@ -4,6 +4,7 @@ import { useSearch } from "@/src/lib/hooks/useSearch";
 import { useSearchHistory } from "@/src/lib/hooks/useSearchHistory";
 import { authedFetch } from "@/src/lib/api/authedFetch";
 import { LiveAvatar } from "@/src/components/LiveAvatar";
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import posthog from "posthog-js";
@@ -468,12 +469,14 @@ export default function SearchPage() {
                         <Link
                           key={post.id}
                           href={`/goals/${post.uid}`}
-                          className="block h-48 bg-gray-200 dark:bg-[var(--dark-2)] rounded-lg overflow-hidden"
+                          className="relative block h-48 bg-gray-200 dark:bg-[var(--dark-2)] rounded-lg overflow-hidden"
                         >
-                          <img
+                          <Image
                             src={post.post_image}
                             alt={post.title}
-                            className="h-full w-full object-cover"
+                            fill
+                            sizes="(max-width: 768px) 100vw, 33vw"
+                            className="object-cover"
                           />
                         </Link>
                       ) : (
@@ -519,9 +522,11 @@ export default function SearchPage() {
                           >
                             {user.profile_picture && (
                               <LiveAvatar username={user.username}>
-                                <img
+                                <Image
                                   src={user.profile_picture}
                                   alt={user.fullname}
+                                  width={48}
+                                  height={48}
                                   className="w-12 h-12 rounded-full object-cover"
                                 />
                               </LiveAvatar>

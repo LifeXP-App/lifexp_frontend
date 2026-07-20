@@ -19,12 +19,20 @@ export function useGoal(goalId: string) {
     queryKey: ["goal", goalId],
     queryFn: () => GoalsService.getGoal(goalId),
     enabled: !!goalId,
+    // `refetch()` below explicitly invalidates this key after every
+    // session-delete / status-change action on the goal detail page.
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const { data: sessionsResponse } = useQuery({
     queryKey: ["goal", goalId, "sessions"],
     queryFn: () => GoalsService.getGoalSessions(goalId).catch(() => null),
     enabled: !!goalId,
+    // Historical session backfill only — live/in-progress sessions come from
+    // the separate Convex subscription below, which is always real-time.
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
   const djangoSessions = useMemo(
     () => sessionsResponse?.results ?? [],
