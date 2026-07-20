@@ -2,6 +2,7 @@
 
 import { FireIcon, InformationCircleIcon } from "@heroicons/react/24/solid";
 import { LiveAvatar } from "@/src/components/LiveAvatar";
+import { usePopup } from "@/src/context/PopupContext";
 import Image from "next/image";
 import Link from "next/link";
 type RightSidebarInfoProps = {
@@ -27,6 +28,8 @@ type RightSidebarInfoProps = {
 };
 
 export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
+  const { openMasteryPopup } = usePopup();
+
   return (
     <aside className="w-full hidden md:block ">
       {/* PROFILE CARD */}
@@ -49,7 +52,11 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
           </Link>
 
           <span className="flex gap-1 justify-center items-center cursor-pointer">
-            <button type="button" className="mastery-info flex cursor-pointer">
+            <button
+              type="button"
+              onClick={openMasteryPopup}
+              className="mastery-info flex cursor-pointer"
+            >
               <InformationCircleIcon className="w-4 h-4 text-gray-400 dark:text-[var(--muted)] dark:hover:text-[var(--muted)]" />
             </button>
             <p
