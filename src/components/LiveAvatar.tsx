@@ -1,10 +1,10 @@
 "use client";
 
-import type { MouseEvent, ReactNode } from "react";
-import { useRouter } from "next/navigation";
-import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { ACTIVITY_META, type ActivityType } from "@/src/lib/types/activityMeta";
+import { useQuery } from "convex/react";
+import { useRouter } from "next/navigation";
+import type { MouseEvent, ReactNode } from "react";
 
 /**
  * Wraps any avatar <img>/<Image> and overlays a live indicator (green ring +
@@ -35,7 +35,7 @@ export function LiveAvatar({
       ? sessions?.find(
           (s) =>
             (username && s.username === username) ||
-            (userId != null && s.userId === String(userId))
+            (userId != null && s.userId === String(userId)),
         )
       : undefined;
 
@@ -57,10 +57,10 @@ export function LiveAvatar({
     ? ACTIVITY_META[live.activityType as ActivityType]?.cssColorVar
     : undefined;
   const color = !isPaused
-    ? activityColor ?? "#22c55e"
+    ? (activityColor ?? "#22c55e")
     : onBreak
-    ? "#3b82f6"
-    : "#f59e0b";
+      ? "#3b82f6"
+      : "#f59e0b";
   const pulse = !isPaused || onBreak;
 
   const goToSession = (e: MouseEvent) => {
@@ -77,18 +77,31 @@ export function LiveAvatar({
         onBreak
           ? "On a break"
           : isPaused
-          ? "Session paused"
-          : "Watch live session"
+            ? "Session paused"
+            : "Watch live session"
       }
     >
       {children}
+      {/* Ring sits a hair outside the avatar's edge (small gap) rather than
+          flush against it. */}
       <span
-        className="pointer-events-none absolute inset-0 rounded-full border-2"
+        className="pointer-events-none absolute -inset-0.75 rounded-full border-3"
         style={{ borderColor: color }}
       />
+      {/* Discord-style status dot, centered exactly on the ring's circumference
+          at its 45°/bottom-right point (a circle inscribed in a square never
+          reaches the box's corner, so corner-relative offsets like `-bottom-0
+          -right-0` leave a gap — percentage position + centering transform
+          puts it precisely on the curve regardless of avatar size). The small
+          fixed px term accounts for the ring now sitting 3px outside the
+          avatar rather than flush against it. */}
       <span
-        className="absolute -bottom-0.5 -right-0.5 flex h-3 w-3 rounded-full border-2 border-white dark:border-dark-2"
-        style={{ backgroundColor: color }}
+        className="absolute flex h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white dark:border-dark-2"
+        style={{
+          backgroundColor: color,
+          top: "calc(85.36% + 2.12px)",
+          left: "calc(85.36% + 2.12px)",
+        }}
       >
         {pulse && (
           <span
