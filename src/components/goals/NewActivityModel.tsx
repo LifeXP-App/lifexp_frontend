@@ -126,6 +126,22 @@ export default function NewActivityModal({
   const [creationError, setCreationError] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<string[] | null>(null);
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const loadingRef = useRef(false);
+  const requestIdRef = useRef(0);
+
+  // Fired on every keystroke (not debounced): invalidate any in-flight
+  // request and clear the stale list immediately so the user never sees
+  // results for the previous query while the new one is still loading.
+  const handleSearchQueryChange = useCallback((value: string) => {
+    requestIdRef.current += 1;
+    setSearchQuery(value);
+    setActivities([]);
+    setPage(1);
+    setHasMore(true);
+    setLoading(true);
+  }, []);
+
   const handleCreateCustom = useCallback(async () => {
     const name = searchQuery.trim();
     if (!name || creating) return;
@@ -156,7 +172,7 @@ export default function NewActivityModal({
         break;
       case "exists":
         // Surface the existing activity by searching for it.
-        setSearchQuery(name);
+        handleSearchQueryChange(name);
         break;
       case "invalid":
       case "error":
@@ -165,11 +181,7 @@ export default function NewActivityModal({
     }
 
     setCreating(false);
-  }, [searchQuery, creating, onSelectActivity]);
-
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const loadingRef = useRef(false);
-  const requestIdRef = useRef(0);
+  }, [searchQuery, creating, onSelectActivity, handleSearchQueryChange]);
 
   const fetchActivities = useCallback(
     async (pageNumber: number, force = false) => {
@@ -381,7 +393,7 @@ export default function NewActivityModal({
               </div>
               <div className="relative mb-4">
                 <input
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => handleSearchQueryChange(e.target.value)}
                   value={searchQuery}
                   type="text"
                   placeholder="🔍  Start Searching..."
@@ -444,7 +456,7 @@ export default function NewActivityModal({
                           onClick={() => {
                             setSuggestions(null);
                             setCreationError(null);
-                            setSearchQuery(s);
+                            handleSearchQueryChange(s);
                           }}
                           className="px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-200 border border-amber-500/30 hover:bg-amber-500/25 transition-colors cursor-pointer"
                         >
