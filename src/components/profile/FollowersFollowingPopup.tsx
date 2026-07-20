@@ -19,6 +19,7 @@ type User = {
   lifelevel: number;
   totalxp: number;
   is_following?: boolean;
+  is_self?: boolean;
   is_current_user?: boolean;
   is_own_profile?: boolean;
 };
@@ -27,6 +28,8 @@ interface FollowersFollowingPopupProps {
   isOpen: boolean;
   onClose: () => void;
   userId: string | number;
+  requestUserId?: string | number;
+  requestUsername?: string;
   type: "followers" | "following";
   initialCount: number;
 }
@@ -35,10 +38,12 @@ export default function FollowersFollowingPopup({
   isOpen,
   onClose,
   userId,
+  requestUserId,
+  requestUsername,
   type,
   initialCount,
 }: FollowersFollowingPopupProps) {
-  const { me } = useAuth();
+  const { me, session } = useAuth();
   const queryClient = useQueryClient();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
@@ -55,6 +60,17 @@ export default function FollowersFollowingPopup({
   // Race condition handling
   const lastClickTimeRef = useRef<Record<number, number>>({});
   const abortControllersRef = useRef<Record<number, AbortController>>({});
+
+  const isRequestUser = (user: User) =>
+    user.is_self === true ||
+    user.is_current_user === true ||
+    user.is_own_profile === true ||
+    (requestUserId != null && String(user.id) === String(requestUserId)) ||
+    (me?.id != null && String(user.id) === String(me.id)) ||
+    (!!requestUsername &&
+      user.username.toLowerCase() === requestUsername.toLowerCase()) ||
+    (!!me?.username &&
+      user.username.toLowerCase() === me.username.toLowerCase());
 
   useEffect(() => {
     if (isOpen) {
@@ -101,6 +117,9 @@ export default function FollowersFollowingPopup({
           method: "GET",
           headers: {
             "Content-Type": "application/json",
+            ...(session?.access_token
+              ? { Authorization: `Bearer ${session.access_token}` }
+              : {}),
           },
           cache: "no-store",
         },
@@ -115,7 +134,9 @@ export default function FollowersFollowingPopup({
         usersList.forEach((user: User) => {
           newFollowStates[user.id] = user.is_following ?? false;
         });
-        setFollowStates(newFollowStates);
+        setFollowStates((prev) =>
+          pageNum === 1 ? newFollowStates : { ...prev, ...newFollowStates },
+        );
 
         if (pageNum === 1) {
           setUsers(usersList);
@@ -138,7 +159,7 @@ export default function FollowersFollowingPopup({
   };
 
   const handleFollowToggle = async (user: User) => {
-    if (user.is_current_user) return;
+    if (isRequestUser(user)) return;
 
     const now = Date.now();
     if (now - (lastClickTimeRef.current[user.id] || 0) < 500) {
@@ -255,6 +276,7 @@ export default function FollowersFollowingPopup({
                 const masteryTitle =
                   user.mastery_title || user.masterytitle || "Novice";
                 const accent = getAccentColors(masteryTitle);
+                const isCurrentUser = isRequestUser(user);
                 return (
                   <div
                     key={user.id}
@@ -296,7 +318,7 @@ export default function FollowersFollowingPopup({
                       </div>
                     </Link>
 
-                    {!user.is_current_user && !user.is_own_profile && (
+                    {!isCurrentUser && (
                       <button
                         onClick={() => handleFollowToggle(user)}
                         disabled={loadingStates[user.id]}
@@ -311,7 +333,7 @@ export default function FollowersFollowingPopup({
                             : "#4168e2",
                         }}
                       >
-                        {followStates[user.id] ? "Following" : "Follow"}
+                        {followStates[user.id] ? "Unfollow" : "Follow"}
                       </button>
                     )}
                   </div>
