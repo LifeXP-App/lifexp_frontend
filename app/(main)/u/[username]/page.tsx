@@ -1343,7 +1343,7 @@ export default function ProfilePage({ params }: PageProps) {
               ) : userPosts.length > 0 ? (
                 (() => {
                   const ongoingPosts = userPosts.filter((p) => p.status === "ongoing");
-                  const otherPosts = userPosts.filter((p) => p.status !== "ongoing");
+                  const otherPosts = userPosts.filter((p) => p.status === "completed");
                   const sharedProps = (post: UserPost) => ({
                     emoji: post.tags_list[0]?.charAt(0) || "🎯",
                     title: post.title,

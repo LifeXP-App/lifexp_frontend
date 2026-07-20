@@ -287,7 +287,7 @@ export default function FollowersFollowingPopup({
                         disabled={loadingStates[user.id]}
                         className={`px-4 py-1.5 text-sm rounded-lg font-medium text-white ${
                           loadingStates[user.id]
-                            ? "opacity-50 cursor-wait"
+                            ? "cursor-wait"
                             : "cursor-pointer active:opacity-80"
                         } ${followStates[user.id] ? "bg-gray-700" : ""}`}
                         style={{
@@ -296,11 +296,7 @@ export default function FollowersFollowingPopup({
                             : "#4168e2",
                         }}
                       >
-                        {loadingStates[user.id]
-                          ? "..."
-                          : followStates[user.id]
-                            ? "Following"
-                            : "Follow"}
+                        {followStates[user.id] ? "Following" : "Follow"}
                       </button>
                     )}
                   </div>
