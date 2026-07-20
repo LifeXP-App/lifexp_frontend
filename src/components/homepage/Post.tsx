@@ -55,6 +55,7 @@ export type PostType = {
   title?: string;
   content: string;
   post_image: string;
+  completion_picture?: string;
   duration: string;
   likes: number;
   masterytitle: string;
@@ -421,30 +422,47 @@ export function Post({ post }: { post: PostType }) {
 
       {/* CONTENT */}
       <div className="px-2 md:px-0">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-base md:text-lg font-bold dark:text-[#dfdfe0]">
-            {post.title || ""}
-          </h3>
-          <span
-            className="text-sm font-bold px-3 py-1 rounded-full"
-            style={{
-              backgroundColor: post.primary,
-              color: "#fff",
-            }}
-          >
-            {Object.values(post.xp_data).reduce((sum, val) => sum + val, 0)} XP
-          </span>
-        </div>
+        <div className="flex items-start gap-4">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-base md:text-lg font-bold dark:text-[#dfdfe0]">
+                {post.title || ""}
+              </h3>
+              <span
+                className="text-sm font-bold px-3 py-1 rounded-full"
+                style={{
+                  backgroundColor: post.primary,
+                  color: "#fff",
+                }}
+              >
+                {Object.values(post.xp_data).reduce((sum, val) => sum + val, 0)} XP
+              </span>
+            </div>
 
-        <p className="post-content text-sm md:text-base text-gray-700 dark:text-[#dfdfe0]/80">
-          {linkify(post.content)}
-        </p>
+            <p className="post-content text-sm md:text-base text-gray-700 dark:text-[#dfdfe0]/80">
+              {linkify(post.content)}
+            </p>
 
-        <div className="flex items-center mt-3 gap-1 text-sm font-medium text-gray-500 dark:text-[var(--muted)]">
-          <ClockIcon className="w-5 h-5 inline-block mr-1" />
-          <span>
-            {post.duration} over {getDuration(post.started_at, post.created_at)}
-          </span>
+            <div className="flex items-center mt-3 gap-1 text-sm font-medium text-gray-500 dark:text-[var(--muted)]">
+              <ClockIcon className="w-5 h-5 inline-block mr-1" />
+              <span>
+                {post.duration} over {getDuration(post.started_at, post.created_at)}
+              </span>
+            </div>
+          </div>
+
+          {post.completion_picture?.trim() ? (
+            <Link href={`/goals/${post.uid}`} className="shrink-0">
+              <img
+                className="h-24 w-24 rounded-lg object-cover md:h-28 md:w-28"
+                src={post.completion_picture.replace(
+                  "/upload/",
+                  "/upload/f_auto,q_auto,w_250,c_fill/",
+                )}
+                alt={`${post.title || "Goal"} completion`}
+              />
+            </Link>
+          ) : null}
         </div>
 
         {post.session && (

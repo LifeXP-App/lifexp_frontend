@@ -175,14 +175,14 @@ export default function SettingsPage() {
   }
 
   const { setTheme } = useTheme();
-  const appearance = form?.appearance;
 
-  useEffect(() => {
-    if (!appearance) return;
-
-    const nextTheme = appearance === "Dark" ? "dark" : "light";
-    setTheme(nextTheme);
-  }, [appearance, setTheme]);
+  const handleAppearanceChange = (appearance: Appearance) => {
+    // Theme changes must only happen in response to an explicit user choice.
+    // Applying the server value in an effect caused merely opening Settings
+    // to overwrite the theme already selected elsewhere in the app.
+    setForm((prev) => (prev ? { ...prev, appearance } : prev));
+    setTheme(appearance === "Dark" ? "dark" : "light");
+  };
 
   const saveSettings = useCallback(async (payload: SettingsFormState) => {
     try {
@@ -352,11 +352,7 @@ export default function SettingsPage() {
               <select
                 value={form.appearance}
                 onChange={(e) =>
-                  setForm((prev) =>
-                    prev
-                      ? { ...prev, appearance: e.target.value as Appearance }
-                      : prev,
-                  )
+                  handleAppearanceChange(e.target.value as Appearance)
                 }
                 className="cursor-pointer text-sm md:text-base block appearance-none w-full bg-white dark:bg-[var(--dark-1)] border border-gray-800 dark:border-[var(--border)] hover:border-gray-500 dark:hover:border-[var(--border)] px-4 py-2 pr-8 rounded leading-tight text-black dark:text-[var(--foreground)]"
               >
