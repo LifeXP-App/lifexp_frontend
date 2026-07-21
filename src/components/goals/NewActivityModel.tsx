@@ -3,7 +3,8 @@ import ActivitySelectButton, {
 } from "@/src/components/goals/ActivityResult";
 import { ActivitiesService } from "@/src/lib/services/activities";
 import { ActivityType } from "@/src/lib/types/activityMeta";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 interface Activity {
   id: string;
@@ -115,11 +116,56 @@ export default function NewActivityModal({
   goalUid,
 }: NewActivityModalProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [activities, setActivities] = useState<Activity[]>([]);
+
+  // The default (non-search) first page is cached per-goal, so switching
+  // between goals in the picker (it stays mounted as one instance while
+  // `goalUid` changes) shows that goal's own last-fetched list instantly
+  // instead of flashing the previously selected goal's list for a moment.
+  const defaultListKey = ["activities", "picker", goalUid ?? "none"];
+
+  const { data: defaultFirstPage, isFetching: defaultListFetching } = useQuery({
+    queryKey: defaultListKey,
+    queryFn: async () => {
+      const params = new URLSearchParams({ page: "1" });
+      if (goalUid) params.set("goal", goalUid);
+
+      const res = await fetch(
+        `${baseUrl}/api/v1/activities/?${params.toString()}`,
+      );
+      const data = await res.json();
+
+      return {
+        activities: getActivitiesFromPayload(data).map(mapActivity),
+        pagination: getPaginationFromPayload(data, 1),
+      };
+    },
+    enabled: isOpen,
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
+
+  // Pages beyond the first (infinite scroll) aren't individually cached —
+  // they're appended on top of the cached first page locally.
+  const [extraPages, setExtraPages] = useState<Activity[]>([]);
+  const [searchResults, setSearchResults] = useState<Activity[] | null>(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
   const [showAiSuggestion, setShowAiSuggestion] = useState(false);
+
+  const activities = useMemo(() => {
+    if (searchResults !== null) return searchResults;
+    return [...(defaultFirstPage?.activities ?? []), ...extraPages];
+  }, [searchResults, defaultFirstPage, extraPages]);
+
+  // Once the cached first page lands for the default (non-search) list,
+  // seed hasMore from its pagination instead of the initial `true` default.
+  useEffect(() => {
+    if (searchResults !== null) return;
+    if (!defaultFirstPage) return;
+    if (page !== 1) return;
+    setHasMore(defaultFirstPage.pagination.hasMore);
+  }, [defaultFirstPage, searchResults, page]);
 
   // AI-generated custom-activity creation state
   const [creating, setCreating] = useState(false);
@@ -136,7 +182,8 @@ export default function NewActivityModal({
   const handleSearchQueryChange = useCallback((value: string) => {
     requestIdRef.current += 1;
     setSearchQuery(value);
-    setActivities([]);
+    setSearchResults(value.trim() ? [] : null);
+    setExtraPages([]);
     setPage(1);
     setHasMore(true);
     setLoading(true);
@@ -183,9 +230,12 @@ export default function NewActivityModal({
     setCreating(false);
   }, [searchQuery, creating, onSelectActivity, handleSearchQueryChange]);
 
+  // Page 1 of the default (non-search) list is owned by the cached query
+  // above; this only fetches subsequent pages for infinite scroll and
+  // appends them locally.
   const fetchActivities = useCallback(
-    async (pageNumber: number, force = false) => {
-      if (!force && loadingRef.current) return;
+    async (pageNumber: number) => {
+      if (loadingRef.current) return;
 
       const requestId = requestIdRef.current + 1;
       requestIdRef.current = requestId;
@@ -207,10 +257,7 @@ export default function NewActivityModal({
         const pagination = getPaginationFromPayload(data, pageNumber);
 
         if (requestId === requestIdRef.current) {
-          setActivities((prev) =>
-            pageNumber === 1 ? mapped : [...prev, ...mapped],
-          );
-
+          setExtraPages((prev) => [...prev, ...mapped]);
           setHasMore(pagination.hasMore);
           setPage(pageNumber);
         }
@@ -252,8 +299,8 @@ export default function NewActivityModal({
 
         if (requestId === requestIdRef.current) {
           const mapped = results.map(mapActivity);
-          setActivities((prev) =>
-            pageNumber === 1 ? mapped : [...prev, ...mapped],
+          setSearchResults((prev) =>
+            pageNumber === 1 ? mapped : [...(prev ?? []), ...mapped],
           );
           setPage(pageNumber);
           setHasMore(pagination.hasMore);
@@ -261,7 +308,7 @@ export default function NewActivityModal({
       } catch (err) {
         console.error("Failed to search activities", err);
         if (requestId === requestIdRef.current) {
-          setActivities([]);
+          setSearchResults([]);
         }
       } finally {
         if (requestId === requestIdRef.current) {
@@ -281,20 +328,24 @@ export default function NewActivityModal({
     setCreationError(null);
     setSuggestions(null);
 
+    if (!query) {
+      // Back to the default list — it's already cached per-goal, so just
+      // reset local pagination state instead of refetching page 1.
+      setSearchResults(null);
+      setExtraPages([]);
+      setPage(1);
+      setHasMore(true);
+      return;
+    }
+
     const timeout = window.setTimeout(() => {
-      if (query) {
-        setPage(1);
-        setHasMore(true);
-        searchActivities(query, 1);
-      } else {
-        setPage(1);
-        setHasMore(true);
-        fetchActivities(1, true);
-      }
+      setPage(1);
+      setHasMore(true);
+      searchActivities(query, 1);
     }, 250);
 
     return () => window.clearTimeout(timeout);
-  }, [searchQuery, isOpen, searchActivities, fetchActivities]);
+  }, [searchQuery, isOpen, searchActivities]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -339,6 +390,8 @@ export default function NewActivityModal({
 
   if (!isOpen) return null;
 
+  const isLoadingList =
+    loading || (searchResults === null && defaultListFetching && page === 1);
   const filteredActivities = activities;
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
   const hasExactSearchMatch =
@@ -471,7 +524,7 @@ export default function NewActivityModal({
                   <p className="text-sm text-red-500 px-1">{creationError}</p>
                 )}
 
-                {loading && (hasMore || page === 1) && (
+                {isLoadingList && (hasMore || page === 1) && (
                   <div className="space-y-2 animate-pulse">
                     {[1, 2, 3, 4].map((i) => (
                       <div
