@@ -534,7 +534,7 @@ export default function SearchPage() {
                               <LiveAvatar username={user.username}>
                                 <Image
                                   src={user.profile_picture}
-                                  alt={user.fullname}
+                                  alt={user.fullname || user.username}
                                   width={48}
                                   height={48}
                                   className="w-12 h-12 rounded-full object-cover"

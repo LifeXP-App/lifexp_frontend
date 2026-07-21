@@ -1,50 +1,48 @@
-'use client';
+"use client";
 
-import React, { useMemo, useState } from 'react';
-import { LiveAvatar } from '@/src/components/LiveAvatar';
-import { RadarChart } from '@/src/components/charts/LazyCharts';
-import { useParams, useRouter } from 'next/navigation';
-import Image from 'next/image';
-import dynamic from 'next/dynamic';
-import { useToast } from "@/src/context/ToastContext";
-import { useAuth } from "@/src/context/AuthContext";
-import { useQueryClient } from "@tanstack/react-query";
-import AspectChip from '@/src/components/goals/AspectChip';
-import { mockUser } from "@/src/lib/mock/userData";
-import SessionInfoPopup from "@/src/components/goals/SessionInfoPopup";
-import {BiDumbbell} from "react-icons/bi";
-import CompleteGoalPopup from '@/src/components/goals/CompleteGoalPopup';
-import { useEffect } from 'react';
-import { supabase } from "@/src/lib/supabase";
-import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
+import { LiveAvatar } from "@/src/components/LiveAvatar";
+import { RadarChart } from "@/src/components/charts/LazyCharts";
+import AspectChip from "@/src/components/goals/AspectChip";
+import SessionInfoPopup from "@/src/components/goals/SessionInfoPopup";
+import { useAuth } from "@/src/context/AuthContext";
+import { useToast } from "@/src/context/ToastContext";
+import { mockUser } from "@/src/lib/mock/userData";
+import { supabase } from "@/src/lib/supabase";
+import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "convex/react";
+import dynamic from "next/dynamic";
+import Image from "next/image";
+import { useParams, useRouter } from "next/navigation";
+import React, { useEffect, useMemo, useState } from "react";
+import { BiDumbbell } from "react-icons/bi";
 
+import NewSessionPopup from "@/src/components/goals/NewSessionPopup";
+import { RocketLaunchIcon } from "@heroicons/react/24/outline";
 import {
-
   BoltIcon,
-  UsersIcon,
-  PlayIcon,
+  CheckBadgeIcon,
   ClockIcon,
   PauseCircleIcon,
-  CheckBadgeIcon,
+  PlayIcon,
+  UsersIcon,
 } from "@heroicons/react/24/solid";
-import { RocketLaunchIcon } from "@heroicons/react/24/outline";
 import { FaBrain, FaHammer } from "react-icons/fa";
-import NewSessionPopup from '@/src/components/goals/NewSessionPopup';
-import NewGoalModal from '@/src/components/goals/NewGoalModal';
 
 const NewActivityModal = dynamic(
-  () => import('@/src/components/goals/NewActivityModel'),
+  () => import("@/src/components/goals/NewActivityModel"),
 );
 
 interface Session {
   id: string;
-  user?:{
-    id: string;
-    username: string;
-  }| undefined;
-  goalTitle:string;
+  user?:
+    | {
+        id: string;
+        username: string;
+      }
+    | undefined;
+  goalTitle: string;
   sessionNumber: number;
   activity: string;
   xpEarned: number;
@@ -67,7 +65,12 @@ interface RawSessionApi {
 
 interface RawLeaderboardEntryApi {
   rank: number;
-  user: { id: string | number; fullname: string; profile_picture?: string };
+  user: {
+    id: string | number;
+    username: string;
+    fullname: string;
+    profile_picture?: string;
+  };
   total_xp: number;
   is_you: boolean;
 }
@@ -112,11 +115,10 @@ interface ActivityDetailProps {
   onCompleteGoal?: () => void;
 }
 
+import GoalPickerPopup from "@/src/components/goals/GoalPickerPopup";
+import { Goal, GoalsService } from "@/src/lib/services/goals";
 import { ACTIVITY_META, ActivityType } from "@/src/lib/types/activityMeta";
 import Link from "next/link";
-import { GoalsService, Goal } from "@/src/lib/services/goals";
-import GoalPickerPopup from "@/src/components/goals/GoalPickerPopup";
-
 
 interface Activity {
   id: string;
@@ -124,26 +126,32 @@ interface Activity {
   type: ActivityType;
 }
 
- type LeaderboardUser = {
+type LeaderboardUser = {
   rank: number;
   id: string;
+  username: string;
   name: string;
   avatar?: string;
   totalXp: number;
   isYou?: boolean;
 };
 
+const users: LeaderboardUser[] = [
+  {
+    rank: 1,
+    id: "1",
+    username: "alex",
+    name: "Alex",
+    totalXp: 5420,
+    avatar:
+      "https://res.cloudinary.com/dfohn9dcz/image/upload/w_100,q_auto,f_auto/v1749738331/oydasgwd0mysponmm7xp.webp",
+  },
+];
 
-
- const users: LeaderboardUser[] = [
-    { rank: 1, id: "1", name: "Alex", totalXp: 5420 , avatar: "https://res.cloudinary.com/dfohn9dcz/image/upload/w_100,q_auto,f_auto/v1749738331/oydasgwd0mysponmm7xp.webp"},
-
-  ];
-
-const ActivityLeaderboard: React.FC<{ users: LeaderboardUser[]; activityName?: string }> = ({ users, activityName }) => {
-
-  
-
+const ActivityLeaderboard: React.FC<{
+  users: LeaderboardUser[];
+  activityName?: string;
+}> = ({ users, activityName }) => {
   const RankBadge = ({ rank }: { rank: number }) => {
     if (rank === 1)
       return (
@@ -185,69 +193,64 @@ const ActivityLeaderboard: React.FC<{ users: LeaderboardUser[]; activityName?: s
     );
   };
 
- 
-
   return (
     <div
       className="rounded-2xl border p-6 bg-white dark:bg-dark-2"
       style={{ borderColor: "var(--border)" }}
     >
-      
       <div className="flex justify-between items-center mb-6">
         <h3 className="font-semibold text-lg ">
           Top Players for {activityName || "this activity"}
         </h3>
-        <p className="text-sm font-medium" style={{ color: "var(--muted)" }}>
+        {/* <p className="text-sm font-medium" style={{ color: "var(--muted)" }}>
           2220 Overall
-        </p>
-
+        </p> */}
       </div>
-
 
       <div className="divide-y" style={{ borderColor: "var(--border)" }}>
         {users.map((user, idx) => (
-           <Link key={user.id} href={`/profile/${user.id}`}>
-                  <div className={`flex ${user.isYou ? 'bg-gray-50 dark:bg-dark-2  ' : 'dark:bg-dark-1'} hover:bg-gray-50 dark:hover:bg-dark-2 cursor-pointer justify-between items-center w-full px-5 py-4 rounded-xl transition-all    border border-transparent hover:border-gray-200 dark:hover:border-[var(--border)]`}>
-                    <div className="flex items-center gap-4">
-                      <div className="w-5 flex justify-center">
-                        <RankBadge rank={user.rank} />
-                      </div>
+          <Link key={user.id} href={`/u/${user.username}`}>
+            <div
+              className={`flex ${user.isYou ? "bg-gray-50 dark:bg-dark-2  " : "dark:bg-dark-1"} hover:bg-gray-50 dark:hover:bg-dark-2 cursor-pointer justify-between items-center w-full px-5 py-4 rounded-xl transition-all    border border-transparent hover:border-gray-200 dark:hover:border-[var(--border)]`}
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-5 flex justify-center">
+                  <RankBadge rank={user.rank} />
+                </div>
 
-                      <LiveAvatar userId={user.id}>
-                        <Image
-                          src={user.avatar || "/default_pfp.png"}
-                          width={40}
-                          height={40}
-                          className="h-10 w-10 rounded-full object-cover ring-2 ring-gray-100 dark:ring-gray-800"
-                          alt={user.name}
-                        />
-                      </LiveAvatar>
+                <LiveAvatar userId={user.id}>
+                  <Image
+                    src={user.avatar || "/default_pfp.png"}
+                    width={40}
+                    height={40}
+                    className="h-10 w-10 rounded-full object-cover ring-2 ring-gray-100 dark:ring-gray-800"
+                    alt={user.name}
+                  />
+                </LiveAvatar>
 
-                      <p className="text-base font-semibold dark:text-[var(--foreground)]">
-                        {`${user.name} ${user.isYou ? "(You)" : ""}`} 
-                      </p>
-                    </div>
+                <p className="text-base font-semibold dark:text-[var(--foreground)]">
+                  {`${user.name} ${user.isYou ? "(You)" : ""}`}
+                </p>
+              </div>
 
-                    <p className="text-base font-semibold dark:text-[var(--foreground)]">
-                      {user.totalXp.toLocaleString()} XP
-                    </p>
-                  </div>
-                </Link>
+              <p className="text-base font-semibold dark:text-[var(--foreground)]">
+                {user.totalXp.toLocaleString()} XP
+              </p>
+            </div>
+          </Link>
         ))}
         {users.length === 0 && (
           <div className="flex-col w-full  justify-center items-center py-4">
-            <RocketLaunchIcon className="w-16 h-16 mb-8 stroke-black opacity-20 dark:stroke-white mx-auto"/>
-                <p className="text-base text-center font-semibold text-black opacity-20 dark:text-[var(--foreground)] mx-auto">
-                  Be the first to try this activity!
-                </p>
-                </div>
-          )}
+            <RocketLaunchIcon className="w-16 h-16 mb-8 stroke-black opacity-20 dark:stroke-white mx-auto" />
+            <p className="text-base text-center font-semibold text-black opacity-20 dark:text-[var(--foreground)] mx-auto">
+              Be the first to try this activity!
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
 };
-
-
 
 const formatLiveDuration = (secs: number) => {
   const h = Math.floor(secs / 3600);
@@ -362,7 +365,10 @@ const LiveSessionCard: React.FC<LiveSessionCardProps> = ({
         }}
       >
         {isPaused ? (
-          <PauseCircleIcon className="w-3.5 h-3.5" style={{ color: timerColor }} />
+          <PauseCircleIcon
+            className="w-3.5 h-3.5"
+            style={{ color: timerColor }}
+          />
         ) : (
           <ClockIcon className="w-3.5 h-3.5" style={{ color: timerColor }} />
         )}
@@ -377,12 +383,9 @@ const LiveSessionCard: React.FC<LiveSessionCardProps> = ({
   );
 };
 
-
-
-
-
-
-const SessionItem: React.FC<Session & { onClick?: () => void; accentColor?: string }> = ({
+const SessionItem: React.FC<
+  Session & { onClick?: () => void; accentColor?: string }
+> = ({
   sessionNumber,
   activity,
   goalTitle,
@@ -394,7 +397,6 @@ const SessionItem: React.FC<Session & { onClick?: () => void; accentColor?: stri
   onClick,
   accentColor = "var(--aspect-creativity)",
 }) => {
-
   const [open, setOpen] = React.useState(false);
   const menuRef = React.useRef<HTMLDivElement>(null);
 
@@ -405,21 +407,26 @@ const SessionItem: React.FC<Session & { onClick?: () => void; accentColor?: stri
       }
     };
 
-  document.addEventListener("mousedown", handleClickOutside);
-  return () => document.removeEventListener("mousedown", handleClickOutside);
-}, []);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
   return (
     <div
-        onClick={onClick}
-        className="flex items-center gap-4 p-4 bg-white dark:bg-dark-2 rounded-2xl border transition-shadow cursor-pointer"
-        style={{ borderColor: "var(--border)" }}
-      >
-
+      onClick={onClick}
+      className="flex items-center gap-4 p-4 bg-white dark:bg-dark-2 rounded-2xl border transition-shadow cursor-pointer"
+      style={{ borderColor: "var(--border)" }}
+    >
       <div className="w-20 h-20 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden bg-gray-100 dark:bg-dark-3/50">
         {emoji ? (
           <span className="text-3xl">{emoji}</span>
         ) : thumbnail ? (
-          <Image src={thumbnail} alt="Session" width={80} height={80} className="w-full h-full object-cover" />
+          <Image
+            src={thumbnail}
+            alt="Session"
+            width={80}
+            height={80}
+            className="w-full h-full object-cover"
+          />
         ) : (
           <Image
             src="https://res.cloudinary.com/dfohn9dcz/image/upload/f_auto,q_auto,w_800,c_fill/v1/posts/user_7/ske_20251115103836"
@@ -433,14 +440,16 @@ const SessionItem: React.FC<Session & { onClick?: () => void; accentColor?: stri
 
       <div className="flex-1 min-w-0">
         <h3 className="font-semibold text-lg text-foreground dark:text-[var(--foreground)]">
-          {goalTitle? goalTitle : `Free ${activity} Session`}
+          {goalTitle ? goalTitle : `Free ${activity} Session`}
         </h3>
         <p className="text-sm font-bold" style={{ color: accentColor }}>
           Session {sessionNumber}
         </p>
-        <p className="text-xs mt-1 font-medium" style={{ color: "var(--muted)" }}>
+        <p
+          className="text-xs mt-1 font-medium"
+          style={{ color: "var(--muted)" }}
+        >
           {xpEarned} XP Earned • {dateTime}
-          
         </p>
       </div>
 
@@ -451,15 +460,14 @@ const SessionItem: React.FC<Session & { onClick?: () => void; accentColor?: stri
             {duration}
           </div>
         </div>
-
       </div>
     </div>
   );
 };
 
-
-
-const FriendSessionItem: React.FC<Session & { onClick?: () => void; accentColor?: string }> = ({
+const FriendSessionItem: React.FC<
+  Session & { onClick?: () => void; accentColor?: string }
+> = ({
   sessionNumber,
   goalTitle,
   user,
@@ -471,7 +479,6 @@ const FriendSessionItem: React.FC<Session & { onClick?: () => void; accentColor?
   onClick,
   accentColor = "var(--aspect-creativity)",
 }) => {
-
   const [open, setOpen] = React.useState(false);
   const menuRef = React.useRef<HTMLDivElement>(null);
 
@@ -482,20 +489,25 @@ const FriendSessionItem: React.FC<Session & { onClick?: () => void; accentColor?
       }
     };
 
-  document.addEventListener("mousedown", handleClickOutside);
-  return () => document.removeEventListener("mousedown", handleClickOutside);
-}, []);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
   return (
     <div
-        className="flex items-center gap-4 p-4 bg-white dark:bg-dark-2 rounded-2xl border transition-shadow cursor-pointer"
-        style={{ borderColor: "var(--border)" }}
-      >
-
+      className="flex items-center gap-4 p-4 bg-white dark:bg-dark-2 rounded-2xl border transition-shadow cursor-pointer"
+      style={{ borderColor: "var(--border)" }}
+    >
       <div className="w-20 h-20 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden bg-gray-100 dark:bg-dark-3/50">
         {emoji ? (
           <span className="text-3xl">{emoji}</span>
         ) : thumbnail ? (
-          <Image src={thumbnail} alt="Session" width={80} height={80} className="w-full h-full object-cover" />
+          <Image
+            src={thumbnail}
+            alt="Session"
+            width={80}
+            height={80}
+            className="w-full h-full object-cover"
+          />
         ) : (
           <Image
             src="https://res.cloudinary.com/dfohn9dcz/image/upload/f_auto,q_auto,w_800,c_fill/v1/posts/user_7/ske_20251115103836"
@@ -511,12 +523,19 @@ const FriendSessionItem: React.FC<Session & { onClick?: () => void; accentColor?
         <h3 className="font-semibold text-lg text-foreground dark:text-[var(--foreground)]">
           {goalTitle}
         </h3>
-        <Link href={`/u/${user?.username}`} className="text-sm font-bold" style={{ color: accentColor }}>
-        <p className="text-sm font-bold" style={{ color: accentColor }}>
-          @{user?.username}
-        </p>
+        <Link
+          href={`/u/${user?.username}`}
+          className="text-sm font-bold"
+          style={{ color: accentColor }}
+        >
+          <p className="text-sm font-bold" style={{ color: accentColor }}>
+            @{user?.username}
+          </p>
         </Link>
-        <p className="text-xs mt-1 font-medium" style={{ color: "var(--muted)" }}>
+        <p
+          className="text-xs mt-1 font-medium"
+          style={{ color: "var(--muted)" }}
+        >
           {xpEarned} XP Earned • {dateTime}
         </p>
       </div>
@@ -528,19 +547,15 @@ const FriendSessionItem: React.FC<Session & { onClick?: () => void; accentColor?
             {duration}
           </div>
         </div>
-
       </div>
     </div>
   );
 };
 
-
 export default function ActivityDetailPage({
   goalCompleted = false,
   title = "Drawing",
   user = mockUser,
-  
-
 
   createdDate = "1 Jan 2026",
   description = "Wanted to get back to drawing and make some really good art of one of my favorite characters, so here it is",
@@ -548,28 +563,27 @@ export default function ActivityDetailPage({
     timeSpent: "2h 20m",
     leaderboard: 3490,
     likes: 24,
-    likeAvatars: ['#171717', '#713599', '#4187a2']
+    likeAvatars: ["#171717", "#713599", "#4187a2"],
   },
   aspects = {
     physique: 24,
     energy: 24,
     logic: 24,
     creativity: 24,
-    social: 24
+    social: 24,
   },
   todaySessions = [
     {
-      id: '1',
+      id: "1",
       sessionNumber: 8,
-      goalTitle:"Drawing mandalorian",
-      activity: 'Drawing',
+      goalTitle: "Drawing mandalorian",
+      activity: "Drawing",
       xpEarned: 232,
-      dateTime: '10:23 AM, 23 Nov 2024',
-      duration: '1:12:02'
-    }
-   
+      dateTime: "10:23 AM, 23 Nov 2024",
+      duration: "1:12:02",
+    },
   ],
-  
+
   onBack = () => window.history.back(),
   onMore = () => {},
 }: ActivityDetailProps) {
@@ -584,14 +598,25 @@ export default function ActivityDetailPage({
 
   const buildRatesParam = (dist: Record<string, number> | undefined) => {
     const SECONDS_PER_HOUR = 3600;
-    const aspects = ['physique', 'energy', 'logic', 'creativity', 'social'] as const;
+    const aspects = [
+      "physique",
+      "energy",
+      "logic",
+      "creativity",
+      "social",
+    ] as const;
     const distribution = dist ?? {};
     const totalXp = aspects.reduce((s, k) => s + (distribution[k] ?? 0), 0);
-    if (totalXp <= 0) return '';
-    const rates = aspects.reduce((acc, k) => {
-      acc[k] = Math.round((distribution[k] ?? 0) / SECONDS_PER_HOUR * 10000) / 10000;
-      return acc;
-    }, {} as Record<string, number>);
+    if (totalXp <= 0) return "";
+    const rates = aspects.reduce(
+      (acc, k) => {
+        acc[k] =
+          Math.round(((distribution[k] ?? 0) / SECONDS_PER_HOUR) * 10000) /
+          10000;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
     return `&rates=${encodeURIComponent(JSON.stringify(rates))}`;
   };
 
@@ -629,8 +654,6 @@ export default function ActivityDetailPage({
     setIsNewSessionPopupOpen(false);
     setIsNewActivityModalOpen(true);
   };
-
-
 
   const [isSessionPopupOpen, setIsSessionPopupOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
@@ -678,12 +701,13 @@ export default function ActivityDetailPage({
       }
     } catch (err) {
       console.error("Failed to delete session:", err);
-      toast.error(err instanceof Error ? err.message : "Failed to delete session.");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to delete session.",
+      );
       // Roll back — the delete didn't actually happen, so bring it back.
       setMySessions((prev) => [...prev, deletedSession]);
     }
   };
-
 
   const [isCompleteGoalOpen, setIsCompleteGoalOpen] = useState(false);
 
@@ -695,13 +719,15 @@ export default function ActivityDetailPage({
     setIsCompleteGoalOpen(false);
   };
 
-
-    const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const moreMenuRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
+      if (
+        moreMenuRef.current &&
+        !moreMenuRef.current.contains(e.target as Node)
+      ) {
         setIsMoreMenuOpen(false);
       }
     };
@@ -710,238 +736,231 @@ export default function ActivityDetailPage({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const [activityData, setActivityData] = useState<ActivityDataResponse | null>(
+    null,
+  );
+  const [loading, setLoading] = useState(true);
 
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-const [activityData, setActivityData] = useState<ActivityDataResponse | null>(null);
-const [loading, setLoading] = useState(true);
+  const radarData = useMemo(() => {
+    const dist = activityData?.xp_distribution || {};
+    const physique = dist.physique ?? 0;
+    const energy = dist.energy ?? 0;
+    const logic = dist.logic ?? 0;
+    const creativity = dist.creativity ?? 0;
+    const social = dist.social ?? 0;
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
+    // Shared fullMark across every aspect keeps the spokes on a single, equal scale.
+    const fullMark = Math.max(physique, energy, logic, creativity, social, 10);
 
+    return [
+      { aspect: "Physique", value: physique, fullMark },
+      { aspect: "Energy", value: energy, fullMark },
+      { aspect: "Logic", value: logic, fullMark },
+      { aspect: "Creativity", value: creativity, fullMark },
+      { aspect: "Social", value: social, fullMark },
+    ];
+  }, [activityData]);
 
-const radarData = useMemo(() => {
-  const dist = activityData?.xp_distribution || {};
-  const physique = dist.physique ?? 0;
-  const energy = dist.energy ?? 0;
-  const logic = dist.logic ?? 0;
-  const creativity = dist.creativity ?? 0;
-  const social = dist.social ?? 0;
+  const activityColor =
+    activityData?.activity_type &&
+    ACTIVITY_META[activityData.activity_type as ActivityType]
+      ? ACTIVITY_META[activityData.activity_type as ActivityType].cssColorVar
+      : "#4f7df3";
 
-  // Shared fullMark across every aspect keeps the spokes on a single, equal scale.
-  const fullMark = Math.max(physique, energy, logic, creativity, social, 10);
+  const formatDuration = (seconds: number) => {
+    if (!seconds) return "00:00:00";
 
-  return [
-    { aspect: "Physique", value: physique, fullMark },
-    { aspect: "Energy", value: energy, fullMark },
-    { aspect: "Logic", value: logic, fullMark },
-    { aspect: "Creativity", value: creativity, fullMark },
-    { aspect: "Social", value: social, fullMark },
-  ];
-}, [activityData]);
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
 
-const activityColor = activityData?.activity_type && ACTIVITY_META[activityData.activity_type as ActivityType]
-  ? ACTIVITY_META[activityData.activity_type as ActivityType].cssColorVar
-  : "#4f7df3";
+    const pad = (n: number) => String(n).padStart(2, "0");
 
-const formatDuration = (seconds: number) => {
-  if (!seconds) return "00:00:00";
-
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-
-  const pad = (n: number) => String(n).padStart(2, "0");
-
-  return `${pad(h)}:${pad(m)}:${pad(s)}`;
-};
-
-const parseDuration = (dur: string): number => {
-  const parts = dur.split(':').map(Number);
-  return (parts[0] || 0) * 3600 + (parts[1] || 0) * 60 + (parts[2] || 0);
-};
-
-const formatTimeSpent = (totalSeconds: number): string => {
-  const h = Math.floor(totalSeconds / 3600);
-  const m = Math.floor((totalSeconds % 3600) / 60);
-  if (h === 0) return `${m}m`;
-  if (m === 0) return `${h}h`;
-  return `${h}h ${m}m`;
-};
-
-useEffect(() => {
-  if (!uid) return;
-
-  const fetchActivity = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/api/v1/activities/${uid}/`);
-      const data = await res.json();
-      
-      setActivityData(data);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-
-    }
+    return `${pad(h)}:${pad(m)}:${pad(s)}`;
   };
 
-  fetchActivity();
-}, [uid]);
-
-
-const [friendsSessions, setFriendsSessions] = useState<Session[]>([]);
-const [sessionsLoading, setSessionsLoading] = useState(true);
-
-
-useEffect(() => {
-  if (!uid) return;
-
-  const fetchFriendsSessions = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const authHeader = session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
-      const headers: HeadersInit = {};
-
-      if (session?.access_token) {
-        headers.Authorization = `Bearer ${session.access_token}`;
-      }
-
-      const res = await fetch(`/api/a/${uid}/sessions/friends/`, {
-        headers,
-        credentials: "include",
-      });
-      const data = await res.json();
-
-      const mapped = (data.results || []).map((s: RawSessionApi) => ({
-        id: String(s.id),
-        sessionNumber: s.session_number,
-        goalTitle: s.goal_title,
-        user:s.user,
-        activity: s.activity?.name,
-        xpEarned: s.xp_total,
-        dateTime: new Date(s.started_at).toLocaleString(),
-        duration: formatDuration(s.total_duration_seconds),
-        emoji: s.activity?.emoji,
-      }));
-
-      setFriendsSessions(mapped);
-
-    } catch (e) {
-      console.error("Friends sessions error:", e);
-    } finally {
-      setSessionsLoading(false);
-    }
+  const parseDuration = (dur: string): number => {
+    const parts = dur.split(":").map(Number);
+    return (parts[0] || 0) * 3600 + (parts[1] || 0) * 60 + (parts[2] || 0);
   };
 
-  fetchFriendsSessions();
-}, [uid]);
-
-
-
-
-const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
-
-
-useEffect(() => {
-  if (!uid) return;
-
-  const fetchLeaderboard = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-
-      const headers: HeadersInit = {};
-
-      if (session?.access_token) {
-        headers.Authorization = `Bearer ${session.access_token}`;
-      }
-
-      const res = await fetch(`/api/a/${uid}/leaderboard/`, {
-        headers,
-      });
-            
-      const data = await res.json();
-
-      // map API → UI format
-      const mapped = (data.leaderboard || []).map((item: RawLeaderboardEntryApi) => ({
-        rank: item.rank,
-        id: String(item.user.id),
-        name: item.user.fullname,
-        avatar: item.user.profile_picture,
-        totalXp: item.total_xp,
-        isYou: item.is_you,
-      }));
-
-      setLeaderboard(mapped);
-
-    } catch (e) {
-      console.error("Leaderboard error:", e);
-    }
+  const formatTimeSpent = (totalSeconds: number): string => {
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    if (h === 0) return `${m}m`;
+    if (m === 0) return `${h}h`;
+    return `${h}h ${m}m`;
   };
 
-  fetchLeaderboard();
-}, [uid]);
+  useEffect(() => {
+    if (!uid) return;
 
+    const fetchActivity = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/activities/${uid}/`);
+        const data = await res.json();
 
-
-
-
-const [mySessions, setMySessions] = useState<Session[]>([]);
-
-
-
-useEffect(() => {
-  if (!uid) return;
-
-  const fetchSessions = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-
-      const headers: HeadersInit = {};
-
-      if (session?.access_token) {
-        headers.Authorization = `Bearer ${session.access_token}`;
+        setActivityData(data);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
       }
+    };
 
-      const res = await fetch(`/api/a/${uid}/sessions/mine/`, {
-        headers,
-        credentials: "include",
-      });
+    fetchActivity();
+  }, [uid]);
 
-      const data = await res.json();
-    const mapped = (data.results || []).map((s: RawSessionApi) => ({
-      id: String(s.id),
-      sessionNumber: s.session_number,
-      goalTitle: s.goal_title,
-      activity: s.activity?.name || "Activity",
-      xpEarned: s.xp_total,
-      dateTime: new Date(s.started_at).toLocaleString(),
-      duration: formatDuration(s.total_duration_seconds),
-      emoji: s.activity?.emoji,
-    }));
+  const [friendsSessions, setFriendsSessions] = useState<Session[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(true);
 
-      setMySessions(mapped);
+  useEffect(() => {
+    if (!uid) return;
 
-    } catch (e) {
-      console.error("Sessions error:", e);
-    }
-  };
+    const fetchFriendsSessions = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const authHeader = session?.access_token
+          ? { Authorization: `Bearer ${session.access_token}` }
+          : {};
+        const headers: HeadersInit = {};
 
-  fetchSessions();
-}, [uid]);
+        if (session?.access_token) {
+          headers.Authorization = `Bearer ${session.access_token}`;
+        }
 
- const liveSessions = useQuery(
-  api.sessions.getLiveSessionsForActivity,
-  uid
-    ? {
-        activityId: uid,
+        const res = await fetch(`/api/a/${uid}/sessions/friends/`, {
+          headers,
+          credentials: "include",
+        });
+        const data = await res.json();
+
+        const mapped = (data.results || []).map((s: RawSessionApi) => ({
+          id: String(s.id),
+          sessionNumber: s.session_number,
+          goalTitle: s.goal_title,
+          user: s.user,
+          activity: s.activity?.name,
+          xpEarned: s.xp_total,
+          dateTime: new Date(s.started_at).toLocaleString(),
+          duration: formatDuration(s.total_duration_seconds),
+          emoji: s.activity?.emoji,
+        }));
+
+        setFriendsSessions(mapped);
+      } catch (e) {
+        console.error("Friends sessions error:", e);
+      } finally {
+        setSessionsLoading(false);
       }
-    : "skip"
-);
+    };
 
+    fetchFriendsSessions();
+  }, [uid]);
 
+  const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
 
+  useEffect(() => {
+    if (!uid) return;
 
-const [isModalOpen, setIsModalOpen] = useState(false);
-    const handleCreateGoal = async (goal: {
+    const fetchLeaderboard = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        const headers: HeadersInit = {};
+
+        if (session?.access_token) {
+          headers.Authorization = `Bearer ${session.access_token}`;
+        }
+
+        const res = await fetch(`/api/a/${uid}/leaderboard/`, {
+          headers,
+        });
+
+        const data = await res.json();
+
+        // map API → UI format
+        const mapped = (data.leaderboard || []).map(
+          (item: RawLeaderboardEntryApi) => ({
+            rank: item.rank,
+            id: String(item.user.id),
+            username: item.user.username,
+            name: item.user.fullname,
+            avatar: item.user.profile_picture,
+            totalXp: item.total_xp,
+            isYou: item.is_you,
+          }),
+        );
+
+        setLeaderboard(mapped);
+      } catch (e) {
+        console.error("Leaderboard error:", e);
+      }
+    };
+
+    fetchLeaderboard();
+  }, [uid]);
+
+  const [mySessions, setMySessions] = useState<Session[]>([]);
+
+  useEffect(() => {
+    if (!uid) return;
+
+    const fetchSessions = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        const headers: HeadersInit = {};
+
+        if (session?.access_token) {
+          headers.Authorization = `Bearer ${session.access_token}`;
+        }
+
+        const res = await fetch(`/api/a/${uid}/sessions/mine/`, {
+          headers,
+          credentials: "include",
+        });
+
+        const data = await res.json();
+        const mapped = (data.results || []).map((s: RawSessionApi) => ({
+          id: String(s.id),
+          sessionNumber: s.session_number,
+          goalTitle: s.goal_title,
+          activity: s.activity?.name || "Activity",
+          xpEarned: s.xp_total,
+          dateTime: new Date(s.started_at).toLocaleString(),
+          duration: formatDuration(s.total_duration_seconds),
+          emoji: s.activity?.emoji,
+        }));
+
+        setMySessions(mapped);
+      } catch (e) {
+        console.error("Sessions error:", e);
+      }
+    };
+
+    fetchSessions();
+  }, [uid]);
+
+  const liveSessions = useQuery(
+    api.sessions.getLiveSessionsForActivity,
+    uid
+      ? {
+          activityId: uid,
+        }
+      : "skip",
+  );
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const handleCreateGoal = async (goal: {
     title: string;
     description: string;
     finishBy: string;
@@ -955,7 +974,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
       setIsModalOpen(false);
       // Optionally redirect to goals page or refresh
-      router.push('/goals');
+      router.push("/goals");
     } catch (error) {
       console.error("Failed to create goal:", error);
       toast.error("Failed to create goal. Please try again.");
@@ -965,7 +984,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   const totalSessions = mySessions.length;
   const totalXP = mySessions.reduce((sum, s) => sum + s.xpEarned, 0);
   const totalTimeSpent = formatTimeSpent(
-    mySessions.reduce((sum, s) => sum + parseDuration(s.duration), 0)
+    mySessions.reduce((sum, s) => sum + parseDuration(s.duration), 0),
   );
 
   return (
@@ -996,33 +1015,36 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
         body {
           margin: 0;
-          font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+          font-family:
+            "DM Sans",
+            -apple-system,
+            BlinkMacSystemFont,
+            sans-serif;
           -webkit-font-smoothing: antialiased;
         }
       `}</style>
 
-      <div 
+      <div
         className="min-h-screen"
-        style={{ backgroundColor: 'var(--background)' }}
+        style={{ backgroundColor: "var(--background)" }}
       >
-
         <SessionInfoPopup
-              isOpen={isSessionPopupOpen}
-              onClose={() => setIsSessionPopupOpen(false)}
-              sessionNumber={selectedSession?.sessionNumber ?? 0}
-              dateText={selectedSession?.dateTime ?? ""}
-              totalDuration={selectedSession?.duration ?? ""}
-              xpEarned={selectedSession?.xpEarned ?? 0}
-              focusedDuration={"--"}
-              nudgeCount={0}
-              nudgeAvatars={[]}
-              activity={{
-                name: selectedSession?.activity ?? "",
-                emoji: "🎨",
-                color: activityColor,
-              }}
-              onDelete={selectedSessionIsMine ? handleDeleteSession : undefined}
-            />
+          isOpen={isSessionPopupOpen}
+          onClose={() => setIsSessionPopupOpen(false)}
+          sessionNumber={selectedSession?.sessionNumber ?? 0}
+          dateText={selectedSession?.dateTime ?? ""}
+          totalDuration={selectedSession?.duration ?? ""}
+          xpEarned={selectedSession?.xpEarned ?? 0}
+          focusedDuration={"--"}
+          nudgeCount={0}
+          nudgeAvatars={[]}
+          activity={{
+            name: selectedSession?.activity ?? "",
+            emoji: "🎨",
+            color: activityColor,
+          }}
+          onDelete={selectedSessionIsMine ? handleDeleteSession : undefined}
+        />
 
         <GoalPickerPopup
           isOpen={isGoalPickerOpen}
@@ -1033,74 +1055,102 @@ const [isModalOpen, setIsModalOpen] = useState(false);
           onStartFree={handleStartFreeSession}
         />
 
-
-
         {/* Header */}
-        <div className="bg-white dark:bg-dark-2 sticky top-0 z-10 border-b" style={{ borderColor: 'var(--border)' }}>
+        <div
+          className="bg-white dark:bg-dark-2 sticky top-0 z-10 border-b"
+          style={{ borderColor: "var(--border)" }}
+        >
           <div className="flex items-center justify-between px-6 py-4">
-            <button 
+            <button
               className="p-2 -ml-2 cursor-pointer  rounded-lg transition-colors"
               onClick={onBack}
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path
+                  d="M15 18L9 12L15 6"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
             </button>
-            
+
             <h1 className="text-xl font-bold flex-1 ml-2 flex items-center gap-1.5 text-foreground dark:text-[var(--foreground)]">
-              {activityData?.name || ''}
+              {activityData?.name || ""}
               {activityData?.verified && (
                 <CheckBadgeIcon className="w-5 h-5 mt-[2px] text-blue-500 shrink-0" />
               )}
             </h1>
-            
+
             <div ref={moreMenuRef} className="relative">
-            <button
+              <button
                 className="w-full px-6 py-2 flex items-center justify-center rounded-lg font-medium text-white text-md transition-all active:scale-95 cursor-pointer"
                 style={{
                   backgroundColor: activityColor,
                 }}
                 onClick={() => setIsGoalPickerOpen(true)}
               >
-
-                Start {activityData?.name && activityData.name.length > 12
+                Start{" "}
+                {activityData?.name && activityData.name.length > 12
                   ? ` ${activityData.name.substring(0, 10)}...`
-                  : activityData?.name || 'Activity'}
+                  : activityData?.name || "Activity"}
                 <PlayIcon className="w-4 h-4 inline-block ml-4" />
-
               </button>
-
-          </div>
-
+            </div>
           </div>
         </div>
 
         {/* Mobile Layout - Single Scroll */}
         <div className="block lg:hidden px-6 py-6 dark:bg-dark-1">
           {/* Stats */}
-<div className="mb-6 flex justify-around bg-white dark:bg-dark-2 rounded-2xl p-4 border" style={{ borderColor: 'var(--border)' }}>
+          <div
+            className="mb-6 flex justify-around bg-white dark:bg-dark-2 rounded-2xl p-4 border"
+            style={{ borderColor: "var(--border)" }}
+          >
             <div className="flex flex-col items-center justify-between">
-              <span className="text-sm" style={{ color: 'var(--muted)' }}>Time Spent</span>
-              <span className="text-lg font-bold text-foreground dark:text-[var(--foreground)]">{totalTimeSpent}</span>
+              <span className="text-sm" style={{ color: "var(--muted)" }}>
+                Time Spent
+              </span>
+              <span className="text-lg font-bold text-foreground dark:text-[var(--foreground)]">
+                {totalTimeSpent}
+              </span>
             </div>
 
-            <div className="h-px" style={{ backgroundColor: 'var(--border)' }} />
+            <div
+              className="h-px"
+              style={{ backgroundColor: "var(--border)" }}
+            />
 
             <div className="flex flex-col items-center justify-between">
-              <span className="text-sm" style={{ color: 'var(--muted)' }}>XP gained</span>
-              <span className="text-lg font-bold text-foreground dark:text-[var(--foreground)]">{totalXP}</span>
+              <span className="text-sm" style={{ color: "var(--muted)" }}>
+                XP gained
+              </span>
+              <span className="text-lg font-bold text-foreground dark:text-[var(--foreground)]">
+                {totalXP}
+              </span>
             </div>
 
-            <div className="h-px" style={{ backgroundColor: 'var(--border)' }} />
+            <div
+              className="h-px"
+              style={{ backgroundColor: "var(--border)" }}
+            />
 
             <div className="flex flex-col items-center justify-between">
-              <span className="text-sm" style={{ color: 'var(--muted)' }}>Sessions</span>
-              <span className="text-lg font-bold text-foreground dark:text-[var(--foreground)]">{totalSessions}</span>
+              <span className="text-sm" style={{ color: "var(--muted)" }}>
+                Sessions
+              </span>
+              <span className="text-lg font-bold text-foreground dark:text-[var(--foreground)]">
+                {totalSessions}
+              </span>
             </div>
           </div>
 
           {/* Radar */}
-          <div className="mb-6 bg-white dark:bg-dark-2 rounded-2xl p-6 border" style={{ borderColor: 'var(--border)' }}>
+          <div
+            className="mb-6 bg-white dark:bg-dark-2 rounded-2xl p-6 border"
+            style={{ borderColor: "var(--border)" }}
+          >
             <div className="w-full h-[220px]">
               <RadarChart
                 data={radarData}
@@ -1118,22 +1168,47 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
           {/* Aspect Chips */}
           <div className="mb-6">
-            <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--muted)' }}>
+            <h3
+              className="text-sm font-semibold mb-3"
+              style={{ color: "var(--muted)" }}
+            >
               Life Aspects
             </h3>
             <div className="flex  justify-around gap-2">
-              <AspectChip icon={<BiDumbbell className="w-4 h-4" />} value={activityData?.xp_distribution.physique ?? 0} tint="physique" />
-              <AspectChip icon={<BoltIcon className="w-4 h-4" />} value={activityData?.xp_distribution.energy ?? 0} tint="energy" />
-              <AspectChip icon={<UsersIcon className="w-4 h-4" />} value={activityData?.xp_distribution.social ?? 0} tint="social" />
-              <AspectChip icon={<FaBrain className="w-4 h-4" />} value={activityData?.xp_distribution.creativity ?? 0} tint="creativity" />
-              <AspectChip icon={<FaHammer className="w-4 h-4" />} value={activityData?.xp_distribution.logic ?? 0} tint="logic" />
+              <AspectChip
+                icon={<BiDumbbell className="w-4 h-4" />}
+                value={activityData?.xp_distribution.physique ?? 0}
+                tint="physique"
+              />
+              <AspectChip
+                icon={<BoltIcon className="w-4 h-4" />}
+                value={activityData?.xp_distribution.energy ?? 0}
+                tint="energy"
+              />
+              <AspectChip
+                icon={<UsersIcon className="w-4 h-4" />}
+                value={activityData?.xp_distribution.social ?? 0}
+                tint="social"
+              />
+              <AspectChip
+                icon={<FaBrain className="w-4 h-4" />}
+                value={activityData?.xp_distribution.creativity ?? 0}
+                tint="creativity"
+              />
+              <AspectChip
+                icon={<FaHammer className="w-4 h-4" />}
+                value={activityData?.xp_distribution.logic ?? 0}
+                tint="logic"
+              />
             </div>
           </div>
 
           {liveSessions && liveSessions.length > 0 && (
             <>
               <div className="flex justify-between">
-                <h2 className="text-xl font-bold my-4 text-foreground dark:text-[var(--foreground)]">Currently Live</h2>
+                <h2 className="text-xl font-bold my-4 text-foreground dark:text-[var(--foreground)]">
+                  Currently Live
+                </h2>
               </div>
               <div className="flex flex-wrap mb-6 gap-3">
                 {liveSessions.map((session) => (
@@ -1147,7 +1222,9 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                     userProfile={session.userProfile}
                     totalDurationSeconds={session.totalDurationSeconds}
                     onClick={() =>
-                      router.push(`/goals/${session.goalId}/session/${session._id}`)
+                      router.push(
+                        `/goals/${session.goalId}/session/${session._id}`,
+                      )
                     }
                   />
                 ))}
@@ -1173,12 +1250,14 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                   </p>
                 </div>
               </div>
-          )}
+            )}
 
           {!sessionsLoading && friendsSessions.length > 0 && (
             <>
               <div className="flex justify-between">
-                <h2 className="text-xl font-bold my-4 text-foreground dark:text-[var(--foreground)]">Friends&apos; {activityData?.name} Sessions</h2>
+                <h2 className="text-xl font-bold my-4 text-foreground dark:text-[var(--foreground)]">
+                  Friends&apos; {activityData?.name} Sessions
+                </h2>
               </div>
               <div className="space-y-3 mb-6">
                 {friendsSessions.map((session) => (
@@ -1196,7 +1275,9 @@ const [isModalOpen, setIsModalOpen] = useState(false);
           {!sessionsLoading && mySessions.length > 0 && (
             <>
               <div className="flex justify-between">
-                <h2 className="text-xl font-bold my-4 text-foreground dark:text-[var(--foreground)]">Your Sessions</h2>
+                <h2 className="text-xl font-bold my-4 text-foreground dark:text-[var(--foreground)]">
+                  Your Sessions
+                </h2>
               </div>
               <div className="space-y-3 mb-6">
                 {mySessions.map((session) => (
@@ -1211,154 +1292,154 @@ const [isModalOpen, setIsModalOpen] = useState(false);
             </>
           )}
 
-          <ActivityLeaderboard users={leaderboard} activityName={activityData?.name} />
+          <ActivityLeaderboard
+            users={leaderboard}
+            activityName={activityData?.name}
+          />
         </div>
 
         {/* Desktop Layout - Two Column */}
         <div className="hidden lg:flex gap-6 px-6 py-6 dark:bg-dark-1">
           {/* Left Column - Main Content */}
           <div className="flex-1">
-
-            <div className="mb-6 flex justify-around bg-white dark:bg-dark-2 rounded-2xl px-4 py-6 border" style={{ borderColor: 'var(--border)' }}>
-            <div className="flex flex-col items-center justify-between">
-              <span className="text-lg font-bold text-foreground dark:text-[var(--foreground)]">{totalTimeSpent}</span>
-              <span className="text-sm" style={{ color: 'var(--muted)' }}>Time Spent</span>
-            </div>
-
-            <div className="w-px" style={{ backgroundColor: 'var(--border)' }} />
-
-            <div className="flex flex-col items-center justify-between">
-
-              <span className="text-lg font-bold text-foreground dark:text-[var(--foreground)]">{totalXP}</span>
-              <span className="text-sm" style={{ color: 'var(--muted)' }}>XP gained</span>
-            </div>
-
-            <div className="w-px" style={{ backgroundColor: 'var(--border)' }} />
-
-<div className="flex flex-col items-center justify-between">
-
-              <span className="text-lg font-bold text-foreground dark:text-[var(--foreground)]">{totalSessions}</span>
-              <span className="text-sm" style={{ color: 'var(--muted)' }}>Sessions</span>
-            </div>
-          
-            
-         
-          </div>
-         
-
-
-              {liveSessions && liveSessions.length > 0 && (
-              <>
-              <div className="flex justify-between">
-            <h2 className="text-xl font-bold my-6 text-foreground dark:text-[var(--foreground)]">Currently Live</h2>
-            <button className='bg-transparent font-medium text-sm cursor-pointer active:opacity-80 hover:opacity-90' style={{color: activityColor}}>
-              View more →
-            </button>
-            </div>
-            <div className="flex flex-wrap mb-2 gap-3">
-                {liveSessions.map((session) => (
-                  <LiveSessionCard
-                    key={session._id}
-                    status={session.status}
-                    goalTitle={session.goalTitle}
-                    activityType={session.activityType}
-                    activityEmoji={session.activityEmoji}
-                    username={session.username}
-                    userProfile={session.userProfile}
-                    totalDurationSeconds={session.totalDurationSeconds}
-                    onClick={() =>
-                      router.push(`/goals/${session.goalId}/session/${session._id}`)
-                    }
-                  />
-                ))}
+            <div
+              className="mb-6 flex justify-around bg-white dark:bg-dark-2 rounded-2xl px-4 py-6 border"
+              style={{ borderColor: "var(--border)" }}
+            >
+              <div className="flex flex-col items-center justify-between">
+                <span className="text-lg font-bold text-foreground dark:text-[var(--foreground)]">
+                  {totalTimeSpent}
+                </span>
+                <span className="text-sm" style={{ color: "var(--muted)" }}>
+                  Time Spent
+                </span>
               </div>
-              </>
-              )}
 
-{!sessionsLoading &&
-  leaderboard.length === 0 &&
-  mySessions.length === 0 &&
-  friendsSessions.length === 0 && (
-    <div
-      className="flex flex-col items-center justify-center text-center py-24 px-6 my-6 rounded-2xl "
-      style={{ borderColor: "var(--border)" }}
-    >
-      <div className="flex flex-col items-center text-center">
-  <div className="text-5xl">🌱</div>
+              <div
+                className="w-px"
+                style={{ backgroundColor: "var(--border)" }}
+              />
 
-          <div className="h-3" />
+              <div className="flex flex-col items-center justify-between">
+                <span className="text-lg font-bold text-foreground dark:text-[var(--foreground)]">
+                  {totalXP}
+                </span>
+                <span className="text-sm" style={{ color: "var(--muted)" }}>
+                  XP gained
+                </span>
+              </div>
 
-          <h3 className="text-sm font-bold">
-            No sessions yet
-          </h3>
+              <div
+                className="w-px"
+                style={{ backgroundColor: "var(--border)" }}
+              />
 
-          <div className="h-1.5" />
-
-          <p className="text-sm text-gray-500">
-            Be the first to log a session for this activity.
-          </p>
-</div>
-    </div>
-)}
-
-{!sessionsLoading && friendsSessions.length > 0 && (
-            <>
-            <div className="flex justify-between">
-            <h2 className="text-xl font-bold my-6 text-foreground dark:text-[var(--foreground)]">Friends&apos; {activityData?.name} Sessions</h2>
-            <button className='bg-transparent font-medium text-sm cursor-pointer active:opacity-80 hover:opacity-90' style={{color: activityColor}}>
-              View more →
-            </button>
+              <div className="flex flex-col items-center justify-between">
+                <span className="text-lg font-bold text-foreground dark:text-[var(--foreground)]">
+                  {totalSessions}
+                </span>
+                <span className="text-sm" style={{ color: "var(--muted)" }}>
+                  Sessions
+                </span>
+              </div>
             </div>
-            <div className="space-y-3">
-            
-                <div className="space-y-3">
-                  {friendsSessions.map((session) => (
-                    <FriendSessionItem
-                      key={session.id}
-                      {...session}
-                      accentColor={activityColor}
-                      onClick={() => handleOpenSessionPopup(session, false)}
+
+            {liveSessions && liveSessions.length > 0 && (
+              <>
+                <h2 className="text-xl font-bold my-6 text-foreground dark:text-[var(--foreground)]">
+                  Currently Live
+                </h2>
+                <div className="flex flex-wrap mb-2 gap-3">
+                  {liveSessions.map((session) => (
+                    <LiveSessionCard
+                      key={session._id}
+                      status={session.status}
+                      goalTitle={session.goalTitle}
+                      activityType={session.activityType}
+                      activityEmoji={session.activityEmoji}
+                      username={session.username}
+                      userProfile={session.userProfile}
+                      totalDurationSeconds={session.totalDurationSeconds}
+                      onClick={() =>
+                        router.push(
+                          `/goals/${session.goalId}/session/${session._id}`,
+                        )
+                      }
                     />
                   ))}
                 </div>
-              
-            </div>
-            </>
+              </>
             )}
 
-{!sessionsLoading && mySessions.length > 0 && (
- 
+            {!sessionsLoading &&
+              leaderboard.length === 0 &&
+              mySessions.length === 0 &&
+              friendsSessions.length === 0 && (
+                <div
+                  className="flex flex-col items-center justify-center text-center py-24 px-6 my-6 rounded-2xl "
+                  style={{ borderColor: "var(--border)" }}
+                >
+                  <div className="flex flex-col items-center text-center">
+                    <div className="text-5xl">🌱</div>
 
-  <>
-            <div className="flex justify-between">
-            <h2 className="text-xl font-bold my-6 text-foreground dark:text-[var(--foreground)]">Your Sessions</h2>
-            <button className='bg-transparent font-medium text-sm cursor-pointer active:opacity-80 hover:opacity-90' style={{color: activityColor}}>
-              View more →
-            </button>
-            </div>
-            <div className="space-y-3">
-            {mySessions.map((session) => (
-                <SessionItem
-                  key={session.id}
-                  {...session}
-                  accentColor={activityColor}
-                  onClick={() => handleOpenSessionPopup(session)}
-                />
+                    <div className="h-3" />
+
+                    <h3 className="text-sm font-bold">No sessions yet</h3>
+
+                    <div className="h-1.5" />
+
+                    <p className="text-sm text-gray-500">
+                      Be the first to log a session for this activity.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+            {!sessionsLoading && friendsSessions.length > 0 && (
+              <>
+                <h2 className="text-xl font-bold my-6 text-foreground dark:text-[var(--foreground)]">
+                  Friends&apos; {activityData?.name} Sessions
+                </h2>
+                <div className="space-y-3">
+                  <div className="space-y-3">
+                    {friendsSessions.map((session) => (
+                      <FriendSessionItem
+                        key={session.id}
+                        {...session}
+                        accentColor={activityColor}
+                        onClick={() => handleOpenSessionPopup(session, false)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {!sessionsLoading && mySessions.length > 0 && (
+              <>
+                <h2 className="text-xl font-bold my-6 text-foreground dark:text-[var(--foreground)]">
+                  Your Sessions
+                </h2>
+                <div className="space-y-3">
+                  {mySessions.map((session) => (
+                    <SessionItem
+                      key={session.id}
+                      {...session}
+                      accentColor={activityColor}
+                      onClick={() => handleOpenSessionPopup(session)}
+                    />
                   ))}
-             
-            </div>
-
-
-         
-          </>
- )}
-         
-            </div>
+                </div>
+              </>
+            )}
+          </div>
 
           {/* Right Sidebar - Desktop Only */}
-          <div style={{width:"450px"}} className="flex-shrink-0">
-            <div className=" space-y-6 mb-6 bg-white dark:bg-dark-2 rounded-2xl p-6 border" style={{ borderColor: 'var(--border)' }}>
-              
+          <div style={{ width: "450px" }} className="flex-shrink-0">
+            <div
+              className=" space-y-6 mb-6 bg-white dark:bg-dark-2 rounded-2xl p-6 border"
+              style={{ borderColor: "var(--border)" }}
+            >
               <div className="w-full h-[220px]">
                 <RadarChart
                   data={radarData}
@@ -1368,41 +1449,50 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                 />
               </div>
 
-               {/* Aspect Chips */}
+              {/* Aspect Chips */}
               <div>
-               
                 <div className="flex  justify-around gap-2">
-                  <AspectChip icon={<BiDumbbell className="w-4 h-4" />} value={activityData?.xp_distribution.physique ?? 0} tint="physique" />
-                  <AspectChip icon={<BoltIcon className="w-4 h-4" />} value={activityData?.xp_distribution.energy ?? 0} tint="energy" />
-                  <AspectChip icon={<UsersIcon className="w-4 h-4" />} value={activityData?.xp_distribution.social ?? 0} tint="social" />
-                  <AspectChip icon={<FaBrain className="w-4 h-4" />} value={activityData?.xp_distribution.creativity ?? 0} tint="creativity" />
-                  <AspectChip icon={<FaHammer className="w-4 h-4" />} value={activityData?.xp_distribution.logic ?? 0} tint="logic" />
+                  <AspectChip
+                    icon={<BiDumbbell className="w-4 h-4" />}
+                    value={activityData?.xp_distribution.physique ?? 0}
+                    tint="physique"
+                  />
+                  <AspectChip
+                    icon={<BoltIcon className="w-4 h-4" />}
+                    value={activityData?.xp_distribution.energy ?? 0}
+                    tint="energy"
+                  />
+                  <AspectChip
+                    icon={<UsersIcon className="w-4 h-4" />}
+                    value={activityData?.xp_distribution.social ?? 0}
+                    tint="social"
+                  />
+                  <AspectChip
+                    icon={<FaBrain className="w-4 h-4" />}
+                    value={activityData?.xp_distribution.creativity ?? 0}
+                    tint="creativity"
+                  />
+                  <AspectChip
+                    icon={<FaHammer className="w-4 h-4" />}
+                    value={activityData?.xp_distribution.logic ?? 0}
+                    tint="logic"
+                  />
                 </div>
               </div>
-              
-
-
-
-
-              
 
               {/* Description */}
 
-                <p className="text-md text-foreground dark:text-[var(--foreground)]">
-                  {activityData?.description}
-                </p>
-
-
-             
+              <p className="text-md text-foreground dark:text-[var(--foreground)]">
+                {activityData?.description}
+              </p>
 
               {/* Complete Goal Button */}
-
-             
-
             </div>
-           <ActivityLeaderboard users={leaderboard} activityName={activityData?.name} />
+            <ActivityLeaderboard
+              users={leaderboard}
+              activityName={activityData?.name}
+            />
           </div>
-          
         </div>
       </div>
 

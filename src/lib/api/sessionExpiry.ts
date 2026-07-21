@@ -3,16 +3,19 @@ import { supabase } from "@/src/lib/supabase";
 /**
  * Global dead-session watchdog.
  *
- * The API proxies refresh tokens server-side, so a 401 that reaches browser
- * code means the session is genuinely unrecoverable (revoked, user deleted,
- * signing key rotated, ...). Without this, a dead session leaves the app
- * stuck on skeletons instead of returning the user to the login page.
+ * Every shared fetch helper already forces one token refresh and retries
+ * before calling report401() — the same-origin /api/* proxies refresh
+ * server-side, and the direct-to-Django helpers (authedFetch, goalsFetch)
+ * refresh via refreshBrowserSession(). So a 401 that reaches this function has
+ * already survived a refresh-and-retry, meaning the session is very likely
+ * genuinely unrecoverable (revoked, user deleted, signing key rotated, ...).
+ * Without this, a dead session leaves the app stuck on skeletons instead of
+ * returning the user to the login page.
  *
- * Call report401() from every shared fetch helper whenever a response comes
- * back 401. Once THRESHOLD 401s land within WINDOW_MS, the Supabase session
- * is cleared and the browser hard-navigates to the login page. The threshold
- * keeps a single transient 401 (e.g. a race during token refresh) from
- * logging the user out.
+ * Once THRESHOLD post-retry 401s land within WINDOW_MS, both session stores
+ * are cleared and the browser hard-navigates to the login page. The threshold
+ * still absorbs a lone straggler (e.g. one request that lost the refresh race)
+ * so a recoverable blip never logs the user out.
  */
 
 const WINDOW_MS = 30_000;
@@ -49,6 +52,18 @@ export async function forceLogout(): Promise<void> {
   } catch {
     // Even if sign-out fails (e.g. auth server unreachable), still redirect —
     // the session is unusable either way.
+  }
+
+  try {
+    // The SDK's signOut only clears the localStorage session (and cookies it
+    // manages). The httpOnly sb-access-token / sb-refresh-token cookies are
+    // set server-side and survive otherwise, so /api/auth/me would keep
+    // reporting the user as authenticated and the login page would bounce them
+    // straight back — "logged out but no login screen". Clear them too.
+    await fetch("/api/auth/logout-supabase", { method: "POST", cache: "no-store" });
+  } catch {
+    // Redirect regardless — the cookies will also be cleared on the next
+    // /api/auth/me 401 path.
   }
 
   window.location.href = "/users/login";

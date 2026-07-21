@@ -1,5 +1,6 @@
 import { supabase } from "@/src/lib/supabase";
 import { report401 } from "@/src/lib/api/sessionExpiry";
+import { refreshBrowserSession } from "@/src/lib/auth/refreshBrowserSession";
 
 export interface Goal {
   id: string;
@@ -123,16 +124,33 @@ async function goalsFetch(input: RequestInfo | URL, init: RequestInit = {}) {
     data: { session },
   } = await supabase.auth.getSession();
   const headers = new Headers(init.headers);
+  const callerSetAuth = headers.has("Authorization");
 
-  if (session?.access_token && !headers.has("Authorization")) {
+  if (session?.access_token && !callerSetAuth) {
     headers.set("Authorization", `Bearer ${session.access_token}`);
   }
 
-  const res = await fetch(input, {
+  let res = await fetch(input, {
     ...init,
     headers,
     cache: init.cache ?? "no-store",
   });
+
+  // A 401 here is usually a just-expired access token, not a dead session.
+  // Force one refresh and retry before reporting, so this direct-to-Django
+  // path self-heals instead of tripping the logout watchdog on a transient.
+  if (res.status === 401 && !callerSetAuth) {
+    const newAccess = await refreshBrowserSession();
+    if (newAccess) {
+      headers.set("Authorization", `Bearer ${newAccess}`);
+      res = await fetch(input, {
+        ...init,
+        headers,
+        cache: init.cache ?? "no-store",
+      });
+    }
+  }
+
   if (res.status === 401) report401();
   return res;
 }
