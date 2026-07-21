@@ -25,6 +25,17 @@ interface PageProps {
   params: Promise<{ username: string }>;
 }
 
+function formatMemberSince(dateString: string) {
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return null;
+
+  return date.toLocaleDateString("en-GB", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
 import Achievement from "@/src/components/profile/Achievement";
 import DefaultUserProfilePicture from "@/src/components/profile/DefaultUserProfilePicture";
 import FollowersFollowingPopup from "@/src/components/profile/FollowersFollowingPopup";
@@ -63,7 +74,7 @@ type UserPost = {
 export default function ProfilePage({ params }: PageProps) {
   const { username } = use(params);
   const router = useRouter();
-  const { me, session, loading: authLoading } = useAuth();
+  const { me, session, supabaseUser, loading: authLoading } = useAuth();
   const { openMasteryPopup } = usePopup();
   const queryClient = useQueryClient();
 
@@ -171,6 +182,14 @@ export default function ProfilePage({ params }: PageProps) {
   const profileUser = (usersData?.profileData as UserProfile | null) ?? null;
   const currentUser = (usersData?.currentData as UserProfile | null) ?? null;
   const isLoading = authLoading || usersQueryLoading;
+  const accountCreatedAt =
+    profileUser?.joined_date ??
+    (profileUser?.username === me?.username
+      ? me?.created_at ?? supabaseUser?.created_at
+      : null);
+  const memberSinceDate = accountCreatedAt
+    ? formatMemberSince(accountCreatedAt)
+    : null;
 
   // isFollowing/followersCount/followingCount are optimistically mutated by
   // handleFollow/handleUnfollow below, so they stay local state — re-synced
@@ -316,18 +335,6 @@ export default function ProfilePage({ params }: PageProps) {
     staleTime: 3 * 60 * 1000,
     gcTime: 15 * 60 * 1000,
   });
-
-  // Format member since date
-  const formatMemberSince = (dateString: string) => {
-    const date = new Date(dateString);
-    if (Number.isNaN(date.getTime())) return null;
-
-    return date.toLocaleDateString("en-GB", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
 
   const handleFollow = async () => {
     if (!profileUser) return;
@@ -1126,9 +1133,8 @@ export default function ProfilePage({ params }: PageProps) {
                     style={{ fontSize: "11px" }}
                     className="text-gray-500 dark:text-[var(--muted)]"
                   >
-                    {profileUser.joined_date &&
-                    formatMemberSince(profileUser.joined_date)
-                      ? `Member since ${formatMemberSince(profileUser.joined_date)}`
+                    {memberSinceDate
+                      ? `Member since ${memberSinceDate}`
                       : "Member since date unavailable"}
                   </p>
                 </span>

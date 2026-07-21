@@ -18,11 +18,19 @@ function normalizeProfileDates(payload: unknown) {
   }
 
   const profile = payload as Record<string, unknown>;
+  const account =
+    profile.user && typeof profile.user === "object" && !Array.isArray(profile.user)
+      ? (profile.user as Record<string, unknown>)
+      : null;
   const joinedDate =
     profile.joined_date ??
     profile.date_joined ??
     profile.created_at ??
-    profile.createdAt;
+    profile.createdAt ??
+    account?.joined_date ??
+    account?.date_joined ??
+    account?.created_at ??
+    account?.createdAt;
 
   return joinedDate
     ? { ...profile, joined_date: joinedDate }

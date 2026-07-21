@@ -11,6 +11,7 @@ type Me = {
   email: string;
   fullname?: string;
   profile_picture?: string | null;
+  created_at?: string | null;
 };
 
 type AuthContextType = {
@@ -81,6 +82,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email: data.email,
         fullname: data.fullname,
         profile_picture: data.profile_picture ?? null,
+        created_at:
+          data.joined_date ?? data.date_joined ?? data.created_at ?? data.createdAt ?? null,
       });
     } catch (err) {
       console.error("refreshMe failed:", err);
