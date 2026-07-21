@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/src/context/AuthContext";
+import { syncTimezoneInBackground } from "@/src/lib/utils/syncTimezone";
 import { useTheme } from "next-themes";
 import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
@@ -21,6 +22,12 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       router.push("/users/login");
     }
   }, [session, loading, router, pathname]);
+
+  useEffect(() => {
+    if (!loading && session) {
+      syncTimezoneInBackground();
+    }
+  }, [session, loading]);
 
   // Show loading state while checking auth
   if (loading) {
