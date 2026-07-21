@@ -670,7 +670,10 @@ useEffect(() => {
   const sessionStatus = session?.status;
   useEffect(() => {
     if (sessionStatus === "completed" && sessionSynced && sessionId && !isSyncing) {
-      router.push(`/goals/${goalId}/session/${sessionId}/reflection`);
+      // Remove the completed timer page from the history entry. Otherwise,
+      // pressing Back from the summary returns here and immediately redirects
+      // to the summary again.
+      router.replace(`/goals/${goalId}/session/${sessionId}/reflection`);
     }
   }, [sessionStatus, sessionSynced, sessionId, goalId, isSyncing, router]);
 
@@ -894,7 +897,9 @@ useEffect(() => {
         duration_seconds: finalStats.totalDurationSeconds,
         focused_seconds: finalStats.focusedDurationSeconds,
       });
-      router.push(`/goals/${goalId}/session/${sessionId}/reflection`);
+      // The completed timer must not remain directly behind the summary in
+      // browser history, or Back creates a timer -> summary redirect loop.
+      router.replace(`/goals/${goalId}/session/${sessionId}/reflection`);
     } catch (err) {
       console.error("Failed to complete session:", err);
       posthog.captureException(err);
