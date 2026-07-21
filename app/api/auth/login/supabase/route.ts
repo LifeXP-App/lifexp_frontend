@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { getAuthCookieOptions } from "@/src/lib/auth/sessionCookies";
 
 /**
  * Login via Supabase + Django integration
@@ -101,23 +102,12 @@ export async function POST(req: Request) {
     });
 
     // Store the Supabase JWT in httpOnly cookie (similar to Django pattern)
-    response.cookies.set("sb-access-token", accessToken, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: false, // localhost dev
-      path: "/",
-      maxAge: 60 * 60 * 24 * 30, // 30 days
-    });
+    const cookieOptions = getAuthCookieOptions();
+    response.cookies.set("sb-access-token", accessToken, cookieOptions);
 
     // Also store refresh token
     if (session.refresh_token) {
-      response.cookies.set("sb-refresh-token", session.refresh_token, {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: false,
-        path: "/",
-        maxAge: 60 * 60 * 24 * 30,
-      });
+      response.cookies.set("sb-refresh-token", session.refresh_token, cookieOptions);
     }
 
     return response;

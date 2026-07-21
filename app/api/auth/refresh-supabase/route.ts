@@ -1,11 +1,12 @@
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { getAuthCookieOptions } from "@/src/lib/auth/sessionCookies";
 
 /**
  * Refresh Supabase session and get new access token
  */
-export async function POST(req: Request) {
+export async function POST() {
   try {
     const cookieStore = await cookies();
     const refreshToken = cookieStore.get("sb-refresh-token")?.value;
@@ -33,22 +34,11 @@ export async function POST(req: Request) {
     const { session } = data;
     const response = NextResponse.json({ ok: true });
 
-    response.cookies.set("sb-access-token", session.access_token, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: false,
-      path: "/",
-      maxAge: 60 * 60 * 24 * 30,
-    });
+    const cookieOptions = getAuthCookieOptions();
+    response.cookies.set("sb-access-token", session.access_token, cookieOptions);
 
     if (session.refresh_token) {
-      response.cookies.set("sb-refresh-token", session.refresh_token, {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: false,
-        path: "/",
-        maxAge: 60 * 60 * 24 * 30,
-      });
+      response.cookies.set("sb-refresh-token", session.refresh_token, cookieOptions);
     }
 
     return response;

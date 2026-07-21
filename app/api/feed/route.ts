@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthToken } from "@/src/lib/auth/getAuthToken";
 import { refreshTokens } from "@/src/lib/auth/refreshTokens";
 import { sharedRefresh } from "@/src/lib/auth/refreshLock";
+import { getAuthCookieOptions } from "@/src/lib/auth/sessionCookies";
 
 async function safeJson(res: Response) {
   const text = await res.text();
@@ -76,21 +77,12 @@ export async function GET(req: Request) {
       const out = NextResponse.json(data, { status: res.status });
 
       // update access cookie
-      out.cookies.set("sb-access-token", tokens.access, {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
-        path: "/",
-      });
+      const cookieOptions = getAuthCookieOptions();
+      out.cookies.set("sb-access-token", tokens.access, cookieOptions);
 
       // rotate refresh if returned
       if (tokens.refresh) {
-        out.cookies.set("sb-refresh-token", tokens.refresh, {
-          httpOnly: true,
-          sameSite: "lax",
-          secure: process.env.NODE_ENV === "production",
-          path: "/",
-        });
+        out.cookies.set("sb-refresh-token", tokens.refresh, cookieOptions);
       }
 
       return out;

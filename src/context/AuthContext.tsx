@@ -14,6 +14,8 @@ type Me = {
   created_at?: string | null;
 };
 
+type AuthStatus = "loading" | "authenticated" | "unauthenticated" | "error";
+
 type AuthContextType = {
   // Player data from Django
   me: Me | null;
@@ -24,6 +26,7 @@ type AuthContextType = {
 
   // Loading states
   loading: boolean;
+  authStatus: AuthStatus;
 
   // Actions
   refreshMe: () => Promise<void>;
@@ -49,6 +52,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [supabaseUser, setSupabaseUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authStatus, setAuthStatus] = useState<AuthStatus>("loading");
+
+  /**
+   * Keep the cookie-backed server session on the exact same token generation
+   * as the browser SDK. Supabase access tokens are intentionally short-lived;
+   * every browser refresh must therefore rotate the server cookies too.
+   */
+  const syncServerSession = useCallback(async (currentSession: Session) => {
+    try {
+      const res = await fetch("/api/auth/set-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          access_token: currentSession.access_token,
+          refresh_token: currentSession.refresh_token,
+        }),
+        cache: "no-store",
+      });
+
+      return res.ok;
+    } catch (err) {
+      console.error("Failed to sync server auth session:", err);
+      return false;
+    }
+  }, []);
 
   /**
    * Fetch Player data from Django backend using Supabase session token
@@ -68,10 +96,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (!res.ok) {
-        if (res.status !== 401) {
+        if (res.status === 401) {
+          setMe(null);
+          setAuthStatus("unauthenticated");
+        } else {
           console.error("Failed to fetch player data:", res.status);
+          // Do not destroy a known-good session because the API had a
+          // temporary outage. During bootstrap, hold on an error screen rather
+          // than misrepresenting a 5xx as a logout.
+          setAuthStatus((current) =>
+            current === "authenticated" ? current : "error"
+          );
         }
-        setMe(null);
         return;
       }
 
@@ -85,9 +121,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         created_at:
           data.joined_date ?? data.date_joined ?? data.created_at ?? data.createdAt ?? null,
       });
+      setAuthStatus("authenticated");
     } catch (err) {
       console.error("refreshMe failed:", err);
-      setMe(null);
+      setAuthStatus((current) =>
+        current === "authenticated" ? current : "error"
+      );
     }
   }, []);
 
@@ -95,35 +134,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * Sign in with email and password
    */
   const signIn = useCallback(async (email: string, password: string) => {
-    // Call the server-side route handler so it can set the httpOnly sb-access-token cookie.
-    // The browser SDK alone only puts the token in localStorage, which server route handlers can't read.
-    const res = await fetch("/api/auth/login/supabase", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      return { error: { message: data.error || "Login failed" } };
-    }
-
-    // Also initialize the browser SDK session so onAuthStateChange fires
-    // and any client-side Supabase queries work.
-    const { error: sessionError } = await supabase.auth.signInWithPassword({
+    // Create exactly one Supabase session. Previously this signed in once via
+    // the Next.js route and a second time in the browser. With "single session
+    // per user" enabled, the second sign-in revoked the refresh token stored
+    // by the first; its access token kept working until expiry and then every
+    // server API call collapsed into 401s.
+    const { data: browserData, error: sessionError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    if (!sessionError) {
-      await refreshMe();
-      posthog.identify(email, { email });
-      posthog.capture("user_signed_in", { email, method: "email" });
+    if (sessionError || !browserData.session) {
+      return { error: sessionError ?? { message: "Authentication failed" } };
     }
 
-    return { error: sessionError ?? null };
-  }, [refreshMe]);
+    const synced = await syncServerSession(browserData.session);
+    if (!synced) {
+      await supabase.auth.signOut();
+      return { error: { message: "Login succeeded, but the session could not be persisted." } };
+    }
+
+    await refreshMe();
+    posthog.identify(email, { email });
+    posthog.capture("user_signed_in", { email, method: "email" });
+
+    return { error: null };
+  }, [refreshMe, syncServerSession]);
 
   /**
    * Sign up with email and password
@@ -164,7 +200,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * Sign in with Google OAuth
    */
   const signInWithGoogle = useCallback(async () => {
-    const { data, error } = await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
@@ -223,37 +259,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setMe(null);
     setSession(null);
     setSupabaseUser(null);
-    window.location.href = "/users/login";
+    window.location.replace("/users/login");
   }, []);
 
   /**
    * Initialize auth state and listen for changes
    */
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
+    let active = true;
+
+    const initialize = async () => {
+      const { data: { session: initialSession } } = await supabase.auth.getSession();
+      if (!active) return;
+
       setSession(initialSession);
       setSupabaseUser(initialSession?.user ?? null);
 
-      // Always resolve `me` from the cookie-backed proxy, even when the browser
-      // SDK has no localStorage session — the httpOnly cookie may still be a
-      // valid session. The proxy returns 401 (→ me = null) when truly signed out.
-      refreshMe().finally(() => setLoading(false));
-    });
+      // getSession() refreshes an old browser token when necessary. Mirror that
+      // fresh generation into the server cookies before any protected page is
+      // allowed to mount and start its API queries.
+      if (initialSession) {
+        await syncServerSession(initialSession);
+      }
+
+      await refreshMe();
+      if (active) setLoading(false);
+    };
+
+    void initialize();
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, currentSession) => {
+      async (event, currentSession) => {
+        // initialize() owns the first reconciliation, avoiding two competing
+        // /auth/me requests during React's initial mount.
+        if (event === "INITIAL_SESSION") return;
+
         setSession(currentSession);
         setSupabaseUser(currentSession?.user ?? null);
 
-        if (_event === "SIGNED_OUT") {
+        if (event === "SIGNED_OUT") {
           // Explicit sign-out — the cookie is cleared server-side; don't re-fetch.
           setMe(null);
+          setAuthStatus("unauthenticated");
         } else {
-          // Login, token refresh, or initial session: resolve `me` from the
-          // cookie-backed proxy (not gated on the SDK localStorage session).
-          await refreshMe();
+          // SIGNED_IN and TOKEN_REFRESHED must update the HttpOnly copy before
+          // the next API request. This is what keeps an indefinite rolling
+          // session healthy across access-token rotations.
+          if (currentSession) {
+            await syncServerSession(currentSession);
+            await refreshMe();
+          }
         }
 
         setLoading(false);
@@ -261,9 +317,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
 
     return () => {
+      active = false;
       subscription.unsubscribe();
     };
-  }, [refreshMe]);
+  }, [refreshMe, syncServerSession]);
 
   const value = useMemo<AuthContextType>(
     () => ({
@@ -271,6 +328,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       session,
       supabaseUser,
       loading,
+      authStatus,
       refreshMe,
       logout,
       signIn,
@@ -283,6 +341,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       session,
       supabaseUser,
       loading,
+      authStatus,
       refreshMe,
       logout,
       signIn,

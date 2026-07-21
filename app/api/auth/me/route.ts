@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { refreshTokens } from "@/src/lib/auth/refreshTokens";
 import { sharedRefresh } from "@/src/lib/auth/refreshLock";
+import { getAuthCookieOptions } from "@/src/lib/auth/sessionCookies";
 
 const projectRef = (() => {
   try {
@@ -100,20 +101,11 @@ export async function GET() {
       status: res.status,
     });
 
-    out.cookies.set("sb-access-token", tokens.access, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-    });
+    const cookieOptions = getAuthCookieOptions();
+    out.cookies.set("sb-access-token", tokens.access, cookieOptions);
 
     if (tokens.refresh) {
-      out.cookies.set("sb-refresh-token", tokens.refresh, {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
-        path: "/",
-      });
+      out.cookies.set("sb-refresh-token", tokens.refresh, cookieOptions);
     }
 
     return removeDuplicateAuthCookies(out);
