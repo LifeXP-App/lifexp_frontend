@@ -1,13 +1,20 @@
 "use client";
 
 import { useAuth } from "@/src/context/AuthContext";
+import { useTheme } from "next-themes";
 import { useRouter, usePathname } from "next/navigation";
-import { useEffect } from "react";
+import Image from "next/image";
+import { useEffect, useState } from "react";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const { theme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  /* eslint-disable-next-line react-hooks/set-state-in-effect */
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     if (!loading && !session) {
@@ -17,12 +24,22 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   // Show loading state while checking auth
   if (loading) {
+    const isDark = mounted && (resolvedTheme === "dark" || theme === "dark");
+    const logoSrc = isDark ? "/logodark.png" : "/logolight.png";
+
     return (
       <div className="flex h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
+        {mounted && (
+          <Image
+            src={logoSrc}
+            alt="GamiLife"
+            width={100}
+            height={100}
+            unoptimized
+            priority
+            className="w-32 h-32 animate-[pulse_3s_ease-in-out_infinite]"
+          />
+        )}
       </div>
     );
   }
