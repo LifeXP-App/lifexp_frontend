@@ -208,6 +208,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     posthog.capture("user_logged_out");
     posthog.reset();
     await supabase.auth.signOut();
+    try {
+      // signOut() only clears the localStorage session. Clear the server-set
+      // httpOnly sb-access-token / sb-refresh-token cookies too, otherwise
+      // /api/auth/me still sees a valid session and the login page bounces the
+      // user back in.
+      await fetch("/api/auth/logout-supabase", { method: "POST", cache: "no-store" });
+    } catch {
+      // Redirect regardless.
+    }
     setMe(null);
     setSession(null);
     setSupabaseUser(null);
