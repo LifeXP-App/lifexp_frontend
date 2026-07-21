@@ -26,6 +26,38 @@ function removeDuplicateAuthCookies(response: NextResponse) {
   return response;
 }
 
+async function getAccountCreatedAt(accessToken: string) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !anonKey) return null;
+
+  try {
+    const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      headers: {
+        apikey: anonKey,
+        Authorization: `Bearer ${accessToken}`,
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) return null;
+
+    const account = (await response.json()) as { created_at?: unknown };
+    return typeof account.created_at === "string" ? account.created_at : null;
+  } catch {
+    return null;
+  }
+}
+
+function withAccountCreatedAt(data: unknown, createdAt: string | null) {
+  if (!data || typeof data !== "object" || Array.isArray(data) || !createdAt) {
+    return data;
+  }
+
+  return { ...(data as Record<string, unknown>), created_at: createdAt };
+}
+
 export async function GET() {
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -63,7 +95,10 @@ export async function GET() {
     });
 
     const data = await res.json();
-    const out = NextResponse.json(data, { status: res.status });
+    const createdAt = await getAccountCreatedAt(tokens.access);
+    const out = NextResponse.json(withAccountCreatedAt(data, createdAt), {
+      status: res.status,
+    });
 
     out.cookies.set("sb-access-token", tokens.access, {
       httpOnly: true,
@@ -85,7 +120,10 @@ export async function GET() {
   }
 
   const data = await res.json();
+  const createdAt = await getAccountCreatedAt(access);
   return removeDuplicateAuthCookies(
-    NextResponse.json(data, { status: res.status })
+    NextResponse.json(withAccountCreatedAt(data, createdAt), {
+      status: res.status,
+    })
   );
 }
