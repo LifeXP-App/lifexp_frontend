@@ -11,7 +11,7 @@ import {
   type User,
   type UsersSearchResult,
 } from "@/lib/api/search";
-import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type SearchType = "global" | "posts" | "users" | "activities";
@@ -107,6 +107,11 @@ export function useSearch(options: UseSearchOptions) {
     // search within a minute is a cache hit instead of a new request.
     staleTime: 60 * 1000,
     gcTime: 5 * 60 * 1000,
+    // The query key changes on every keystroke (it embeds debouncedQuery),
+    // which React Query otherwise treats as a brand new query with no data —
+    // this keeps the previous query's results on screen while the new one
+    // fetches, instead of flashing back to empty/skeleton each time.
+    placeholderData: keepPreviousData,
   });
 
   // ── Single-domain paginated search (posts/users/activities) ──
@@ -130,6 +135,9 @@ export function useSearch(options: UseSearchOptions) {
     enabled: enabled && searchType !== "global",
     staleTime: 60 * 1000,
     gcTime: 5 * 60 * 1000,
+    // Same reasoning as globalQuery above — keep showing the previous
+    // search term's results while the new term's first page loads.
+    placeholderData: keepPreviousData,
   });
 
   // Save to history once per (searchType, query) pair, only after results land —

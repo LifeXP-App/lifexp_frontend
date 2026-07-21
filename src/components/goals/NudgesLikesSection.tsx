@@ -1,10 +1,10 @@
 "use client";
 
 import { LiveAvatar } from "@/src/components/LiveAvatar";
-import { supabase } from "@/src/lib/supabase";
+import { useAuth } from "@/src/context/AuthContext";
+import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
 
 type InteractionType = "nudge" | "like";
 
@@ -32,76 +32,63 @@ type InteractionResponse = {
 };
 
 export function NudgesLikesSection() {
-  const [interactions, setInteractions] = useState<Interactions[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { session } = useAuth();
 
-  useEffect(() => {
-    const fetchInteractions = async () => {
-      try {
-        setLoading(true);
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+  // Cached via React Query (and persisted to localStorage by the app-wide
+  // persister in providers.tsx) so re-entering/reloading the goals page
+  // shows the last-seen interactions instantly instead of a skeleton every
+  // time, while still quietly refetching underneath.
+  const { data: interactions = [], isLoading: loading } = useQuery<Interactions[]>({
+    queryKey: ["goals", "recent-interactions"],
+    queryFn: async () => {
+      const res = await fetch("/api/goals/interactions/recent", {
+        headers: session?.access_token
+          ? { Authorization: `Bearer ${session.access_token}` }
+          : undefined,
+        cache: "no-store",
+      });
 
-        const res = await fetch("/api/goals/interactions/recent", {
-          headers: session?.access_token
-            ? { Authorization: `Bearer ${session.access_token}` }
-            : undefined,
-          cache: "no-store",
-        });
+      if (!res.ok) throw new Error("Failed to fetch interactions");
 
-        if (!res.ok) throw new Error("Failed to fetch interactions");
+      const data = await res.json();
 
-        const data = await res.json();
+      const results = Array.isArray(data.results) ? data.results : [];
+      return results.map((raw: InteractionResponse) => {
+        const actor =
+          raw.actor && typeof raw.actor === "object"
+            ? (raw.actor as Record<string, unknown>)
+            : null;
+        const goal =
+          raw.goal && typeof raw.goal === "object"
+            ? (raw.goal as Record<string, unknown>)
+            : null;
+        const type: InteractionType =
+          raw.interaction_type === "nudge" ? "nudge" : "like";
 
-        const results = Array.isArray(data.results) ? data.results : [];
-        const mapped: Interactions[] = results.map(
-          (raw: InteractionResponse) => {
-            const actor =
-              raw.actor && typeof raw.actor === "object"
-                ? (raw.actor as Record<string, unknown>)
-                : null;
-            const goal =
-              raw.goal && typeof raw.goal === "object"
-                ? (raw.goal as Record<string, unknown>)
-                : null;
-            const type: InteractionType =
-              raw.interaction_type === "nudge" ? "nudge" : "like";
-
-            return {
-              id: String(raw.id),
-              image:
-                typeof actor?.profile_picture === "string"
-                  ? actor.profile_picture
-                  : "",
-              username:
-                typeof actor?.username === "string"
-                  ? actor.username
-                  : "Unknown",
-              type,
-              goalTitle:
-                typeof goal?.title === "string" ? goal.title : undefined,
-              activityName: undefined,
-              date:
-                typeof raw.created_at === "string"
-                  ? formatTimeAgo(raw.created_at)
-                  : "",
-              href: typeof goal?.uid === "string" ? `/goals/${goal.uid}` : "#",
-              rounded: true,
-            };
-          },
-        );
-
-        setInteractions(mapped);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchInteractions();
-  }, []);
+        return {
+          id: String(raw.id),
+          image:
+            typeof actor?.profile_picture === "string"
+              ? actor.profile_picture
+              : "",
+          username:
+            typeof actor?.username === "string" ? actor.username : "Unknown",
+          type,
+          goalTitle: typeof goal?.title === "string" ? goal.title : undefined,
+          activityName: undefined,
+          date:
+            typeof raw.created_at === "string"
+              ? formatTimeAgo(raw.created_at)
+              : "",
+          href: typeof goal?.uid === "string" ? `/goals/${goal.uid}` : "#",
+          rounded: true,
+        } satisfies Interactions;
+      });
+    },
+    enabled: !!session?.access_token,
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
 
   return (
     <>

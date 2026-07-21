@@ -956,9 +956,9 @@ export default function GoalDetailPage() {
           style={{ borderColor: "var(--border)" }}
         >
           <div className="flex items-center justify-between px-6 py-4">
-            <button
+            <Link  href="/goals"
               className="p-2 -ml-2 cursor-pointer  rounded-lg transition-colors"
-              onClick={onBack}
+
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                 <path
@@ -969,7 +969,7 @@ export default function GoalDetailPage() {
                   strokeLinejoin="round"
                 />
               </svg>
-            </button>
+            </Link>
 
             <h1 className="text-xl font-bold flex-1 ml-2 text-foreground dark:text-[var(--foreground)]">
               {goal.username && goal.username !== me?.username ? (

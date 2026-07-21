@@ -3,10 +3,11 @@ import { useAuth } from "@/src/context/AuthContext";
 import { useSearch } from "@/src/lib/hooks/useSearch";
 import { useSearchHistory } from "@/src/lib/hooks/useSearchHistory";
 import { authedFetch } from "@/src/lib/api/authedFetch";
+import { useQuery } from "@tanstack/react-query";
 import { LiveAvatar } from "@/src/components/LiveAvatar";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import posthog from "posthog-js";
 import { CheckBadgeIcon } from "@heroicons/react/24/solid";
 
@@ -17,6 +18,7 @@ type DiscoverPost = {
   uid: string;
   title: string;
   content: string;
+  emoji?: string;
   post_image: string | null;
   created_at: string;
   user?: {
@@ -62,13 +64,71 @@ export default function SearchPage() {
   const [query, setQuery] = useState("");
   const searchCaptureTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Recent content state
-  const [recentPosts, setRecentPosts] = useState<DiscoverPost[]>([]);
-  const [recentUsers, setRecentUsers] = useState<DiscoverUser[]>([]);
-  const [recentActivities, setRecentActivities] = useState<DiscoverActivity[]>(
-    [],
-  );
-  const [loadingRecent, setLoadingRecent] = useState(true);
+  // Recent content — cached via React Query (and persisted to localStorage
+  // by the app-wide persister in providers.tsx) so re-entering the search
+  // page shows the last-seen "recent" content instantly instead of a
+  // skeleton every time, while still quietly refetching underneath.
+  const hasAccessToken = !authLoading && !!session?.access_token;
+
+  const { data: recentPosts = [], isLoading: postsRecentLoading } = useQuery({
+    queryKey: ["discover-posts"],
+    queryFn: async () => {
+      try {
+        const res = await authedFetch("/api/discover/posts", { cache: "no-store" });
+        if (!res.ok) return [] as DiscoverPost[];
+        const data = await res.json();
+        return (data.results || data.posts || []) as DiscoverPost[];
+      } catch (e) {
+        console.error("[SearchPage] Error loading recent posts:", e);
+        return [] as DiscoverPost[];
+      }
+    },
+    enabled: hasAccessToken,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+  });
+
+  // Same endpoint the home page's "Discover players" widget already caches
+  // under this key — reusing it means either page can serve the other an
+  // instant cache hit.
+  const { data: recentUsers = [], isLoading: usersRecentLoading } = useQuery({
+    queryKey: ["discover-users"],
+    queryFn: async () => {
+      try {
+        const res = await authedFetch("/api/discover/users", { cache: "no-store" });
+        if (!res.ok) return [] as DiscoverUser[];
+        const data = await res.json();
+        return (data.results || data.users || []) as DiscoverUser[];
+      } catch (e) {
+        console.error("[SearchPage] Error loading recent users:", e);
+        return [] as DiscoverUser[];
+      }
+    },
+    enabled: hasAccessToken,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+  });
+
+  const { data: recentActivities = [], isLoading: activitiesRecentLoading } = useQuery({
+    queryKey: ["discover-activities"],
+    queryFn: async () => {
+      try {
+        const res = await authedFetch("/api/discover/activities", { cache: "no-store" });
+        if (!res.ok) return [] as DiscoverActivity[];
+        const data = await res.json();
+        return (data.results || data.activities || []) as DiscoverActivity[];
+      } catch (e) {
+        console.error("[SearchPage] Error loading recent activities:", e);
+        return [] as DiscoverActivity[];
+      }
+    },
+    enabled: hasAccessToken,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+  });
+
+  const loadingRecent =
+    postsRecentLoading || usersRecentLoading || activitiesRecentLoading;
 
   // Determine search type based on active filters
   const searchType = useMemo(() => {
@@ -100,63 +160,6 @@ export default function SearchPage() {
     accessToken: session?.access_token ?? null,
   });
 
-  // Load recent content when component mounts
-  useEffect(() => {
-    if (authLoading) {
-      return;
-    }
-
-    if (!session?.access_token) {
-      setRecentPosts([]);
-      setRecentUsers([]);
-      setRecentActivities([]);
-      setLoadingRecent(false);
-      return;
-    }
-
-    let cancelled = false;
-
-    const loadRecentContent = async () => {
-      setLoadingRecent(true);
-
-      try {
-        const [p, u, a] = await Promise.all([
-          authedFetch("/api/discover/posts", { cache: "no-store" }),
-          authedFetch("/api/discover/users", { cache: "no-store" }),
-          authedFetch("/api/discover/activities", { cache: "no-store" }),
-        ]);
-
-        const postsData = await p.json();
-        const usersData = await u.json();
-        const activitiesData = await a.json();
-
-        if (cancelled) {
-          return;
-        }
-
-        // Handle paginated response format
-        setRecentPosts(p.ok ? postsData.results || postsData.posts || [] : []);
-        setRecentUsers(u.ok ? usersData.results || usersData.users || [] : []);
-        setRecentActivities(
-          a.ok ? activitiesData.results || activitiesData.activities || [] : [],
-        );
-      } catch (e) {
-        if (!cancelled) {
-          console.error("[SearchPage] Error loading recent content:", e);
-        }
-      } finally {
-        if (!cancelled) {
-          setLoadingRecent(false);
-        }
-      }
-    };
-
-    loadRecentContent();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [authLoading, session?.access_token]);
 
   // Filter results based on active filters
   const filteredResults = useMemo(() => {
@@ -483,14 +486,21 @@ export default function SearchPage() {
                         <Link
                           key={post.id}
                           href={`/goals/${post.uid}`}
-                          className="flex flex-col justify-between h-48 p-4 bg-gray-200 dark:bg-[var(--dark-2)] rounded-lg overflow-hidden hover:bg-gray-300 dark:hover:bg-[var(--dark-3)] transition-colors"
+                          className="flex flex-col h-48 p-4 bg-gray-200 dark:bg-[var(--dark-2)] rounded-lg overflow-hidden hover:bg-gray-300 dark:hover:bg-[var(--dark-3)] transition-colors"
                         >
-                          <p className="font-semibold text-gray-900 dark:text-[var(--foreground)] line-clamp-3">
-                            {post.title}
-                          </p>
-                          <p className="text-sm text-gray-600 dark:text-[var(--muted)] line-clamp-2">
-                            {post.content}
-                          </p>
+                          {post.emoji && (
+                            <div className="flex-1 flex items-center justify-center text-6xl">
+                              {post.emoji}
+                            </div>
+                          )}
+                          <div>
+                            <p className="font-semibold text-gray-900 dark:text-[var(--foreground)] line-clamp-3">
+                              {post.title}
+                            </p>
+                            <p className="text-sm text-gray-600 dark:text-[var(--muted)] line-clamp-2">
+                              {post.content}
+                            </p>
+                          </div>
                         </Link>
                       ),
                     )}

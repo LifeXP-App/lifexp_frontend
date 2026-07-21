@@ -637,7 +637,7 @@ export default function ProfilePage({ params }: PageProps) {
           User not found
         </h1>
         <p className="text-gray-500 dark:text-[var(--muted)]">
-          @{username} doesn&apos;t exist
+          @{username+" "}  doesn&apos;t exist
         </p>
       </main>
     );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@/src/context/AuthContext";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -123,7 +123,6 @@ export default function EditProfilePage() {
 
   /* ---------------- STATE ---------------- */
 
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
 
@@ -144,6 +143,7 @@ export default function EditProfilePage() {
   const [initialPreview, setInitialPreview] = useState("");
   const [profilePreview, setProfilePreview] = useState("");
   const userId = me?.id;
+  const username = me?.username;
 
   // popup
   const [showDiscardPopup, setShowDiscardPopup] = useState(false);
@@ -154,43 +154,46 @@ export default function EditProfilePage() {
     sessionRef.current = session;
   }, [session]);
 
+  // Cached via React Query (own key — /api/users/[id] returns a differently
+  // shaped payload than the /u/[username] page's ["profile-users", ...]
+  // entry, so it can't share that cache) so re-entering edit shows the
+  // last-known profile instantly instead of a skeleton every time.
+  const { data: profileData, isLoading: loading } = useQuery({
+    queryKey: ["edit-profile", username],
+    queryFn: async () => {
+      const res = await fetch(`/api/users/${userId}`, {
+        headers: sessionRef.current?.access_token
+          ? { Authorization: `Bearer ${sessionRef.current.access_token}` }
+          : undefined,
+        cache: "no-store",
+      });
+
+      if (!res.ok) throw new Error("Failed to fetch profile");
+
+      return res.json();
+    },
+    enabled: !authLoading && !!userId,
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
+
   useEffect(() => {
-    if (authLoading) return;
-    if (!userId) return;
+    if (!profileData) return;
 
-    const loadProfile = async () => {
-      try {
-        const res = await fetch(`/api/users/${userId}`, {
-          headers: sessionRef.current?.access_token
-            ? { Authorization: `Bearer ${sessionRef.current.access_token}` }
-            : undefined,
-          cache: "no-store",
-        });
-
-        if (!res.ok) return;
-
-        const data = await res.json();
-
-        const baseForm = {
-          username: data.username,
-          fullname: data.fullname || "",
-          title: data.title || "",
-          bio: data.bio || "",
-        };
-
-        setInitialForm(baseForm);
-        setForm(baseForm);
-
-        const pic = data.profile_picture || "/default_pfp.png";
-        setInitialPreview(pic);
-        setProfilePreview(pic);
-      } finally {
-        setLoading(false);
-      }
+    const baseForm = {
+      username: profileData.username,
+      fullname: profileData.fullname || "",
+      title: profileData.title || "",
+      bio: profileData.bio || "",
     };
 
-    loadProfile();
-  }, [authLoading, userId]);
+    setInitialForm(baseForm);
+    setForm(baseForm);
+
+    const pic = profileData.profile_picture || "/default_pfp.png";
+    setInitialPreview(pic);
+    setProfilePreview(pic);
+  }, [profileData]);
 
 
   const [profileFile, setProfileFile] = useState<File | null>(null);
@@ -303,6 +306,9 @@ export default function EditProfilePage() {
       // view of this profile (own profile page, home widget, goals sidebar)
       // all need to drop their now-stale copy.
       await refreshMe();
+      queryClient.invalidateQueries({
+        queryKey: ["edit-profile", me.username],
+      });
       queryClient.invalidateQueries({
         queryKey: ["profile-users", me.username, me.username],
       });

@@ -23,6 +23,7 @@ export interface Post {
   uid: string;
   title: string;
   content: string;
+  emoji?: string;
   post_image?: string;
   created_at: string;
   updated_at: string;
