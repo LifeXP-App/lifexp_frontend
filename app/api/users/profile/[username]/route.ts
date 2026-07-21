@@ -12,6 +12,23 @@ async function safeJson(res: Response) {
   }
 }
 
+function normalizeProfileDates(payload: unknown) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return payload;
+  }
+
+  const profile = payload as Record<string, unknown>;
+  const joinedDate =
+    profile.joined_date ??
+    profile.date_joined ??
+    profile.created_at ??
+    profile.createdAt;
+
+  return joinedDate
+    ? { ...profile, joined_date: joinedDate }
+    : profile;
+}
+
 async function authedFetch(url: string, options: RequestInit = {}) {
   const cookieStore = await cookies();
   const incomingHeaders = new Headers(options.headers);
@@ -61,7 +78,9 @@ export async function GET(
     },
   });
 
-  return NextResponse.json(await safeJson(res), {
+  const profile = normalizeProfileDates(await safeJson(res));
+
+  return NextResponse.json(profile, {
     status: res.status,
   });
 }

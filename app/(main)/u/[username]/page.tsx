@@ -320,7 +320,9 @@ export default function ProfilePage({ params }: PageProps) {
   // Format member since date
   const formatMemberSince = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
+    if (Number.isNaN(date.getTime())) return null;
+
+    return date.toLocaleDateString("en-GB", {
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -1124,10 +1126,10 @@ export default function ProfilePage({ params }: PageProps) {
                     style={{ fontSize: "11px" }}
                     className="text-gray-500 dark:text-[var(--muted)]"
                   >
-                    Member since{" "}
-                    {profileUser.joined_date
-                      ? formatMemberSince(profileUser.joined_date)
-                      : "Unknown"}
+                    {profileUser.joined_date &&
+                    formatMemberSince(profileUser.joined_date)
+                      ? `Member since ${formatMemberSince(profileUser.joined_date)}`
+                      : "Member since date unavailable"}
                   </p>
                 </span>
               </div>
