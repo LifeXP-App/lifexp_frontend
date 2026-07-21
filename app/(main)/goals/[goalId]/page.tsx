@@ -633,7 +633,10 @@ export default function GoalDetailPage() {
     setIsModalOpen(false);
   };
 
-  const onBack = () => window.history.back();
+  // Always leave goal details through the goals list. Using browser history
+  // here can return to a just-completed session/reflection route, whose
+  // completed-session redirect sends the user back there in a loop.
+  const onBack = () => router.replace("/goals");
 
   if (loading) {
   return (

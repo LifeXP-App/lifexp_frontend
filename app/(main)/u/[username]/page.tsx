@@ -183,27 +183,6 @@ export default function ProfilePage({ params }: PageProps) {
     setFollowingCount(usersData.profileData.following_count ?? 0);
   }, [usersData]);
 
-  const { data: userPosts = [], isLoading: postsLoading } = useQuery({
-    queryKey: ["profile-posts", username],
-    queryFn: async () => {
-      const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1`;
-      const response = await fetch(`${apiUrl}/users/${username}/posts/`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        cache: "no-store",
-      });
-
-      if (!response.ok) return [] as UserPost[];
-      const data = await response.json();
-      return (data.results || []) as UserPost[];
-    },
-    enabled: !!username,
-    staleTime: 3 * 60 * 1000,
-    gcTime: 15 * 60 * 1000,
-  });
-
   // Cleanup on unmount
   useEffect(() => {
     isMountedRef.current = true;
@@ -234,34 +213,39 @@ export default function ProfilePage({ params }: PageProps) {
     };
   }, []);
 
-  // Fetch weekly XP, recent sessions, and ongoing goals
-  const { data: profileStatsData, isLoading: dataLoading } = useQuery({
-    queryKey: ["profile-stats", username],
+  // Each profile section owns its request so a slower endpoint does not block
+  // otherwise-ready content from being shown.
+  const { data: ongoingGoals = [], isLoading: goalsLoading } = useQuery({
+    queryKey: ["profile-stats", username, "ongoing-goals"],
     queryFn: async () => {
-      const [weeklyRes, sessionsRes, goalsRes] = await Promise.all([
-        fetch(`/api/stats/weekly?username=${username}`, {
-          cache: "no-store",
-        }),
-        fetch(`/api/users/${username}/sessions?limit=5`, {
-          cache: "no-store",
-        }),
-        fetch(`/api/users/${username}/goals?status=ongoing`, {
-          cache: "no-store",
-        }),
-      ]);
+      const response = await fetch(
+        `/api/users/${username}/goals?status=ongoing`,
+        { cache: "no-store" },
+      );
+      if (!response.ok) return [] as Goal[];
+      const data = await response.json();
+      return (Array.isArray(data) ? data : data.results || []) as Goal[];
+    },
+    enabled: !!username && !authLoading && !!session?.access_token,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
 
-      // Process weekly XP
-      let weeklyXP: { date: string; xp: number }[] = [];
-      if (weeklyRes.ok) {
-        const weeklyData = await weeklyRes.json();
-        // Transform the daily_breakdown into array format for the chart
-        const dailyBreakdown = weeklyData.daily_breakdown || {};
-        const dates = Object.keys(dailyBreakdown).sort();
-        weeklyXP = dates.map((date) => {
+  const { data: weeklyXP = [], isLoading: weeklyXPLoading } = useQuery({
+    queryKey: ["profile-stats", username, "weekly-xp"],
+    queryFn: async () => {
+      const response = await fetch(`/api/stats/weekly?username=${username}`, {
+        cache: "no-store",
+      });
+      if (!response.ok) return [] as { date: string; xp: number }[];
+
+      const data = await response.json();
+      const dailyBreakdown = data.daily_breakdown || {};
+      return Object.keys(dailyBreakdown)
+        .sort()
+        .map((date) => {
           const dateObj = new Date(date);
-          const today = new Date();
-          const isToday = dateObj.toDateString() === today.toDateString();
-
+          const isToday = dateObj.toDateString() === new Date().toDateString();
           return {
             date: isToday
               ? "Today"
@@ -272,43 +256,29 @@ export default function ProfilePage({ params }: PageProps) {
             xp: dailyBreakdown[date].xp || 0,
           };
         });
-      }
-
-      // Process recent sessions
-      let recentSessions: Session[] = [];
-      if (sessionsRes.ok) {
-        const sessionsData = await sessionsRes.json();
-        recentSessions = Array.isArray(sessionsData)
-          ? sessionsData
-          : Array.isArray(sessionsData.results)
-            ? sessionsData.results
-            : [];
-      }
-
-      // Process ongoing goals
-      let ongoingGoals: Goal[] = [];
-      if (goalsRes.ok) {
-        const goalsData = await goalsRes.json();
-        ongoingGoals = Array.isArray(goalsData)
-          ? goalsData
-          : Array.isArray(goalsData.results)
-            ? goalsData.results
-            : [];
-      }
-
-      return { weeklyXP, recentSessions, ongoingGoals };
     },
     enabled: !!username && !authLoading && !!session?.access_token,
     staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
 
-  const weeklyXP = profileStatsData?.weeklyXP ?? [];
-  const recentSessions = profileStatsData?.recentSessions ?? [];
-  const ongoingGoals = profileStatsData?.ongoingGoals ?? [];
+  const { data: recentSessions = [], isLoading: sessionsLoading } = useQuery({
+    queryKey: ["profile-stats", username, "recent-sessions", 5],
+    queryFn: async () => {
+      const response = await fetch(`/api/users/${username}/sessions?limit=5`, {
+        cache: "no-store",
+      });
+      if (!response.ok) return [] as Session[];
+      const data = await response.json();
+      return (Array.isArray(data) ? data : data.results || []) as Session[];
+    },
+    enabled: !!username && !authLoading && !!session?.access_token,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
 
   // Fetch top activities (requires the numeric profile user id)
-  const { data: topActivities = [] } = useQuery({
+  const { data: topActivities = [], isLoading: topActivitiesLoading } = useQuery({
     queryKey: ["profile-top-activities", profileUser?.id],
     queryFn: async () => {
       const res = await fetch(
@@ -325,6 +295,25 @@ export default function ProfilePage({ params }: PageProps) {
     enabled: !authLoading && !!profileUser?.id && !!session?.access_token,
     // Top-activities ranking changes rarely — safe to cache generously.
     staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+  });
+
+  const { data: userPosts = [], isLoading: postsLoading } = useQuery({
+    queryKey: ["profile-posts", username],
+    queryFn: async () => {
+      const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1`;
+      const response = await fetch(`${apiUrl}/users/${username}/posts/`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+      });
+
+      if (!response.ok) return [] as UserPost[];
+      const data = await response.json();
+      return (data.results || []) as UserPost[];
+    },
+    enabled: !!username,
+    staleTime: 3 * 60 * 1000,
     gcTime: 15 * 60 * 1000,
   });
 
@@ -988,7 +977,14 @@ export default function ProfilePage({ params }: PageProps) {
                     Ongoing Goals
                   </h3>
                   <div className="flex gap-2 flex-wrap">
-                    {ongoingGoals.length > 0 ? (
+                    {goalsLoading ? (
+                      [1, 2, 3, 4].map((i) => (
+                        <span
+                          key={i}
+                          className="px-3 py-1.5 rounded-full bg-gray-200 dark:bg-dark-3 w-24 h-7 animate-pulse"
+                        />
+                      ))
+                    ) : ongoingGoals.length > 0 ? (
                       ongoingGoals.map((goal) => (
                         <span
                           key={goal.id || goal.uid}
@@ -1172,7 +1168,18 @@ export default function ProfilePage({ params }: PageProps) {
             </div>
 
             {/* WEEKLY XP CHART */}
-            <div className="p-4 sm:p-6 my-4 bg-white dark:bg-dark-2 dark:border-[var(--border)] border-2 border-gray-200 rounded-2xl w-full">
+            {weeklyXPLoading ? (
+              <div className="p-4 sm:p-6 my-4 bg-white dark:bg-dark-2 dark:border-[var(--border)] border-2 border-gray-200 rounded-2xl w-full animate-pulse">
+                <div className="flex justify-between items-center mb-4">
+                  <span className="flex gap-3 items-center">
+                    <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-dark-3" />
+                    <div className="h-4 w-40 rounded bg-gray-200 dark:bg-dark-3" />
+                  </span>
+                </div>
+                <div className="relative h-48 sm:h-64 rounded-xl bg-gray-200 dark:bg-dark-3" />
+              </div>
+            ) : (
+              <div className="p-4 sm:p-6 my-4 bg-white dark:bg-dark-2 dark:border-[var(--border)] border-2 border-gray-200 rounded-2xl w-full">
               <div className="flex justify-between items-center mb-4">
                 <span className="flex gap-3 items-center">
                   {profileUser.avatar ? (
@@ -1211,7 +1218,8 @@ export default function ProfilePage({ params }: PageProps) {
                   gradientEnd={accent.gradEnd}
                 />
               </div>
-            </div>
+              </div>
+            )}
 
             {/* TOP ACTIVITIES & RECENT SESSIONS */}
             <div className="flex flex-col md:flex-row gap-4">
@@ -1223,7 +1231,7 @@ export default function ProfilePage({ params }: PageProps) {
                   <span className="text-gray-500 dark:text-[var(--muted)] text-sm"></span>
                 </div>
 
-                {dataLoading ? (
+                {topActivitiesLoading ? (
                   <p className="text-gray-500 dark:text-[var(--muted)] text-sm">
                     Loading activities...
                   </p>
@@ -1280,7 +1288,7 @@ export default function ProfilePage({ params }: PageProps) {
                   <span className="text-gray-500 dark:text-[var(--muted)] text-sm"></span>
                 </div>
 
-                {dataLoading ? (
+                {sessionsLoading ? (
                   <p className="text-gray-500 dark:text-[var(--muted)] text-sm">
                     Loading sessions...
                   </p>
