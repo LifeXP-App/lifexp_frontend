@@ -364,9 +364,6 @@ export default function SessionTimer({ params }: SessionTimerProps) {
   const enterAsSpectatorMutation = useMutation(
     api.sessions.enterSessionAsSpectator,
   );
-  const leaveAsSpectatorMutation = useMutation(
-    api.sessions.leaveSessionAsSpectator,
-  );
 
   const isRunning = session?.status === "live";
   const isPaused = session?.status === "paused";
@@ -394,19 +391,13 @@ export default function SessionTimer({ params }: SessionTimerProps) {
 
     refreshPresence();
     const heartbeat = window.setInterval(refreshPresence, 20_000);
-    return () => {
-      window.clearInterval(heartbeat);
-      void leaveAsSpectatorMutation({
-        sessionId,
-        userId: String(me.id),
-      }).catch((err) => {
-        console.error("Failed to clear spectator presence:", err);
-      });
-    };
+    // Avoid an explicit async leave here: React Strict Mode performs an
+    // effect cleanup/remount cycle, where leave can race and beat the new
+    // join. Viewers naturally expire after their heartbeat stops.
+    return () => window.clearInterval(heartbeat);
   }, [
     enterAsSpectatorMutation,
     isOwn,
-    leaveAsSpectatorMutation,
     me,
     sessionId,
     sessionOwnerId,
@@ -1137,9 +1128,25 @@ useEffect(() => {
   const activityLabel = isBreak
     ? "Break"
     : (session?.activityName ?? activityType ?? "Activity");
-  const activeSpectators = (session?.spectators ?? []).filter(
+  const persistedSpectators = (session?.spectators ?? []).filter(
     (spectator) => spectator.lastSeenAt >= Date.now() - 60_000,
   );
+  const activeSpectators =
+    !isOwn &&
+    me &&
+    !persistedSpectators.some(
+      (spectator) => spectator.userId === String(me.id),
+    )
+      ? [
+          ...persistedSpectators,
+          {
+            userId: String(me.id),
+            username: me.username,
+            profilePicture: me.profile_picture ?? undefined,
+            lastSeenAt: Date.now(),
+          },
+        ]
+      : persistedSpectators;
 
   return (
     <div className="h-screen w-full bg-black relative overflow-hidden select-none">
@@ -1151,11 +1158,15 @@ useEffect(() => {
 
       {activeSpectators.length > 0 && (
         <aside
-          className="absolute right-5 top-1/2 z-30 flex -translate-y-1/2 flex-col gap-3"
+          className="absolute right-5 top-1/2 z-30 flex -translate-y-1/2 flex-col items-center gap-3"
           aria-label={`${activeSpectators.length} ${
             activeSpectators.length === 1 ? "spectator" : "spectators"
           } watching`}
         >
+          <div className="rounded-full border border-white/10 bg-gray-900/90 px-3 py-1 text-xs font-medium text-white/80 shadow-lg backdrop-blur">
+            {activeSpectators.length}{" "}
+            {activeSpectators.length === 1 ? "spectator" : "spectators"}
+          </div>
           {activeSpectators.map((spectator) => (
             <div
               key={spectator.userId}
