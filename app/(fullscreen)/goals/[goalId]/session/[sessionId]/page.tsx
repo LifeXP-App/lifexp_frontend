@@ -17,6 +17,7 @@ import { useMutation, useQuery } from "convex/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { DumbbellIcon } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { FaBrain, FaHammer } from "react-icons/fa";
 import posthog from "posthog-js";
@@ -218,33 +219,47 @@ function playPhaseEndChime(nextPhase: "focus" | "break") {
 // session: no pause/discard/finish, just a one-shot nudge + a way back out.
 function SpectatorControls({
   sessionId,
+  userId,
+  hasNudged,
   categoryColor,
   onClose,
 }: {
   sessionId: Id<"sessions"> | null;
+  userId: string | null;
+  hasNudged: boolean | undefined;
   categoryColor: string;
   onClose: () => void;
 }) {
-  const [nudged, setNudged] = useState(false);
+  const claimNudge = useMutation(api.sessions.claimSessionNudge);
 
   const handleNudge = useCallback(async () => {
-    if (nudged || !sessionId) return;
-    setNudged(true);
+    if (hasNudged !== false || !sessionId || !userId) return;
     try {
-      await authedFetch(`/api/sessions/${sessionId}/nudge`, { method: "POST" });
+      const claimed = await claimNudge({ sessionId, userId });
+      if (!claimed) return;
+      const response = await authedFetch(`/api/sessions/${sessionId}/nudge`, {
+        method: "POST",
+      });
+      if (!response.ok) {
+        console.error("Failed to send claimed session nudge:", response.status);
+      }
     } catch (err) {
       console.error("Failed to nudge session:", err);
     }
-  }, [nudged, sessionId]);
+  }, [claimNudge, hasNudged, sessionId, userId]);
 
   return (
     <div className="flex items-center gap-4">
       <button
         onClick={handleNudge}
-        disabled={nudged}
+        disabled={hasNudged !== false}
         className="w-36 h-14 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-medium transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-default"
       >
-        {nudged ? "Nudged 👋" : "Nudge 👋"}
+        {hasNudged === undefined
+          ? "Loading…"
+          : hasNudged
+            ? "Nudged 👋"
+            : "Nudge 👋"}
       </button>
 
       <button
@@ -336,14 +351,59 @@ export default function SessionTimer({ params }: SessionTimerProps) {
   const abandonMutation = useMutation(api.sessions.abandonSession);
   const updateInitialRatesMutation = useMutation(api.sessions.updateInitialRates);
   const markSyncedMutation = useMutation(api.sessions.markSyncedToDjango);
+  const enterAsSpectator = useMutation(api.sessions.enterSessionAsSpectator);
+  const leaveAsSpectator = useMutation(api.sessions.leaveSessionAsSpectator);
 
   const isRunning = session?.status === "live";
   const isPaused = session?.status === "paused";
   const isActive = isRunning || isPaused;
   // Flat primitive so React Compiler can track it without inferring the whole session object
   const sessionSynced = session?.syncedToDjango ?? false;
+  const sessionOwnerId = session?.userId;
   // Whether the logged-in user owns this session, vs. viewing someone else's live session
-  const isOwn = Boolean(me && session && session.userId === String(me.id));
+  const isOwn = Boolean(me && sessionOwnerId === String(me.id));
+  const spectatorUserId = me ? String(me.id) : null;
+  const spectators = useQuery(
+    api.sessions.getSessionSpectators,
+    sessionId ? { sessionId } : "skip",
+  );
+  const spectatorState = useQuery(
+    api.sessions.getSpectatorState,
+    sessionId && spectatorUserId
+      ? { sessionId, userId: spectatorUserId }
+      : "skip",
+  );
+
+  // A short presence heartbeat keeps the avatar visible to everyone currently
+  // in the timer, while the stored record preserves the one-time nudge state.
+  useEffect(() => {
+    if (!sessionOwnerId || isOwn || !sessionId || !me) return;
+    const presence = {
+      sessionId,
+      userId: String(me.id),
+      username: me.username,
+      profilePicture: me.profile_picture ?? undefined,
+    };
+    void enterAsSpectator(presence);
+    const heartbeat = window.setInterval(
+      () => void enterAsSpectator(presence),
+      15_000,
+    );
+    return () => {
+      window.clearInterval(heartbeat);
+      void leaveAsSpectator({
+        sessionId,
+        userId: String(me.id),
+      });
+    };
+  }, [
+    enterAsSpectator,
+    isOwn,
+    leaveAsSpectator,
+    me,
+    sessionId,
+    sessionOwnerId,
+  ]);
 
   // ── Check for existing active session before creating ──
   const existingSession = useQuery(
@@ -1079,6 +1139,30 @@ useEffect(() => {
         style={{ backgroundColor: categoryColor }}
       />
 
+      {spectators && spectators.length > 0 && (
+        <div
+          className="absolute right-5 top-5 z-30 flex -space-x-3"
+          aria-label={`${spectators.length} ${spectators.length === 1 ? "spectator" : "spectators"} watching`}
+        >
+          {spectators.map((spectator) => (
+            <div
+              key={spectator._id}
+              className="relative h-12 w-12 overflow-hidden rounded-full border-2 border-black bg-gray-800 shadow-lg"
+              title={`${spectator.username} is watching`}
+            >
+              <Image
+                src={spectator.profilePicture || "/default_pfp.png"}
+                alt={`${spectator.username}'s profile picture`}
+                fill
+                sizes="48px"
+                className="object-cover"
+                unoptimized
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Main content */}
       <div className="relative z-10 h-full flex flex-col items-center justify-around py-20 px-6">
         {/* Goal info */}
@@ -1183,6 +1267,8 @@ useEffect(() => {
         {!isOwn ? (
           <SpectatorControls
             sessionId={sessionId}
+            userId={spectatorUserId}
+            hasNudged={spectatorState?.hasNudged}
             categoryColor={categoryColor}
             onClose={() => router.back()}
           />

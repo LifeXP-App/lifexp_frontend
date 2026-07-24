@@ -471,6 +471,113 @@ export const getSession = query({
   },
 });
 
+export const getSessionSpectators = query({
+  args: { sessionId: v.id("sessions") },
+  handler: async (ctx, args) => {
+    const spectators = await ctx.db
+      .query("sessionSpectators")
+      .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+      .collect();
+
+    const activeSince = Date.now() - 30_000;
+    return spectators.filter(
+      (spectator) => spectator.isViewing && spectator.lastSeenAt >= activeSince,
+    );
+  },
+});
+
+export const getSpectatorState = query({
+  args: {
+    sessionId: v.id("sessions"),
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("sessionSpectators")
+      .withIndex("by_session_user", (q) =>
+        q.eq("sessionId", args.sessionId).eq("userId", args.userId),
+      )
+      .unique();
+  },
+});
+
+export const enterSessionAsSpectator = mutation({
+  args: {
+    sessionId: v.id("sessions"),
+    userId: v.string(),
+    username: v.string(),
+    profilePicture: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("sessionSpectators")
+      .withIndex("by_session_user", (q) =>
+        q.eq("sessionId", args.sessionId).eq("userId", args.userId),
+      )
+      .unique();
+    const presence = {
+      username: args.username,
+      profilePicture: args.profilePicture,
+      isViewing: true,
+      lastSeenAt: Date.now(),
+    };
+
+    if (existing) {
+      await ctx.db.patch(existing._id, presence);
+      return existing._id;
+    }
+    return await ctx.db.insert("sessionSpectators", {
+      sessionId: args.sessionId,
+      userId: args.userId,
+      ...presence,
+      hasNudged: false,
+    });
+  },
+});
+
+export const leaveSessionAsSpectator = mutation({
+  args: {
+    sessionId: v.id("sessions"),
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("sessionSpectators")
+      .withIndex("by_session_user", (q) =>
+        q.eq("sessionId", args.sessionId).eq("userId", args.userId),
+      )
+      .unique();
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        isViewing: false,
+        lastSeenAt: Date.now(),
+      });
+    }
+  },
+});
+
+export const claimSessionNudge = mutation({
+  args: {
+    sessionId: v.id("sessions"),
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const spectator = await ctx.db
+      .query("sessionSpectators")
+      .withIndex("by_session_user", (q) =>
+        q.eq("sessionId", args.sessionId).eq("userId", args.userId),
+      )
+      .unique();
+    if (!spectator || spectator.hasNudged) return false;
+
+    await ctx.db.patch(spectator._id, {
+      hasNudged: true,
+      nudgedAt: Date.now(),
+    });
+    return true;
+  },
+});
+
 export const getSessionsByGoal = query({
   args: { goalId: v.string() },
   handler: async (ctx, args) => {
@@ -521,6 +628,11 @@ export const deleteSession = mutation({
   handler: async (ctx, args) => {
     const session = await ctx.db.get(args.sessionId);
     if (!session) return;
+    const spectators = await ctx.db
+      .query("sessionSpectators")
+      .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+      .collect();
+    await Promise.all(spectators.map((spectator) => ctx.db.delete(spectator._id)));
     await ctx.db.delete(args.sessionId);
   },
 });
