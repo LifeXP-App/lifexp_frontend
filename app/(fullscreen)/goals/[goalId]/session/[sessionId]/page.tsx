@@ -17,14 +17,7 @@ import { useMutation, useQuery } from "convex/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { DumbbellIcon } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Image from "next/image";
-import {
-  use,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { use, useCallback, useEffect, useRef, useState } from "react";
 import { FaBrain, FaHammer } from "react-icons/fa";
 import posthog from "posthog-js";
 
@@ -225,94 +218,46 @@ function playPhaseEndChime(nextPhase: "focus" | "break") {
 // session: no pause/discard/finish, just a one-shot nudge + a way back out.
 function SpectatorControls({
   sessionId,
-  userId,
-  hasNudged,
   categoryColor,
   onClose,
 }: {
   sessionId: Id<"sessions"> | null;
-  userId: string | null;
-  hasNudged: boolean | undefined;
   categoryColor: string;
   onClose: () => void;
 }) {
-  const claimNudge = useMutation(api.sessions.claimSessionNudge);
-  const [locallyNudged, setLocallyNudged] = useState(false);
-  const [localNudgeLoaded, setLocalNudgeLoaded] = useState(false);
-  const nudgeStorageKey =
-    sessionId && userId ? `lifexp:nudged:${sessionId}:${userId}` : null;
-  const isNudged = hasNudged === true || locallyNudged;
+  const [nudged, setNudged] = useState(false);
 
   useEffect(() => {
-    // Read after hydration so server rendering never touches browser storage.
-    // Scheduling the update also avoids a synchronous effect render cascade.
     const frame = window.requestAnimationFrame(() => {
-      setLocallyNudged(
+      setNudged(
         Boolean(
-          nudgeStorageKey &&
-            window.localStorage.getItem(nudgeStorageKey) === "true",
+          sessionId &&
+            window.localStorage.getItem(`lifexp:nudged:${sessionId}`) === "true",
         ),
       );
-      setLocalNudgeLoaded(true);
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [nudgeStorageKey]);
+  }, [sessionId]);
 
   const handleNudge = useCallback(async () => {
-    if (
-      isNudged ||
-      !localNudgeLoaded ||
-      hasNudged === undefined ||
-      !sessionId ||
-      !userId
-    )
-      return;
+    if (nudged || !sessionId) return;
+    setNudged(true);
+    window.localStorage.setItem(`lifexp:nudged:${sessionId}`, "true");
     try {
-      const claimed = await claimNudge({ sessionId, userId });
-      if (!claimed) {
-        // A false claim means this user already nudged according to the shared
-        // session record. Preserve that one-way state in this browser too.
-        if (nudgeStorageKey) {
-          window.localStorage.setItem(nudgeStorageKey, "true");
-          setLocallyNudged(true);
-        }
-        return;
-      }
-      if (nudgeStorageKey) {
-        window.localStorage.setItem(nudgeStorageKey, "true");
-        setLocallyNudged(true);
-      }
-      const response = await authedFetch(`/api/sessions/${sessionId}/nudge`, {
-        method: "POST",
-      });
-      if (!response.ok) {
-        console.error("Failed to send claimed session nudge:", response.status);
-      }
+      await authedFetch(`/api/sessions/${sessionId}/nudge`, { method: "POST" });
     } catch (err) {
       console.error("Failed to nudge session:", err);
     }
-  }, [
-    claimNudge,
-    hasNudged,
-    isNudged,
-    localNudgeLoaded,
-    nudgeStorageKey,
-    sessionId,
-    userId,
-  ]);
+  }, [nudged, sessionId]);
 
   return (
     <div className="flex items-center gap-4">
       <button
         onClick={handleNudge}
-        disabled={isNudged || !localNudgeLoaded || hasNudged === undefined}
+        disabled={nudged}
         className="w-36 h-14 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-medium transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-default"
       >
-        {isNudged
-          ? "Nudged 👋"
-          : !localNudgeLoaded || hasNudged === undefined
-          ? "Loading…"
-          : "Nudge 👋"}
+        {nudged ? "Nudged 👋" : "Nudge 👋"}
       </button>
 
       <button
@@ -404,59 +349,14 @@ export default function SessionTimer({ params }: SessionTimerProps) {
   const abandonMutation = useMutation(api.sessions.abandonSession);
   const updateInitialRatesMutation = useMutation(api.sessions.updateInitialRates);
   const markSyncedMutation = useMutation(api.sessions.markSyncedToDjango);
-  const enterAsSpectator = useMutation(api.sessions.enterSessionAsSpectator);
-  const leaveAsSpectator = useMutation(api.sessions.leaveSessionAsSpectator);
 
   const isRunning = session?.status === "live";
   const isPaused = session?.status === "paused";
   const isActive = isRunning || isPaused;
   // Flat primitive so React Compiler can track it without inferring the whole session object
   const sessionSynced = session?.syncedToDjango ?? false;
-  const sessionOwnerId = session?.userId;
   // Whether the logged-in user owns this session, vs. viewing someone else's live session
-  const isOwn = Boolean(me && sessionOwnerId === String(me.id));
-  const spectatorUserId = me ? String(me.id) : null;
-  const spectators = useQuery(
-    api.sessions.getSessionSpectators,
-    sessionId ? { sessionId } : "skip",
-  );
-  const spectatorState = useQuery(
-    api.sessions.getSpectatorState,
-    sessionId && spectatorUserId
-      ? { sessionId, userId: spectatorUserId }
-      : "skip",
-  );
-
-  // A short presence heartbeat keeps the avatar visible to everyone currently
-  // in the timer, while the stored record preserves the one-time nudge state.
-  useEffect(() => {
-    if (!sessionOwnerId || isOwn || !sessionId || !me) return;
-    const presence = {
-      sessionId,
-      userId: String(me.id),
-      username: me.username,
-      profilePicture: me.profile_picture ?? undefined,
-    };
-    void enterAsSpectator(presence);
-    const heartbeat = window.setInterval(
-      () => void enterAsSpectator(presence),
-      15_000,
-    );
-    return () => {
-      window.clearInterval(heartbeat);
-      void leaveAsSpectator({
-        sessionId,
-        userId: String(me.id),
-      });
-    };
-  }, [
-    enterAsSpectator,
-    isOwn,
-    leaveAsSpectator,
-    me,
-    sessionId,
-    sessionOwnerId,
-  ]);
+  const isOwn = Boolean(me && session && session.userId === String(me.id));
 
   // ── Check for existing active session before creating ──
   const existingSession = useQuery(
@@ -1192,30 +1092,6 @@ useEffect(() => {
         style={{ backgroundColor: categoryColor }}
       />
 
-      {spectators && spectators.length > 0 && (
-        <div
-          className="absolute right-5 top-5 z-30 flex -space-x-3"
-          aria-label={`${spectators.length} ${spectators.length === 1 ? "spectator" : "spectators"} watching`}
-        >
-          {spectators.map((spectator) => (
-            <div
-              key={spectator._id}
-              className="relative h-12 w-12 overflow-hidden rounded-full border-2 border-black bg-gray-800 shadow-lg"
-              title={`${spectator.username} is watching`}
-            >
-              <Image
-                src={spectator.profilePicture || "/default_pfp.png"}
-                alt={`${spectator.username}'s profile picture`}
-                fill
-                sizes="48px"
-                className="object-cover"
-                unoptimized
-              />
-            </div>
-          ))}
-        </div>
-      )}
-
       {/* Main content */}
       <div className="relative z-10 h-full flex flex-col items-center justify-around py-20 px-6">
         {/* Goal info */}
@@ -1320,8 +1196,6 @@ useEffect(() => {
         {!isOwn ? (
           <SpectatorControls
             sessionId={sessionId}
-            userId={spectatorUserId}
-            hasNudged={spectatorState?.hasNudged}
             categoryColor={categoryColor}
             onClose={() => router.back()}
           />

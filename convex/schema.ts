@@ -116,17 +116,4 @@ export default defineSchema({
     .index("by_sync", ["syncedToDjango"])
     .index("by_heartbeat", ["status", "lastHeartbeatAt"])
     .index("by_activity_status", ["activityId", "status"]),
-
-  sessionSpectators: defineTable({
-    sessionId: v.id("sessions"),
-    userId: v.string(),
-    username: v.string(),
-    profilePicture: v.optional(v.string()),
-    isViewing: v.boolean(),
-    lastSeenAt: v.number(),
-    hasNudged: v.boolean(),
-    nudgedAt: v.optional(v.number()),
-  })
-    .index("by_session", ["sessionId"])
-    .index("by_session_user", ["sessionId", "userId"]),
 });
