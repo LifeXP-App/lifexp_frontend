@@ -16,6 +16,7 @@ import {
 import { useMutation, useQuery } from "convex/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { DumbbellIcon } from "lucide-react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { FaBrain, FaHammer } from "react-icons/fa";
@@ -360,14 +361,56 @@ export default function SessionTimer({ params }: SessionTimerProps) {
   const abandonMutation = useMutation(api.sessions.abandonSession);
   const updateInitialRatesMutation = useMutation(api.sessions.updateInitialRates);
   const markSyncedMutation = useMutation(api.sessions.markSyncedToDjango);
+  const enterAsSpectatorMutation = useMutation(
+    api.sessions.enterSessionAsSpectator,
+  );
+  const leaveAsSpectatorMutation = useMutation(
+    api.sessions.leaveSessionAsSpectator,
+  );
 
   const isRunning = session?.status === "live";
   const isPaused = session?.status === "paused";
   const isActive = isRunning || isPaused;
   // Flat primitive so React Compiler can track it without inferring the whole session object
   const sessionSynced = session?.syncedToDjango ?? false;
+  const sessionOwnerId = session?.userId;
   // Whether the logged-in user owns this session, vs. viewing someone else's live session
-  const isOwn = Boolean(me && session && session.userId === String(me.id));
+  const isOwn = Boolean(me && sessionOwnerId === String(me.id));
+
+  useEffect(() => {
+    if (!sessionId || !sessionOwnerId || !me || isOwn) return;
+
+    const presence = {
+      sessionId,
+      userId: String(me.id),
+      username: me.username,
+      profilePicture: me.profile_picture ?? undefined,
+    };
+    const refreshPresence = () => {
+      void enterAsSpectatorMutation(presence).catch((err) => {
+        console.error("Failed to update spectator presence:", err);
+      });
+    };
+
+    refreshPresence();
+    const heartbeat = window.setInterval(refreshPresence, 20_000);
+    return () => {
+      window.clearInterval(heartbeat);
+      void leaveAsSpectatorMutation({
+        sessionId,
+        userId: String(me.id),
+      }).catch((err) => {
+        console.error("Failed to clear spectator presence:", err);
+      });
+    };
+  }, [
+    enterAsSpectatorMutation,
+    isOwn,
+    leaveAsSpectatorMutation,
+    me,
+    sessionId,
+    sessionOwnerId,
+  ]);
 
   // ── Check for existing active session before creating ──
   const existingSession = useQuery(
@@ -1094,6 +1137,9 @@ useEffect(() => {
   const activityLabel = isBreak
     ? "Break"
     : (session?.activityName ?? activityType ?? "Activity");
+  const activeSpectators = (session?.spectators ?? []).filter(
+    (spectator) => spectator.lastSeenAt >= Date.now() - 60_000,
+  );
 
   return (
     <div className="h-screen w-full bg-black relative overflow-hidden select-none">
@@ -1102,6 +1148,32 @@ useEffect(() => {
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-[120px] opacity-20"
         style={{ backgroundColor: categoryColor }}
       />
+
+      {activeSpectators.length > 0 && (
+        <aside
+          className="absolute right-5 top-1/2 z-30 flex -translate-y-1/2 flex-col gap-3"
+          aria-label={`${activeSpectators.length} ${
+            activeSpectators.length === 1 ? "spectator" : "spectators"
+          } watching`}
+        >
+          {activeSpectators.map((spectator) => (
+            <div
+              key={spectator.userId}
+              className="relative h-12 w-12 overflow-hidden rounded-full border-2 border-white/20 bg-gray-800 shadow-lg shadow-black/40"
+              title={`${spectator.username} is spectating`}
+            >
+              <Image
+                src={spectator.profilePicture || "/default_pfp.png"}
+                alt={`${spectator.username}'s profile picture`}
+                fill
+                sizes="48px"
+                className="object-cover"
+                unoptimized
+              />
+            </div>
+          ))}
+        </aside>
+      )}
 
       {/* Main content */}
       <div className="relative z-10 h-full flex flex-col items-center justify-around py-20 px-6">
