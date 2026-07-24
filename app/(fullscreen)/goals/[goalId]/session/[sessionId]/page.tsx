@@ -229,12 +229,19 @@ function SpectatorControls({
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
-      setNudged(
-        Boolean(
-          sessionId &&
-            window.localStorage.getItem(`lifexp:nudged:${sessionId}`) === "true",
-        ),
-      );
+      try {
+        setNudged(
+          Boolean(
+            sessionId &&
+              window.localStorage.getItem(`lifexp:nudged:${sessionId}`) ===
+                "true",
+          ),
+        );
+      } catch {
+        // Storage can be unavailable in restricted/private browser contexts.
+        // The spectator timer must still load and allow a nudge.
+        setNudged(false);
+      }
     });
     return () => window.cancelAnimationFrame(frame);
   }, [sessionId]);
@@ -242,7 +249,11 @@ function SpectatorControls({
   const handleNudge = useCallback(async () => {
     if (nudged || !sessionId) return;
     setNudged(true);
-    window.localStorage.setItem(`lifexp:nudged:${sessionId}`, "true");
+    try {
+      window.localStorage.setItem(`lifexp:nudged:${sessionId}`, "true");
+    } catch {
+      // Keep the in-memory "Nudged" state even when persistence is blocked.
+    }
     try {
       await authedFetch(`/api/sessions/${sessionId}/nudge`, { method: "POST" });
     } catch (err) {
