@@ -24,7 +24,6 @@ import {
   useEffect,
   useRef,
   useState,
-  useSyncExternalStore,
 } from "react";
 import { FaBrain, FaHammer } from "react-icons/fa";
 import posthog from "posthog-js";
@@ -238,45 +237,31 @@ function SpectatorControls({
   onClose: () => void;
 }) {
   const claimNudge = useMutation(api.sessions.claimSessionNudge);
+  const [locallyNudged, setLocallyNudged] = useState(false);
+  const [localNudgeLoaded, setLocalNudgeLoaded] = useState(false);
   const nudgeStorageKey =
     sessionId && userId ? `lifexp:nudged:${sessionId}:${userId}` : null;
-  const subscribeToLocalNudge = useCallback(
-    (onStoreChange: () => void) => {
-      const handleChange = (event: Event) => {
-        if (
-          (event instanceof StorageEvent && event.key === nudgeStorageKey) ||
-          (event instanceof CustomEvent && event.detail === nudgeStorageKey)
-        ) {
-          onStoreChange();
-        }
-      };
-      window.addEventListener("storage", handleChange);
-      window.addEventListener("lifexp:nudge-state-changed", handleChange);
-      return () => {
-        window.removeEventListener("storage", handleChange);
-        window.removeEventListener("lifexp:nudge-state-changed", handleChange);
-      };
-    },
-    [nudgeStorageKey],
-  );
-  const getLocalNudge = useCallback(
-    () =>
-      Boolean(
-        nudgeStorageKey &&
-          window.localStorage.getItem(nudgeStorageKey) === "true",
-      ),
-    [nudgeStorageKey],
-  );
-  const locallyNudged = useSyncExternalStore(
-    subscribeToLocalNudge,
-    getLocalNudge,
-    () => false,
-  );
   const isNudged = hasNudged === true || locallyNudged;
+
+  useEffect(() => {
+    // Read after hydration so server rendering never touches browser storage.
+    // Scheduling the update also avoids a synchronous effect render cascade.
+    const frame = window.requestAnimationFrame(() => {
+      setLocallyNudged(
+        Boolean(
+          nudgeStorageKey &&
+            window.localStorage.getItem(nudgeStorageKey) === "true",
+        ),
+      );
+      setLocalNudgeLoaded(true);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [nudgeStorageKey]);
 
   const handleNudge = useCallback(async () => {
     if (
       isNudged ||
+      !localNudgeLoaded ||
       hasNudged === undefined ||
       !sessionId ||
       !userId
@@ -289,21 +274,13 @@ function SpectatorControls({
         // session record. Preserve that one-way state in this browser too.
         if (nudgeStorageKey) {
           window.localStorage.setItem(nudgeStorageKey, "true");
-          window.dispatchEvent(
-            new CustomEvent("lifexp:nudge-state-changed", {
-              detail: nudgeStorageKey,
-            }),
-          );
+          setLocallyNudged(true);
         }
         return;
       }
       if (nudgeStorageKey) {
         window.localStorage.setItem(nudgeStorageKey, "true");
-        window.dispatchEvent(
-          new CustomEvent("lifexp:nudge-state-changed", {
-            detail: nudgeStorageKey,
-          }),
-        );
+        setLocallyNudged(true);
       }
       const response = await authedFetch(`/api/sessions/${sessionId}/nudge`, {
         method: "POST",
@@ -318,6 +295,7 @@ function SpectatorControls({
     claimNudge,
     hasNudged,
     isNudged,
+    localNudgeLoaded,
     nudgeStorageKey,
     sessionId,
     userId,
@@ -327,12 +305,12 @@ function SpectatorControls({
     <div className="flex items-center gap-4">
       <button
         onClick={handleNudge}
-        disabled={isNudged || hasNudged === undefined}
+        disabled={isNudged || !localNudgeLoaded || hasNudged === undefined}
         className="w-36 h-14 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-medium transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-default"
       >
         {isNudged
           ? "Nudged 👋"
-          : hasNudged === undefined
+          : !localNudgeLoaded || hasNudged === undefined
           ? "Loading…"
           : "Nudge 👋"}
       </button>
