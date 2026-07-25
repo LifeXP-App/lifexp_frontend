@@ -219,45 +219,68 @@ function playPhaseEndChime(nextPhase: "focus" | "break") {
 // session: no pause/discard/finish, just a one-shot nudge + a way back out.
 function SpectatorControls({
   sessionId,
+  viewerUserId,
   categoryColor,
   onClose,
 }: {
   sessionId: Id<"sessions"> | null;
+  viewerUserId: string | null;
   categoryColor: string;
   onClose: () => void;
 }) {
   const [nudged, setNudged] = useState(false);
   const [nudging, setNudging] = useState(false);
+  const nudgeStorageKey =
+    sessionId && viewerUserId
+      ? `lifexp:nudged:${sessionId}:${viewerUserId}`
+      : null;
 
   useEffect(() => {
-    const frame = window.requestAnimationFrame(() => {
+    if (!sessionId || !nudgeStorageKey) {
+      setNudged(false);
+      return;
+    }
+
+    let cancelled = false;
+    try {
+      setNudged(window.localStorage.getItem(nudgeStorageKey) === "true");
+    } catch {
+      setNudged(false);
+    }
+
+    const loadPersistedNudge = async () => {
       try {
-        setNudged(
-          Boolean(
-            sessionId &&
-              window.localStorage.getItem(`lifexp:nudged:${sessionId}`) ===
-                "true",
-          ),
-        );
-      } catch {
-        // Storage can be unavailable in restricted/private browser contexts.
-        // The spectator timer must still load and allow a nudge.
-        setNudged(false);
+        const response = await authedFetch(`/api/sessions/${sessionId}`);
+        if (!response.ok) return;
+        const data = (await response.json()) as { is_nudged?: boolean };
+        if (cancelled || typeof data.is_nudged !== "boolean") return;
+        setNudged(data.is_nudged);
+        try {
+          window.localStorage.setItem(
+            nudgeStorageKey,
+            String(data.is_nudged),
+          );
+        } catch {
+          // Server state remains authoritative.
+        }
+      } catch (err) {
+        console.error("Failed to load saved nudge state:", err);
       }
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [sessionId]);
+    };
+
+    void loadPersistedNudge();
+    return () => {
+      cancelled = true;
+    };
+  }, [nudgeStorageKey, sessionId]);
 
   const handleNudge = useCallback(async () => {
-    if (nudging || !sessionId) return;
+    if (nudging || !sessionId || !nudgeStorageKey) return;
     const nextNudged = !nudged;
     setNudged(nextNudged);
     setNudging(true);
     try {
-      window.localStorage.setItem(
-        `lifexp:nudged:${sessionId}`,
-        String(nextNudged),
-      );
+      window.localStorage.setItem(nudgeStorageKey, String(nextNudged));
     } catch {
       // Keep the in-memory state even when persistence is blocked.
     }
@@ -268,36 +291,30 @@ function SpectatorControls({
         body: JSON.stringify({ is_nudged: nextNudged }),
       });
       if (!response.ok) throw new Error(`Nudge request failed: ${response.status}`);
-
-      const data = (await response.json().catch(() => null)) as {
-        is_nudged?: boolean;
-      } | null;
-      const serverNudged =
-        typeof data?.is_nudged === "boolean" ? data.is_nudged : nextNudged;
-      setNudged(serverNudged);
-      try {
-        window.localStorage.setItem(
-          `lifexp:nudged:${sessionId}`,
-          String(serverNudged),
-        );
-      } catch {
-        // The in-memory state remains authoritative for this page visit.
+      const data = (await response.json()) as { is_nudged?: boolean };
+      if (typeof data.is_nudged === "boolean") {
+        setNudged(data.is_nudged);
+        try {
+          window.localStorage.setItem(
+            nudgeStorageKey,
+            String(data.is_nudged),
+          );
+        } catch {
+          // Server state remains authoritative.
+        }
       }
     } catch (err) {
       setNudged(nudged);
       try {
-        window.localStorage.setItem(
-          `lifexp:nudged:${sessionId}`,
-          String(nudged),
-        );
+        window.localStorage.setItem(nudgeStorageKey, String(nudged));
       } catch {
-        // Ignore unavailable storage while reverting the optimistic state.
+        // Keep the in-memory rollback.
       }
       console.error("Failed to nudge session:", err);
     } finally {
       setNudging(false);
     }
-  }, [nudged, nudging, sessionId]);
+  }, [nudgeStorageKey, nudged, nudging, sessionId]);
 
   return (
     <div className="flex items-center gap-4">
@@ -1327,6 +1344,7 @@ useEffect(() => {
         {!isOwn ? (
           <SpectatorControls
             sessionId={sessionId}
+            viewerUserId={me ? String(me.id) : null}
             categoryColor={categoryColor}
             onClose={() => router.back()}
           />
