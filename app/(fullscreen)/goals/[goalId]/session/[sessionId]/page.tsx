@@ -276,10 +276,7 @@ function SpectatorControls({
       const response = await authedFetch(`/api/sessions/${sessionId}/nudge`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          is_nudge: nextNudged,
-          is_nudged: nextNudged,
-        }),
+        body: JSON.stringify({ is_nudged: nextNudged }),
       });
       if (!response.ok) throw new Error(`Nudge request failed: ${response.status}`);
     } catch (err) {

@@ -104,7 +104,9 @@ function SessionPostComponent({ session }: { session: ApiSessionPost }) {
   const [showComments, setShowComments] = useState(false);
   const [commentCount] = useState(session.comment_count ?? 0);
   const [nudgeCount, setNudgeCount] = useState(session.nudge_count ?? 0);
-  const [hasNudged, setHasNudged] = useState(session.is_nudged);
+  const [hasNudged, setHasNudged] = useState(
+    session.is_nudged === true,
+  );
   const [nudging, setNudging] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
 
@@ -142,20 +144,19 @@ function SessionPostComponent({ session }: { session: ApiSessionPost }) {
       }
 
       const data = (await res.json().catch(() => null)) as {
-        is_nudged?: boolean;
         nudge_count?: number;
       } | null;
-      setHasNudged(
-        typeof data?.is_nudged === "boolean" ? data.is_nudged : nextNudged,
-      );
+      // The user's click owns the boolean state; a delayed response must not
+      // flip it back. The response is only used to reconcile the shared count.
+      setHasNudged(nextNudged);
       setNudgeCount(
         typeof data?.nudge_count === "number"
           ? data.nudge_count
           : Math.max(0, previousCount + (nextNudged ? 1 : -1)),
       );
     } catch {
-      setHasNudged(previousNudged);
-      setNudgeCount(previousCount);
+      // Keep the user's boolean selection. A later explicit click is the only
+      // action that toggles it again.
     } finally {
       setNudging(false);
     }

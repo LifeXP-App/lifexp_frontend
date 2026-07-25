@@ -47,10 +47,16 @@ export async function POST(
   const { sessionId } = await context.params;
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
   const body = await req.json().catch(() => null);
+  if (!body || typeof body.is_nudged !== "boolean") {
+    return NextResponse.json(
+      { detail: "is_nudged must be a boolean" },
+      { status: 400 },
+    );
+  }
 
   const res = await authedFetch(req, `${baseUrl}/api/v1/sessions/${sessionId}/nudge/`, {
     method: "POST",
-    ...(body ? { body: JSON.stringify(body) } : {}),
+    body: JSON.stringify({ is_nudged: body.is_nudged }),
   });
 
   if (res instanceof NextResponse) return res;
