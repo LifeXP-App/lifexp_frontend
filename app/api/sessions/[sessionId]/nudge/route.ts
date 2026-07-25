@@ -46,9 +46,11 @@ export async function POST(
 ) {
   const { sessionId } = await context.params;
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
+  const body = await req.json().catch(() => null);
 
   const res = await authedFetch(req, `${baseUrl}/api/v1/sessions/${sessionId}/nudge/`, {
     method: "POST",
+    ...(body ? { body: JSON.stringify(body) } : {}),
   });
 
   if (res instanceof NextResponse) return res;

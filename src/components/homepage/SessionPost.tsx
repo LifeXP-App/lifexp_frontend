@@ -115,10 +115,13 @@ function SessionPostComponent({ session }: { session: ApiSessionPost }) {
   };
 
   const handleNudge = async () => {
-    if (nudging || hasNudged) return;
-    // Optimistic — feel instant
-    setHasNudged(true);
-    setNudgeCount((prev) => prev + 1);
+    if (nudging) return;
+    const previousNudged = hasNudged;
+    const previousCount = nudgeCount;
+    const nextNudged = !previousNudged;
+
+    setHasNudged(nextNudged);
+    setNudgeCount(Math.max(0, previousCount + (nextNudged ? 1 : -1)));
     setNudging(true);
     try {
       const {
@@ -126,21 +129,33 @@ function SessionPostComponent({ session }: { session: ApiSessionPost }) {
       } = await supabase.auth.getSession();
       const res = await fetch(`/api/sessions/${session.id}/nudge`, {
         method: "POST",
-        headers: supaSession?.access_token
-          ? { Authorization: `Bearer ${supaSession.access_token}` }
-          : {},
+        headers: {
+          "Content-Type": "application/json",
+          ...(supaSession?.access_token
+            ? { Authorization: `Bearer ${supaSession.access_token}` }
+            : {}),
+        },
+        body: JSON.stringify({ is_nudged: nextNudged }),
       });
-      if (res.status === 201) {
-        const data = await res.json();
-        setNudgeCount(data.nudge_count);
-      } else if (res.status !== 409) {
-        // 409 = already nudged, keep state. Anything else = revert.
-        setHasNudged(false);
-        setNudgeCount((prev) => prev - 1);
+      if (!res.ok) {
+        throw new Error(`Nudge request failed: ${res.status}`);
       }
+
+      const data = (await res.json().catch(() => null)) as {
+        is_nudged?: boolean;
+        nudge_count?: number;
+      } | null;
+      setHasNudged(
+        typeof data?.is_nudged === "boolean" ? data.is_nudged : nextNudged,
+      );
+      setNudgeCount(
+        typeof data?.nudge_count === "number"
+          ? data.nudge_count
+          : Math.max(0, previousCount + (nextNudged ? 1 : -1)),
+      );
     } catch {
-      setHasNudged(false);
-      setNudgeCount((prev) => prev - 1);
+      setHasNudged(previousNudged);
+      setNudgeCount(previousCount);
     } finally {
       setNudging(false);
     }

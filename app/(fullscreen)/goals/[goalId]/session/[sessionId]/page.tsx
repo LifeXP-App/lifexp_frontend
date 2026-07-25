@@ -227,6 +227,7 @@ function SpectatorControls({
   onClose: () => void;
 }) {
   const [nudged, setNudged] = useState(false);
+  const [nudging, setNudging] = useState(false);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -248,25 +249,61 @@ function SpectatorControls({
   }, [sessionId]);
 
   const handleNudge = useCallback(async () => {
-    if (nudged || !sessionId) return;
-    setNudged(true);
+    if (nudging || !sessionId) return;
+    const nextNudged = !nudged;
+    setNudged(nextNudged);
+    setNudging(true);
     try {
-      window.localStorage.setItem(`lifexp:nudged:${sessionId}`, "true");
+      window.localStorage.setItem(
+        `lifexp:nudged:${sessionId}`,
+        String(nextNudged),
+      );
     } catch {
-      // Keep the in-memory "Nudged" state even when persistence is blocked.
+      // Keep the in-memory state even when persistence is blocked.
     }
     try {
-      await authedFetch(`/api/sessions/${sessionId}/nudge`, { method: "POST" });
+      const response = await authedFetch(`/api/sessions/${sessionId}/nudge`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_nudged: nextNudged }),
+      });
+      if (!response.ok) throw new Error(`Nudge request failed: ${response.status}`);
+
+      const data = (await response.json().catch(() => null)) as {
+        is_nudged?: boolean;
+      } | null;
+      const serverNudged =
+        typeof data?.is_nudged === "boolean" ? data.is_nudged : nextNudged;
+      setNudged(serverNudged);
+      try {
+        window.localStorage.setItem(
+          `lifexp:nudged:${sessionId}`,
+          String(serverNudged),
+        );
+      } catch {
+        // The in-memory state remains authoritative for this page visit.
+      }
     } catch (err) {
+      setNudged(nudged);
+      try {
+        window.localStorage.setItem(
+          `lifexp:nudged:${sessionId}`,
+          String(nudged),
+        );
+      } catch {
+        // Ignore unavailable storage while reverting the optimistic state.
+      }
       console.error("Failed to nudge session:", err);
+    } finally {
+      setNudging(false);
     }
-  }, [nudged, sessionId]);
+  }, [nudged, nudging, sessionId]);
 
   return (
     <div className="flex items-center gap-4">
       <button
         onClick={handleNudge}
-        disabled={nudged}
+        disabled={nudging}
         className="w-36 h-14 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-medium transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-default"
       >
         {nudged ? "Nudged 👋" : "Nudge 👋"}
