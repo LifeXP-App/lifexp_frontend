@@ -236,43 +236,20 @@ function SpectatorControls({
       : null;
 
   useEffect(() => {
-    if (!sessionId || !nudgeStorageKey) {
-      setNudged(false);
-      return;
-    }
-
-    let cancelled = false;
-    try {
-      setNudged(window.localStorage.getItem(nudgeStorageKey) === "true");
-    } catch {
-      setNudged(false);
-    }
-
-    const loadPersistedNudge = async () => {
+    const frame = window.requestAnimationFrame(() => {
       try {
-        const response = await authedFetch(`/api/sessions/${sessionId}`);
-        if (!response.ok) return;
-        const data = (await response.json()) as { is_nudged?: boolean };
-        if (cancelled || typeof data.is_nudged !== "boolean") return;
-        setNudged(data.is_nudged);
-        try {
-          window.localStorage.setItem(
-            nudgeStorageKey,
-            String(data.is_nudged),
-          );
-        } catch {
-          // Server state remains authoritative.
-        }
-      } catch (err) {
-        console.error("Failed to load saved nudge state:", err);
+        setNudged(
+          Boolean(
+            nudgeStorageKey &&
+              window.localStorage.getItem(nudgeStorageKey) === "true",
+          ),
+        );
+      } catch {
+        setNudged(false);
       }
-    };
-
-    void loadPersistedNudge();
-    return () => {
-      cancelled = true;
-    };
-  }, [nudgeStorageKey, sessionId]);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [nudgeStorageKey]);
 
   const handleNudge = useCallback(async () => {
     if (nudging || !sessionId || !nudgeStorageKey) return;
@@ -288,20 +265,20 @@ function SpectatorControls({
       const response = await authedFetch(`/api/sessions/${sessionId}/nudge`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ is_nudged: nextNudged }),
+        body: JSON.stringify({
+          is_nudge: nextNudged,
+          is_nudged: nextNudged,
+        }),
       });
       if (!response.ok) throw new Error(`Nudge request failed: ${response.status}`);
       const data = (await response.json()) as { is_nudged?: boolean };
-      if (typeof data.is_nudged === "boolean") {
-        setNudged(data.is_nudged);
-        try {
-          window.localStorage.setItem(
-            nudgeStorageKey,
-            String(data.is_nudged),
-          );
-        } catch {
-          // Server state remains authoritative.
-        }
+      const savedState =
+        typeof data.is_nudged === "boolean" ? data.is_nudged : nextNudged;
+      setNudged(savedState);
+      try {
+        window.localStorage.setItem(nudgeStorageKey, String(savedState));
+      } catch {
+        // The server still retains the saved state.
       }
     } catch (err) {
       setNudged(nudged);
