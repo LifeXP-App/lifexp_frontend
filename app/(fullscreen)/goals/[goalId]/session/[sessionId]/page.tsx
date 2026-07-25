@@ -217,6 +217,8 @@ function playPhaseEndChime(nextPhase: "focus" | "break") {
 
 // Shown instead of the normal owner controls when viewing someone else's live
 // session: no pause/discard/finish, just a one-shot nudge + a way back out.
+const timerNudgeState = new Map<string, boolean>();
+
 function SpectatorControls({
   sessionId,
   viewerUserId,
@@ -237,14 +239,22 @@ function SpectatorControls({
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
+      const cachedState = nudgeStorageKey
+        ? timerNudgeState.get(nudgeStorageKey)
+        : undefined;
+      if (cachedState !== undefined) {
+        setNudged(cachedState);
+        return;
+      }
       try {
-        setNudged(
-          Boolean(
-            nudgeStorageKey &&
-              window.localStorage.getItem(nudgeStorageKey) === "true",
-          ),
+        const savedState = Boolean(
+          nudgeStorageKey &&
+            window.localStorage.getItem(nudgeStorageKey) === "true",
         );
+        if (nudgeStorageKey) timerNudgeState.set(nudgeStorageKey, savedState);
+        setNudged(savedState);
       } catch {
+        if (nudgeStorageKey) timerNudgeState.set(nudgeStorageKey, false);
         setNudged(false);
       }
     });
@@ -254,6 +264,7 @@ function SpectatorControls({
   const handleNudge = useCallback(async () => {
     if (nudging || !sessionId || !nudgeStorageKey) return;
     const nextNudged = !nudged;
+    timerNudgeState.set(nudgeStorageKey, nextNudged);
     setNudged(nextNudged);
     setNudging(true);
     try {
@@ -271,22 +282,9 @@ function SpectatorControls({
         }),
       });
       if (!response.ok) throw new Error(`Nudge request failed: ${response.status}`);
-      const data = (await response.json()) as { is_nudged?: boolean };
-      const savedState =
-        typeof data.is_nudged === "boolean" ? data.is_nudged : nextNudged;
-      setNudged(savedState);
-      try {
-        window.localStorage.setItem(nudgeStorageKey, String(savedState));
-      } catch {
-        // The server still retains the saved state.
-      }
     } catch (err) {
-      setNudged(nudged);
-      try {
-        window.localStorage.setItem(nudgeStorageKey, String(nudged));
-      } catch {
-        // Keep the in-memory rollback.
-      }
+      // Never overwrite the viewer's saved toggle from an API response or
+      // request failure. Only another button click may change it.
       console.error("Failed to nudge session:", err);
     } finally {
       setNudging(false);
