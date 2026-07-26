@@ -5,6 +5,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { useAuth } from "@/src/context/AuthContext";
 import { useToast, useConfirm } from "@/src/context/ToastContext";
 import { authedFetch } from "@/src/lib/api/authedFetch";
+import { getResponseError } from "@/src/lib/api/responseError";
 import { GoalsService } from "@/src/lib/services/goals";
 import {
   BoltIcon,
@@ -230,6 +231,7 @@ function SpectatorControls({
   categoryColor: string;
   onClose: () => void;
 }) {
+  const toast = useToast();
   const [nudged, setNudged] = useState(false);
   const [nudging, setNudging] = useState(false);
   const nudgeStorageKey =
@@ -263,6 +265,7 @@ function SpectatorControls({
 
   const handleNudge = useCallback(async () => {
     if (nudging || !sessionId || !nudgeStorageKey) return;
+    const previousNudged = nudged;
     const nextNudged = !nudged;
     timerNudgeState.set(nudgeStorageKey, nextNudged);
     setNudged(nextNudged);
@@ -278,15 +281,30 @@ function SpectatorControls({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ is_nudged: nextNudged }),
       });
-      if (!response.ok) throw new Error(`Nudge request failed: ${response.status}`);
+      if (!response.ok) {
+        throw new Error(
+          await getResponseError(response, "Could not update nudge"),
+        );
+      }
     } catch (err) {
-      // Never overwrite the viewer's saved toggle from an API response or
-      // request failure. Only another button click may change it.
+      timerNudgeState.set(nudgeStorageKey, previousNudged);
+      setNudged(previousNudged);
+      try {
+        window.localStorage.setItem(
+          nudgeStorageKey,
+          String(previousNudged),
+        );
+      } catch {
+        // The in-memory state has still been restored.
+      }
       console.error("Failed to nudge session:", err);
+      toast.error(
+        err instanceof Error ? err.message : "Could not update nudge",
+      );
     } finally {
       setNudging(false);
     }
-  }, [nudgeStorageKey, nudged, nudging, sessionId]);
+  }, [nudgeStorageKey, nudged, nudging, sessionId, toast]);
 
   return (
     <div className="flex items-center gap-4">

@@ -2,6 +2,8 @@
 
 import { CommentSection } from "@/src/components/homepage/CommentSection";
 import { LiveAvatar } from "@/src/components/LiveAvatar";
+import { useToast } from "@/src/context/ToastContext";
+import { getResponseError } from "@/src/lib/api/responseError";
 import { supabase } from "@/src/lib/supabase";
 import {
   ChatBubbleOvalLeftIcon,
@@ -96,6 +98,7 @@ function formatSessionTime(dateString: string): string {
 }
 
 function SessionPostComponent({ session }: { session: ApiSessionPost }) {
+  const toast = useToast();
   const { user, goal, activity } = session;
   const goalHref = goal?.uid
     ? `/goals/${goal.uid}?owner=${encodeURIComponent(user.username)}`
@@ -140,7 +143,7 @@ function SessionPostComponent({ session }: { session: ApiSessionPost }) {
         body: JSON.stringify({ is_nudged: nextNudged }),
       });
       if (!res.ok) {
-        throw new Error(`Nudge request failed: ${res.status}`);
+        throw new Error(await getResponseError(res, "Could not update nudge"));
       }
 
       const data = (await res.json().catch(() => null)) as {
@@ -154,9 +157,13 @@ function SessionPostComponent({ session }: { session: ApiSessionPost }) {
           ? data.nudge_count
           : Math.max(0, previousCount + (nextNudged ? 1 : -1)),
       );
-    } catch {
-      // Keep the user's boolean selection. A later explicit click is the only
-      // action that toggles it again.
+    } catch (err) {
+      setHasNudged(previousNudged);
+      setNudgeCount(previousCount);
+      console.error("Failed to nudge session:", err);
+      toast.error(
+        err instanceof Error ? err.message : "Could not update nudge",
+      );
     } finally {
       setNudging(false);
     }
