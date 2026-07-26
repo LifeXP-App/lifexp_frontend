@@ -218,63 +218,65 @@ function playPhaseEndChime(nextPhase: "focus" | "break") {
 
 // Shown instead of the normal owner controls when viewing someone else's live
 // session: no pause/discard/finish, just a one-shot nudge + a way back out.
-const timerNudgeState = new Map<string, boolean>();
-
 function SpectatorControls({
   sessionId,
-  viewerUserId,
   categoryColor,
   onClose,
 }: {
   sessionId: Id<"sessions"> | null;
-  viewerUserId: string | null;
   categoryColor: string;
   onClose: () => void;
 }) {
   const toast = useToast();
-  const [nudged, setNudged] = useState(false);
+  const [nudged, setNudged] = useState<boolean | null>(null);
   const [nudging, setNudging] = useState(false);
-  const nudgeStorageKey =
-    sessionId && viewerUserId
-      ? `lifexp:nudged:${sessionId}:${viewerUserId}`
-      : null;
 
   useEffect(() => {
-    const frame = window.requestAnimationFrame(() => {
-      const cachedState = nudgeStorageKey
-        ? timerNudgeState.get(nudgeStorageKey)
-        : undefined;
-      if (cachedState !== undefined) {
-        setNudged(cachedState);
-        return;
-      }
-      try {
-        const savedState = Boolean(
-          nudgeStorageKey &&
-            window.localStorage.getItem(nudgeStorageKey) === "true",
+    if (!sessionId) {
+      setNudged(null);
+      return;
+    }
+
+    let active = true;
+    setNudged(null);
+
+    void authedFetch(`/api/sessions/${sessionId}`, {
+      cache: "no-store",
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(
+            await getResponseError(response, "Could not load nudge state"),
+          );
+        }
+
+        const data = (await response.json()) as { is_nudged?: unknown };
+        if (typeof data.is_nudged !== "boolean") {
+          throw new Error("The nudge service returned an invalid response.");
+        }
+        if (active) setNudged(data.is_nudged);
+      })
+      .catch((error) => {
+        if (!active) return;
+        console.error("Failed to load nudge state:", error);
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Could not load nudge state",
         );
-        if (nudgeStorageKey) timerNudgeState.set(nudgeStorageKey, savedState);
-        setNudged(savedState);
-      } catch {
-        if (nudgeStorageKey) timerNudgeState.set(nudgeStorageKey, false);
-        setNudged(false);
-      }
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [nudgeStorageKey]);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [sessionId, toast]);
 
   const handleNudge = useCallback(async () => {
-    if (nudging || !sessionId || !nudgeStorageKey) return;
+    if (nudging || !sessionId || nudged === null) return;
     const previousNudged = nudged;
     const nextNudged = !nudged;
-    timerNudgeState.set(nudgeStorageKey, nextNudged);
     setNudged(nextNudged);
     setNudging(true);
-    try {
-      window.localStorage.setItem(nudgeStorageKey, String(nextNudged));
-    } catch {
-      // Keep the in-memory state even when persistence is blocked.
-    }
     try {
       const response = await authedFetch(`/api/sessions/${sessionId}/nudge`, {
         method: "POST",
@@ -287,16 +289,7 @@ function SpectatorControls({
         );
       }
     } catch (err) {
-      timerNudgeState.set(nudgeStorageKey, previousNudged);
       setNudged(previousNudged);
-      try {
-        window.localStorage.setItem(
-          nudgeStorageKey,
-          String(previousNudged),
-        );
-      } catch {
-        // The in-memory state has still been restored.
-      }
       console.error("Failed to nudge session:", err);
       toast.error(
         err instanceof Error ? err.message : "Could not update nudge",
@@ -304,16 +297,16 @@ function SpectatorControls({
     } finally {
       setNudging(false);
     }
-  }, [nudgeStorageKey, nudged, nudging, sessionId, toast]);
+  }, [nudged, nudging, sessionId, toast]);
 
   return (
     <div className="flex items-center gap-4">
       <button
         onClick={handleNudge}
-        disabled={nudging}
+        disabled={nudging || nudged === null}
         className="w-36 h-14 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-medium transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-default"
       >
-        {nudged ? "Nudged 👋" : "Nudge 👋"}
+        {nudged === true ? "Nudged 👋" : "Nudge 👋"}
       </button>
 
       <button
@@ -1334,7 +1327,6 @@ useEffect(() => {
         {!isOwn ? (
           <SpectatorControls
             sessionId={sessionId}
-            viewerUserId={me ? String(me.id) : null}
             categoryColor={categoryColor}
             onClose={() => router.back()}
           />

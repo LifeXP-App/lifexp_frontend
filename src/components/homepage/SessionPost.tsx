@@ -9,6 +9,7 @@ import {
   ChatBubbleOvalLeftIcon,
   EllipsisVerticalIcon,
 } from "@heroicons/react/24/solid";
+import { useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
 import { memo, useState } from "react";
@@ -50,6 +51,22 @@ export type ApiSessionPost = {
   };
   like_count: number;
   comment_count: number;
+};
+
+type CachedFeedItem = {
+  id?: string;
+  type?: string;
+  is_nudged?: boolean;
+  nudge_count?: number;
+  [key: string]: unknown;
+};
+
+type CachedFeedData = {
+  pages: Array<{
+    list: CachedFeedItem[];
+    [key: string]: unknown;
+  }>;
+  pageParams: unknown[];
 };
 
 function toggleDropdown(btn: HTMLElement) {
@@ -99,6 +116,7 @@ function formatSessionTime(dateString: string): string {
 
 function SessionPostComponent({ session }: { session: ApiSessionPost }) {
   const toast = useToast();
+  const queryClient = useQueryClient();
   const { user, goal, activity } = session;
   const goalHref = goal?.uid
     ? `/goals/${goal.uid}?owner=${encodeURIComponent(user.username)}`
@@ -151,11 +169,32 @@ function SessionPostComponent({ session }: { session: ApiSessionPost }) {
       } | null;
       // The user's click owns the boolean state; a delayed response must not
       // flip it back. The response is only used to reconcile the shared count.
-      setHasNudged(nextNudged);
-      setNudgeCount(
+      const confirmedCount =
         typeof data?.nudge_count === "number"
           ? data.nudge_count
-          : Math.max(0, previousCount + (nextNudged ? 1 : -1)),
+          : Math.max(0, previousCount + (nextNudged ? 1 : -1));
+      setHasNudged(nextNudged);
+      setNudgeCount(confirmedCount);
+      queryClient.setQueriesData<CachedFeedData>(
+        { queryKey: ["feed"] },
+        (cached) => {
+          if (!cached?.pages) return cached;
+          return {
+            ...cached,
+            pages: cached.pages.map((page) => ({
+              ...page,
+              list: page.list.map((item) =>
+                item.type === "session" && item.id === session.id
+                  ? {
+                      ...item,
+                      is_nudged: nextNudged,
+                      nudge_count: confirmedCount,
+                    }
+                  : item,
+              ),
+            })),
+          };
+        },
       );
     } catch (err) {
       setHasNudged(previousNudged);
