@@ -344,7 +344,7 @@ const LiveSessionCard: React.FC<LiveSessionCardProps> = ({
 
       {/* Title */}
       <p className="text-center text-[13px] font-semibold leading-tight line-clamp-2 text-foreground dark:text-[var(--foreground)]">
-        {goalTitle || "Active Session"}
+        {goalTitle || "Free Session"}
       </p>
 
       {/* Username */}
@@ -440,7 +440,7 @@ const SessionItem: React.FC<
 
       <div className="flex-1 min-w-0">
         <h3 className="font-semibold text-lg text-foreground dark:text-[var(--foreground)]">
-          {goalTitle ? goalTitle : `Free ${activity} Session`}
+          {goalTitle || "Free Session"}
         </h3>
         <p className="text-sm font-bold" style={{ color: accentColor }}>
           Session {sessionNumber}
@@ -521,7 +521,7 @@ const FriendSessionItem: React.FC<
 
       <div className="flex-1 min-w-0">
         <h3 className="font-semibold text-lg text-foreground dark:text-[var(--foreground)]">
-          {goalTitle}
+          {goalTitle || "Free Session"}
         </h3>
         <Link
           href={`/u/${user?.username}`}

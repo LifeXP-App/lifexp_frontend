@@ -39,6 +39,7 @@ function formatMemberSince(dateString: string) {
 import Achievement from "@/src/components/profile/Achievement";
 import DefaultUserProfilePicture from "@/src/components/profile/DefaultUserProfilePicture";
 import FollowersFollowingPopup from "@/src/components/profile/FollowersFollowingPopup";
+import SessionInfoPopup from "@/src/components/goals/SessionInfoPopup";
 
 type UserPost = {
   id: number;
@@ -48,8 +49,10 @@ type UserPost = {
   user_mastery_title: string;
   user_life_level: number;
   title: string;
+  emoji?: string;
   content: string;
   post_image_url: string;
+  completion_picture_url?: string | null;
   duration: string;
   duration_display: string;
   status: string;
@@ -116,15 +119,24 @@ export default function ProfilePage({ params }: PageProps) {
   type Session = {
     id: string;
     uid: string;
+    session_number?: number;
     activity?: {
       id: string;
+      uid?: string;
       name: string;
       emoji?: string;
       type?: string;
     };
     total_duration_seconds: number;
+    focused_duration_seconds?: number;
     started_at: string;
     ended_at?: string;
+    completion_picture?: string | null;
+    xp_physique?: number;
+    xp_energy?: number;
+    xp_logic?: number;
+    xp_creativity?: number;
+    xp_social?: number;
   };
 
   type Goal = {
@@ -141,6 +153,33 @@ export default function ProfilePage({ params }: PageProps) {
   const [showFollowersPopup, setShowFollowersPopup] = useState(false);
   const [showFollowingPopup, setShowFollowingPopup] = useState(false);
   const [profileUrl, setProfileUrl] = useState("");
+
+  const [isSessionPopupOpen, setIsSessionPopupOpen] = useState(false);
+  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+
+  const handleOpenSessionPopup = (session: Session) => {
+    setSelectedSession(session);
+    setIsSessionPopupOpen(true);
+  };
+
+  const formatSessionDuration = (seconds?: number | null) => {
+    if (!seconds) return "00:00:00";
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return `${h > 0 ? h + ":" : ""}${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  };
+
+  const formatSessionDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
   // Race condition handling refs
   const lastFollowClickRef = useRef(0);
@@ -872,6 +911,39 @@ export default function ProfilePage({ params }: PageProps) {
         />
       )}
 
+      <SessionInfoPopup
+        isOpen={isSessionPopupOpen}
+        onClose={() => setIsSessionPopupOpen(false)}
+        sessionNumber={selectedSession?.session_number ?? 0}
+        dateText={selectedSession ? formatSessionDate(selectedSession.started_at) : ""}
+        totalDuration={
+          selectedSession
+            ? formatSessionDuration(selectedSession.total_duration_seconds)
+            : ""
+        }
+        coverImageUrl={selectedSession?.completion_picture || undefined}
+        xpDistribution={{
+          physique: selectedSession?.xp_physique || 0,
+          energy: selectedSession?.xp_energy || 0,
+          logic: selectedSession?.xp_logic || 0,
+          creativity: selectedSession?.xp_creativity || 0,
+          social: selectedSession?.xp_social || 0,
+        }}
+        focusedDuration={
+          selectedSession
+            ? formatSessionDuration(selectedSession.focused_duration_seconds)
+            : "--"
+        }
+        nudgeCount={0}
+        nudgeAvatars={[]}
+        activity={{
+          uid: selectedSession?.activity?.uid,
+          name: selectedSession?.activity?.name ?? "Activity",
+          emoji: selectedSession?.activity?.emoji ?? "🎯",
+          color: `var(--aspect-${selectedSession?.activity?.type || "muted"})`,
+        }}
+      />
+
       <div className="w-full bg-gray-100 dark:bg-dark-1 px-4 py-4 sm:px-6 md:px-8 lg:px-12 xl:px-24">
         {/* PROFILE HEADER */}
         <div className="relative rounded-xl flex flex-col md:flex-row justify-between w-full mb-4">
@@ -1315,6 +1387,7 @@ export default function ProfilePage({ params }: PageProps) {
                     return (
                       <div
                         key={session.id || session.uid}
+                        onClick={() => handleOpenSessionPopup(session)}
                         className="p-3 hover:bg-gray-100 dark:hover:bg-dark-3 rounded-lg transition-colors cursor-pointer"
                       >
                         <div className="flex items-center justify-between">
@@ -1436,11 +1509,12 @@ export default function ProfilePage({ params }: PageProps) {
                   }
 
                   const sharedProps = (post: UserPost) => ({
-                    emoji: post.tags_list[0]?.charAt(0) || "🎯",
+                    emoji: post.emoji || "🎯",
                     title: post.title,
                     description: post.content,
                     xp: post.total_xp,
-                    coverImage: post.post_image_url || null,
+                    coverImage:
+                      post.completion_picture_url || post.post_image_url || null,
                     timeText: getTimeAgo(post.created_at),
                     accent: { primary: accent.primary, secondary: accent.secondary },
                     stats: {

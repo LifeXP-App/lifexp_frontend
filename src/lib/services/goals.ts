@@ -72,6 +72,7 @@ export interface Session {
   completed_reason: string | null;
   activity: {
     id: string;
+    uid?: string;
     name: string;
     emoji: string;
     type: string;

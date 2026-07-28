@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
+import Link from "next/link";
 
 import AspectChip from "@/src/components/goals/AspectChip";
 import DeleteSessionConfirmationModal from "@/src/components/goals/DeleteSessionConfirmationModal";
@@ -10,6 +11,7 @@ import { FaBrain, FaHammer } from "react-icons/fa";
 import { BiDumbbell } from "react-icons/bi";
 
 interface ActivityType {
+  uid?: string;
   name: string;
   emoji: string;
   color: string;
@@ -194,23 +196,40 @@ const SessionInfoPopup: React.FC<SessionInfoPopupProps> = ({
 
           {/* Activity Badge */}
           <div
-            className="px-6 pb-5 flex justify-center"
+            className="px-6 pb-5 flex justify-center cursor-pointer"
             style={{
               animation: isAnimating ? "slideUp 0.25s ease-out 0.1s both" : "none",
             }}
           >
-            <div
-              className="flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-dark-3"
-              style={{
-                border: "1px solid var(--border)",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-              }}
-            >
-              <span className="text-2xl">{activity?.emoji}</span>
-              <span className="font-semibold text-lg" style={{ color: activity?.color }}>
-                {activity?.name}
-              </span>
-            </div>
+            {activity?.uid ? (
+              <Link
+                href={`/a/${activity.uid}`}
+                onClick={onClose}
+                className="flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-dark-3 "
+                style={{
+                  border: "1px solid var(--border)",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+                }}
+              >
+                <span className="text-2xl">{activity?.emoji}</span>
+                <span className="font-semibold text-lg" style={{ color: activity?.color }}>
+                  {activity?.name}
+                </span>
+              </Link>
+            ) : (
+              <div
+                className="flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-dark-3"
+                style={{
+                  border: "1px solid var(--border)",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+                }}
+              >
+                <span className="text-2xl">{activity?.emoji}</span>
+                <span className="font-semibold text-lg" style={{ color: activity?.color }}>
+                  {activity?.name}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Stats Grid */}

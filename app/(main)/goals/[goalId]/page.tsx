@@ -911,6 +911,7 @@ export default function GoalDetailPage() {
           nudgeCount={0}
           nudgeAvatars={[]}
           activity={{
+            uid: selectedSession?.activity?.uid,
             name: selectedSession?.activity?.name ?? "Activity",
             emoji: selectedSession?.activity?.emoji ?? "🎯",
             color: `var(--aspect-${selectedSession?.activity?.type || "muted"})`,

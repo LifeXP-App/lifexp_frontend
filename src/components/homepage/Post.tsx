@@ -126,51 +126,30 @@ function PostComponent({ post }: { post: PostType }) {
     });
   };
 
-  const getDuration = (
-    startedAt: string | Date,
-    createdAt: string | Date,
-  ): string => {
+  // "X over <getDuration>" reads as "X logged over the Nweeks/months/etc
+  // since this was started" — a coarse calendar span since `startedAt`, not
+  // a fine-grained diff between two timestamps.
+  const getDuration = (startedAt: string | Date): string => {
     const startDate = new Date(startedAt);
-    const endDate = new Date(createdAt);
+    if (Number.isNaN(startDate.getTime())) return "";
 
-    // Calculate difference in milliseconds
-    const diffInMs = endDate.getTime() - startDate.getTime();
+    const now = new Date();
+    const diffInMs = Math.max(0, now.getTime() - startDate.getTime());
 
-    // Handle negative duration (if created_at is before started_at)
-    if (diffInMs < 0) {
-      return "0s";
-    }
+    // Same calendar day counts as having lasted 1 day, same as a goal
+    // created and completed on the same date.
+    const diffInDays = Math.max(1, Math.ceil(diffInMs / (1000 * 60 * 60 * 24)));
+    const diffInWeeks = Math.floor(diffInDays / 7);
+    const diffInMonths = Math.floor(diffInDays / 30);
+    const diffInYears = Math.floor(diffInDays / 365);
 
-    // Calculate time units
-    const diffInSeconds = Math.floor(diffInMs / 1000);
-    const diffInMinutes = Math.floor(diffInSeconds / 60);
-    const diffInHours = Math.floor(diffInMinutes / 60);
-    const diffInDays = Math.floor(diffInHours / 24);
+    const plural = (n: number, unit: string) =>
+      `${n} ${unit}${n === 1 ? "" : "s"}`;
 
-    // Get remainders
-    const seconds = diffInSeconds % 60;
-    const minutes = diffInMinutes % 60;
-    const hours = diffInHours % 24;
-
-    // Format based on magnitude
-    if (diffInDays > 0) {
-      if (hours > 0) {
-        return `${diffInDays}d ${hours}h`;
-      }
-      return `${diffInDays}d`;
-    } else if (diffInHours > 0) {
-      if (minutes > 0) {
-        return `${diffInHours}h ${minutes}m`;
-      }
-      return `${diffInHours}h`;
-    } else if (diffInMinutes > 0) {
-      if (seconds > 0) {
-        return `${diffInMinutes}m ${seconds}s`;
-      }
-      return `${diffInMinutes}m`;
-    } else {
-      return `${diffInSeconds}s`;
-    }
+    if (diffInDays < 7) return plural(diffInDays, "day");
+    if (diffInWeeks < 4) return plural(diffInWeeks, "week");
+    if (diffInMonths < 12) return plural(diffInMonths, "month");
+    return plural(diffInYears, "year");
   };
 
   const [liked, setLiked] = useState(post.user_liked);
@@ -408,7 +387,7 @@ function PostComponent({ post }: { post: PostType }) {
       </div>
 
       {/* IMAGE */}
-      {post.post_image?.trim() ? (
+      {post.completion_picture?.trim() ? (
         <a href={goalHref} className="block">
           <div className="w-full my-4">
             <Image
@@ -425,6 +404,7 @@ function PostComponent({ post }: { post: PostType }) {
           </div>
         </a>
       ) : null}
+        
 
       {/* CONTENT */}
       <div className="px-2 md:px-0">
@@ -452,25 +432,12 @@ function PostComponent({ post }: { post: PostType }) {
             <div className="flex items-center mt-3 gap-1 text-sm font-medium text-gray-500 dark:text-[var(--muted)]">
               <ClockIcon className="w-5 h-5 inline-block mr-1" />
               <span>
-                {post.duration} over {getDuration(post.started_at, post.created_at)}
+                {post.duration} over {getDuration(post.started_at)}
               </span>
             </div>
           </div>
 
-          {post.completion_picture?.trim() ? (
-            <Link href={goalHref} className="shrink-0">
-              <Image
-                width={112}
-                height={112}
-                className="h-24 w-24 rounded-lg object-cover md:h-28 md:w-28"
-                src={post.completion_picture.replace(
-                  "/upload/",
-                  "/upload/f_auto,q_auto,w_250,c_fill/",
-                )}
-                alt={`${post.title || "Goal"} completion`}
-              />
-            </Link>
-          ) : null}
+       
         </div>
 
         {post.session && (
@@ -489,7 +456,7 @@ function PostComponent({ post }: { post: PostType }) {
                 alt={`Session ${post.session.number}`}
               />
             ) : (
-              <div className="w-24 h-24 shrink-0 bg-gray-100 dark:bg-[var(--dark-2)] flex items-center justify-center rounded-lg">
+              <div className="w-24 h-24 shrink-0 cursor-pointer bg-gray-100 dark:bg-[var(--dark-2)] flex items-center justify-center rounded-lg">
                 <span className="text-4xl">{post.session.activity.emoji}</span>
               </div>
             )}

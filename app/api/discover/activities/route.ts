@@ -24,11 +24,11 @@ export async function GET(request: Request) {
       );
     }
 
-    const target = `${baseUrl}/api/v1/activities/?page=1&page_size=3`;
+    const target = `${baseUrl}/api/v1/activities/?page=1&page_size=6&discover=true`;
 
     let res = await fetch(target, {
       headers: { Authorization: `Bearer ${access}` },
-      next: { revalidate: 60 },
+      cache: "no-store",
     });
 
     if (res.status === 401) {
@@ -44,7 +44,7 @@ export async function GET(request: Request) {
 
       res = await fetch(target, {
         headers: { Authorization: `Bearer ${access}` },
-        next: { revalidate: 60 },
+        cache: "no-store",
       });
     }
 

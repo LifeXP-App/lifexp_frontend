@@ -22,10 +22,10 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   }, [authStatus, loading]);
 
   useEffect(() => {
-    if (!loading && session) {
+    if (!loading && authStatus === "authenticated") {
       syncTimezoneInBackground();
     }
-  }, [session, loading]);
+  }, [authStatus, loading]);
 
   // Show loading state while checking auth
   if (loading || authStatus === "loading") {

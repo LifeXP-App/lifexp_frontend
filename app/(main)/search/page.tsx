@@ -84,7 +84,11 @@ export default function SearchPage() {
       }
     },
     enabled: hasAccessToken,
-    staleTime: 5 * 60 * 1000,
+    // Discover results are randomized server-side for variety on every
+    // request — a long staleTime would just keep serving the same cached
+    // sample, defeating that. Short enough to feel fresh on a revisit,
+    // long enough not to refetch on every re-render within a session.
+    staleTime: 30 * 1000,
     gcTime: 15 * 60 * 1000,
   });
 
@@ -105,7 +109,7 @@ export default function SearchPage() {
       }
     },
     enabled: hasAccessToken,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000,
     gcTime: 15 * 60 * 1000,
   });
 
@@ -123,7 +127,7 @@ export default function SearchPage() {
       }
     },
     enabled: hasAccessToken,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000,
     gcTime: 15 * 60 * 1000,
   });
 
