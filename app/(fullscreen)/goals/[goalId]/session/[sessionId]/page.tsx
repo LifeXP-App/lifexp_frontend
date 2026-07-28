@@ -5,6 +5,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { useAuth } from "@/src/context/AuthContext";
 import { useToast, useConfirm } from "@/src/context/ToastContext";
 import { authedFetch } from "@/src/lib/api/authedFetch";
+import { getResponseError } from "@/src/lib/api/responseError";
 import { GoalsService } from "@/src/lib/services/goals";
 import {
   BoltIcon,
@@ -16,6 +17,7 @@ import {
 import { useMutation, useQuery } from "convex/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { DumbbellIcon } from "lucide-react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { FaBrain, FaHammer } from "react-icons/fa";
@@ -225,26 +227,86 @@ function SpectatorControls({
   categoryColor: string;
   onClose: () => void;
 }) {
-  const [nudged, setNudged] = useState(false);
+  const toast = useToast();
+  const [nudged, setNudged] = useState<boolean | null>(null);
+  const [nudging, setNudging] = useState(false);
+
+  useEffect(() => {
+    if (!sessionId) {
+      setNudged(null);
+      return;
+    }
+
+    let active = true;
+    setNudged(null);
+
+    void authedFetch(`/api/sessions/${sessionId}`, {
+      cache: "no-store",
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(
+            await getResponseError(response, "Could not load nudge state"),
+          );
+        }
+
+        const data = (await response.json()) as { is_nudged?: unknown };
+        if (typeof data.is_nudged !== "boolean") {
+          throw new Error("The nudge service returned an invalid response.");
+        }
+        if (active) setNudged(data.is_nudged);
+      })
+      .catch((error) => {
+        if (!active) return;
+        console.error("Failed to load nudge state:", error);
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Could not load nudge state",
+        );
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [sessionId, toast]);
 
   const handleNudge = useCallback(async () => {
-    if (nudged || !sessionId) return;
-    setNudged(true);
+    if (nudging || !sessionId || nudged === null) return;
+    const previousNudged = nudged;
+    const nextNudged = !nudged;
+    setNudged(nextNudged);
+    setNudging(true);
     try {
-      await authedFetch(`/api/sessions/${sessionId}/nudge`, { method: "POST" });
+      const response = await authedFetch(`/api/sessions/${sessionId}/nudge`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_nudged: nextNudged }),
+      });
+      if (!response.ok) {
+        throw new Error(
+          await getResponseError(response, "Could not update nudge"),
+        );
+      }
     } catch (err) {
+      setNudged(previousNudged);
       console.error("Failed to nudge session:", err);
+      toast.error(
+        err instanceof Error ? err.message : "Could not update nudge",
+      );
+    } finally {
+      setNudging(false);
     }
-  }, [nudged, sessionId]);
+  }, [nudged, nudging, sessionId, toast]);
 
   return (
     <div className="flex items-center gap-4">
       <button
         onClick={handleNudge}
-        disabled={nudged}
+        disabled={nudging || nudged === null}
         className="w-36 h-14 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-medium transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-default"
       >
-        {nudged ? "Nudged 👋" : "Nudge 👋"}
+        {nudged === true ? "Nudged 👋" : "Nudge 👋"}
       </button>
 
       <button
@@ -336,14 +398,47 @@ export default function SessionTimer({ params }: SessionTimerProps) {
   const abandonMutation = useMutation(api.sessions.abandonSession);
   const updateInitialRatesMutation = useMutation(api.sessions.updateInitialRates);
   const markSyncedMutation = useMutation(api.sessions.markSyncedToDjango);
+  const enterAsSpectatorMutation = useMutation(
+    api.sessions.enterSessionAsSpectator,
+  );
 
   const isRunning = session?.status === "live";
   const isPaused = session?.status === "paused";
   const isActive = isRunning || isPaused;
   // Flat primitive so React Compiler can track it without inferring the whole session object
   const sessionSynced = session?.syncedToDjango ?? false;
+  const sessionOwnerId = session?.userId;
   // Whether the logged-in user owns this session, vs. viewing someone else's live session
-  const isOwn = Boolean(me && session && session.userId === String(me.id));
+  const isOwn = Boolean(me && sessionOwnerId === String(me.id));
+
+  useEffect(() => {
+    if (!sessionId || !sessionOwnerId || !me || isOwn) return;
+
+    const presence = {
+      sessionId,
+      userId: String(me.id),
+      username: me.username,
+      profilePicture: me.profile_picture ?? undefined,
+    };
+    const refreshPresence = () => {
+      void enterAsSpectatorMutation(presence).catch((err) => {
+        console.error("Failed to update spectator presence:", err);
+      });
+    };
+
+    refreshPresence();
+    const heartbeat = window.setInterval(refreshPresence, 20_000);
+    // Avoid an explicit async leave here: React Strict Mode performs an
+    // effect cleanup/remount cycle, where leave can race and beat the new
+    // join. Viewers naturally expire after their heartbeat stops.
+    return () => window.clearInterval(heartbeat);
+  }, [
+    enterAsSpectatorMutation,
+    isOwn,
+    me,
+    sessionId,
+    sessionOwnerId,
+  ]);
 
   // ── Check for existing active session before creating ──
   const existingSession = useQuery(
@@ -1070,6 +1165,25 @@ useEffect(() => {
   const activityLabel = isBreak
     ? "Break"
     : (session?.activityName ?? activityType ?? "Activity");
+  const persistedSpectators = (session?.spectators ?? []).filter(
+    (spectator) => spectator.lastSeenAt >= Date.now() - 60_000,
+  );
+  const activeSpectators =
+    !isOwn &&
+    me &&
+    !persistedSpectators.some(
+      (spectator) => spectator.userId === String(me.id),
+    )
+      ? [
+          ...persistedSpectators,
+          {
+            userId: String(me.id),
+            username: me.username,
+            profilePicture: me.profile_picture ?? undefined,
+            lastSeenAt: Date.now(),
+          },
+        ]
+      : persistedSpectators;
 
   return (
     <div className="h-screen w-full bg-black relative overflow-hidden select-none">
@@ -1078,6 +1192,36 @@ useEffect(() => {
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-[120px] opacity-20"
         style={{ backgroundColor: categoryColor }}
       />
+
+      {activeSpectators.length > 0 && (
+        <aside
+          className="absolute right-5 top-1/2 z-30 flex -translate-y-1/2 flex-col items-center gap-3"
+          aria-label={`${activeSpectators.length} ${
+            activeSpectators.length === 1 ? "spectator" : "spectators"
+          } watching`}
+        >
+          <div className="rounded-full border border-white/10 bg-gray-900/90 px-3 py-1 text-xs font-medium text-white/80 shadow-lg backdrop-blur">
+            {activeSpectators.length}{" "}
+            {activeSpectators.length === 1 ? "spectator" : "spectators"}
+          </div>
+          {activeSpectators.map((spectator) => (
+            <div
+              key={spectator.userId}
+              className="relative h-12 w-12 overflow-hidden rounded-full border-2 border-white/20 bg-gray-800 shadow-lg shadow-black/40"
+              title={`${spectator.username} is spectating`}
+            >
+              <Image
+                src={spectator.profilePicture || "/default_pfp.png"}
+                alt={`${spectator.username}'s profile picture`}
+                fill
+                sizes="48px"
+                className="object-cover"
+                unoptimized
+              />
+            </div>
+          ))}
+        </aside>
+      )}
 
       {/* Main content */}
       <div className="relative z-10 h-full flex flex-col items-center justify-around py-20 px-6">

@@ -633,7 +633,7 @@ const {
   hasNextPage: postsHasMore,
   fetchNextPage: loadMorePosts,
 } = useInfiniteQuery({
-  queryKey: ["feed"],
+  queryKey: ["feed", me?.id],
   queryFn: async ({ pageParam }) => {
     const res = await fetch(`/api/feed?page=${pageParam}&limit=10`, {
       method: "GET",

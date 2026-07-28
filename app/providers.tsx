@@ -13,7 +13,7 @@ const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 // Bump this if a query's cached data shape ever changes incompatibly —
 // it invalidates any previously-persisted cache instead of letting stale
 // old-shaped data get restored and crash a component expecting new fields.
-const PERSISTED_CACHE_VERSION = 'v1';
+const PERSISTED_CACHE_VERSION = 'v2';
 
 export function Providers({ children }: { children: ReactNode }) {
   // One QueryClient per browser session (not per render) — created lazily so

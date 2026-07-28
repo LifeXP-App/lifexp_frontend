@@ -78,6 +78,16 @@ export default defineSchema({
 
     // ── Social ──
     nudgeCount: v.number(),
+    spectators: v.optional(
+      v.array(
+        v.object({
+          userId: v.string(),
+          username: v.string(),
+          profilePicture: v.optional(v.string()),
+          lastSeenAt: v.number(),
+        }),
+      ),
+    ),
 
     // ── Device Context ──
     deviceContext: v.optional(

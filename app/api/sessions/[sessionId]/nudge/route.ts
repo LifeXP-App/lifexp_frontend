@@ -45,11 +45,43 @@ export async function POST(
   context: { params: Promise<{ sessionId: string }> },
 ) {
   const { sessionId } = await context.params;
-  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+  const body = await req.json().catch(() => null);
+  if (!body || typeof body.is_nudged !== "boolean") {
+    return NextResponse.json(
+      { detail: "is_nudged must be a boolean" },
+      { status: 400 },
+    );
+  }
 
-  const res = await authedFetch(req, `${baseUrl}/api/v1/sessions/${sessionId}/nudge/`, {
-    method: "POST",
-  });
+  if (!baseUrl) {
+    console.error("Nudge proxy is missing NEXT_PUBLIC_API_BASE_URL");
+    return NextResponse.json(
+      { detail: "Nudge service is not configured." },
+      { status: 500 },
+    );
+  }
+
+  let res: Response;
+  try {
+    res = await authedFetch(
+      req,
+      `${baseUrl}/api/v1/sessions/${sessionId}/nudge/`,
+      {
+        method: "POST",
+        body: JSON.stringify({ is_nudged: body.is_nudged }),
+      },
+    );
+  } catch (error) {
+    console.error("Nudge proxy could not reach the backend", {
+      sessionId,
+      error,
+    });
+    return NextResponse.json(
+      { detail: "Nudge service is temporarily unavailable. Please try again." },
+      { status: 502 },
+    );
+  }
 
   if (res instanceof NextResponse) return res;
 
@@ -57,6 +89,9 @@ export async function POST(
   try {
     return NextResponse.json(JSON.parse(text), { status: res.status });
   } catch {
-    return NextResponse.json({ detail: text }, { status: res.status });
+    return NextResponse.json(
+      { detail: text.trim() || "The nudge service returned an empty response." },
+      { status: res.status },
+    );
   }
 }

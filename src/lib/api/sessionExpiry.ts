@@ -66,5 +66,5 @@ export async function forceLogout(): Promise<void> {
     // /api/auth/me 401 path.
   }
 
-  window.location.href = "/users/login";
+  window.location.replace("/users/login");
 }

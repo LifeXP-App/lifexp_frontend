@@ -471,6 +471,56 @@ export const getSession = query({
   },
 });
 
+export const enterSessionAsSpectator = mutation({
+  args: {
+    sessionId: v.id("sessions"),
+    userId: v.string(),
+    username: v.string(),
+    profilePicture: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const session = await ctx.db.get(args.sessionId);
+    if (!session) throw new Error("Session not found");
+    if (session.userId === args.userId) return;
+
+    const now = Date.now();
+    const existing = session.spectators ?? [];
+    const otherActiveSpectators = existing.filter(
+      (spectator) =>
+        spectator.userId !== args.userId &&
+        spectator.lastSeenAt >= now - 60_000,
+    );
+
+    await ctx.db.patch(args.sessionId, {
+      spectators: [
+        ...otherActiveSpectators,
+        {
+          userId: args.userId,
+          username: args.username,
+          profilePicture: args.profilePicture,
+          lastSeenAt: now,
+        },
+      ],
+    });
+  },
+});
+
+export const leaveSessionAsSpectator = mutation({
+  args: {
+    sessionId: v.id("sessions"),
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const session = await ctx.db.get(args.sessionId);
+    if (!session) return;
+    await ctx.db.patch(args.sessionId, {
+      spectators: (session.spectators ?? []).filter(
+        (spectator) => spectator.userId !== args.userId,
+      ),
+    });
+  },
+});
+
 export const getSessionsByGoal = query({
   args: { goalId: v.string() },
   handler: async (ctx, args) => {

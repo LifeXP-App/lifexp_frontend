@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getAuthCookieOptions } from "@/src/lib/auth/sessionCookies";
 
 /**
  * Persists a Supabase session (obtained client-side, e.g. after an OAuth
@@ -14,13 +15,7 @@ export async function POST(req: Request) {
 
   const response = NextResponse.json({ ok: true });
 
-  const cookieOptions = {
-    httpOnly: true,
-    sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 30, // 30 days
-  };
+  const cookieOptions = getAuthCookieOptions();
 
   response.cookies.set("sb-access-token", access_token, cookieOptions);
 

@@ -2,11 +2,14 @@
 
 import { CommentSection } from "@/src/components/homepage/CommentSection";
 import { LiveAvatar } from "@/src/components/LiveAvatar";
+import { useToast } from "@/src/context/ToastContext";
+import { getResponseError } from "@/src/lib/api/responseError";
 import { supabase } from "@/src/lib/supabase";
 import {
   ChatBubbleOvalLeftIcon,
   EllipsisVerticalIcon,
 } from "@heroicons/react/24/solid";
+import { useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
 import { memo, useState } from "react";
@@ -48,6 +51,22 @@ export type ApiSessionPost = {
   };
   like_count: number;
   comment_count: number;
+};
+
+type CachedFeedItem = {
+  id?: string;
+  type?: string;
+  is_nudged?: boolean;
+  nudge_count?: number;
+  [key: string]: unknown;
+};
+
+type CachedFeedData = {
+  pages: Array<{
+    list: CachedFeedItem[];
+    [key: string]: unknown;
+  }>;
+  pageParams: unknown[];
 };
 
 function toggleDropdown(btn: HTMLElement) {
@@ -96,6 +115,8 @@ function formatSessionTime(dateString: string): string {
 }
 
 function SessionPostComponent({ session }: { session: ApiSessionPost }) {
+  const toast = useToast();
+  const queryClient = useQueryClient();
   const { user, goal, activity } = session;
   const goalHref = goal?.uid
     ? `/goals/${goal.uid}?owner=${encodeURIComponent(user.username)}`
@@ -104,7 +125,9 @@ function SessionPostComponent({ session }: { session: ApiSessionPost }) {
   const [showComments, setShowComments] = useState(false);
   const [commentCount] = useState(session.comment_count ?? 0);
   const [nudgeCount, setNudgeCount] = useState(session.nudge_count ?? 0);
-  const [hasNudged, setHasNudged] = useState(session.is_nudged);
+  const [hasNudged, setHasNudged] = useState(
+    session.is_nudged === true,
+  );
   const [nudging, setNudging] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
 
@@ -115,10 +138,13 @@ function SessionPostComponent({ session }: { session: ApiSessionPost }) {
   };
 
   const handleNudge = async () => {
-    if (nudging || hasNudged) return;
-    // Optimistic — feel instant
-    setHasNudged(true);
-    setNudgeCount((prev) => prev + 1);
+    if (nudging) return;
+    const previousNudged = hasNudged;
+    const previousCount = nudgeCount;
+    const nextNudged = !previousNudged;
+
+    setHasNudged(nextNudged);
+    setNudgeCount(Math.max(0, previousCount + (nextNudged ? 1 : -1)));
     setNudging(true);
     try {
       const {
@@ -126,21 +152,57 @@ function SessionPostComponent({ session }: { session: ApiSessionPost }) {
       } = await supabase.auth.getSession();
       const res = await fetch(`/api/sessions/${session.id}/nudge`, {
         method: "POST",
-        headers: supaSession?.access_token
-          ? { Authorization: `Bearer ${supaSession.access_token}` }
-          : {},
+        headers: {
+          "Content-Type": "application/json",
+          ...(supaSession?.access_token
+            ? { Authorization: `Bearer ${supaSession.access_token}` }
+            : {}),
+        },
+        body: JSON.stringify({ is_nudged: nextNudged }),
       });
-      if (res.status === 201) {
-        const data = await res.json();
-        setNudgeCount(data.nudge_count);
-      } else if (res.status !== 409) {
-        // 409 = already nudged, keep state. Anything else = revert.
-        setHasNudged(false);
-        setNudgeCount((prev) => prev - 1);
+      if (!res.ok) {
+        throw new Error(await getResponseError(res, "Could not update nudge"));
       }
-    } catch {
-      setHasNudged(false);
-      setNudgeCount((prev) => prev - 1);
+
+      const data = (await res.json().catch(() => null)) as {
+        nudge_count?: number;
+      } | null;
+      // The user's click owns the boolean state; a delayed response must not
+      // flip it back. The response is only used to reconcile the shared count.
+      const confirmedCount =
+        typeof data?.nudge_count === "number"
+          ? data.nudge_count
+          : Math.max(0, previousCount + (nextNudged ? 1 : -1));
+      setHasNudged(nextNudged);
+      setNudgeCount(confirmedCount);
+      queryClient.setQueriesData<CachedFeedData>(
+        { queryKey: ["feed"] },
+        (cached) => {
+          if (!cached?.pages) return cached;
+          return {
+            ...cached,
+            pages: cached.pages.map((page) => ({
+              ...page,
+              list: page.list.map((item) =>
+                item.type === "session" && item.id === session.id
+                  ? {
+                      ...item,
+                      is_nudged: nextNudged,
+                      nudge_count: confirmedCount,
+                    }
+                  : item,
+              ),
+            })),
+          };
+        },
+      );
+    } catch (err) {
+      setHasNudged(previousNudged);
+      setNudgeCount(previousCount);
+      console.error("Failed to nudge session:", err);
+      toast.error(
+        err instanceof Error ? err.message : "Could not update nudge",
+      );
     } finally {
       setNudging(false);
     }

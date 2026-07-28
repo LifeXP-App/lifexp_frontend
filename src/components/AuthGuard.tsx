@@ -3,14 +3,12 @@
 import { useAuth } from "@/src/context/AuthContext";
 import { syncTimezoneInBackground } from "@/src/lib/utils/syncTimezone";
 import { useTheme } from "next-themes";
-import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { forceLogout } from "@/src/lib/api/sessionExpiry";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { session, loading } = useAuth();
-  const router = useRouter();
-  const pathname = usePathname();
+  const { authStatus, loading, refreshMe } = useAuth();
   const { theme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -18,10 +16,10 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => setMounted(true), []);
 
   useEffect(() => {
-    if (!loading && !session) {
-      router.push("/users/login");
+    if (!loading && authStatus === "unauthenticated") {
+      void forceLogout();
     }
-  }, [session, loading, router, pathname]);
+  }, [authStatus, loading]);
 
   useEffect(() => {
     if (!loading && session) {
@@ -30,7 +28,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   }, [session, loading]);
 
   // Show loading state while checking auth
-  if (loading) {
+  if (loading || authStatus === "loading") {
     const isDark = mounted && (resolvedTheme === "dark" || theme === "dark");
     const logoSrc = isDark ? "/logodark.png" : "/logolight.png";
 
@@ -52,8 +50,23 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   }
 
   // Don't render children if not authenticated
-  if (!session) {
+  if (authStatus === "unauthenticated") {
     return null;
+  }
+
+  if (authStatus === "error") {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center gap-4 px-6 text-center">
+        <p>We couldn&apos;t verify your session right now.</p>
+        <button
+          type="button"
+          onClick={() => void refreshMe()}
+          className="rounded-lg bg-black px-4 py-2 text-white dark:bg-white dark:text-black"
+        >
+          Try again
+        </button>
+      </div>
+    );
   }
 
   return <>{children}</>;
