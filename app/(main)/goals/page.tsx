@@ -13,7 +13,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import dynamic from "next/dynamic";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { FaBrain, FaHammer } from "react-icons/fa";
 
 const NewActivityModal = dynamic(
@@ -426,6 +426,15 @@ export default function GoalsPage() {
     newStatus: string;
     goalTitle: string;
   } | null>(null);
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("new") !== "1") return;
+
+    setIsModalOpen(true);
+    url.searchParams.delete("new");
+    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+  }, []);
 
   const { data: goals = [], isLoading: goalsLoading } = useQuery({
     queryKey: ["goals"],

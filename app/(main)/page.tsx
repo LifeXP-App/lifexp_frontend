@@ -829,7 +829,10 @@ const { data: discoverUsers = [], isLoading: discoverLoading } = useQuery({
           className="flex-1 min-h-[100vh] pb-16 md:pb-6 py-2 md:py-6 md:px-4 sm:px-6 overflow-y-auto scrollbar-hide h-screen"
         >
           {/* TOP BAR */}
-          <div className="mb-8 pl-2 md:pl-0 flex gap-4 overflow-x-auto whitespace-nowrap scrollbar-hide">
+          <div
+            data-onboarding="daily-pulse"
+            className="mb-8 pl-2 md:pl-0 flex gap-4 overflow-x-auto whitespace-nowrap scrollbar-hide"
+          >
             {friendsStatusLoading ? (
               <>
                 <UserStatusSkeleton />
@@ -899,6 +902,7 @@ const { data: discoverUsers = [], isLoading: discoverLoading } = useQuery({
           {/* POSTS */}
           <div
             id="posts-container"
+            data-onboarding="feed"
             className="overflow-hidden scrollbar-hide transition-opacity duration-300"
           >
             {postsLoading && posts.length === 0 ? (

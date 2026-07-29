@@ -73,6 +73,7 @@ export function Sidebar() {
         <button
           ref={menuButtonRef}
           type="button"
+          data-onboarding="mobile-menu"
           aria-label="Open navigation"
           aria-controls="mobile-sidebar"
           aria-expanded={isMobileOpen}

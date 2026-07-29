@@ -390,6 +390,23 @@ export default function SettingsPage() {
           )}
         </div>
 
+        <div className="flex items-center justify-between gap-4 border-t border-gray-200 pt-6 dark:border-[var(--border)]">
+          <div>
+            <h2 className="text-l font-medium text-black dark:text-[var(--foreground)] md:text-xl">
+              Guided Tour
+            </h2>
+            <p className="mt-1 text-sm text-gray-500 dark:text-[var(--muted)]">
+              Review goals, sessions, XP, and the feed.
+            </p>
+          </div>
+          <Link
+            href="/?tour=1"
+            className="inline-flex h-11 shrink-0 cursor-pointer items-center rounded-xl border border-gray-300 px-4 text-sm font-semibold text-gray-800 transition-[background-color,transform] duration-150 hover:bg-gray-100 active:scale-[0.97] dark:border-[var(--border)] dark:text-[var(--foreground)] dark:hover:bg-dark-3"
+          >
+            Take Tour
+          </Link>
+        </div>
+
         {/* Save button
         <button
           onClick={() => form && saveSettings(form)}

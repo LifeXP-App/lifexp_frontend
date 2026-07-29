@@ -166,6 +166,22 @@ body {
 .animate-backdrop-in { animation: toast-backdrop-in 0.18s ease-out; }
 .animate-dialog-in { animation: toast-dialog-in 0.22s cubic-bezier(0.16, 1, 0.3, 1); }
 
+.tour-card {
+  transition: opacity 180ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@starting-style {
+  .tour-card {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tour-card {
+    transition-duration: 0ms;
+  }
+}
+
 
 .recharts-wrapper:focus,
 .recharts-wrapper:focus-visible,
@@ -177,7 +193,6 @@ svg:focus,
 svg:focus-visible {
   outline: none !important;
 }
-
 
 
 

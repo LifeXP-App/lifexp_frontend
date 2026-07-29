@@ -8,6 +8,7 @@ import MasteryPopupWrapper from "../../src/components/MasteryPopupWrapper";
 import { PopupProvider } from "../../src/context/PopupContext";
 import { AuthProvider } from "@/src/context/AuthContext";
 import { AuthGuard } from "@/src/components/AuthGuard";
+import { OnboardingTour } from "@/src/components/onboarding/OnboardingTour";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -42,6 +43,7 @@ export default function RootLayout({
                 <div className="flex h-[100dvh] overflow-hidden bg-gray-100 dark:bg-dark-1">
                   {/* ✅ Client wrapper handles state */}
                   <MasteryPopupWrapper />
+                  <OnboardingTour />
 
                   <Sidebar />
                   <main className="flex-1 overflow-y-auto pt-16 md:pt-0">
