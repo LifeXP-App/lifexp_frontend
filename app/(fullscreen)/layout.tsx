@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "../globals.css";
 import { Providers } from "../providers";
 import { AuthProvider } from "@/src/context/AuthContext";
+import { OnboardingTour } from "@/src/components/onboarding/OnboardingTour";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,6 +33,8 @@ export default function RootLayout({
       >
         <Providers>
           <AuthProvider>
+            {/* Picks the walkthrough back up on session and reflection screens. */}
+            <OnboardingTour />
             <div className="flex h-screen overflow-hidden">
               <main className="flex-1 overflow-y-auto">
                 {children}

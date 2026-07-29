@@ -412,6 +412,7 @@ const DayCompletePage = () => {
           <div className="px-6 pb-6">
 
             <div
+              data-onboarding="reflection-share"
               onClick={() => {
                 if (!imagePreview) handlePickImage();
               }}

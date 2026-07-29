@@ -170,6 +170,27 @@ body {
   transition: opacity 180ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
+/* Spotlight ring — pulses so the eye lands on the highlighted control */
+@keyframes tour-ring-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.tour-ring {
+  animation: tour-ring-pulse 1.8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tour-ring {
+    animation: none;
+  }
+}
+
 @starting-style {
   .tour-card {
     opacity: 0;

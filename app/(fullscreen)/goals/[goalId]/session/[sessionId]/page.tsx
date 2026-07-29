@@ -1239,7 +1239,10 @@ useEffect(() => {
         </div>
 
         {/* Timer */}
-        <div className="relative mb-8">
+        <div
+          className="relative mb-8"
+          data-onboarding={isOwn ? "session-timer" : undefined}
+        >
           {isRunning && (
             <div
               className="absolute inset-0 rounded-full animate-ping opacity-20"
@@ -1255,7 +1258,11 @@ useEffect(() => {
         </div>
 
         {/* XP indicator */}
-        <div className="relative mb-12" ref={statsRef}>
+        <div
+          className="relative mb-12"
+          ref={statsRef}
+          data-onboarding={isOwn ? "session-xp" : undefined}
+        >
           <button
             onClick={() => setShowStats(!showStats)}
             className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
@@ -1363,7 +1370,10 @@ useEffect(() => {
             </div>
 
             {isBreak ? (
-              <div className="flex items-center gap-4">
+              <div
+                className="flex items-center gap-4"
+                data-onboarding="session-controls"
+              >
                 <button
                   onClick={handleSkipBreak}
                   disabled={isSyncing}
@@ -1395,7 +1405,10 @@ useEffect(() => {
                 </button>
               </div>
             ) : (
-              <div className="flex items-center gap-4">
+              <div
+                className="flex items-center gap-4"
+                data-onboarding="session-controls"
+              >
                 <button
                   onClick={handleDiscard}
                   disabled={isSyncing}

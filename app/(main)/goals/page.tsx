@@ -93,6 +93,7 @@ function GoalCard({
   showAchievementCta,
   onStatusChange,
   onDelete,
+  spotlightPrimary,
 }: {
   goal: Goal;
   primaryCta?: { label: string; onClick: () => void };
@@ -100,6 +101,8 @@ function GoalCard({
   showAchievementCta?: { label: string; onClick: () => void };
   onStatusChange?: (goalId: string, newStatus: string) => void;
   onDelete?: (goalId: string) => void;
+  /** Marks this card's primary button as the onboarding tour anchor. */
+  spotlightPrimary?: boolean;
 }) {
   const isCompleted = goal.status === "completed";
 
@@ -212,6 +215,7 @@ function GoalCard({
         {primaryCta && (
           <button
             onClick={primaryCta.onClick}
+            data-onboarding={spotlightPrimary ? "goal-session-cta" : undefined}
             style={{
               backgroundColor: "var(--rookie-primary)",
             }}
@@ -833,6 +837,7 @@ export default function GoalsPage() {
               {/* Create new goal */}
               <button
                 type="button"
+                data-onboarding="goals-empty-session"
                 onClick={handleOpenEmptySessionModal}
                 className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-gray-200 dark:bg-dark-2 text-black dark:text-[var(--foreground)] font-semibold py-4 px-5 hover:bg-gray-300 dark:hover:bg-dark-3 transition cursor-pointer"
               >
@@ -841,6 +846,7 @@ export default function GoalsPage() {
               </button>
               <button
                 type="button"
+                data-onboarding="goals-create"
                 onClick={() => setIsModalOpen(true)}
                 className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-gray-200 dark:bg-dark-2 text-black dark:text-[var(--foreground)] font-semibold py-4 px-5 hover:bg-gray-300 dark:hover:bg-dark-3 transition cursor-pointer"
               >
@@ -884,9 +890,10 @@ export default function GoalsPage() {
                 </>
               ) : (
                 <div className="space-y-4">
-                  {ongoingGoals.map((goal) => (
+                  {ongoingGoals.map((goal, index) => (
                     <GoalCard
                       key={goal.id}
+                      spotlightPrimary={index === 0}
                       goal={{
                         id: goal.uid,
                         emoji: goal.emoji || "🎯",
@@ -927,9 +934,10 @@ export default function GoalsPage() {
                 </>
               ) : (
                 <div className="space-y-4">
-                  {plannedGoals.map((goal) => (
+                  {plannedGoals.map((goal, index) => (
                     <GoalCard
                       key={goal.id}
+                      spotlightPrimary={index === 0 && ongoingGoals.length === 0}
                       goal={{
                         id: goal.uid,
                         emoji: goal.emoji || "🎯",
