@@ -93,6 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const res = await fetch("/api/auth/me", {
         method: "GET",
         cache: "no-store",
+        credentials: "include",
       });
 
       if (!res.ok) {

@@ -80,6 +80,7 @@ export async function GET() {
 
   // 2) if expired -> shared refresh -> retry once
   if (res.status === 401) {
+    console.log("Django authentication error:", await res.clone().text());
     const tokens = await sharedRefresh(refreshTokens);
 
     if (!tokens?.access) {
