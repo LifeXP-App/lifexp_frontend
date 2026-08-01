@@ -84,6 +84,7 @@ export default defineSchema({
           userId: v.string(),
           username: v.string(),
           profilePicture: v.optional(v.string()),
+          isNudged: v.optional(v.boolean()),
           lastSeenAt: v.number(),
         }),
       ),

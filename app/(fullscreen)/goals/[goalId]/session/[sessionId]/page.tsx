@@ -220,10 +220,12 @@ function playPhaseEndChime(nextPhase: "focus" | "break") {
 // session: no pause/discard/finish, just a one-shot nudge + a way back out.
 function SpectatorControls({
   sessionId,
+  onNudgeChange,
   categoryColor,
   onClose,
 }: {
   sessionId: Id<"sessions"> | null;
+  onNudgeChange: (isNudged: boolean) => void;
   categoryColor: string;
   onClose: () => void;
 }) {
@@ -254,7 +256,10 @@ function SpectatorControls({
         if (typeof data.is_nudged !== "boolean") {
           throw new Error("The nudge service returned an invalid response.");
         }
-        if (active) setNudged(data.is_nudged);
+        if (active) {
+          setNudged(data.is_nudged);
+          onNudgeChange(data.is_nudged);
+        }
       })
       .catch((error) => {
         if (!active) return;
@@ -269,13 +274,14 @@ function SpectatorControls({
     return () => {
       active = false;
     };
-  }, [sessionId, toast]);
+  }, [onNudgeChange, sessionId, toast]);
 
   const handleNudge = useCallback(async () => {
     if (nudging || !sessionId || nudged === null) return;
     const previousNudged = nudged;
     const nextNudged = !nudged;
     setNudged(nextNudged);
+    onNudgeChange(nextNudged);
     setNudging(true);
     try {
       const response = await authedFetch(`/api/sessions/${sessionId}/nudge`, {
@@ -290,6 +296,7 @@ function SpectatorControls({
       }
     } catch (err) {
       setNudged(previousNudged);
+      onNudgeChange(previousNudged);
       console.error("Failed to nudge session:", err);
       toast.error(
         err instanceof Error ? err.message : "Could not update nudge",
@@ -297,7 +304,7 @@ function SpectatorControls({
     } finally {
       setNudging(false);
     }
-  }, [nudged, nudging, sessionId, toast]);
+  }, [nudged, nudging, onNudgeChange, sessionId, toast]);
 
   return (
     <div className="flex items-center gap-4">
@@ -401,6 +408,9 @@ export default function SessionTimer({ params }: SessionTimerProps) {
   const enterAsSpectatorMutation = useMutation(
     api.sessions.enterSessionAsSpectator,
   );
+  const setSpectatorNudgeMutation = useMutation(
+    api.sessions.setSpectatorNudge,
+  );
 
   const isRunning = session?.status === "live";
   const isPaused = session?.status === "paused";
@@ -410,6 +420,19 @@ export default function SessionTimer({ params }: SessionTimerProps) {
   const sessionOwnerId = session?.userId;
   // Whether the logged-in user owns this session, vs. viewing someone else's live session
   const isOwn = Boolean(me && sessionOwnerId === String(me.id));
+  const handleSpectatorNudgeChange = useCallback(
+    (isNudged: boolean) => {
+      if (!sessionId || !me) return;
+      void setSpectatorNudgeMutation({
+        sessionId,
+        userId: String(me.id),
+        isNudged,
+      }).catch((err) => {
+        console.error("Failed to update spectator nudge badge:", err);
+      });
+    },
+    [me, sessionId, setSpectatorNudgeMutation],
+  );
 
   useEffect(() => {
     if (!sessionId || !sessionOwnerId || !me || isOwn) return;
@@ -1180,6 +1203,7 @@ useEffect(() => {
             userId: String(me.id),
             username: me.username,
             profilePicture: me.profile_picture ?? undefined,
+            isNudged: false,
             lastSeenAt: Date.now(),
           },
         ]
@@ -1207,17 +1231,28 @@ useEffect(() => {
           {activeSpectators.map((spectator) => (
             <div
               key={spectator.userId}
-              className="relative h-12 w-12 overflow-hidden rounded-full border-2 border-white/20 bg-gray-800 shadow-lg shadow-black/40"
+              className="relative h-12 w-12"
               title={`${spectator.username} is spectating`}
             >
-              <Image
-                src={spectator.profilePicture || "/default_pfp.png"}
-                alt={`${spectator.username}'s profile picture`}
-                fill
-                sizes="48px"
-                className="object-cover"
-                unoptimized
-              />
+              <div className="relative h-12 w-12 overflow-hidden rounded-full border-2 border-white/20 bg-gray-800 shadow-lg shadow-black/40">
+                <Image
+                  src={spectator.profilePicture || "/default_pfp.png"}
+                  alt={`${spectator.username}'s profile picture`}
+                  fill
+                  sizes="48px"
+                  className="object-cover"
+                  unoptimized
+                />
+              </div>
+              {spectator.isNudged === true && (
+                <span
+                  className="absolute -right-2 -top-2 z-10 flex h-7 w-7 items-center justify-center rounded-full border-2 border-black bg-white text-base shadow-lg"
+                  aria-label={`${spectator.username} nudged this session`}
+                  title={`${spectator.username} nudged this session`}
+                >
+                  👋
+                </span>
+              )}
             </div>
           ))}
         </aside>
@@ -1334,6 +1369,7 @@ useEffect(() => {
         {!isOwn ? (
           <SpectatorControls
             sessionId={sessionId}
+            onNudgeChange={handleSpectatorNudgeChange}
             categoryColor={categoryColor}
             onClose={() => router.back()}
           />
