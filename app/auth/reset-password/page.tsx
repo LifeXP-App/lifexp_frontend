@@ -3,11 +3,19 @@
 /**
  * Password Reset Landing Page
  *
- * Supabase's password reset email links here with a `?code=` param (see
- * redirect_to in the Django /api/v1/auth/password-reset/ endpoint). Exchanges
- * that code for a recovery session the same way /auth/callback exchanges an
- * OAuth code, then lets the user set a new password before signing them back
- * out to log in normally.
+ * Supabase's password reset email links to Supabase's own hosted
+ * `/auth/v1/verify?token=...&type=recovery&redirect_to=...` endpoint, which
+ * verifies the token server-side and then redirects the browser here. That
+ * redirect can land in either of two shapes depending on the Supabase
+ * project's flow configuration:
+ *   - a PKCE-style `?code=` query param (exchanged via exchangeCodeForSession)
+ *   - the legacy implicit `#access_token=&refresh_token=&type=recovery` hash
+ *     fragment (applied directly via setSession)
+ * Both are handled below so the link works regardless of which one Supabase
+ * actually sends. Once a recovery session is established, the user sets a
+ * new password and is logged straight into the app — AuthContext's own
+ * onAuthStateChange listener already syncs the resulting session into
+ * server cookies, so no separate login step is needed.
  */
 
 import Image from "next/image";
@@ -27,6 +35,7 @@ export default function ResetPasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
   useEffect(() => {
     if (ran.current) return;
@@ -38,31 +47,57 @@ export default function ResetPasswordPage() {
       const error = url.searchParams.get("error");
       const errorDescription = url.searchParams.get("error_description");
 
+      // Hash fragment isn't sent to the server and isn't in searchParams —
+      // parse it manually. Supabase's implicit recovery redirect puts
+      // access_token/refresh_token/type here instead of a query `code`.
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+      const hashAccessToken = hashParams.get("access_token");
+      const hashRefreshToken = hashParams.get("refresh_token");
+      const hashError = hashParams.get("error");
+      const hashErrorDescription = hashParams.get("error_description");
+
       // Strip auth params from the URL immediately, same as /auth/callback.
       window.history.replaceState({}, "", "/auth/reset-password");
 
-      if (error) {
-        console.error("Password reset link error:", error, errorDescription);
-        setLinkError(errorDescription || "This password reset link is invalid or has expired.");
+      if (error || hashError) {
+        console.error("Password reset link error:", error || hashError, errorDescription || hashErrorDescription);
+        setLinkError(errorDescription || hashErrorDescription || "This password reset link is invalid or has expired.");
         setVerifying(false);
         return;
       }
 
-      if (!code) {
-        setLinkError("This password reset link is invalid or has expired.");
+      if (code) {
+        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+
+        if (exchangeError) {
+          console.error("Reset code exchange error:", exchangeError);
+          setLinkError("This password reset link is invalid or has expired.");
+          setVerifying(false);
+          return;
+        }
+
         setVerifying(false);
         return;
       }
 
-      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+      if (hashAccessToken && hashRefreshToken) {
+        const { error: setSessionError } = await supabase.auth.setSession({
+          access_token: hashAccessToken,
+          refresh_token: hashRefreshToken,
+        });
 
-      if (exchangeError) {
-        console.error("Reset code exchange error:", exchangeError);
-        setLinkError("This password reset link is invalid or has expired.");
+        if (setSessionError) {
+          console.error("Reset session error:", setSessionError);
+          setLinkError("This password reset link is invalid or has expired.");
+          setVerifying(false);
+          return;
+        }
+
         setVerifying(false);
         return;
       }
 
+      setLinkError("This password reset link is invalid or has expired.");
       setVerifying(false);
     };
 
@@ -93,10 +128,11 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    // The recovery session is only good for setting a new password - sign
-    // out so the user logs back in normally with it.
-    await supabase.auth.signOut();
-    router.replace(`/users/login?message=${encodeURIComponent("Password updated. Please log in.")}`);
+    // The recovery session from the reset link is already a real session —
+    // AuthContext's onAuthStateChange listener syncs it into server cookies
+    // automatically, so the user is already logged in at this point.
+    setSuccess(true);
+    router.replace("/");
   }
 
   return (
@@ -119,7 +155,9 @@ export default function ResetPasswordPage() {
         <div className="w-full max-w-md rounded-2xl bg-black/50 p-8 shadow-lg backdrop-blur-lg">
           <h2 className="mb-6 text-center text-3xl font-bold">Set New Password</h2>
 
-          {verifying ? (
+          {success ? (
+            <p className="text-center text-gray-400">Password updated. Taking you in...</p>
+          ) : verifying ? (
             <p className="text-center text-gray-400">Verifying your reset link...</p>
           ) : linkError ? (
             <div className="space-y-4">
