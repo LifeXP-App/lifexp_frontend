@@ -485,6 +485,9 @@ export const enterSessionAsSpectator = mutation({
 
     const now = Date.now();
     const existing = session.spectators ?? [];
+    const currentSpectator = existing.find(
+      (spectator) => spectator.userId === args.userId,
+    );
     const otherActiveSpectators = existing.filter(
       (spectator) =>
         spectator.userId !== args.userId &&
@@ -498,9 +501,30 @@ export const enterSessionAsSpectator = mutation({
           userId: args.userId,
           username: args.username,
           profilePicture: args.profilePicture,
+          isNudged: currentSpectator?.isNudged ?? false,
           lastSeenAt: now,
         },
       ],
+    });
+  },
+});
+
+export const setSpectatorNudge = mutation({
+  args: {
+    sessionId: v.id("sessions"),
+    userId: v.string(),
+    isNudged: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const session = await ctx.db.get(args.sessionId);
+    if (!session) throw new Error("Session not found");
+
+    await ctx.db.patch(args.sessionId, {
+      spectators: (session.spectators ?? []).map((spectator) =>
+        spectator.userId === args.userId
+          ? { ...spectator, isNudged: args.isNudged }
+          : spectator,
+      ),
     });
   },
 });
