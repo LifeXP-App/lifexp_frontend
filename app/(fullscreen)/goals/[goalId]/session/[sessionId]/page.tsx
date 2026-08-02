@@ -617,14 +617,14 @@ export default function SessionTimer({ params }: SessionTimerProps) {
 
   // ── Spectator elapsed-time ticker ──
   // Non-owners see a plain elapsed-time counter (mirrors Convex's
-  // totalDurationSeconds), never a pomodoro countdown that could affect the
+  // focusedDurationSeconds), never a pomodoro countdown that could affect the
   // owner's session.
   const [spectatorElapsed, setSpectatorElapsed] = useState(0);
 
   useEffect(() => {
     if (isOwn || !session) return;
-    setSpectatorElapsed(session.totalDurationSeconds);
-  }, [isOwn, session, session?.totalDurationSeconds]);
+    setSpectatorElapsed(session.focusedDurationSeconds);
+  }, [isOwn, session, session?.focusedDurationSeconds]);
 
   useEffect(() => {
     if (isOwn || !isRunning) return;
