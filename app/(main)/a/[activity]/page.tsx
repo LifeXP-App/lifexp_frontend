@@ -757,9 +757,9 @@ export default function ActivityDetailPage({
     return [
       { aspect: "Physique", value: physique, fullMark },
       { aspect: "Energy", value: energy, fullMark },
-      { aspect: "Logic", value: logic, fullMark },
-      { aspect: "Creativity", value: creativity, fullMark },
       { aspect: "Social", value: social, fullMark },
+      { aspect: "Creativity", value: creativity, fullMark },
+      { aspect: "Logic", value: logic, fullMark },
     ];
   }, [activityData]);
 

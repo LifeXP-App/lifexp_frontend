@@ -738,9 +738,9 @@ export default function ProfilePage({ params }: PageProps) {
       fullMark: maxAspectXP,
     },
     {
-      aspect: "Logic",
-      value: currentUser.aspects.logic.currentXP,
-      comparisonValue: profileUser.aspects.logic.currentXP,
+      aspect: "Social",
+      value: currentUser.aspects.social.currentXP,
+      comparisonValue: profileUser.aspects.social.currentXP,
       fullMark: maxAspectXP,
     },
     {
@@ -750,9 +750,9 @@ export default function ProfilePage({ params }: PageProps) {
       fullMark: maxAspectXP,
     },
     {
-      aspect: "Social",
-      value: currentUser.aspects.social.currentXP,
-      comparisonValue: profileUser.aspects.social.currentXP,
+      aspect: "Logic",
+      value: currentUser.aspects.logic.currentXP,
+      comparisonValue: profileUser.aspects.logic.currentXP,
       fullMark: maxAspectXP,
     },
   ];
