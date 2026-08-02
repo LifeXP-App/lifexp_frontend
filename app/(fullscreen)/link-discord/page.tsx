@@ -99,7 +99,7 @@ function LinkDiscordPage() {
 
   // Derived, not stored: render directly from authStatus/callbackStatus/linking
   // instead of mirroring them into a redundant piece of state.
-  const status: "checking-auth" | "needs-login" | "ready" | "linking" | CallbackStatus = isCallback
+  const status: "checking-auth" | "needs-login" | "ready" | "linking" | "link-failed" | CallbackStatus = isCallback
     ? callbackStatus === "idle"
       ? "confirming"
       : callbackStatus
@@ -109,26 +109,37 @@ function LinkDiscordPage() {
         ? "needs-login"
         : linking
           ? "linking"
-          : "ready";
+          : error
+            ? "link-failed"
+            : "ready";
 
   async function handleLinkDiscord() {
     if (!token) return;
     setLinking(true);
     setError(null);
 
-    const { error: linkError } = await supabase.auth.linkIdentity({
-      provider: "discord",
-      options: {
-        redirectTo: `${window.location.origin}/link-discord?token=${token}`,
-      },
-    });
+    let linkError: { message?: string } | null = null;
+    try {
+      const result = await supabase.auth.linkIdentity({
+        provider: "discord",
+        options: {
+          redirectTo: `${window.location.origin}/link-discord?token=${token}`,
+        },
+      });
+      linkError = result.error;
+    } catch (err) {
+      // linkIdentity() calls Supabase's /user/identities/authorize before
+      // redirecting; a network failure or a disabled "Manual Linking"
+      // setting can reject here instead of resolving with `error` set.
+      linkError = { message: err instanceof Error ? err.message : "Failed to start Discord linking." };
+    }
 
     if (linkError) {
       setError(linkError.message || "Failed to start Discord linking.");
       setLinking(false);
     }
-    // On success, Supabase redirects the browser to Discord — this page
-    // re-mounts on the way back with ?code=... (handled above).
+    // On success, linkIdentity() redirects the browser to Discord itself —
+    // this page re-mounts on the way back with ?code=... (handled above).
   }
 
   return (
@@ -149,24 +160,33 @@ function LinkDiscordPage() {
             <p className="text-gray-400">Checking your LifeXP session…</p>
           )}
 
-          {token && status === "error" && (
+          {token && status === "needs-login" && (
             <>
               <p className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">
-                {error}
+                You need to be logged in to LifeXP to link Discord.
               </p>
-              {authStatus !== "authenticated" && (
-                <a
-                  href={`/users/login?message=${encodeURIComponent("Log in, then run /link in Discord again to link your account.")}`}
-                  className="inline-block rounded-lg bg-white px-6 py-3 font-bold text-black transition hover:bg-gray-300"
-                >
-                  Go to Login
-                </a>
-              )}
+              <a
+                href={`/users/login?message=${encodeURIComponent("Log in, then run /link in Discord again to link your account.")}`}
+                className="inline-block rounded-lg bg-white px-6 py-3 font-bold text-black transition hover:bg-gray-300"
+              >
+                Go to Login
+              </a>
             </>
           )}
 
-          {token && status === "ready" && (
+          {token && status === "error" && (
+            <p className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">
+              {error}
+            </p>
+          )}
+
+          {token && (status === "ready" || status === "link-failed") && (
             <>
+              {status === "link-failed" && (
+                <p className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">
+                  {error}
+                </p>
+              )}
               <p className="mb-6 text-gray-400">
                 Confirm below to connect your Discord account. This lets the LifeXP bot show your stats, leaderboard
                 rank, and more in Discord.
@@ -176,7 +196,7 @@ function LinkDiscordPage() {
                 onClick={handleLinkDiscord}
                 className="w-full cursor-pointer rounded-lg bg-[#5865F2] py-3 font-bold text-white transition hover:bg-[#4752C4]"
               >
-                Link Discord Account
+                {status === "link-failed" ? "Try Again" : "Link Discord Account"}
               </button>
             </>
           )}
