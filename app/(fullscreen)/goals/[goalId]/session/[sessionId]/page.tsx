@@ -406,6 +406,7 @@ export default function SessionTimer({ params }: SessionTimerProps) {
   const abandonMutation = useMutation(api.sessions.abandonSession);
   const updateInitialRatesMutation = useMutation(api.sessions.updateInitialRates);
   const markSyncedMutation = useMutation(api.sessions.markSyncedToDjango);
+  const setSessionAfkMutation = useMutation(api.sessions.setSessionAfk);
   const enterAsSpectatorMutation = useMutation(
     api.sessions.enterSessionAsSpectator,
   );
@@ -421,6 +422,43 @@ export default function SessionTimer({ params }: SessionTimerProps) {
   const sessionOwnerId = session?.userId;
   // Whether the logged-in user owns this session, vs. viewing someone else's live session
   const isOwn = Boolean(me && sessionOwnerId === String(me.id));
+  const isPausedRef = useRef(isPaused);
+  isPausedRef.current = isPaused;
+
+  // AFK is live Convex presence only. A paused owner becomes AFK when this
+  // timer is hidden or left, and becomes active again upon returning/resuming.
+  useEffect(() => {
+    if (!isOwn || !sessionId) return;
+
+    const updateAfk = (afk: boolean) => {
+      void setSessionAfkMutation({ sessionId, afk }).catch((err) => {
+        console.error("Failed to update session AFK state:", err);
+      });
+    };
+    const handleVisibilityChange = () => {
+      updateAfk(document.hidden && isPausedRef.current);
+    };
+    const handlePageHide = () => {
+      if (isPausedRef.current) updateAfk(true);
+    };
+
+    updateAfk(false);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("pagehide", handlePageHide);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("pagehide", handlePageHide);
+      if (isPausedRef.current) updateAfk(true);
+    };
+  }, [isOwn, sessionId, setSessionAfkMutation]);
+
+  useEffect(() => {
+    if (isOwn && sessionId && !isPaused && !document.hidden) {
+      void setSessionAfkMutation({ sessionId, afk: false }).catch((err) => {
+        console.error("Failed to clear session AFK state:", err);
+      });
+    }
+  }, [isOwn, isPaused, sessionId, setSessionAfkMutation]);
   const handleSpectatorNudgeChange = useCallback(
     (isNudged: boolean) => {
       if (!sessionId || !me) return;
