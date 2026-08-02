@@ -556,7 +556,7 @@ export default function SearchPage() {
                {/* Posts Results - 3 Column Grid */}
               {/* Recent Posts */}
               {filteredResults.posts.length > 0 && (
-                <div className="text-left mb-10">
+                <div className="text-left mt-10">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-[var(--foreground)] mb-4">
                     Recent Posts ({filteredResults.posts.length})
                   </h3>
