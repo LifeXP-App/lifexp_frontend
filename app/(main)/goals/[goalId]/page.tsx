@@ -1345,8 +1345,8 @@ export default function GoalDetailPage() {
                       fullMark: maxAspectXp,
                     },
                     {
-                      aspect: "Logic",
-                      value: aspectXp.logic,
+                      aspect: "Social",
+                      value: aspectXp.social,
                       fullMark: maxAspectXp,
                     },
                     {
@@ -1355,8 +1355,8 @@ export default function GoalDetailPage() {
                       fullMark: maxAspectXp,
                     },
                     {
-                      aspect: "Social",
-                      value: aspectXp.social,
+                      aspect: "Logic",
+                      value: aspectXp.logic,
                       fullMark: maxAspectXp,
                     },
                   ]}

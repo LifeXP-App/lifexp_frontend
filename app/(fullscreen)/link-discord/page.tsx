@@ -80,7 +80,7 @@ function LinkDiscordPage() {
 
         if (!res.ok) {
           const body = await res.json().catch(() => null);
-          setError(body?.detail || "Failed to confirm the link with LifeXP.");
+          setError(body?.detail || "Failed to confirm the link with Gamilife.");
           setCallbackStatus("error");
           return;
         }
@@ -147,7 +147,7 @@ function LinkDiscordPage() {
       <div className="relative z-10 flex min-h-screen items-center justify-center px-4">
         <div className="w-full max-w-md rounded-2xl bg-black/50 p-8 shadow-lg backdrop-blur-lg text-center">
           <div className="mb-4 text-4xl">🔗</div>
-          <h2 className="mb-2 text-2xl font-bold">Link Discord to LifeXP</h2>
+          <h2 className="mb-2 text-2xl font-bold">Link Discord to Gamilife</h2>
 
           {!token && (
             <p className="text-red-200">
@@ -157,13 +157,13 @@ function LinkDiscordPage() {
           )}
 
           {token && status === "checking-auth" && (
-            <p className="text-gray-400">Checking your LifeXP session…</p>
+            <p className="text-gray-400">Checking your Gamilife session…</p>
           )}
 
           {token && status === "needs-login" && (
             <>
               <p className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">
-                You need to be logged in to LifeXP to link Discord.
+                You need to be logged in to Gamilife to link Discord.
               </p>
               <a
                 href={`/users/login?message=${encodeURIComponent("Log in, then run /link in Discord again to link your account.")}`}
@@ -188,7 +188,7 @@ function LinkDiscordPage() {
                 </p>
               )}
               <p className="mb-6 text-gray-400">
-                Confirm below to connect your Discord account. This lets the LifeXP bot show your stats, leaderboard
+                Confirm below to connect your Discord account. This lets the GamilBot show your stats, leaderboard
                 rank, and more in Discord.
               </p>
               <button
@@ -215,7 +215,7 @@ function LinkDiscordPage() {
                 onClick={() => router.push("/")}
                 className="w-full cursor-pointer rounded-lg bg-white py-3 font-bold text-black transition hover:bg-gray-300"
               >
-                Back to LifeXP
+                Back to Gamilife
               </button>
             </>
           )}
