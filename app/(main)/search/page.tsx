@@ -592,7 +592,7 @@ export default function SearchPage() {
                               {post.title}
                             </p>
                             <p className="text-sm text-gray-600 dark:text-[var(--muted)] line-clamp-2">
-                              {post.user?.username ?? "unknown"}
+                              @{post.user?.username ?? "unknown"}
                             </p>
                           </div>
                         </Link>
