@@ -333,7 +333,7 @@ interface Activity {
 
 function RightSidebarInfoSkeleton() {
   return (
-    <aside className="w-2xl hidden md:block">
+    <aside className="w-[400px] hidden md:block">
       {/* PROFILE CARD */}
       <div className="bg-white p-6 mb-4 rounded-xl border-2 border-gray-200 dark:bg-dark-2 dark:border-[var(--border)] animate-pulse">
         <div className="text-center flex flex-col items-center">
@@ -827,7 +827,7 @@ export default function GoalsPage() {
       <div className="mx-auto w-full  px-4 py-6">
         <div className="flex w-full gap-6">
           {/* LEFT MAIN CONTENT */}
-          <div className="w-full h-screen overflow-scroll noscrollbar py-4 px-6 md:px-12">
+          <div className="flex-1 md:w-[90%] lg:w-[60%] h-screen overflow-scroll noscrollbar py-4 px-6 md:px-12">
             {/* Title */}
             <h1 className="text-xl font-bold text-black dark:text-[var(--foreground)] mb-4">
               Goals
@@ -1191,7 +1191,7 @@ export default function GoalsPage() {
 function RightSidebar({ user }: { user: UserGoalsInfo }) {
   const { openMasteryPopup } = usePopup();
   return (
-    <aside className="w-2xl hidden md:block">
+    <aside className="w-[400px] hidden md:block">
       {/* PROFILE CARD */}
       <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-[var(--border)]">
         <div className="text-center flex flex-col items-center">
