@@ -603,18 +603,99 @@ export default function SessionTimer({ params }: SessionTimerProps) {
   const [pomodoroPhase, setPomodoroPhase] = useState<"focus" | "break">("focus");
   const [phaseSecondsLeft, setPhaseSecondsLeft] = useState(FOCUS_SECONDS);
   const [isBreakRunning, setIsBreakRunning] = useState(false);
+  const pomodoroStorageKey = sessionId
+    ? `lifexp:pomodoro:${sessionId}`
+    : null;
+  const [restoredPomodoroKey, setRestoredPomodoroKey] = useState<string | null>(
+    null,
+  );
+
+  // The Pomodoro countdown is display state, separate from Convex's
+  // authoritative duration totals. Persisting it lets a reload resume at the
+  // same countdown without changing session timing or XP calculations.
+  useEffect(() => {
+    if (!pomodoroStorageKey) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      try {
+        const raw = window.localStorage.getItem(pomodoroStorageKey);
+        if (raw) {
+          const saved = JSON.parse(raw) as {
+            phase?: unknown;
+            secondsLeft?: unknown;
+            isBreakRunning?: unknown;
+          };
+          if (saved.phase === "focus" || saved.phase === "break") {
+            setPomodoroPhase(saved.phase);
+          }
+          if (
+            typeof saved.secondsLeft === "number" &&
+            Number.isFinite(saved.secondsLeft) &&
+            saved.secondsLeft >= 0
+          ) {
+            setPhaseSecondsLeft(Math.floor(saved.secondsLeft));
+          }
+          if (typeof saved.isBreakRunning === "boolean") {
+            setIsBreakRunning(saved.isBreakRunning);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to restore Pomodoro countdown:", err);
+      } finally {
+        setRestoredPomodoroKey(pomodoroStorageKey);
+      }
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [pomodoroStorageKey]);
+
+  useEffect(() => {
+    if (
+      !isOwn ||
+      !pomodoroStorageKey ||
+      restoredPomodoroKey !== pomodoroStorageKey
+    )
+      return;
+    try {
+      window.localStorage.setItem(
+        pomodoroStorageKey,
+        JSON.stringify({
+          phase: pomodoroPhase,
+          secondsLeft: phaseSecondsLeft,
+          isBreakRunning,
+        }),
+      );
+    } catch (err) {
+      console.error("Failed to save Pomodoro countdown:", err);
+    }
+  }, [
+    isBreakRunning,
+    isOwn,
+    phaseSecondsLeft,
+    pomodoroPhase,
+    pomodoroStorageKey,
+    restoredPomodoroKey,
+  ]);
 
   useEffect(() => {
     // Only the owner runs the local pomodoro state machine — a spectator's
     // countdown is unrelated to the actual session and must never pause it.
     if (!isOwn) return;
+    if (restoredPomodoroKey !== pomodoroStorageKey) return;
     if (pomodoroPhase === "focus" && !isRunning) return;
     if (pomodoroPhase === "break" && !isBreakRunning) return;
     const id = setInterval(() => {
       setPhaseSecondsLeft((prev) => Math.max(0, prev - 1));
     }, 1000);
     return () => clearInterval(id);
-  }, [isRunning, isBreakRunning, pomodoroPhase, isOwn]);
+  }, [
+    isRunning,
+    isBreakRunning,
+    pomodoroPhase,
+    isOwn,
+    pomodoroStorageKey,
+    restoredPomodoroKey,
+  ]);
 
   // ── Spectator elapsed-time ticker ──
   // Non-owners see a plain elapsed-time counter (mirrors Convex's
@@ -643,6 +724,7 @@ export default function SessionTimer({ params }: SessionTimerProps) {
 
 useEffect(() => {
   if (!isOwn) return;
+  if (restoredPomodoroKey !== pomodoroStorageKey) return;
   if (phaseSecondsLeft > 0) return;
 
   const sid = sessionIdRef.current;
@@ -671,7 +753,7 @@ useEffect(() => {
   }
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [phaseSecondsLeft]);
+}, [phaseSecondsLeft, pomodoroStorageKey, restoredPomodoroKey]);
 
   const currentRates = session?.rateSegments?.[0]?.rates;
   const ratePhysique = currentRates?.physique ?? 0;
