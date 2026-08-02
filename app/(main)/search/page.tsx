@@ -463,54 +463,7 @@ export default function SearchPage() {
           {/* Search Results / Recent Content */}
           {showContent && (
             <div>
-              {/* Posts Results - 3 Column Grid */}
-              {/* Recent Posts */}
-              {filteredResults.posts.length > 0 && (
-                <div className="text-left mb-10">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-[var(--foreground)] mb-4">
-                    Recent Posts ({filteredResults.posts.length})
-                  </h3>
-                  <div className="grid grid-cols-3 gap-4">
-                    {filteredResults.posts.map((post) =>
-                      post.post_image ? (
-                        <Link
-                          key={post.id}
-                          href={`/goals/${post.uid}`}
-                          className="relative block h-48 bg-gray-200 dark:bg-[var(--dark-2)] rounded-lg overflow-hidden"
-                        >
-                          <Image
-                            src={post.post_image}
-                            alt={post.title}
-                            fill
-                            sizes="(max-width: 768px) 100vw, 33vw"
-                            className="object-cover"
-                          />
-                        </Link>
-                      ) : (
-                        <Link
-                          key={post.id}
-                          href={`/goals/${post.uid}`}
-                          className="flex flex-col h-48 p-4 bg-gray-200 dark:bg-[var(--dark-2)] rounded-lg overflow-hidden hover:bg-gray-300 dark:hover:bg-[var(--dark-3)] transition-colors"
-                        >
-                          {post.emoji && (
-                            <div className="flex-1 flex items-center justify-center text-6xl">
-                              {post.emoji}
-                            </div>
-                          )}
-                          <div>
-                            <p className="font-semibold text-gray-900 dark:text-[var(--foreground)] line-clamp-3">
-                              {post.title}
-                            </p>
-                            <p className="text-sm text-gray-600 dark:text-[var(--muted)] line-clamp-2">
-                              {post.content}
-                            </p>
-                          </div>
-                        </Link>
-                      ),
-                    )}
-                  </div>
-                </div>
-              )}
+             
 
               {/* Users and Activities - Side by Side */}
               {(filteredResults.users.length > 0 ||
@@ -597,6 +550,55 @@ export default function SearchPage() {
                       </div>
                     </div>
                   )}
+                </div>
+              )}
+
+               {/* Posts Results - 3 Column Grid */}
+              {/* Recent Posts */}
+              {filteredResults.posts.length > 0 && (
+                <div className="text-left mb-10">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-[var(--foreground)] mb-4">
+                    Recent Posts ({filteredResults.posts.length})
+                  </h3>
+                  <div className="grid grid-cols-3 gap-4">
+                    {filteredResults.posts.map((post) =>
+                      post.post_image ? (
+                        <Link
+                          key={post.id}
+                          href={`/goals/${post.uid}`}
+                          className="relative block h-48 bg-gray-200 dark:bg-[var(--dark-2)] rounded-lg overflow-hidden"
+                        >
+                          <Image
+                            src={post.post_image}
+                            alt={post.title}
+                            fill
+                            sizes="(max-width: 768px) 100vw, 33vw"
+                            className="object-cover"
+                          />
+                        </Link>
+                      ) : (
+                        <Link
+                          key={post.id}
+                          href={`/goals/${post.uid}`}
+                          className="flex flex-col h-48 p-4 bg-gray-200 dark:bg-[var(--dark-2)] rounded-lg overflow-hidden hover:bg-gray-300 dark:hover:bg-[var(--dark-3)] transition-colors"
+                        >
+                          {post.emoji && (
+                            <div className="flex-1 flex items-center justify-center text-6xl">
+                              {post.emoji}
+                            </div>
+                          )}
+                          <div>
+                            <p className="font-semibold text-gray-900 dark:text-[var(--foreground)] line-clamp-3">
+                              {post.title}
+                            </p>
+                            <p className="text-sm text-gray-600 dark:text-[var(--muted)] line-clamp-2">
+                              {post.content}
+                            </p>
+                          </div>
+                        </Link>
+                      ),
+                    )}
+                  </div>
                 </div>
               )}
 

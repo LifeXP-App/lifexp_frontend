@@ -24,7 +24,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const target = `${baseUrl}/api/v1/activities/?page=1&page_size=6&discover=true`;
+    const target = `${baseUrl}/api/v1/activities/?page=1&page_size=3&discover=true`;
 
     let res = await fetch(target, {
       headers: { Authorization: `Bearer ${access}` },
