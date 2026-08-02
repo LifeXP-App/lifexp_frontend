@@ -18,6 +18,7 @@ import { useMutation, useQuery } from "convex/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { DumbbellIcon } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { FaBrain, FaHammer } from "react-icons/fa";
@@ -617,14 +618,14 @@ export default function SessionTimer({ params }: SessionTimerProps) {
 
   // ── Spectator elapsed-time ticker ──
   // Non-owners see a plain elapsed-time counter (mirrors Convex's
-  // totalDurationSeconds), never a pomodoro countdown that could affect the
+  // focusedDurationSeconds), never a pomodoro countdown that could affect the
   // owner's session.
   const [spectatorElapsed, setSpectatorElapsed] = useState(0);
 
   useEffect(() => {
     if (isOwn || !session) return;
-    setSpectatorElapsed(session.totalDurationSeconds);
-  }, [isOwn, session, session?.totalDurationSeconds]);
+    setSpectatorElapsed(session.focusedDurationSeconds);
+  }, [isOwn, session, session?.focusedDurationSeconds]);
 
   useEffect(() => {
     if (isOwn || !isRunning) return;
@@ -1229,10 +1230,11 @@ useEffect(() => {
             {activeSpectators.length === 1 ? "spectator" : "spectators"}
           </div>
           {activeSpectators.map((spectator) => (
-            <div
+            <Link
               key={spectator.userId}
+              href={`/u/${encodeURIComponent(spectator.username)}`}
               className="relative h-12 w-12"
-              title={`${spectator.username} is spectating`}
+              title={`View ${spectator.username}'s profile`}
             >
               <div className="relative h-12 w-12 overflow-hidden rounded-full border-2 border-white/20 bg-gray-800 shadow-lg shadow-black/40">
                 <Image
@@ -1253,7 +1255,7 @@ useEffect(() => {
                   👋
                 </span>
               )}
-            </div>
+            </Link>
           ))}
         </aside>
       )}

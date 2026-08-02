@@ -1374,10 +1374,11 @@ export default function ProfilePage({ params }: PageProps) {
                   </p>
                 ) : recentSessions.length > 0 ? (
                   recentSessions.map((session) => {
-                    // Format duration
-                    const totalSeconds = session.total_duration_seconds || 0;
-                    const hours = Math.floor(totalSeconds / 3600);
-                    const minutes = Math.floor((totalSeconds % 3600) / 60);
+                    // Show active session time; paused time is excluded.
+                    const focusedSeconds =
+                      session.focused_duration_seconds ?? 0;
+                    const hours = Math.floor(focusedSeconds / 3600);
+                    const minutes = Math.floor((focusedSeconds % 3600) / 60);
                     const duration =
                       hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
 
