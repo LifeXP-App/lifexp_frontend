@@ -37,6 +37,7 @@ export default defineSchema({
       v.literal("paused"),
       v.literal("completed")
     ),
+    afk: v.optional(v.boolean()),
     startedAt: v.number(), // epoch ms
     endedAt: v.optional(v.number()),
     lastResumedAt: v.optional(v.number()),
