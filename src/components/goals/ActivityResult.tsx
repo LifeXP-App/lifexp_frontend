@@ -16,24 +16,28 @@ interface Activity {
 interface ActivitySelectButtonProps {
   activity: Activity;
   onSelect: (activity: Activity) => void;
+  isSelected?: boolean;
 }
 
 function ActivitySelectButton({
   activity,
   onSelect,
+  isSelected = false,
 }: ActivitySelectButtonProps) {
   const meta = ACTIVITY_META[activity.type];
 
   return (
-   
+
 
      <button
                   key={activity.id}
                    onClick={() => onSelect(activity)}
                   className="w-full flex items-center justify-between p-3.5 rounded-2xl transition-all cursor-pointer group relative overflow-hidden active:scale-[0.98]"
                   style={{
-                    backgroundColor: `rgba(${meta.cssColorVarRgb}, 0.08)`,
-                    border: `1px solid rgba(${meta.cssColorVarRgb}, 0.1)`,
+                    backgroundColor: `rgba(${meta.cssColorVarRgb}, ${isSelected ? 0.15 : 0.08})`,
+                    border: isSelected
+                      ? `1px solid rgba(${meta.cssColorVarRgb}, 0.4)`
+                      : `1px solid rgba(${meta.cssColorVarRgb}, 0.1)`,
                   }}
                 >
                   <div

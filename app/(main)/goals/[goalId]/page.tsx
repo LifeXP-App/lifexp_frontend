@@ -398,8 +398,14 @@ export default function GoalDetailPage() {
 
   const handleStartSession = useCallback(async () => {
     if (!goal?.last_activity?.uid) return;
+    const ok = await confirm({
+      title: "Start session",
+      message: `Start a session for "${goal.last_activity.name}"?`,
+      confirmText: "Start",
+    });
+    if (!ok) return;
     await createAndNavigate(goal.last_activity.uid, goal.last_activity.name);
-  }, [goal?.last_activity, createAndNavigate]);
+  }, [goal?.last_activity, createAndNavigate, confirm]);
 
   const handleSelectActivity = useCallback(async (activity: Activity) => {
     setIsNewActivityModalOpen(false);
@@ -426,10 +432,6 @@ export default function GoalDetailPage() {
       toast.error("Failed to create activity. Please try again.");
     }
   }, [createAndNavigate]);
-
-  const handleStartDrawing = useCallback(() => {
-    setIsNewActivityModalOpen(true);
-  }, []);
 
   const handleOpenNewActivity = () => {
     setIsNewSessionPopupOpen(false);
@@ -1507,7 +1509,6 @@ export default function GoalDetailPage() {
         onClose={() => setIsNewActivityModalOpen(false)}
         onSelectActivity={handleSelectActivity}
         onGenerateNew={handleGenerateNew}
-        onStartDrawing={handleStartDrawing}
         goalUid={goalId}
       />
     </>

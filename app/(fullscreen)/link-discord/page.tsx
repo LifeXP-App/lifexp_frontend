@@ -18,7 +18,7 @@
  */
 
 import { useEffect, useRef, useState, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/src/context/AuthContext";
 import { supabase } from "@/src/lib/supabase";
 
@@ -28,7 +28,6 @@ import { supabase } from "@/src/lib/supabase";
 type CallbackStatus = "idle" | "confirming" | "success" | "error";
 
 function LinkDiscordPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { authStatus } = useAuth();
   const ran = useRef(false);
@@ -147,7 +146,9 @@ function LinkDiscordPage() {
       <div className="relative z-10 flex min-h-screen items-center justify-center px-4">
         <div className="w-full max-w-md rounded-2xl bg-black/50 p-8 shadow-lg backdrop-blur-lg text-center">
           <div className="mb-4 text-4xl">🔗</div>
-          <h2 className="mb-2 text-2xl font-bold">Link Discord to Gamilife</h2>
+          <h2 className="mb-2 text-2xl font-bold">
+            {status === "success" ? "Discord successfully linked to Gamilife" : "Link Discord to Gamilife"}
+          </h2>
 
           {!token && (
             <p className="text-red-200">
@@ -207,16 +208,15 @@ function LinkDiscordPage() {
 
           {token && status === "success" && (
             <>
-              <p className="mb-4 rounded-lg border border-green-500/30 bg-green-500/10 p-3 text-sm text-green-200">
-                Discord account linked! You can close this tab and head back to Discord.
+              <p className="mb-6 rounded-lg border border-green-500/30 bg-green-500/10 p-3 text-sm text-green-200">
+                You can close this tab and start using GamBot on Discord.
               </p>
-              <button
-                type="button"
-                onClick={() => router.push("/")}
+              <a
+                href="https://app.gamilife.com"
                 className="w-full cursor-pointer rounded-lg bg-white py-3 font-bold text-black transition hover:bg-gray-300"
               >
-                Back to Gamilife
-              </button>
+                Go to Homepage
+              </a>
             </>
           )}
         </div>

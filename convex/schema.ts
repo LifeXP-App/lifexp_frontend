@@ -30,8 +30,10 @@ export default defineSchema({
     activity_uid: v.optional(v.string()),
 
     // ── Lifecycle ──
+    afk: v.optional(v.boolean()), // legacy boolean field; status is the current source of truth
     status: v.union(
       v.literal("live"),
+      v.literal("afk"),
       v.literal("paused"),
       v.literal("completed")
     ),
@@ -62,6 +64,12 @@ export default defineSchema({
         v.literal("break")
       )
     ),
+    // Cumulative seconds added/subtracted via the timer's +60/-60 buttons
+    // during the current focus phase. Reset to 0 whenever a new focus phase
+    // starts (session start, or returning from a break) so the countdown
+    // (FOCUS_SECONDS + focusAdjustSeconds - focusedDurationSeconds) survives
+    // a page reload instead of resetting to a bare 25:00.
+    focusAdjustSeconds: v.optional(v.number()),
 
     // ── XP Rates ──
     rateSegments: v.array(

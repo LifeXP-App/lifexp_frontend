@@ -80,6 +80,7 @@ export default defineSchema({
     // ── Lifecycle ──
     status: v.union(
       v.literal("live"),
+      v.literal("afk"),
       v.literal("paused"),
       v.literal("completed")
     ),

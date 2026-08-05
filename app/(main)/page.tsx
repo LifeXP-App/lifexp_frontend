@@ -418,10 +418,10 @@ export default function Home() {
   // nobody appears twice in the row.
   const allLiveSessions = useConvexQuery(api.sessions.getLiveSessions) ?? [];
   const liveSessions = allLiveSessions.filter(
-    (s) => !me?.username || s.username !== me.username
+    (s) => s.status !== "afk" && (!me?.username || s.username !== me.username)
   );
   const liveUsernames = new Set(
-    allLiveSessions.map((s) => s.username).filter(Boolean)
+    liveSessions.map((s) => s.username).filter(Boolean)
   );
 
   const { data: friendsStatus = [], isLoading: friendsStatusLoading } = useQuery({

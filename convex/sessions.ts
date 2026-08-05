@@ -141,7 +141,7 @@ export const startSession = mutation({
   ),
 },
   handler: async (ctx, args) => {
-    // Check no existing live or paused session for this user
+    // Check no existing active session for this user
     const existingLive = await ctx.db
       .query("sessions")
       .withIndex("by_user_status", (q) =>
@@ -150,6 +150,16 @@ export const startSession = mutation({
       .first();
     if (existingLive) {
       throw new Error("User already has a live session");
+    }
+
+    const existingAfk = await ctx.db
+      .query("sessions")
+      .withIndex("by_user_status", (q) =>
+        q.eq("userId", args.userId).eq("status", "afk")
+      )
+      .first();
+    if (existingAfk) {
+      throw new Error("User already has an afk session");
     }
 
     const existingPaused = await ctx.db
@@ -191,6 +201,7 @@ const sessionId = await ctx.db.insert("sessions", {
   focusedDurationSeconds: 0,
 
   sessionMode: "focus",
+  focusAdjustSeconds: 0,
 
   rateSegments: [
     {
@@ -309,6 +320,68 @@ export const pauseSession = mutation({
   },
 });
 
+export const enterAfk = mutation({
+  args: {
+    sessionId: v.id("sessions"),
+    fromStatus: v.union(v.literal("live"), v.literal("paused")),
+    reason: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const session = await ctx.db.get(args.sessionId);
+    if (!session) throw new Error("Session not found");
+    if (session.status === "afk") return;
+    if (session.status !== args.fromStatus) {
+      throw new Error(`Cannot mark a ${session.status} session as afk from ${args.fromStatus}`);
+    }
+
+    const now = Date.now();
+    const intervals = [...session.pauseIntervals];
+
+    if (args.fromStatus === "live") {
+      intervals.push({ pausedAt: now, reason: args.reason ?? "window_hidden" });
+    }
+
+    const updates = recalculate({ ...session, pauseIntervals: intervals }, now);
+
+    await ctx.db.patch(args.sessionId, {
+      status: "afk",
+      lastHeartbeatAt: now,
+      pauseIntervals: intervals,
+      ...updates,
+    });
+  },
+});
+
+export const returnFromAfk = mutation({
+  args: {
+    sessionId: v.id("sessions"),
+    toStatus: v.union(v.literal("live"), v.literal("paused")),
+  },
+  handler: async (ctx, args) => {
+    const session = await ctx.db.get(args.sessionId);
+    if (!session) throw new Error("Session not found");
+    if (session.status !== "afk") return;
+
+    const now = Date.now();
+    const intervals = [...session.pauseIntervals];
+    const lastInterval = intervals[intervals.length - 1];
+
+    if (args.toStatus === "live" && lastInterval && lastInterval.resumedAt === undefined) {
+      intervals[intervals.length - 1] = {
+        ...lastInterval,
+        resumedAt: now,
+      };
+    }
+
+    await ctx.db.patch(args.sessionId, {
+      status: args.toStatus,
+      lastResumedAt: args.toStatus === "live" ? now : session.lastResumedAt,
+      lastHeartbeatAt: now,
+      pauseIntervals: intervals,
+    });
+  },
+});
+
 export const resumeSession = mutation({
   args: {
     sessionId: v.id("sessions"),
@@ -321,7 +394,7 @@ export const resumeSession = mutation({
       throw new Error("Session not found");
     }
 
-    if (session.status !== "paused") {
+    if (session.status !== "paused" && session.status !== "afk") {
       throw new Error(`Cannot resume a ${session.status} session`);
     }
 
@@ -330,6 +403,7 @@ export const resumeSession = mutation({
     const intervals = [...session.pauseIntervals];
 
     const lastInterval = intervals[intervals.length - 1];
+    const wasOnBreak = lastInterval?.reason === "break_started";
 
     // only close interval if one exists
     if (lastInterval && !lastInterval.resumedAt) {
@@ -344,6 +418,10 @@ export const resumeSession = mutation({
       lastResumedAt: now,
       lastHeartbeatAt: now,
       pauseIntervals: intervals,
+      // A break just ended and focus resumed — start the new focus phase's
+      // countdown fresh instead of carrying over the prior phase's manual
+      // +60/-60 adjustments.
+      ...(wasOnBreak ? { focusAdjustSeconds: 0 } : {}),
     });
   },
 });
@@ -360,15 +438,19 @@ export const completeSession = mutation({
   handler: async (ctx, args) => {
     const session = await ctx.db.get(args.sessionId);
     if (!session) throw new Error("Session not found");
-    if (session.status !== "live" && session.status !== "paused") {
+    if (
+      session.status !== "live" &&
+      session.status !== "afk" &&
+      session.status !== "paused"
+    ) {
       throw new Error(`Cannot complete a ${session.status} session`);
     }
 
     const now = Date.now();
     const intervals = [...session.pauseIntervals];
 
-    // If paused, close the open pause interval
-    if (session.status === "paused") {
+    // If paused/AFK, close the open inactive interval
+    if (session.status === "paused" || session.status === "afk") {
       const lastInterval = intervals[intervals.length - 1];
       if (lastInterval && lastInterval.resumedAt === undefined) {
         intervals[intervals.length - 1] = { ...lastInterval, resumedAt: now };
@@ -404,14 +486,18 @@ export const abandonSession = mutation({
   handler: async (ctx, args) => {
     const session = await ctx.db.get(args.sessionId);
     if (!session) throw new Error("Session not found");
-    if (session.status !== "live" && session.status !== "paused") {
+    if (
+      session.status !== "live" &&
+      session.status !== "afk" &&
+      session.status !== "paused"
+    ) {
       throw new Error(`Cannot abandon a ${session.status} session`);
     }
 
     const now = Date.now();
     const intervals = [...session.pauseIntervals];
 
-    if (session.status === "paused") {
+    if (session.status === "paused" || session.status === "afk") {
       const lastInterval = intervals[intervals.length - 1];
       if (lastInterval && lastInterval.resumedAt === undefined) {
         intervals[intervals.length - 1] = { ...lastInterval, resumedAt: now };
@@ -454,6 +540,14 @@ export const getActiveSession = query({
       )
       .first();
     if (live) return live;
+
+    const afk = await ctx.db
+      .query("sessions")
+      .withIndex("by_user_status", (q) =>
+        q.eq("userId", args.userId).eq("status", "afk")
+      )
+      .first();
+    if (afk) return afk;
 
     return await ctx.db
       .query("sessions")
@@ -548,11 +642,12 @@ export const leaveSessionAsSpectator = mutation({
 export const getSessionsByGoal = query({
   args: { goalId: v.string() },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const sessions = await ctx.db
       .query("sessions")
       .withIndex("by_goal", (q) => q.eq("goalId", args.goalId))
       .order("desc")
       .collect();
+    return sessions.filter((session) => session.status === "completed");
   },
 });
 
@@ -590,6 +685,21 @@ export const updateInitialRates = mutation({
   },
 });
 
+export const adjustFocusTime = mutation({
+  args: {
+    sessionId: v.id("sessions"),
+    deltaSeconds: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const session = await ctx.db.get(args.sessionId);
+    if (!session) throw new Error("Session not found");
+
+    await ctx.db.patch(args.sessionId, {
+      focusAdjustSeconds: (session.focusAdjustSeconds ?? 0) + args.deltaSeconds,
+    });
+  },
+});
+
 export const deleteSession = mutation({
   args: { sessionId: v.id("sessions") },
   handler: async (ctx, args) => {
@@ -613,10 +723,15 @@ export const markSyncedToDjango = mutation({
 export const getLiveSessions = query({
   args: {},
   handler: async (ctx) => {
-    const [live, paused] = await Promise.all([
+    const [live, afk, paused] = await Promise.all([
       ctx.db
         .query("sessions")
         .withIndex("by_heartbeat", (q) => q.eq("status", "live"))
+        .order("desc")
+        .collect(),
+      ctx.db
+        .query("sessions")
+        .withIndex("by_heartbeat", (q) => q.eq("status", "afk"))
         .order("desc")
         .collect(),
       ctx.db
@@ -628,7 +743,7 @@ export const getLiveSessions = query({
     // A pomodoro break pauses the session with reason "break_started" — surface
     // that as its own display state so the UI can distinguish break from a
     // manual pause.
-    return [...live, ...paused].map((s) => {
+    return [...live, ...afk, ...paused].map((s) => {
       const openInterval = s.pauseIntervals[s.pauseIntervals.length - 1];
       const onBreak =
         s.status === "paused" &&
@@ -646,7 +761,7 @@ export const getLiveSessionsForActivity = query({
   },
 
   handler: async (ctx, args) => {
-    const [live, paused] = await Promise.all([
+    const [live, afk, paused] = await Promise.all([
       ctx.db
         .query("sessions")
         .withIndex("by_activity_status", (q) =>
@@ -656,10 +771,16 @@ export const getLiveSessionsForActivity = query({
       ctx.db
         .query("sessions")
         .withIndex("by_activity_status", (q) =>
+          q.eq("activityId", args.activityId).eq("status", "afk")
+        )
+        .collect(),
+      ctx.db
+        .query("sessions")
+        .withIndex("by_activity_status", (q) =>
           q.eq("activityId", args.activityId).eq("status", "paused")
         )
         .collect(),
     ]);
-    return [...live, ...paused];
+    return [...live, ...afk, ...paused];
   },
 });

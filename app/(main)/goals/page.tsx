@@ -684,13 +684,6 @@ export default function GoalsPage() {
     }
   };
 
-  const handleStartDrawing = () => {
-    setIsActivityModalOpen(false);
-    if (selectedGoalId) {
-      router.push(`/goals/${selectedGoalId}`);
-    }
-  };
-
   const handleDeleteGoal = async (goalUid: string) => {
     try {
       setDeletingGoalId(goalUid);
@@ -1123,7 +1116,6 @@ export default function GoalsPage() {
         onClose={() => setIsActivityModalOpen(false)}
         onSelectActivity={handleSelectActivity}
         onGenerateNew={handleGenerateNewActivity}
-        onStartDrawing={handleStartDrawing}
         goalUid={selectedGoalId}
       />
 

@@ -8,13 +8,13 @@ export const cleanupStaleSessions = internalMutation({
   handler: async (ctx) => {
     const now = Date.now();
 
-    // ── 1. Auto-pause live sessions with stale heartbeats ──
+    // ── 1. Mark live sessions AFK when heartbeats go stale ──
     // Mobile browsers suspend JS when the screen locks or the tab is
     // backgrounded, so heartbeats going silent usually means the user just
-    // put their phone down — not that they abandoned the session. Pause
+    // put their phone down — not that they abandoned the session. Mark AFK
     // instead of killing it, backdating the pause to the last heartbeat so
     // the dead air counts as pause time (no focused time, no XP). When the
-    // user comes back, the session is sitting there paused and resumable.
+    // user comes back, the session can return to live or paused locally.
     const staleLive = await ctx.db
       .query("sessions")
       .withIndex("by_heartbeat", (q) =>
@@ -30,28 +30,35 @@ export const cleanupStaleSessions = internalMutation({
       const updates = recalculate({ ...session, pauseIntervals: intervals }, now);
 
       await ctx.db.patch(session._id, {
-        status: "paused",
+        status: "afk",
         lastHeartbeatAt: now,
         pauseIntervals: intervals,
         ...updates,
       });
     }
 
-    // ── 2. Abandon sessions left paused for too long ──
-    // Covers both user-paused sessions that were forgotten and sessions
-    // auto-paused above whose owner never came back. lastHeartbeatAt is set
-    // to the pause time by pauseSession and by the auto-pause above, so this
-    // effectively measures time spent paused.
-    const stalePaused = await ctx.db
-      .query("sessions")
-      .withIndex("by_heartbeat", (q) =>
-        q
-          .eq("status", "paused")
-          .lt("lastHeartbeatAt", now - ABANDON_PAUSED_AFTER_MS)
-      )
-      .collect();
+    // ── 2. Abandon sessions left inactive for too long ──
+    // Covers both user-paused and AFK sessions whose owner never came back.
+    const [stalePaused, staleAfk] = await Promise.all([
+      ctx.db
+        .query("sessions")
+        .withIndex("by_heartbeat", (q) =>
+          q
+            .eq("status", "paused")
+            .lt("lastHeartbeatAt", now - ABANDON_PAUSED_AFTER_MS)
+        )
+        .collect(),
+      ctx.db
+        .query("sessions")
+        .withIndex("by_heartbeat", (q) =>
+          q
+            .eq("status", "afk")
+            .lt("lastHeartbeatAt", now - ABANDON_PAUSED_AFTER_MS)
+        )
+        .collect(),
+    ]);
 
-    for (const session of stalePaused) {
+    for (const session of [...stalePaused, ...staleAfk]) {
       const intervals = [...session.pauseIntervals];
       const lastInterval = intervals[intervals.length - 1];
       if (lastInterval && lastInterval.resumedAt === undefined) {

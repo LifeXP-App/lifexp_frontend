@@ -54,7 +54,6 @@ interface NewActivityModalProps {
   onSelectActivity: (activity: Activity) => void;
   /** @deprecated Custom activities are now generated inline via the AI button. Kept for backwards compatibility. */
   onGenerateNew?: (query: string) => void;
-  onStartDrawing: () => void;
   /** Goal uid to scope the default activity list to, when the picker is opened for a specific goal. */
   goalUid?: string | null;
 }
@@ -112,10 +111,10 @@ export default function NewActivityModal({
   isOpen,
   onClose,
   onSelectActivity,
-  onStartDrawing,
   goalUid,
 }: NewActivityModalProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
 
   // The default (non-search) first page is cached per-goal, so switching
   // between goals in the picker (it stays mounted as one instance while
@@ -320,6 +319,13 @@ export default function NewActivityModal({
     [],
   );
 
+  // Clear the highlighted selection whenever the modal closes or the query
+  // changes — a selection made against a previous list shouldn't silently
+  // carry over.
+  useEffect(() => {
+    setSelectedActivity(null);
+  }, [isOpen, searchQuery]);
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -471,7 +477,8 @@ export default function NewActivityModal({
                   <ActivitySelectButton
                     key={activity.id}
                     activity={activity}
-                    onSelect={onSelectActivity}
+                    onSelect={setSelectedActivity}
+                    isSelected={selectedActivity?.id === activity.id}
                   />
                 ))}
 
@@ -560,8 +567,9 @@ export default function NewActivityModal({
             </button>
 
             <button
-              onClick={onStartDrawing}
-              className="py-3 px-4 rounded-xl font-medium active:opacity-80  text-white transition-all cursor-pointer "
+              onClick={() => selectedActivity && onSelectActivity(selectedActivity)}
+              disabled={!selectedActivity}
+              className="py-3 px-4 rounded-xl font-medium active:opacity-80 text-white transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               style={{ backgroundColor: "var(--rookie-primary)" }}
             >
               Start Activity

@@ -265,7 +265,7 @@ interface LiveSessionCardProps {
   userProfile?: string;
   activityType?: string;
   activityEmoji?: string;
-  status: "live" | "paused" | "completed";
+  status: "live" | "afk" | "paused" | "completed";
   goalTitle?: string;
   totalDurationSeconds: number;
   onClick?: () => void;
@@ -281,7 +281,7 @@ const LiveSessionCard: React.FC<LiveSessionCardProps> = ({
   totalDurationSeconds,
   onClick,
 }) => {
-  const isPaused = status === "paused";
+  const isPaused = status === "paused" || status === "afk";
   const [elapsedSeconds, setElapsedSeconds] = useState(totalDurationSeconds);
 
   // Resync whenever Convex pushes a fresh elapsed value
@@ -643,11 +643,6 @@ export default function ActivityDetailPage({
   const handleGenerateNew = () => {
     setIsNewActivityModalOpen(false);
     // TODO: This page needs a goal ID to properly start a session with AI-generated activity
-  };
-
-  const handleStartDrawing = () => {
-    setIsNewActivityModalOpen(false);
-    router.push(`/goals/${uid}/session/new?activity=drawing`);
   };
 
   const handleOpenNewActivity = () => {
@@ -1510,7 +1505,6 @@ export default function ActivityDetailPage({
         onClose={() => setIsNewActivityModalOpen(false)}
         onSelectActivity={handleSelectActivity}
         onGenerateNew={handleGenerateNew}
-        onStartDrawing={handleStartDrawing}
       />
     </>
   );

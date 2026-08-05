@@ -400,11 +400,90 @@ export default function SessionTimer({ params }: SessionTimerProps) {
   );
   const startMutation = useMutation(api.sessions.startSession);
   const heartbeatMutation = useMutation(api.sessions.heartbeat);
-  const pauseMutation = useMutation(api.sessions.pauseSession);
-  const resumeMutation = useMutation(api.sessions.resumeSession);
+  // Pause/resume/AFK-return/time-adjust all patch the local getSession cache
+  // immediately (withOptimisticUpdate) so the button state and countdown
+  // react on the same frame the user clicks, instead of waiting on a round
+  // trip to Convex — the real response then just confirms the same value.
+  // Pushing/closing a pauseIntervals entry here (mirroring what the real
+  // mutation does) matters: the local countdown (recalcLocal below) walks
+  // pauseIntervals every second, so without this patch it would keep
+  // counting focus time as accruing until the real response landed.
+  const pauseMutation = useMutation(api.sessions.pauseSession).withOptimisticUpdate(
+    (localStore, args) => {
+      const current = localStore.getQuery(api.sessions.getSession, {
+        sessionId: args.sessionId,
+      });
+      if (!current || current.status !== "live") return;
+      localStore.setQuery(
+        api.sessions.getSession,
+        { sessionId: args.sessionId },
+        {
+          ...current,
+          status: "paused",
+          pauseIntervals: [
+            ...current.pauseIntervals,
+            { pausedAt: Date.now(), reason: args.reason },
+          ],
+        },
+      );
+    },
+  );
+  const returnFromAfkMutation = useMutation(
+    api.sessions.returnFromAfk,
+  ).withOptimisticUpdate((localStore, args) => {
+    const current = localStore.getQuery(api.sessions.getSession, {
+      sessionId: args.sessionId,
+    });
+    if (!current || current.status !== "afk") return;
+    const intervals = [...current.pauseIntervals];
+    const last = intervals[intervals.length - 1];
+    if (args.toStatus === "live" && last && last.resumedAt === undefined) {
+      intervals[intervals.length - 1] = { ...last, resumedAt: Date.now() };
+    }
+    localStore.setQuery(
+      api.sessions.getSession,
+      { sessionId: args.sessionId },
+      { ...current, status: args.toStatus, pauseIntervals: intervals },
+    );
+  });
+  const resumeMutation = useMutation(api.sessions.resumeSession).withOptimisticUpdate(
+    (localStore, args) => {
+      const current = localStore.getQuery(api.sessions.getSession, {
+        sessionId: args.sessionId,
+      });
+      if (!current || (current.status !== "paused" && current.status !== "afk"))
+        return;
+      const intervals = [...current.pauseIntervals];
+      const last = intervals[intervals.length - 1];
+      if (last && last.resumedAt === undefined) {
+        intervals[intervals.length - 1] = { ...last, resumedAt: Date.now() };
+      }
+      localStore.setQuery(
+        api.sessions.getSession,
+        { sessionId: args.sessionId },
+        { ...current, status: "live", pauseIntervals: intervals },
+      );
+    },
+  );
   const completeMutation = useMutation(api.sessions.completeSession);
   const abandonMutation = useMutation(api.sessions.abandonSession);
   const updateInitialRatesMutation = useMutation(api.sessions.updateInitialRates);
+  const adjustFocusTimeMutation = useMutation(
+    api.sessions.adjustFocusTime,
+  ).withOptimisticUpdate((localStore, args) => {
+    const current = localStore.getQuery(api.sessions.getSession, {
+      sessionId: args.sessionId,
+    });
+    if (!current) return;
+    localStore.setQuery(
+      api.sessions.getSession,
+      { sessionId: args.sessionId },
+      {
+        ...current,
+        focusAdjustSeconds: (current.focusAdjustSeconds ?? 0) + args.deltaSeconds,
+      },
+    );
+  });
   const markSyncedMutation = useMutation(api.sessions.markSyncedToDjango);
   const enterAsSpectatorMutation = useMutation(
     api.sessions.enterSessionAsSpectator,
@@ -414,8 +493,9 @@ export default function SessionTimer({ params }: SessionTimerProps) {
   );
 
   const isRunning = session?.status === "live";
+  const isAfk = session?.status === "afk";
   const isPaused = session?.status === "paused";
-  const isActive = isRunning || isPaused;
+  const isActive = isRunning || isAfk || isPaused;
   // Flat primitive so React Compiler can track it without inferring the whole session object
   const sessionSynced = session?.syncedToDjango ?? false;
   const sessionOwnerId = session?.userId;
@@ -524,6 +604,14 @@ export default function SessionTimer({ params }: SessionTimerProps) {
           },
         });
 
+        // startSession creates the session as "live" — immediately pause it
+        // so a brand-new session always lands paused, waiting for the user
+        // to press play, instead of silently ticking/accruing XP while the
+        // page is still loading.
+        await pauseMutation({ sessionId: id, reason: "user_initiated" }).catch(
+          console.error,
+        );
+
         // Register the session with Django BEFORE navigating. This must be awaited:
         // router.replace below changes the route and can abort an in-flight
         // fire-and-forget request, leaving Django with no session record — which
@@ -591,30 +679,132 @@ export default function SessionTimer({ params }: SessionTimerProps) {
     isEmptySession,
     searchParams,
     startMutation,
+    pauseMutation,
     updateInitialRatesMutation,
     router,
   ]);
 
+  // ── Local XP projection (ticks every second, grounded in Convex session data) ──
+  // Convex heartbeats keep server state accurate every 5s; this mirrors the same
+  // formula client-side so the display increments smoothly every second.
+  const [localXpTotal, setLocalXpTotal] = useState(0);
+  const [localXpBreakdown, setLocalXpBreakdown] = useState<XpRates>({
+    physique: 0,
+    energy: 0,
+    logic: 0,
+    creativity: 0,
+    social: 0,
+  });
+  // Also drives the focus-phase countdown (see pomodoro timer section below)
+  // so it's grounded in the same pause-aware elapsed-time math as XP, and
+  // survives reload without any local-only persistence of its own.
+  const [localFocusedDurationSeconds, setLocalFocusedDurationSeconds] = useState(0);
+
+  useEffect(() => {
+    if (!session) return;
+
+    const DIMS = ["physique", "energy", "logic", "creativity", "social"] as const;
+
+    function recalcLocal() {
+      if (!session) return;
+      const now = Date.now();
+
+      // Mirror Convex's getTotalPauseDurationMs: unclosed interval uses `now`
+      let pausedMs = 0;
+      for (const interval of session.pauseIntervals) {
+        pausedMs += (interval.resumedAt ?? now) - interval.pausedAt;
+      }
+      const focusedSeconds = Math.max(
+        0,
+        (now - session.startedAt) / 1000 - pausedMs / 1000,
+      );
+
+      // Mirror Convex's calculateXP
+      const breakdown: XpRates = { physique: 0, energy: 0, logic: 0, creativity: 0, social: 0 };
+      for (let i = 0; i < session.rateSegments.length; i++) {
+        const seg = session.rateSegments[i];
+        if (seg.atSecond >= focusedSeconds) break;
+        const segEnd =
+          i + 1 < session.rateSegments.length
+            ? session.rateSegments[i + 1].atSecond
+            : focusedSeconds;
+        const duration = Math.min(segEnd, focusedSeconds) - seg.atSecond;
+        for (const dim of DIMS) {
+          breakdown[dim] += seg.rates[dim] * duration;
+        }
+      }
+      const total = Math.floor(DIMS.reduce((sum, dim) => sum + breakdown[dim], 0));
+
+      setLocalXpTotal(total);
+      setLocalXpBreakdown({ ...breakdown });
+      setLocalFocusedDurationSeconds(focusedSeconds);
+    }
+
+    recalcLocal();
+    const id = setInterval(recalcLocal, 1000);
+    return () => clearInterval(id);
+  }, [session]); // re-subscribes whenever Convex session data changes
+
   // ── Pomodoro timer ──
-  // During focus: countdown ticks only while the Convex session is live.
-  // During break: countdown ticks only while the user has explicitly started
-  // it (isBreakRunning) — breaks aren't tracked by Convex (no XP accrues), so
-  // this is purely a local play/pause flag, separate from isRunning/isPaused.
-  const [pomodoroPhase, setPomodoroPhase] = useState<"focus" | "break">("focus");
-  const [phaseSecondsLeft, setPhaseSecondsLeft] = useState(FOCUS_SECONDS);
+  // Focus phase: a pomodoro break pauses the Convex session with reason
+  // "break_started" (see getLiveSessions in convex/sessions.ts), so that
+  // pause interval is the source of truth for which phase we're in — this
+  // is what lets the phase survive a reload instead of always starting back
+  // at "focus".
+  const lastPauseInterval = session?.pauseIntervals[session.pauseIntervals.length - 1];
+  const isOnBreak =
+    isPaused &&
+    lastPauseInterval !== undefined &&
+    lastPauseInterval.resumedAt === undefined &&
+    lastPauseInterval.reason === "break_started";
+
+  // When the break countdown reaches 0 the phase display flips to "focus"
+  // (25:00, ready to go) but — matching the original "DO NOT auto resume"
+  // behavior — the underlying Convex session stays paused until the user
+  // presses play. Cleared as soon as isOnBreak goes false for real (the user
+  // resumed) or a new break starts.
+  const [breakFinishedAwaitingResume, setBreakFinishedAwaitingResume] = useState(false);
+  const pomodoroPhase: "focus" | "break" =
+    isOnBreak && !breakFinishedAwaitingResume ? "break" : "focus";
+
+  // Focus countdown is derived from Convex's focusedDurationSeconds (already
+  // accounts for pauses/AFK/reload) plus any manual +60/-60 adjustment, so it
+  // survives a page reload without any local persistence of its own.
+  const focusAdjustSeconds = session?.focusAdjustSeconds ?? 0;
+  const focusSecondsLeft = breakFinishedAwaitingResume
+    ? FOCUS_SECONDS + focusAdjustSeconds
+    : Math.max(0, FOCUS_SECONDS + focusAdjustSeconds - Math.floor(localFocusedDurationSeconds));
+
+  // Break isn't time-tracked in Convex (no XP accrues on break, and breaks
+  // aren't meant to survive a reload) — this remains a local-only countdown,
+  // reset to a fresh BREAK_SECONDS whenever we detect a new break starting.
+  const [breakSecondsLeft, setBreakSecondsLeft] = useState(BREAK_SECONDS);
   const [isBreakRunning, setIsBreakRunning] = useState(false);
+  const wasOnBreakRef = useRef(false);
+  useEffect(() => {
+    if (isOnBreak && !wasOnBreakRef.current) {
+      setBreakSecondsLeft(BREAK_SECONDS);
+      setIsBreakRunning(false);
+      setBreakFinishedAwaitingResume(false);
+    }
+    if (!isOnBreak) setBreakFinishedAwaitingResume(false);
+    wasOnBreakRef.current = isOnBreak;
+  }, [isOnBreak]);
+
+  const phaseSecondsLeft = pomodoroPhase === "focus" ? focusSecondsLeft : breakSecondsLeft;
 
   useEffect(() => {
     // Only the owner runs the local pomodoro state machine — a spectator's
     // countdown is unrelated to the actual session and must never pause it.
     if (!isOwn) return;
-    if (pomodoroPhase === "focus" && !isRunning) return;
-    if (pomodoroPhase === "break" && !isBreakRunning) return;
-    const id = setInterval(() => {
-      setPhaseSecondsLeft((prev) => Math.max(0, prev - 1));
-    }, 1000);
-    return () => clearInterval(id);
-  }, [isRunning, isBreakRunning, pomodoroPhase, isOwn]);
+    if (pomodoroPhase === "break") {
+      if (!isBreakRunning) return;
+      const id = setInterval(() => {
+        setBreakSecondsLeft((prev) => Math.max(0, prev - 1));
+      }, 1000);
+      return () => clearInterval(id);
+    }
+  }, [isBreakRunning, pomodoroPhase, isOwn]);
 
   // ── Spectator elapsed-time ticker ──
   // Non-owners see a plain elapsed-time counter (mirrors Convex's
@@ -644,29 +834,28 @@ export default function SessionTimer({ params }: SessionTimerProps) {
 useEffect(() => {
   if (!isOwn) return;
   if (phaseSecondsLeft > 0) return;
+  // Only the live->break edge is driven from focusSecondsLeft; guard against
+  // re-firing while already paused/transitioning (isRunning flips false as
+  // soon as the pause mutation above resolves).
+  if (pomodoroPhase === "focus" && !isRunning) return;
 
   const sid = sessionIdRef.current;
   playPhaseEndChime(pomodoroPhase === "focus" ? "break" : "focus");
 
   if (pomodoroPhase === "focus") {
-    // pause when focus ends
+    // pause when focus ends — isOnBreak (derived from the resulting pause
+    // interval's reason) flips the phase to "break" once Convex updates
     if (sid) {
       pauseMutation({
         sessionId: sid,
         reason: "break_started",
       }).catch(console.error);
     }
-
-    setPomodoroPhase("break");
-    setPhaseSecondsLeft(BREAK_SECONDS);
-    // DO NOT auto-start the break countdown — wait for the user to press play
-    setIsBreakRunning(false);
-
   } else {
-    // switch back to focus
-    // DO NOT auto resume
-    setPomodoroPhase("focus");
-    setPhaseSecondsLeft(FOCUS_SECONDS);
+    // break ended — flip the display to "focus" (25:00, ready to go) but DO
+    // NOT auto-resume the underlying Convex session; the user still presses
+    // play, same as before
+    setBreakFinishedAwaitingResume(true);
     setIsBreakRunning(false);
   }
 
@@ -760,30 +949,12 @@ useEffect(() => {
     };
   }, [holdWakeLock]);
 
-  // ── Foreground ping ──
-  // Mobile browsers throttle/suspend setInterval while the tab is backgrounded
-  // or the screen is locked, so the regular 5s heartbeat above can go silent
-  // for a while. Convex's cleanupStaleSessions cron auto-pauses any "live"
-  // session whose heartbeat is more than 5 minutes stale — sending a
-  // zero-XP/zero-duration heartbeat the instant the tab is visible again
-  // refreshes lastHeartbeatAt immediately, so a short interruption (a phone
-  // call, switching apps for a few minutes) doesn't get the session paused
-  // before the normal interval resumes.
-  useEffect(() => {
-    if (!isOwn || !isRunning || !sessionId) return;
-
-    const pingOnForeground = () => {
-      if (document.visibilityState !== "visible") return;
-      heartbeatMutation({
-        sessionId,
-        elapsedSeconds: 0,
-        xpDelta: { physique: 0, energy: 0, logic: 0, creativity: 0, social: 0 },
-      }).catch(console.error);
-    };
-
-    document.addEventListener("visibilitychange", pingOnForeground);
-    return () => document.removeEventListener("visibilitychange", pingOnForeground);
-  }, [isOwn, isRunning, sessionId, heartbeatMutation]);
+  // Tab switching intentionally does NOT trigger AFK — only a prolonged
+  // absence (heartbeats going silent, e.g. the browser tab is closed/crashed
+  // or a mobile OS suspends it) does, via the server-side cleanupStaleSessions
+  // cron (see convex/sessionJobs.ts) after STALE_THRESHOLD_MS of missed
+  // heartbeats. returnFromAfkMutation below still lets the user manually
+  // return from whatever AFK state the cron put them in.
 
   // ── Auto-redirect for already-completed+synced sessions (e.g. page refresh) ──
   const sessionStatus = session?.status;
@@ -857,62 +1028,6 @@ useEffect(() => {
     markSyncedMutation,
   ]);
 
-  // ── Local XP projection (ticks every second, grounded in Convex session data) ──
-  // Convex heartbeats keep server state accurate every 5s; this mirrors the same
-  // formula client-side so the display increments smoothly every second.
-  const [localXpTotal, setLocalXpTotal] = useState(0);
-  const [localXpBreakdown, setLocalXpBreakdown] = useState<XpRates>({
-    physique: 0,
-    energy: 0,
-    logic: 0,
-    creativity: 0,
-    social: 0,
-  });
-
-  useEffect(() => {
-    if (!session) return;
-
-    const DIMS = ["physique", "energy", "logic", "creativity", "social"] as const;
-
-    function recalcLocal() {
-      if (!session) return;
-      const now = Date.now();
-
-      // Mirror Convex's getTotalPauseDurationMs: unclosed interval uses `now`
-      let pausedMs = 0;
-      for (const interval of session.pauseIntervals) {
-        pausedMs += (interval.resumedAt ?? now) - interval.pausedAt;
-      }
-      const focusedSeconds = Math.max(
-        0,
-        (now - session.startedAt) / 1000 - pausedMs / 1000,
-      );
-
-      // Mirror Convex's calculateXP
-      const breakdown: XpRates = { physique: 0, energy: 0, logic: 0, creativity: 0, social: 0 };
-      for (let i = 0; i < session.rateSegments.length; i++) {
-        const seg = session.rateSegments[i];
-        if (seg.atSecond >= focusedSeconds) break;
-        const segEnd =
-          i + 1 < session.rateSegments.length
-            ? session.rateSegments[i + 1].atSecond
-            : focusedSeconds;
-        const duration = Math.min(segEnd, focusedSeconds) - seg.atSecond;
-        for (const dim of DIMS) {
-          breakdown[dim] += seg.rates[dim] * duration;
-        }
-      }
-      const total = Math.floor(DIMS.reduce((sum, dim) => sum + breakdown[dim], 0));
-
-      setLocalXpTotal(total);
-      setLocalXpBreakdown({ ...breakdown });
-    }
-
-    recalcLocal();
-    const id = setInterval(recalcLocal, 1000);
-    return () => clearInterval(id);
-  }, [session]); // re-subscribes whenever Convex session data changes
-
   // ── XP display ──
   const xpGained = localXpTotal;
   const aspects = [
@@ -955,16 +1070,27 @@ useEffect(() => {
     if (isRunning) {
       await pauseMutation({ sessionId, reason: "user_initiated" });
       posthog.capture("session_paused", { session_id: sessionId, goal_id: goalId });
+    } else if (isAfk) {
+      // AFK always lands on paused, never straight back to live — the user
+      // must explicitly press play again to actually resume ticking.
+      await returnFromAfkMutation({ sessionId, toStatus: "paused" });
     } else if (isPaused) {
       await resumeMutation({ sessionId });
       posthog.capture("session_resumed", { session_id: sessionId, goal_id: goalId });
-
-      if (pomodoroPhase === "break") {
-        setPomodoroPhase("focus");
-        setPhaseSecondsLeft(FOCUS_SECONDS);
-      }
+      // isOnBreak flips false once Convex updates, which also clears
+      // breakFinishedAwaitingResume and resets focusAdjustSeconds server-side.
     }
-  }, [isRunning, isPaused, isActive, sessionId, goalId, pauseMutation, resumeMutation]);
+  }, [
+    isRunning,
+    isAfk,
+    isPaused,
+    isActive,
+    sessionId,
+    goalId,
+    pauseMutation,
+    returnFromAfkMutation,
+    resumeMutation,
+  ]);
 
   // A logged session changes the goal's XP/session totals, the user's own
   // XP/streak, and can surface as a new feed post — invalidate every cache
@@ -1093,11 +1219,11 @@ useEffect(() => {
     if (!sessionId) return;
     try {
       await resumeMutation({ sessionId });
+      // isOnBreak flips false once Convex updates, flipping the phase back
+      // to "focus" with a fresh countdown.
     } catch (err) {
       console.error("Failed to skip break:", err);
     }
-    setPomodoroPhase("focus");
-    setPhaseSecondsLeft(FOCUS_SECONDS);
     setIsBreakRunning(false);
   }, [sessionId, resumeMutation]);
 
@@ -1105,9 +1231,19 @@ useEffect(() => {
     setIsBreakRunning((prev) => !prev);
   }, []);
 
-  const handleAdjustTime = useCallback((deltaSeconds: number) => {
-    setPhaseSecondsLeft((prev) => Math.max(0, prev + deltaSeconds));
-  }, []);
+  const handleAdjustTime = useCallback(
+    (deltaSeconds: number) => {
+      if (pomodoroPhase === "break") {
+        setBreakSecondsLeft((prev) => Math.max(0, prev + deltaSeconds));
+        return;
+      }
+      if (!sessionId) return;
+      void adjustFocusTimeMutation({ sessionId, deltaSeconds }).catch((err) => {
+        console.error("Failed to adjust focus time:", err);
+      });
+    },
+    [pomodoroPhase, sessionId, adjustFocusTimeMutation],
+  );
 
   // ── Keyboard shortcuts (owner only — spectators have no session controls) ──
   useEffect(() => {

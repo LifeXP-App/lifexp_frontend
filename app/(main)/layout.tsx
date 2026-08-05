@@ -8,8 +8,7 @@ import MasteryPopupWrapper from "../../src/components/MasteryPopupWrapper";
 import { PopupProvider } from "../../src/context/PopupContext";
 import { AuthProvider } from "@/src/context/AuthContext";
 import { AuthGuard } from "@/src/components/AuthGuard";
-import { OnboardingTour } from "@/src/components/onboarding/OnboardingTour";
-
+import { OnboardingTour } from "@/src/components/onboarding/OnboardingTour";import AfkSessionPopup from "@/src/components/goals/AfkSessionPopup";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -49,6 +48,7 @@ export default function RootLayout({
                   <main className="flex-1 overflow-y-auto pt-16 md:pt-0">
                     {children}
                   </main>
+                  <AfkSessionPopup />
                 </div>
               </PopupProvider>
             </AuthGuard>
