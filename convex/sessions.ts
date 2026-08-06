@@ -190,7 +190,6 @@ const sessionId = await ctx.db.insert("sessions", {
   activity_uid: args.activity_uid,
 
   status: "live",
-  afk: false,
 
   startedAt: now,
   lastResumedAt: now,
@@ -416,7 +415,6 @@ export const resumeSession = mutation({
 
     await ctx.db.patch(args.sessionId, {
       status: "live",
-      afk: false,
       lastResumedAt: now,
       lastHeartbeatAt: now,
       pauseIntervals: intervals,
@@ -464,7 +462,6 @@ export const completeSession = mutation({
 
     await ctx.db.patch(args.sessionId, {
       status: "completed",
-      afk: false,
       endedAt: now,
       completedReason: args.reason,
       pauseIntervals: intervals,
@@ -512,7 +509,6 @@ export const abandonSession = mutation({
 
     await ctx.db.patch(args.sessionId, {
       status: "completed",
-      afk: false,
       endedAt: now,
       completedReason: "abandoned",
       interruptionReason: args.interruptionReason,
@@ -527,19 +523,6 @@ export const abandonSession = mutation({
       xpTotal: updates.xpTotal,
       xpBreakdown: updates.xpBreakdown,
     };
-  },
-});
-
-// ────────────────────────────────────────────
-export const setSessionAfk = mutation({
-  args: {
-    sessionId: v.id("sessions"),
-    afk: v.boolean(),
-  },
-  handler: async (ctx, args) => {
-    const session = await ctx.db.get(args.sessionId);
-    if (!session || session.status === "completed") return;
-    await ctx.db.patch(args.sessionId, { afk: args.afk });
   },
 });
 

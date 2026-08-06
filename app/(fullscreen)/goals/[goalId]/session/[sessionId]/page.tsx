@@ -953,8 +953,27 @@ useEffect(() => {
   // absence (heartbeats going silent, e.g. the browser tab is closed/crashed
   // or a mobile OS suspends it) does, via the server-side cleanupStaleSessions
   // cron (see convex/sessionJobs.ts) after STALE_THRESHOLD_MS of missed
-  // heartbeats. returnFromAfkMutation below still lets the user manually
-  // return from whatever AFK state the cron put them in.
+  // heartbeats.
+  //
+  // The page itself must never show/sit in "afk" while it's actually open:
+  // if the session is already afk when this page mounts (or becomes visible
+  // again — e.g. the laptop was asleep with the tab open, heartbeats lapsed,
+  // the cron marked it afk, then the laptop wakes with the page still there),
+  // immediately resolve it to paused rather than waiting for the user to
+  // notice and press play.
+  useEffect(() => {
+    if (!isOwn || !sessionId) return;
+
+    const resolveAfkIfVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      if (session?.status !== "afk") return;
+      returnFromAfkMutation({ sessionId, toStatus: "paused" }).catch(console.error);
+    };
+
+    resolveAfkIfVisible();
+    document.addEventListener("visibilitychange", resolveAfkIfVisible);
+    return () => document.removeEventListener("visibilitychange", resolveAfkIfVisible);
+  }, [isOwn, sessionId, session?.status, returnFromAfkMutation]);
 
   // ── Auto-redirect for already-completed+synced sessions (e.g. page refresh) ──
   const sessionStatus = session?.status;

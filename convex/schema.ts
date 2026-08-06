@@ -30,14 +30,12 @@ export default defineSchema({
     activity_uid: v.optional(v.string()),
 
     // ── Lifecycle ──
-    afk: v.optional(v.boolean()), // legacy boolean field; status is the current source of truth
     status: v.union(
       v.literal("live"),
       v.literal("afk"),
       v.literal("paused"),
       v.literal("completed")
     ),
-    afk: v.optional(v.boolean()),
     startedAt: v.number(), // epoch ms
     endedAt: v.optional(v.number()),
     lastResumedAt: v.optional(v.number()),
