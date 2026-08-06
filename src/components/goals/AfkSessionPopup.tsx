@@ -10,7 +10,7 @@ export default function AfkSessionPopup() {
   const userId = me ? String(me.id) : null;
   const { session } = useConvexActiveSession(userId);
 
-  if (!session || session.status !== "afk") {
+  if (!session) {
     return null;
   }
 
@@ -25,6 +25,26 @@ export default function AfkSessionPopup() {
   const goalTitle = session.goalTitle || session.activityName || "Ongoing session";
 
   if (!sessionId || !goalId) return null;
+
+  // A pomodoro break is a "paused" session whose open pause interval was
+  // started with reason "break_started" — same convention the timer page and
+  // getLiveSessions (convex/sessions.ts) use to distinguish break from a
+  // plain manual pause.
+  const lastPauseInterval = session.pauseIntervals[session.pauseIntervals.length - 1];
+  const isOnBreak =
+    session.status === "paused" &&
+    lastPauseInterval !== undefined &&
+    lastPauseInterval.resumedAt === undefined &&
+    lastPauseInterval.reason === "break_started";
+
+  const message =
+    session.status === "afk"
+      ? "Your session was marked AFK. Tap to return to your timer."
+      : session.status === "live"
+        ? "You have a session in progress. Tap to return to your timer."
+        : isOnBreak
+          ? "Your session is on a break. Tap to return to your timer."
+          : "Your session is paused. Tap to return to your timer.";
 
   return (
     <div className="fixed bottom-[1.5rem] right-[1.5rem] z-[95] w-[min(340px,calc(100%-2rem))]">
@@ -54,7 +74,7 @@ export default function AfkSessionPopup() {
               {goalTitle}
             </h2>
             <p className="mt-2 text-sm text-black/60 dark:text-[var(--foreground)]/70">
-              Your session was marked AFK. Tap to return to your timer.
+              {message}
             </p>
           </div>
         </div>
