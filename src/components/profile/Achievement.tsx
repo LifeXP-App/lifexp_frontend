@@ -81,7 +81,7 @@ export default function Achievement({
         </div>
 
         {description && (
-          <p className="text-sm text-gray-500 dark:text-[var(--muted)] line-clamp-2">
+          <p className="text-sm text-gray-500 opacity-80 dark:text-[var(--muted)] line-clamp-2">
             {description}
           </p>
         )}
@@ -103,12 +103,14 @@ export default function Achievement({
         </p>
 
         {/* Aspect chips */}
-        <div className="grid grid-cols-5 gap-1.5 mt-1">
-          {chips.map((chip, index) => (
-            <span className={index >= 2 ? "opacity-40" : ""} key={chip.tint}>
-              <AspectChip icon={chip.icon} value={chip.value} tint={chip.tint} />
-            </span>
-          ))}
+        <div className="flex w-full gap-1.5 mt-1">
+          {chips
+            .filter((chip) => chip.value > 0)
+            .map((chip) => (
+              <span key={chip.tint} className="flex-1">
+                <AspectChip icon={chip.icon} value={chip.value} tint={chip.tint} />
+              </span>
+            ))}
         </div>
       </div>
     );
@@ -181,12 +183,14 @@ export default function Achievement({
         </p>
 
         {/* Aspect chips */}
-        <div className="grid grid-cols-5 gap-1.5 mt-2">
-          {chips.map((chip, index) => (
-            <span className={index >= 2 ? "opacity-40" : ""} key={chip.tint}>
-              <AspectChip icon={chip.icon} value={chip.value} tint={chip.tint} />
-            </span>
-          ))}
+        <div className="flex w-full gap-1.5 mt-2">
+          {chips
+            .filter((chip) => chip.value > 0)
+            .map((chip) => (
+              <span key={chip.tint} className="flex-1">
+                <AspectChip icon={chip.icon} value={chip.value} tint={chip.tint} />
+              </span>
+            ))}
         </div>
       </div>
     </div>

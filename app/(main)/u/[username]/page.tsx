@@ -51,6 +51,7 @@ type UserPost = {
   title: string;
   emoji?: string;
   content: string;
+  description?: string;
   post_image_url: string;
   completion_picture_url?: string | null;
   duration: string;
@@ -1512,7 +1513,10 @@ export default function ProfilePage({ params }: PageProps) {
                   const sharedProps = (post: UserPost) => ({
                     emoji: post.emoji || "🎯",
                     title: post.title,
-                    description: post.content,
+                    // Goals write user-entered text to `description`; `content`
+                    // is a separate, usually-empty field on the same model
+                    // (see Goal in main/models.py) — prefer whichever is set.
+                    description: post.description || post.content,
                     xp: post.total_xp,
                     coverImage:
                       post.completion_picture_url || post.post_image_url || null,
