@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from "react";
 interface GoalStatusMenuProps {
   goalId: string;
   currentStatus: 'planned' | 'ongoing' | 'paused' | 'completed' | 'abandoned';
+  onEdit: (goalId: string) => void;
   onStatusChange: (goalId: string, newStatus: string) => void;
   onDelete: (goalId: string) => void;
 }
@@ -12,6 +13,7 @@ interface GoalStatusMenuProps {
 export default function GoalStatusMenu({
   goalId,
   currentStatus,
+  onEdit,
   onStatusChange,
   onDelete,
 }: GoalStatusMenuProps) {
@@ -95,6 +97,21 @@ export default function GoalStatusMenu({
           className="absolute right-0 top-10 w-48 bg-white dark:bg-dark-2 border border-gray-200 dark:border-[var(--border)] rounded-xl shadow-lg overflow-hidden z-20"
           onClick={(e) => e.stopPropagation()}
         >
+          <button
+            type="button"
+            className="w-full cursor-pointer text-left font-medium py-3 px-4 text-sm hover:bg-gray-100 dark:hover:bg-dark-3 transition-colors text-black dark:text-[var(--foreground)]"
+            onClick={() => {
+              setOpen(false);
+              onEdit(goalId);
+            }}
+          >
+            Edit Goal
+          </button>
+
+          {actions.length > 0 && (
+            <div className="border-t border-gray-200 dark:border-[var(--border)]" />
+          )}
+
           {actions.map((action) => (
             <button
               key={action.value}

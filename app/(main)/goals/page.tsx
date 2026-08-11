@@ -71,6 +71,7 @@ type GoalPost = {
   status: GoalStatus;
   emoji?: string | null;
   duration_display?: string | null;
+  finish_by?: string | null;
   total_xp?: number;
   xp_distribution?: Record<AspectKey, number>;
 };
@@ -92,6 +93,7 @@ function GoalCard({
   secondaryCta,
   showAchievementCta,
   onStatusChange,
+  onEdit,
   onDelete,
   spotlightPrimary,
 }: {
@@ -100,6 +102,7 @@ function GoalCard({
   secondaryCta?: { label: string; onClick: () => void };
   showAchievementCta?: { label: string; onClick: () => void };
   onStatusChange?: (goalId: string, newStatus: string) => void;
+  onEdit?: (goalId: string) => void;
   onDelete?: (goalId: string) => void;
   /** Marks this card's primary button as the onboarding tour anchor. */
   spotlightPrimary?: boolean;
@@ -138,10 +141,11 @@ function GoalCard({
         </div>
 
         {/* 3-dot Status Menu */}
-        {onStatusChange && onDelete && (
+        {onStatusChange && onEdit && onDelete && (
           <GoalStatusMenu
             goalId={goal.id}
             currentStatus={goal.status}
+            onEdit={onEdit}
             onStatusChange={onStatusChange}
             onDelete={onDelete}
           />
@@ -413,6 +417,7 @@ export default function GoalsPage() {
   const confirm = useConfirm();
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingGoal, setEditingGoal] = useState<GoalPost | null>(null);
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
   const [deletingGoalId, setDeletingGoalId] = useState<string | null>(null);
@@ -435,6 +440,7 @@ export default function GoalsPage() {
     const url = new URL(window.location.href);
     if (url.searchParams.get("new") !== "1") return;
 
+    setEditingGoal(null);
     setIsModalOpen(true);
     url.searchParams.delete("new");
     window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
@@ -497,6 +503,11 @@ export default function GoalsPage() {
 
   const showGoalsSkeleton = goalsLoading && goals.length === 0;
   const showSidebarSkeleton = sidebarLoading && !sidebarInfo;
+
+  const handleOpenCreateGoal = () => {
+    setEditingGoal(null);
+    setIsModalOpen(true);
+  };
 
   const handleCreateGoal = async (goal: {
     title: string;
@@ -616,6 +627,39 @@ export default function GoalsPage() {
 
     // Refetch to reconcile with the server's authoritative shape.
     queryClient.invalidateQueries({ queryKey: ["goals"] });
+  };
+
+  const handleOpenEditGoal = (goalId: string) => {
+    const goal = goals.find((candidate) => candidate.uid === goalId);
+    if (!goal) return;
+    setEditingGoal(goal);
+    setIsModalOpen(true);
+  };
+
+  const handleUpdateGoal = async (data: {
+    title: string;
+    description: string;
+    finishBy: string;
+  }) => {
+    if (!editingGoal) return;
+
+    const goalId = editingGoal.uid;
+    setIsModalOpen(false);
+    setEditingGoal(null);
+
+    try {
+      await GoalsService.updateGoal(goalId, {
+        title: data.title,
+        description: data.description,
+        ...(data.finishBy ? { finish_by: data.finishBy } : {}),
+      });
+      queryClient.invalidateQueries({ queryKey: ["goals"] });
+      queryClient.invalidateQueries({ queryKey: ["goal", goalId] });
+    } catch (error) {
+      console.error("Failed to update goal:", error);
+      toast.error("Failed to update goal. Please try again.");
+      queryClient.invalidateQueries({ queryKey: ["goals"] });
+    }
   };
 
   const getPreferredGoalId = () => {
@@ -840,7 +884,7 @@ export default function GoalsPage() {
               <button
                 type="button"
                 data-onboarding="goals-create"
-                onClick={() => setIsModalOpen(true)}
+                onClick={handleOpenCreateGoal}
                 className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-gray-200 dark:bg-dark-2 text-black dark:text-[var(--foreground)] font-semibold py-4 px-5 hover:bg-gray-300 dark:hover:bg-dark-3 transition cursor-pointer"
               >
                 <PlusIcon className="w-5 h-5" />
@@ -861,7 +905,7 @@ export default function GoalsPage() {
                 </p>
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(true)}
+                  onClick={handleOpenCreateGoal}
                   className="mt-5 flex items-center gap-2 rounded-2xl bg-[var(--rookie-primary)]  text-white font-semibold py-3 px-6 hover:opacity-90 transition cursor-pointer"
                 >
                   <PlusIcon className="w-5 h-5" />
@@ -906,6 +950,7 @@ export default function GoalsPage() {
                         onClick: () => router.push(`/goals/${goal.uid}`),
                       }}
                       onStatusChange={handleStatusChangeRequest}
+                      onEdit={handleOpenEditGoal}
                       onDelete={handleDeleteGoalRequest}
                     />
                   ))}
@@ -959,6 +1004,7 @@ export default function GoalsPage() {
                         },
                       }}
                       onStatusChange={handleStatusChangeRequest}
+                      onEdit={handleOpenEditGoal}
                       onDelete={handleDeleteGoalRequest}
                     />
                   ))}
@@ -1001,6 +1047,7 @@ export default function GoalsPage() {
                         onClick: () => router.push(`/goals/${goal.uid}`),
                       }}
                       onStatusChange={handleStatusChangeRequest}
+                      onEdit={handleOpenEditGoal}
                       onDelete={handleDeleteGoalRequest}
                     />
                   ))}
@@ -1043,6 +1090,7 @@ export default function GoalsPage() {
                         onClick: () => router.push(`/goals/${goal.uid}`),
                       }}
                       onStatusChange={handleStatusChangeRequest}
+                      onEdit={handleOpenEditGoal}
                       onDelete={handleDeleteGoalRequest}
                     />
                   ))}
@@ -1081,6 +1129,7 @@ export default function GoalsPage() {
                         onClick: () => router.push(`/goals/${goal.uid}`),
                       }}
                       onStatusChange={handleStatusChangeRequest}
+                      onEdit={handleOpenEditGoal}
                       onDelete={handleDeleteGoalRequest}
                     />
                   ))}
@@ -1104,10 +1153,24 @@ export default function GoalsPage() {
 
       {/* New Goal Modal */}
       <NewGoalModal
+        key={editingGoal?.uid ?? "new-goal"}
         isOpen={isModalOpen}
-        isEdit={false}
-        onClose={() => setIsModalOpen(false)}
-        onSubmit={handleCreateGoal}
+        isEdit={editingGoal !== null}
+        goalCompleted={editingGoal?.status === "completed"}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingGoal(null);
+        }}
+        onSubmit={editingGoal ? handleUpdateGoal : handleCreateGoal}
+        initialGoal={
+          editingGoal
+            ? {
+                title: editingGoal.title,
+                description: getGoalDescription(editingGoal),
+                finishBy: editingGoal.finish_by ?? "",
+              }
+            : undefined
+        }
       />
 
       {/* New Activity Modal */}
