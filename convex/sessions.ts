@@ -201,6 +201,7 @@ const sessionId = await ctx.db.insert("sessions", {
   focusedDurationSeconds: 0,
 
   sessionMode: "focus",
+  focusPhaseStartSeconds: 0,
   focusAdjustSeconds: 0,
 
   rateSegments: [
@@ -413,15 +414,24 @@ export const resumeSession = mutation({
       };
     }
 
+    // At the end of a break, snapshot the session's cumulative focused time.
+    // The client uses this as the zero point for the next 25-minute phase.
+    const updates = recalculate({ ...session, pauseIntervals: intervals }, now);
+
     await ctx.db.patch(args.sessionId, {
       status: "live",
       lastResumedAt: now,
       lastHeartbeatAt: now,
       pauseIntervals: intervals,
+      ...updates,
       // A break just ended and focus resumed — start the new focus phase's
-      // countdown fresh instead of carrying over the prior phase's manual
-      // +60/-60 adjustments.
-      ...(wasOnBreak ? { focusAdjustSeconds: 0 } : {}),
+      // countdown from the current cumulative focus total instead of zero.
+      ...(wasOnBreak
+        ? {
+            focusPhaseStartSeconds: updates.focusedDurationSeconds,
+            focusAdjustSeconds: 0,
+          }
+        : {}),
     });
   },
 });

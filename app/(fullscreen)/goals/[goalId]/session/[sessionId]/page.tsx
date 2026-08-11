@@ -380,6 +380,7 @@ export default function SessionTimer({ params }: SessionTimerProps) {
   const statsRef = useRef<HTMLDivElement>(null);
   const [ratesError, setRatesError] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isSkippingBreak, setIsSkippingBreak] = useState(false);
 
   // Collapse the XP stats dropdown when clicking outside of it
   useEffect(() => {
@@ -461,7 +462,17 @@ export default function SessionTimer({ params }: SessionTimerProps) {
       localStore.setQuery(
         api.sessions.getSession,
         { sessionId: args.sessionId },
-        { ...current, status: "live", pauseIntervals: intervals },
+        {
+          ...current,
+          status: "live",
+          pauseIntervals: intervals,
+          ...(last?.reason === "break_started"
+            ? {
+                focusPhaseStartSeconds: current.focusedDurationSeconds,
+                focusAdjustSeconds: 0,
+              }
+            : {}),
+        },
       );
     },
   );
@@ -771,9 +782,14 @@ export default function SessionTimer({ params }: SessionTimerProps) {
   // accounts for pauses/AFK/reload) plus any manual +60/-60 adjustment, so it
   // survives a page reload without any local persistence of its own.
   const focusAdjustSeconds = session?.focusAdjustSeconds ?? 0;
+  const focusPhaseStartSeconds = session?.focusPhaseStartSeconds ?? 0;
+  const currentPhaseFocusedSeconds = Math.max(
+    0,
+    localFocusedDurationSeconds - focusPhaseStartSeconds,
+  );
   const focusSecondsLeft = breakFinishedAwaitingResume
     ? FOCUS_SECONDS + focusAdjustSeconds
-    : Math.max(0, FOCUS_SECONDS + focusAdjustSeconds - Math.floor(localFocusedDurationSeconds));
+    : Math.max(0, FOCUS_SECONDS + focusAdjustSeconds - Math.floor(currentPhaseFocusedSeconds));
 
   // Break isn't time-tracked in Convex (no XP accrues on break, and breaks
   // aren't meant to survive a reload) — this remains a local-only countdown,
@@ -1235,16 +1251,19 @@ useEffect(() => {
   ]);
 
   const handleSkipBreak = useCallback(async () => {
-    if (!sessionId) return;
+    if (!sessionId || isSkippingBreak) return;
+    setIsSkippingBreak(true);
     try {
       await resumeMutation({ sessionId });
       // isOnBreak flips false once Convex updates, flipping the phase back
       // to "focus" with a fresh countdown.
     } catch (err) {
       console.error("Failed to skip break:", err);
+    } finally {
+      setIsSkippingBreak(false);
     }
     setIsBreakRunning(false);
-  }, [sessionId, resumeMutation]);
+  }, [sessionId, isSkippingBreak, resumeMutation]);
 
   const handleToggleBreak = useCallback(() => {
     setIsBreakRunning((prev) => !prev);
@@ -1569,10 +1588,10 @@ useEffect(() => {
               >
                 <button
                   onClick={handleSkipBreak}
-                  disabled={isSyncing}
+                  disabled={isSyncing || isSkippingBreak}
                   className="h-14 w-24 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-medium transition-colors cursor-pointer disabled:opacity-40"
                 >
-                  Skip
+                  {isSkippingBreak ? "Skipping…" : "Skip"}
                 </button>
 
                 <button

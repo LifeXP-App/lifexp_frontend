@@ -63,11 +63,13 @@ export default defineSchema({
         v.literal("break")
       )
     ),
+    // Total focused time already accrued when the current Pomodoro focus
+    // phase began. Subtracting this baseline from focusedDurationSeconds keeps
+    // each phase independent while still allowing the countdown to survive a
+    // reload. Optional for sessions created before this field was introduced.
+    focusPhaseStartSeconds: v.optional(v.number()),
     // Cumulative seconds added/subtracted via the timer's +60/-60 buttons
-    // during the current focus phase. Reset to 0 whenever a new focus phase
-    // starts (session start, or returning from a break) so the countdown
-    // (FOCUS_SECONDS + focusAdjustSeconds - focusedDurationSeconds) survives
-    // a page reload instead of resetting to a bare 25:00.
+    // during the current focus phase. Reset whenever a new focus phase starts.
     focusAdjustSeconds: v.optional(v.number()),
 
     // ── XP Rates ──
