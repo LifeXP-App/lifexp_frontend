@@ -1194,7 +1194,9 @@ export default function GoalDetailPage() {
                 activity={session.activity?.name || "Activity"}
                 xpEarned={session.xp_total}
                 dateTime={formatDate(session.started_at)}
-                duration={formatDuration(session.total_duration_seconds)}
+                duration={formatDuration(
+                  session.focused_duration_seconds ?? session.total_duration_seconds,
+                )}
                 emoji={session.activity?.emoji}
                 onClick={() => handleOpenSessionPopup(session)}
                 onDelete={() => setRowDeleteSession(session)}
@@ -1219,7 +1221,9 @@ export default function GoalDetailPage() {
                 activity={session.activity?.name || "Activity"}
                 xpEarned={session.xp_total}
                 dateTime={formatDate(session.started_at)}
-                duration={formatDuration(session.total_duration_seconds)}
+                duration={formatDuration(
+                  session.focused_duration_seconds ?? session.total_duration_seconds,
+                )}
                 emoji={session.activity?.emoji}
                 onClick={() => handleOpenSessionPopup(session)}
                 onDelete={() => setRowDeleteSession(session)}
@@ -1289,7 +1293,9 @@ export default function GoalDetailPage() {
                   activity={session.activity?.name || "Activity"}
                   xpEarned={session.xp_total}
                   dateTime={formatDate(session.started_at)}
-                  duration={formatDuration(session.total_duration_seconds)}
+                  duration={formatDuration(
+                    session.focused_duration_seconds ?? session.total_duration_seconds,
+                  )}
                   emoji={session.activity?.emoji}
                   onClick={() => handleOpenSessionPopup(session)}
                 onDelete={() => setRowDeleteSession(session)}
@@ -1314,7 +1320,9 @@ export default function GoalDetailPage() {
                   activity={session.activity?.name || "Activity"}
                   xpEarned={session.xp_total}
                   dateTime={formatDate(session.started_at)}
-                  duration={formatDuration(session.total_duration_seconds)}
+                  duration={formatDuration(
+                    session.focused_duration_seconds ?? session.total_duration_seconds,
+                  )}
                   emoji={session.activity?.emoji}
                   onClick={() => handleOpenSessionPopup(session)}
                 onDelete={() => setRowDeleteSession(session)}
