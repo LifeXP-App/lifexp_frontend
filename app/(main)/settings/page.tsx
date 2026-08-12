@@ -463,7 +463,15 @@ export default function SettingsPage() {
         </div>
 
         <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-[var(--border)] flex flex-col gap-4">
-          
+
+          <a target="__blank" href="https://www.gamilife.com/privacy-policy" className="cursor-pointer active:opacity-80 text-l font-semibold text-left text-gray-800 dark:text-[var(--foreground)] hover:text-gray-600 dark:hover:text-[var(--muted)]">
+            Privacy Policy
+          </a>
+
+          <a target="__blank" href="https://www.gamilife.com/terms-of-service" className="cursor-pointer active:opacity-80 text-l font-semibold text-left text-gray-800 dark:text-[var(--foreground)] hover:text-gray-600 dark:hover:text-[var(--muted)]">
+            Terms of Service
+          </a>
+
           <a target="__blank" href="https://www.gamilife.com/community" className="cursor-pointer active:opacity-80 text-l font-semibold text-left text-gray-800 dark:text-[var(--foreground)] hover:text-gray-600 dark:hover:text-[var(--muted)]">
             Send Review
           </a>
