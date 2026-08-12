@@ -234,12 +234,9 @@ export default function SettingsPage() {
     return isSameSettings(form, initialForm);
   }, [form, initialForm]);
 
-  // autosave on mobile (< md)
+  // autosave on any change
   useEffect(() => {
     if (!form) return;
-    if (typeof window === "undefined") return;
-    if (window.innerWidth >= 768) return;
-
     if (loadingSettings) return;
     if (!initialForm) return;
     if (isUnchanged) return;

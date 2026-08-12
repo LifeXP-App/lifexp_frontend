@@ -18,6 +18,13 @@ function LoginForm() {
     searchParams.get("error") || null
   );
   const [message] = useState<string | null>(searchParams.get("message") || null);
+  // Present when we were sent here from /link-discord (a Discord user with
+  // no Gamilife session yet). Carried through to Register too, and used to
+  // send the user back to finish the Discord link instead of the homepage.
+  const linkToken = searchParams.get("token");
+  const registerHref = linkToken
+    ? `/users/register?token=${encodeURIComponent(linkToken)}`
+    : "/users/register";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -33,8 +40,9 @@ function LoginForm() {
         return;
       }
 
-      // Successfully logged in - AuthGuard will handle redirect
-      router.push("/");
+      // Successfully logged in - AuthGuard will handle redirect, unless we
+      // arrived here to finish linking a Discord account.
+      router.push(linkToken ? `/link-discord?token=${encodeURIComponent(linkToken)}` : "/");
     } catch (err) {
       console.error("LOGIN ERROR:", err);
       setError(err instanceof Error ? err.message : String(err));
@@ -168,7 +176,7 @@ function LoginForm() {
           <p className="mt-4 text-center text-gray-500">
             Don&apos;t have an account?{" "}
             <a
-              href="/users/register"
+              href={registerHref}
               className="underline text-white hover:text-gray-300"
             >
               Register

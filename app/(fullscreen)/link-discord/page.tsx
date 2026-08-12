@@ -70,11 +70,26 @@ function LinkDiscordPage() {
         return;
       }
 
+      // `identity.id` is Supabase's own internal identity row id, not the
+      // Discord snowflake -- the provider's actual subject id lives in
+      // `identity_data`, mirroring the `provider_id`/`sub` fields the backend
+      // reads off the JWT's `user_metadata` (see
+      // LifeXP/middleware/supabase_auth.py::_extract_discord_uid). Sending
+      // `identity.id` here fails the token's discord_uid cross-check on the
+      // backend, so the link 400s and Player.discord_uid never gets set.
+      const discordUid =
+        discordIdentity.identity_data?.provider_id || discordIdentity.identity_data?.sub;
+      if (!discordUid) {
+        setError("Could not read your Discord account id. Please try again.");
+        setCallbackStatus("error");
+        return;
+      }
+
       try {
         const res = await fetch("/api/auth/discord-link", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token, discord_uid: discordIdentity.id }),
+          body: JSON.stringify({ token, discord_uid: discordUid }),
         });
 
         if (!res.ok) {
@@ -167,7 +182,7 @@ function LinkDiscordPage() {
                 You need to be logged in to Gamilife to link Discord.
               </p>
               <a
-                href={`/users/login?message=${encodeURIComponent("Log in, then run /link in Discord again to link your account.")}`}
+                href={`/users/login?token=${encodeURIComponent(token)}`}
                 className="inline-block rounded-lg bg-white px-6 py-3 font-bold text-black transition hover:bg-gray-300"
               >
                 Go to Login

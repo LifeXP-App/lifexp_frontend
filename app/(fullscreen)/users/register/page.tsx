@@ -199,6 +199,14 @@ async function onSubmit(e: React.FormEvent) {
 
 const searchParams = useSearchParams();
   const { signIn, signInWithGoogle } = useAuth();
+  // Present when we arrived from /users/login while trying to finish a
+  // Discord link (see /link-discord). Carried through to the post-signup
+  // and "Already have an account?" login links so the user lands back on
+  // /link-discord instead of losing the link token after confirming email.
+  const linkToken = searchParams.get("token");
+  const loginHref = linkToken
+    ? `/users/login?token=${encodeURIComponent(linkToken)}`
+    : "/users/login";
 
 
 const [loading, setLoading] = useState(false);
@@ -257,7 +265,7 @@ const [loading, setLoading] = useState(false);
                 </p>
               </div>
               <Link
-                href="/users/login"
+                href={loginHref}
                 className="block w-full rounded-lg bg-white py-3 text-center font-bold text-black transition hover:bg-gray-300"
               >
                 Go to Login
@@ -428,7 +436,7 @@ const [loading, setLoading] = useState(false);
           {!registrationSuccess && (
             <p className="mt-4 text-center text-gray-500">
               Already have an account?{" "}
-              <Link href="/users/login" className="text-white underline hover:text-gray-300">
+              <Link href={loginHref} className="text-white underline hover:text-gray-300">
                 Login
               </Link>
             </p>
