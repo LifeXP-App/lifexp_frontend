@@ -87,10 +87,10 @@ function SessionTypeBadge({ type }: { type?: string }) {
 
   return (
     <div
-      className="absolute bottom-2 right-2 z-10 flex h-8 w-8 items-center justify-center rounded-full backdrop-blur-sm"
+      className="absolute top-2 right-2 z-10 flex h-8 w-8 items-center justify-center rounded-full shadow-sm"
       style={{
-        backgroundColor: `rgba(${meta.cssColorVarRgb}, 0.25)`,
-        color: meta.cssColorVar,
+        backgroundColor: `rgba(${meta.cssColorVarRgb}, 0.9)`,
+        color: "#fff",
       }}
       title={meta.label}
     >
@@ -99,33 +99,58 @@ function SessionTypeBadge({ type }: { type?: string }) {
   );
 }
 
+// Same short-form duration used by the "Recent Sessions" list further up
+// this page (getTimeAgo / "1h 23m" formatting) — kept consistent rather
+// than introducing a second date/duration format on the same profile.
+function formatShortDuration(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+}
+
 function SessionGalleryCard({
   session,
   onClick,
+  getTimeAgo,
 }: {
   session: GallerySession;
   onClick: () => void;
+  getTimeAgo: (dateString: string) => string;
 }) {
   const goalTitle = session.goal?.title || "Free Session";
   const activityName = session.activity?.name ?? "Activity";
+  const meta = session.activity?.type
+    ? ACTIVITY_META[session.activity.type as ActivityType]
+    : undefined;
+  const duration = formatShortDuration(
+    session.focused_duration_seconds ?? session.total_duration_seconds ?? 0,
+  );
+  const timestamp = getTimeAgo(session.ended_at || session.started_at);
 
   return (
     <button
       type="button"
       onClick={onClick}
-      className="group relative flex flex-col overflow-hidden rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-[#151618] text-left cursor-pointer transition-transform active:scale-[0.98]"
+      className="group flex flex-col overflow-hidden rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-[#151618] text-left cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98]"
     >
-      <div className="relative h-32 w-full shrink-0 bg-gray-100 dark:bg-dark-3 flex items-center justify-center overflow-hidden">
+      <div
+        className="relative h-32 w-full shrink-0 flex items-center justify-center overflow-hidden"
+        style={{
+          backgroundColor: meta
+            ? `rgba(${meta.cssColorVarRgb}, 0.1)`
+            : "var(--dark-3)",
+        }}
+      >
         {session.completion_picture ? (
           <Image
             src={session.completion_picture}
             alt={activityName}
             fill
             className="object-cover"
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
           />
         ) : (
-          <span className="text-4xl">{session.activity?.emoji ?? "🎯"}</span>
+          <span className="text-5xl">{session.activity?.emoji ?? "🎯"}</span>
         )}
         <SessionTypeBadge type={session.activity?.type} />
       </div>
@@ -136,6 +161,9 @@ function SessionGalleryCard({
         <p className="text-xs text-gray-500 dark:text-[var(--muted)] truncate">
           {goalTitle}
         </p>
+        <p className="text-[11px] text-gray-400 dark:text-[var(--muted)]/70 mt-1">
+          {timestamp} · {duration}
+        </p>
       </div>
     </button>
   );
@@ -144,7 +172,7 @@ function SessionGalleryCard({
 function SessionGallerySkeleton() {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-pulse">
-      {[1, 2, 3].map((i) => (
+      {[1, 2, 3, 4].map((i) => (
         <div
           key={i}
           className="rounded-2xl overflow-hidden border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-[#151618]"
@@ -192,6 +220,16 @@ function LoadMoreSentinel({
   return <div ref={setNode} className="h-1 w-full" />;
 }
 
+// Falls back to a plain locale date if the caller doesn't supply its own
+// "time ago" formatter (the profile page passes its existing getTimeAgo so
+// the gallery matches the rest of the page instead of introducing a second
+// relative-time implementation).
+function defaultGetTimeAgo(dateString: string): string {
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
 export default function SessionGallery({
   sessions,
   loading,
@@ -200,6 +238,7 @@ export default function SessionGallery({
   onLoadMore,
   onSelectSession,
   emptyState,
+  getTimeAgo = defaultGetTimeAgo,
 }: {
   sessions: GallerySession[];
   loading: boolean;
@@ -208,6 +247,7 @@ export default function SessionGallery({
   onLoadMore: () => void;
   onSelectSession: (session: GallerySession) => void;
   emptyState?: React.ReactNode;
+  getTimeAgo?: (dateString: string) => string;
 }) {
   if (loading) return <SessionGallerySkeleton />;
 
@@ -236,6 +276,7 @@ export default function SessionGallery({
                 key={session.id}
                 session={session}
                 onClick={() => onSelectSession(session)}
+                getTimeAgo={getTimeAgo}
               />
             ))}
           </div>

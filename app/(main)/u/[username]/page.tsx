@@ -1613,6 +1613,7 @@ export default function ProfilePage({ params }: PageProps) {
                 hasMore={!!sessionGalleryHasMore}
                 onLoadMore={() => fetchNextSessionGalleryPage()}
                 onSelectSession={handleOpenSessionPopup}
+                getTimeAgo={getTimeAgo}
               />
             </div>
           </>
