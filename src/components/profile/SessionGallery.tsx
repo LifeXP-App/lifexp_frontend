@@ -87,7 +87,7 @@ function SessionTypeBadge({ type }: { type?: string }) {
 
   return (
     <div
-      className="absolute top-2 right-2 z-10 flex h-8 w-8 items-center justify-center rounded-full backdrop-blur-sm"
+      className="absolute bottom-2 right-2 z-10 flex h-8 w-8 items-center justify-center rounded-full backdrop-blur-sm"
       style={{
         backgroundColor: `rgba(${meta.cssColorVarRgb}, 0.25)`,
         color: meta.cssColorVar,
@@ -115,7 +115,6 @@ function SessionGalleryCard({
       onClick={onClick}
       className="group relative flex flex-col overflow-hidden rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-[#151618] text-left cursor-pointer transition-transform active:scale-[0.98]"
     >
-      <SessionTypeBadge type={session.activity?.type} />
       <div className="relative h-32 w-full shrink-0 bg-gray-100 dark:bg-dark-3 flex items-center justify-center overflow-hidden">
         {session.completion_picture ? (
           <Image
@@ -128,6 +127,7 @@ function SessionGalleryCard({
         ) : (
           <span className="text-4xl">{session.activity?.emoji ?? "🎯"}</span>
         )}
+        <SessionTypeBadge type={session.activity?.type} />
       </div>
       <div className="p-3 flex flex-col gap-0.5 min-w-0">
         <p className="font-semibold text-sm text-black dark:text-[var(--foreground)] truncate">
@@ -143,7 +143,7 @@ function SessionGalleryCard({
 
 function SessionGallerySkeleton() {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-pulse">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-pulse">
       {[1, 2, 3].map((i) => (
         <div
           key={i}
@@ -230,7 +230,7 @@ export default function SessionGallery({
           <p className="text-sm font-semibold text-gray-500 dark:text-[var(--muted)] uppercase tracking-wide mb-4">
             {group.label}
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {group.sessions.map((session) => (
               <SessionGalleryCard
                 key={session.id}
