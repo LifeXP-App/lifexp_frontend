@@ -783,8 +783,14 @@ export default function SessionTimer({ params }: SessionTimerProps) {
     0,
     localFocusedDurationSeconds - focusPhaseStartSeconds,
   );
+  // While awaiting resume after a break, resumeSession hasn't run yet, so
+  // session.focusAdjustSeconds still holds the PREVIOUS focus phase's
+  // leftover +60/-60 total (only reset server-side once the user actually
+  // presses play) — showing that stale value here made the "ready to start"
+  // display read e.g. 2:00 instead of 25:00 if the prior phase had been
+  // adjusted down. The upcoming phase always starts at a clean baseline.
   const focusSecondsLeft = breakFinishedAwaitingResume
-    ? FOCUS_SECONDS + focusAdjustSeconds
+    ? FOCUS_SECONDS
     : Math.max(0, FOCUS_SECONDS + focusAdjustSeconds - Math.floor(currentPhaseFocusedSeconds));
 
   // Break isn't time-tracked in Convex (no XP accrues on break, and breaks
