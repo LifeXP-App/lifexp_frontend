@@ -15,7 +15,7 @@ import { FireIcon, LockClosedIcon, PlusIcon, RocketLaunchIcon } from "@heroicons
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { FaLinkedin, FaSquareWhatsapp } from "react-icons/fa6";
 import { toggleFollow } from "@/lib/api/users";
@@ -40,6 +40,7 @@ import Achievement from "@/src/components/profile/Achievement";
 import DefaultUserProfilePicture from "@/src/components/profile/DefaultUserProfilePicture";
 import FollowersFollowingPopup from "@/src/components/profile/FollowersFollowingPopup";
 import SessionInfoPopup from "@/src/components/goals/SessionInfoPopup";
+import SessionGallery from "@/src/components/profile/SessionGallery";
 
 type UserPost = {
   id: number;
@@ -128,6 +129,7 @@ export default function ProfilePage({ params }: PageProps) {
       emoji?: string;
       type?: string;
     };
+    goal?: { uid: string; title: string } | null;
     total_duration_seconds: number;
     focused_duration_seconds?: number;
     started_at: string;
@@ -375,6 +377,39 @@ export default function ProfilePage({ params }: PageProps) {
     staleTime: 3 * 60 * 1000,
     gcTime: 15 * 60 * 1000,
   });
+
+  const {
+    data: sessionGalleryPages,
+    isLoading: sessionGalleryLoading,
+    isFetchingNextPage: sessionGalleryLoadingMore,
+    hasNextPage: sessionGalleryHasMore,
+    fetchNextPage: fetchNextSessionGalleryPage,
+  } = useInfiniteQuery({
+    queryKey: ["profile-session-gallery", username],
+    queryFn: async ({ pageParam }) => {
+      const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1`;
+      const response = await fetch(
+        `${apiUrl}/users/${username}/sessions/gallery/?page=${pageParam}`,
+        { method: "GET", headers: { "Content-Type": "application/json" }, cache: "no-store" },
+      );
+      if (!response.ok) return { results: [] as Session[], next: null as string | null };
+      const data = await response.json();
+      return {
+        results: (data.results ?? []) as Session[],
+        next: (data.next ?? null) as string | null,
+      };
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage.next ? allPages.length + 1 : undefined,
+    enabled: !!username,
+    staleTime: 3 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+  });
+
+  const sessionGallerySessions = (sessionGalleryPages?.pages ?? []).flatMap(
+    (page) => page.results,
+  );
 
   const handleFollow = async () => {
     if (!profileUser) return;
@@ -1564,6 +1599,21 @@ export default function ProfilePage({ params }: PageProps) {
                   );
                 })()
               )}
+            </div>
+
+            {/* SESSIONS */}
+            <div className="max-w-6xl mx-auto px-2 p-2 pb-12 my-4 rounded-sm w-full">
+              <h2 className="text-lg sm:text-xl font-semibold dark:text-[var(--foreground)] mb-6">
+                Sessions
+              </h2>
+              <SessionGallery
+                sessions={sessionGallerySessions}
+                loading={sessionGalleryLoading}
+                loadingMore={sessionGalleryLoadingMore}
+                hasMore={!!sessionGalleryHasMore}
+                onLoadMore={() => fetchNextSessionGalleryPage()}
+                onSelectSession={handleOpenSessionPopup}
+              />
             </div>
           </>
         )}

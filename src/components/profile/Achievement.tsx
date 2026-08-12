@@ -22,6 +22,19 @@ type AspectXP = {
 
 type AspectTint = keyof AspectXP;
 
+// <1000: as-is. 1000-9999: one decimal + "k" (1.2k). 10000-999999: whole "k"
+// (12k). >=1000000: two decimals + "m" (1.23m).
+function formatAspectValue(value: number): string {
+  const abs = Math.abs(value);
+  if (abs < 1000) return String(value);
+  if (abs < 1_000_000) {
+    const thousands = value / 1000;
+    const decimals = abs < 10_000 ? 1 : 0;
+    return `${thousands.toFixed(decimals)}k`;
+  }
+  return `${(value / 1_000_000).toFixed(2)}m`;
+}
+
 type AchievementProps = {
   emoji?: string;
   title: string;
@@ -108,7 +121,13 @@ export default function Achievement({
             .filter((chip) => chip.value > 0)
             .map((chip) => (
               <span key={chip.tint} className="flex-1">
-                <AspectChip icon={chip.icon} value={chip.value} tint={chip.tint} />
+                <AspectChip
+                  icon={chip.icon}
+                  value={chip.value}
+                  tint={chip.tint}
+                  displayValue={formatAspectValue(chip.value)}
+                  title={chip.value.toLocaleString()}
+                />
               </span>
             ))}
         </div>
@@ -188,7 +207,13 @@ export default function Achievement({
             .filter((chip) => chip.value > 0)
             .map((chip) => (
               <span key={chip.tint} className="flex-1">
-                <AspectChip icon={chip.icon} value={chip.value} tint={chip.tint} />
+                <AspectChip
+                  icon={chip.icon}
+                  value={chip.value}
+                  tint={chip.tint}
+                  displayValue={formatAspectValue(chip.value)}
+                  title={chip.value.toLocaleString()}
+                />
               </span>
             ))}
         </div>
