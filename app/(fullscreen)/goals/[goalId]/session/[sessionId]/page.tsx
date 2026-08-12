@@ -615,13 +615,10 @@ export default function SessionTimer({ params }: SessionTimerProps) {
           },
         });
 
-        // startSession creates the session as "live" — immediately pause it
-        // so a brand-new session always lands paused, waiting for the user
-        // to press play, instead of silently ticking/accruing XP while the
-        // page is still loading.
-        await pauseMutation({ sessionId: id, reason: "user_initiated" }).catch(
-          console.error,
-        );
+        // startSession already creates the session as "live" — a brand-new
+        // session autostarts focus immediately rather than landing paused,
+        // so the user doesn't have to press play right after picking an
+        // activity.
 
         // Register the session with Django BEFORE navigating. This must be awaited:
         // router.replace below changes the route and can abort an in-flight
@@ -690,7 +687,6 @@ export default function SessionTimer({ params }: SessionTimerProps) {
     isEmptySession,
     searchParams,
     startMutation,
-    pauseMutation,
     updateInitialRatesMutation,
     router,
   ]);
