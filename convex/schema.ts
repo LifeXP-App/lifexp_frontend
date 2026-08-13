@@ -94,6 +94,7 @@ export default defineSchema({
           username: v.string(),
           profilePicture: v.optional(v.string()),
           isNudged: v.optional(v.boolean()),
+          isWatching: v.optional(v.boolean()),
           lastSeenAt: v.number(),
         }),
       ),

@@ -591,20 +591,22 @@ export const enterSessionAsSpectator = mutation({
     const currentSpectator = existing.find(
       (spectator) => spectator.userId === args.userId,
     );
-    const otherActiveSpectators = existing.filter(
-      (spectator) =>
-        spectator.userId !== args.userId &&
-        spectator.lastSeenAt >= now - 60_000,
+    const otherSpectators = existing.filter(
+      (spectator) => spectator.userId !== args.userId,
     );
 
+    // Spectator rows are permanent once created — anyone who has ever opened
+    // this session stays in the list forever; only isWatching toggles based
+    // on whether they're currently on the page.
     await ctx.db.patch(args.sessionId, {
       spectators: [
-        ...otherActiveSpectators,
+        ...otherSpectators,
         {
           userId: args.userId,
           username: args.username,
           profilePicture: args.profilePicture,
           isNudged: currentSpectator?.isNudged ?? false,
+          isWatching: true,
           lastSeenAt: now,
         },
       ],
@@ -640,9 +642,12 @@ export const leaveSessionAsSpectator = mutation({
   handler: async (ctx, args) => {
     const session = await ctx.db.get(args.sessionId);
     if (!session) return;
+    // Never remove the spectator row — just mark them as no longer watching.
     await ctx.db.patch(args.sessionId, {
-      spectators: (session.spectators ?? []).filter(
-        (spectator) => spectator.userId !== args.userId,
+      spectators: (session.spectators ?? []).map((spectator) =>
+        spectator.userId === args.userId
+          ? { ...spectator, isWatching: false, lastSeenAt: Date.now() }
+          : spectator,
       ),
     });
   },

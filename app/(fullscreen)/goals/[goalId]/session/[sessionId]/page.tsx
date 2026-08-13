@@ -499,6 +499,9 @@ export default function SessionTimer({ params }: SessionTimerProps) {
   const enterAsSpectatorMutation = useMutation(
     api.sessions.enterSessionAsSpectator,
   );
+  const leaveAsSpectatorMutation = useMutation(
+    api.sessions.leaveSessionAsSpectator,
+  );
   const setSpectatorNudgeMutation = useMutation(
     api.sessions.setSpectatorNudge,
   );
@@ -529,26 +532,44 @@ export default function SessionTimer({ params }: SessionTimerProps) {
   useEffect(() => {
     if (!sessionId || !sessionOwnerId || !me || isOwn) return;
 
+    const userId = String(me.id);
     const presence = {
       sessionId,
-      userId: String(me.id),
+      userId,
       username: me.username,
       profilePicture: me.profile_picture ?? undefined,
     };
-    const refreshPresence = () => {
+    const markWatching = () => {
       void enterAsSpectatorMutation(presence).catch((err) => {
         console.error("Failed to update spectator presence:", err);
       });
     };
+    const markLeft = () => {
+      void leaveAsSpectatorMutation({ sessionId, userId }).catch((err) => {
+        console.error("Failed to mark spectator as left:", err);
+      });
+    };
 
-    refreshPresence();
-    const heartbeat = window.setInterval(refreshPresence, 20_000);
-    // Avoid an explicit async leave here: React Strict Mode performs an
-    // effect cleanup/remount cycle, where leave can race and beat the new
-    // join. Viewers naturally expire after their heartbeat stops.
-    return () => window.clearInterval(heartbeat);
+    markWatching();
+    const heartbeat = window.setInterval(markWatching, 20_000);
+
+    // The spectator row itself is permanent (never removed) — isWatching is
+    // the only thing that toggles, driven explicitly by visibility/unmount
+    // rather than a heartbeat timeout.
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") markLeft();
+      else markWatching();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      window.clearInterval(heartbeat);
+      document.removeEventListener("visibilitychange", onVisibility);
+      markLeft();
+    };
   }, [
     enterAsSpectatorMutation,
+    leaveAsSpectatorMutation,
     isOwn,
     me,
     sessionId,
@@ -1365,26 +1386,25 @@ useEffect(() => {
   const activityLabel = isBreak
     ? "Break"
     : (session?.activityName ?? activityType ?? "Activity");
-  const persistedSpectators = (session?.spectators ?? []).filter(
-    (spectator) => spectator.lastSeenAt >= Date.now() - 60_000,
-  );
-  const activeSpectators =
-    !isOwn &&
-    me &&
-    !persistedSpectators.some(
+  // Spectator rows are permanent — everyone who has ever opened this session
+  // stays listed; isWatching (not presence/recency) drives opacity below.
+  const allSpectators =
+    !isOwn && me && !(session?.spectators ?? []).some(
       (spectator) => spectator.userId === String(me.id),
     )
       ? [
-          ...persistedSpectators,
+          ...(session?.spectators ?? []),
           {
             userId: String(me.id),
             username: me.username,
             profilePicture: me.profile_picture ?? undefined,
             isNudged: false,
+            isWatching: true,
             lastSeenAt: Date.now(),
           },
         ]
-      : persistedSpectators;
+      : (session?.spectators ?? []);
+  const watchingCount = allSpectators.filter((s) => s.isWatching).length;
 
   return (
     <div className="h-screen w-full bg-black relative overflow-hidden select-none">
@@ -1394,22 +1414,23 @@ useEffect(() => {
         style={{ backgroundColor: categoryColor }}
       />
 
-      {activeSpectators.length > 0 && (
+      {allSpectators.length > 0 && (
         <aside
           className="absolute right-5 top-1/2 z-30 flex -translate-y-1/2 flex-col items-center gap-3"
-          aria-label={`${activeSpectators.length} ${
-            activeSpectators.length === 1 ? "spectator" : "spectators"
+          aria-label={`${watchingCount} ${
+            watchingCount === 1 ? "spectator" : "spectators"
           } watching`}
         >
           <div className="rounded-full border border-white/10 bg-gray-900/90 px-3 py-1 text-xs font-medium text-white/80 shadow-lg backdrop-blur">
-            {activeSpectators.length}{" "}
-            {activeSpectators.length === 1 ? "spectator" : "spectators"}
+            {watchingCount}{" "}
+            {watchingCount === 1 ? "spectator" : "spectators"}
           </div>
-          {activeSpectators.map((spectator) => (
+          {allSpectators.map((spectator) => (
             <Link
               key={spectator.userId}
               href={`/u/${encodeURIComponent(spectator.username)}`}
-              className="relative h-12 w-12"
+              className="relative h-12 w-12 transition-opacity"
+              style={{ opacity: spectator.isWatching ? 1 : 0.4 }}
               title={`View ${spectator.username}'s profile`}
             >
               <div className="relative h-12 w-12 overflow-hidden rounded-full border-2 border-white/20 bg-gray-800 shadow-lg shadow-black/40">
