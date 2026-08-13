@@ -4,7 +4,7 @@ import { useAuth } from "@/src/context/AuthContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 function EditProfileSkeleton() {
   return (
     <main className="flex h-screen w-full overflow-hidden">
@@ -183,11 +183,17 @@ interface CropModalProps {
 // a visual guide only (see cropImageToSquare).
 function CropModal({ imageUrl, onCancel, onSave }: CropModalProps) {
   const [natural, setNatural] = useState<{ width: number; height: number } | null>(null);
-  // Displayed (stage-space) box — square, top-left + size.
-  const [box, setBox] = useState({ x: 0, y: 0, size: 0 });
+  // Displayed (stage-space) box — square, top-left + size. null until the
+  // image has loaded and an initial centered box has been derived from it.
+  const [box, setBox] = useState<{ x: number; y: number; size: number } | null>(null);
+  // Tracks which `display` the current `box` was initialized for, so a
+  // newly-loaded image (display identity changes) re-centers the box.
+  // Plain state (not a ref) so it can be read/adjusted during render, per
+  // React's "adjusting state when a prop changes" pattern.
+  const [boxInitializedFor, setBoxInitializedFor] = useState<unknown>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<
-    | { mode: "move"; startX: number; startY: number; boxX: number; boxY: number }
+    | { mode: "move"; startX: number; startY: number; boxX: number; boxY: number; boxSize: number }
     | { mode: "resize"; startX: number; startY: number; boxX: number; boxY: number; boxSize: number }
     | null
   >(null);
@@ -219,84 +225,105 @@ function CropModal({ imageUrl, onCancel, onSave }: CropModalProps) {
     img.src = imageUrl;
   }, [imageUrl]);
 
-  useEffect(() => {
-    if (!display) return;
+  // Re-center the box whenever a new `display` becomes available (image
+  // just loaded, or a different image was passed in) — adjusted directly
+  // during render rather than in an effect, per React's guidance for
+  // resetting derived state when an input changes.
+  if (display && boxInitializedFor !== display) {
     const size = Math.min(display.width, display.height);
+    setBoxInitializedFor(display);
     setBox({
       x: display.offsetX + (display.width - size) / 2,
       y: display.offsetY + (display.height - size) / 2,
       size,
     });
-  }, [display]);
+  }
 
-  const clampBox = (next: { x: number; y: number; size: number }) => {
-    if (!display) return next;
-    const size = Math.max(CROP_MIN_BOX, Math.min(next.size, display.width, display.height));
-    const x = Math.min(
-      Math.max(next.x, display.offsetX),
-      display.offsetX + display.width - size,
-    );
-    const y = Math.min(
-      Math.max(next.y, display.offsetY),
-      display.offsetY + display.height - size,
-    );
-    return { x, y, size };
-  };
+  const clampBox = useCallback(
+    (next: { x: number; y: number; size: number }) => {
+      if (!display) return next;
+      const size = Math.max(CROP_MIN_BOX, Math.min(next.size, display.width, display.height));
+      const x = Math.min(
+        Math.max(next.x, display.offsetX),
+        display.offsetX + display.width - size,
+      );
+      const y = Math.min(
+        Math.max(next.y, display.offsetY),
+        display.offsetY + display.height - size,
+      );
+      return { x, y, size };
+    },
+    [display],
+  );
 
-  const handlePointerMove = (e: PointerEvent) => {
-    const drag = dragRef.current;
-    const stage = stageRef.current;
-    if (!drag || !stage) return;
-    const rect = stage.getBoundingClientRect();
-    const dx = e.clientX - rect.left - drag.startX;
-    const dy = e.clientY - rect.top - drag.startY;
+  // startX/startY hold the pointer's position (in stage coordinates) at the
+  // moment the drag began — handlePointerMove compares the current pointer
+  // position against that to get a delta, then applies it to the box's
+  // position/size as it was at drag start (boxX/boxY/boxSize).
+  // Stable via useCallback so the exact function instance registered by
+  // addEventListener is the same one passed to removeEventListener, even
+  // though setBox below triggers re-renders mid-drag.
+  const handlePointerMove = useCallback(
+    (e: PointerEvent) => {
+      const drag = dragRef.current;
+      const stage = stageRef.current;
+      if (!drag || !stage) return;
+      const rect = stage.getBoundingClientRect();
+      const pointerX = e.clientX - rect.left;
+      const pointerY = e.clientY - rect.top;
+      const dx = pointerX - drag.startX;
+      const dy = pointerY - drag.startY;
 
-    if (drag.mode === "move") {
-      setBox((prev) => clampBox({ x: drag.boxX + dx, y: drag.boxY + dy, size: prev.size }));
-    } else {
-      // Resize from the bottom-right handle — keep it a square by taking the
-      // larger of the two deltas.
-      const delta = Math.max(dx, dy);
-      setBox(() => clampBox({ x: drag.boxX, y: drag.boxY, size: drag.boxSize + delta }));
-    }
-  };
+      if (drag.mode === "move") {
+        setBox(clampBox({ x: drag.boxX + dx, y: drag.boxY + dy, size: drag.boxSize }));
+      } else {
+        // Resize from the bottom-right handle — keep it a square by taking
+        // the larger of the two deltas.
+        const delta = Math.max(dx, dy);
+        setBox(clampBox({ x: drag.boxX, y: drag.boxY, size: drag.boxSize + delta }));
+      }
+    },
+    [clampBox],
+  );
 
-  const stopDragging = () => {
+  // Registered with { once: true } below, so it never needs to remove its
+  // own pointerup listener (avoids a self-referencing useCallback).
+  const stopDragging = useCallback(() => {
     dragRef.current = null;
     window.removeEventListener("pointermove", handlePointerMove);
-    window.removeEventListener("pointerup", stopDragging);
-  };
+  }, [handlePointerMove]);
 
   const startMove = (e: React.PointerEvent) => {
     const stage = stageRef.current;
-    if (!stage) return;
+    if (!stage || !box) return;
     const rect = stage.getBoundingClientRect();
     dragRef.current = {
       mode: "move",
-      startX: e.clientX - rect.left - box.x,
-      startY: e.clientY - rect.top - box.y,
-      boxX: box.x,
-      boxY: box.y,
-    };
-    window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerup", stopDragging);
-  };
-
-  const startResize = (e: React.PointerEvent) => {
-    e.stopPropagation();
-    const stage = stageRef.current;
-    if (!stage) return;
-    const rect = stage.getBoundingClientRect();
-    dragRef.current = {
-      mode: "resize",
-      startX: e.clientX - rect.left - (box.x + box.size),
-      startY: e.clientY - rect.top - (box.y + box.size),
+      startX: e.clientX - rect.left,
+      startY: e.clientY - rect.top,
       boxX: box.x,
       boxY: box.y,
       boxSize: box.size,
     };
     window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerup", stopDragging);
+    window.addEventListener("pointerup", stopDragging, { once: true });
+  };
+
+  const startResize = (e: React.PointerEvent) => {
+    e.stopPropagation();
+    const stage = stageRef.current;
+    if (!stage || !box) return;
+    const rect = stage.getBoundingClientRect();
+    dragRef.current = {
+      mode: "resize",
+      startX: e.clientX - rect.left,
+      startY: e.clientY - rect.top,
+      boxX: box.x,
+      boxY: box.y,
+      boxSize: box.size,
+    };
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", stopDragging, { once: true });
   };
 
   useEffect(() => {
@@ -304,11 +331,10 @@ function CropModal({ imageUrl, onCancel, onSave }: CropModalProps) {
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", stopDragging);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [handlePointerMove, stopDragging]);
 
   const handleSave = () => {
-    if (!display || !natural) return;
+    if (!display || !natural || !box) return;
     const cropX = (box.x - display.offsetX) / display.scale;
     const cropY = (box.y - display.offsetY) / display.scale;
     const cropSize = box.size / display.scale;
@@ -349,7 +375,7 @@ function CropModal({ imageUrl, onCancel, onSave }: CropModalProps) {
             />
           )}
 
-          {display && box.size > 0 && (
+          {display && box && box.size > 0 && (
             <>
               {/* Dark overlay outside the square, with a transparent circular
                   cutout inside the square — outside-square area and the
