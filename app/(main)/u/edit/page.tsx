@@ -69,6 +69,59 @@ function EditProfileSkeleton() {
   );
 }
 
+// Crops `file` down to the square region [cropX, cropY, cropSize] (in the
+// image's natural pixel coordinates) and returns a new File with the same
+// name/type. Purely a square crop — no circular masking is baked into the
+// output; the circle is only a UI guide in the popup.
+function cropImageToSquare(
+  file: File,
+  cropX: number,
+  cropY: number,
+  cropSize: number,
+): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image();
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      img.src = e.target?.result as string;
+    };
+
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = cropSize;
+      canvas.height = cropSize;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return reject(new Error("Canvas context unavailable"));
+
+      ctx.drawImage(
+        img,
+        cropX,
+        cropY,
+        cropSize,
+        cropSize,
+        0,
+        0,
+        cropSize,
+        cropSize,
+      );
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) return reject(new Error("Canvas is empty"));
+          resolve(new File([blob], file.name, { type: file.type || "image/jpeg" }));
+        },
+        file.type || "image/jpeg",
+        0.95,
+      );
+    };
+
+    img.onerror = reject;
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 function resizeImage(file: File, maxDimension = 512, quality = 0.85): Promise<File> {
   return new Promise((resolve, reject) => {
     const img = new window.Image();
@@ -114,6 +167,255 @@ function resizeImage(file: File, maxDimension = 512, quality = 0.85): Promise<Fi
   });
 }
 
+const CROP_STAGE_SIZE = 420;
+const CROP_HANDLE_SIZE = 16;
+const CROP_MIN_BOX = 80;
+
+interface CropModalProps {
+  imageUrl: string;
+  onCancel: () => void;
+  onSave: (cropX: number, cropY: number, cropSize: number) => void;
+}
+
+// Square, resizable crop selector with a circular cutout guide (dark outside
+// the circle, transparent inside) — same idea as a standard profile-picture
+// cropper. Only the square region is actually cropped on Save; the circle is
+// a visual guide only (see cropImageToSquare).
+function CropModal({ imageUrl, onCancel, onSave }: CropModalProps) {
+  const [natural, setNatural] = useState<{ width: number; height: number } | null>(null);
+  // Displayed (stage-space) box — square, top-left + size.
+  const [box, setBox] = useState({ x: 0, y: 0, size: 0 });
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  const dragRef = useRef<
+    | { mode: "move"; startX: number; startY: number; boxX: number; boxY: number }
+    | { mode: "resize"; startX: number; startY: number; boxX: number; boxY: number; boxSize: number }
+    | null
+  >(null);
+
+  // Displayed image dimensions within the fixed-size stage (letterboxed to
+  // fit, same as object-contain).
+  const display = useMemo(() => {
+    if (!natural) return null;
+    const scale = Math.min(
+      CROP_STAGE_SIZE / natural.width,
+      CROP_STAGE_SIZE / natural.height,
+    );
+    const width = natural.width * scale;
+    const height = natural.height * scale;
+    return {
+      width,
+      height,
+      offsetX: (CROP_STAGE_SIZE - width) / 2,
+      offsetY: (CROP_STAGE_SIZE - height) / 2,
+      scale,
+    };
+  }, [natural]);
+
+  useEffect(() => {
+    const img = new window.Image();
+    img.onload = () => {
+      setNatural({ width: img.naturalWidth, height: img.naturalHeight });
+    };
+    img.src = imageUrl;
+  }, [imageUrl]);
+
+  useEffect(() => {
+    if (!display) return;
+    const size = Math.min(display.width, display.height);
+    setBox({
+      x: display.offsetX + (display.width - size) / 2,
+      y: display.offsetY + (display.height - size) / 2,
+      size,
+    });
+  }, [display]);
+
+  const clampBox = (next: { x: number; y: number; size: number }) => {
+    if (!display) return next;
+    const size = Math.max(CROP_MIN_BOX, Math.min(next.size, display.width, display.height));
+    const x = Math.min(
+      Math.max(next.x, display.offsetX),
+      display.offsetX + display.width - size,
+    );
+    const y = Math.min(
+      Math.max(next.y, display.offsetY),
+      display.offsetY + display.height - size,
+    );
+    return { x, y, size };
+  };
+
+  const handlePointerMove = (e: PointerEvent) => {
+    const drag = dragRef.current;
+    const stage = stageRef.current;
+    if (!drag || !stage) return;
+    const rect = stage.getBoundingClientRect();
+    const dx = e.clientX - rect.left - drag.startX;
+    const dy = e.clientY - rect.top - drag.startY;
+
+    if (drag.mode === "move") {
+      setBox((prev) => clampBox({ x: drag.boxX + dx, y: drag.boxY + dy, size: prev.size }));
+    } else {
+      // Resize from the bottom-right handle — keep it a square by taking the
+      // larger of the two deltas.
+      const delta = Math.max(dx, dy);
+      setBox(() => clampBox({ x: drag.boxX, y: drag.boxY, size: drag.boxSize + delta }));
+    }
+  };
+
+  const stopDragging = () => {
+    dragRef.current = null;
+    window.removeEventListener("pointermove", handlePointerMove);
+    window.removeEventListener("pointerup", stopDragging);
+  };
+
+  const startMove = (e: React.PointerEvent) => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const rect = stage.getBoundingClientRect();
+    dragRef.current = {
+      mode: "move",
+      startX: e.clientX - rect.left - box.x,
+      startY: e.clientY - rect.top - box.y,
+      boxX: box.x,
+      boxY: box.y,
+    };
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", stopDragging);
+  };
+
+  const startResize = (e: React.PointerEvent) => {
+    e.stopPropagation();
+    const stage = stageRef.current;
+    if (!stage) return;
+    const rect = stage.getBoundingClientRect();
+    dragRef.current = {
+      mode: "resize",
+      startX: e.clientX - rect.left - (box.x + box.size),
+      startY: e.clientY - rect.top - (box.y + box.size),
+      boxX: box.x,
+      boxY: box.y,
+      boxSize: box.size,
+    };
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", stopDragging);
+  };
+
+  useEffect(() => {
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", stopDragging);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleSave = () => {
+    if (!display || !natural) return;
+    const cropX = (box.x - display.offsetX) / display.scale;
+    const cropY = (box.y - display.offsetY) / display.scale;
+    const cropSize = box.size / display.scale;
+    onSave(
+      Math.max(0, Math.round(cropX)),
+      Math.max(0, Math.round(cropY)),
+      Math.round(Math.min(cropSize, natural.width - cropX, natural.height - cropY)),
+    );
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-[#161719] dark:border dark:border-[#2d2f32]">
+        <h3 className="text-lg font-semibold dark:text-[var(--foreground)]">
+          Crop photo
+        </h3>
+        <p className="mt-1 text-sm text-gray-600 dark:text-[var(--foreground)]/50">
+          Drag to reposition, drag the corner handle to resize.
+        </p>
+
+        <div
+          ref={stageRef}
+          className="relative mt-4 select-none overflow-hidden rounded-lg bg-gray-100 dark:bg-[#1f2022]"
+          style={{ width: CROP_STAGE_SIZE, height: CROP_STAGE_SIZE, margin: "0 auto" }}
+        >
+          {display && (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={imageUrl}
+              alt="Crop preview"
+              className="pointer-events-none absolute"
+              style={{
+                left: display.offsetX,
+                top: display.offsetY,
+                width: display.width,
+                height: display.height,
+              }}
+            />
+          )}
+
+          {display && box.size > 0 && (
+            <>
+              {/* Dark overlay outside the square, with a transparent circular
+                  cutout inside the square — outside-square area and the
+                  square-minus-circle corners are both dark. */}
+              <div
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  background: "rgba(0,0,0,0.6)",
+                  WebkitMaskImage: `radial-gradient(circle at ${box.x + box.size / 2}px ${
+                    box.y + box.size / 2
+                  }px, transparent ${box.size / 2}px, black ${box.size / 2}px)`,
+                  maskImage: `radial-gradient(circle at ${box.x + box.size / 2}px ${
+                    box.y + box.size / 2
+                  }px, transparent ${box.size / 2}px, black ${box.size / 2}px)`,
+                }}
+              />
+
+              {/* Draggable square outline */}
+              <div
+                onPointerDown={startMove}
+                className="absolute cursor-move border-2 border-white/90"
+                style={{
+                  left: box.x,
+                  top: box.y,
+                  width: box.size,
+                  height: box.size,
+                }}
+              >
+                <div
+                  onPointerDown={startResize}
+                  className="absolute cursor-nwse-resize rounded-full border-2 border-white bg-[#4168e2]"
+                  style={{
+                    right: -CROP_HANDLE_SIZE / 2,
+                    bottom: -CROP_HANDLE_SIZE / 2,
+                    width: CROP_HANDLE_SIZE,
+                    height: CROP_HANDLE_SIZE,
+                  }}
+                />
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="mt-6 flex items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-lg cursor-pointer border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:border-[#2d2f32] dark:bg-[#1f2022] dark:text-[var(--foreground)]/80 dark:hover:bg-[#26282b]"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            onClick={handleSave}
+            style={{ backgroundColor: "#4168e2" }}
+            className="rounded-lg cursor-pointer px-4 py-2 text-sm font-medium text-white hover:opacity-95"
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function EditProfilePage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const router = useRouter();
@@ -147,6 +449,11 @@ export default function EditProfilePage() {
 
   // popup
   const [showDiscardPopup, setShowDiscardPopup] = useState(false);
+
+  // Newly-selected file awaiting crop confirmation — the crop popup is shown
+  // whenever this is set, and cleared on both Cancel and Save.
+  const [pendingCropFile, setPendingCropFile] = useState<File | null>(null);
+  const [pendingCropUrl, setPendingCropUrl] = useState<string>("");
 
   /* ---------------- LOAD PROFILE ---------------- */
 
@@ -218,17 +525,42 @@ export default function EditProfilePage() {
   const file = e.target.files?.[0];
   if (!file) return;
 
-  try {
-    const resizedFile = await resizeImage(file, 512, 0.85);
-    setProfileFile(resizedFile);
-
-    const url = URL.createObjectURL(resizedFile);
-    setProfilePreview(url);
-  } catch (err) {
-    console.error("Failed to resize image:", err);
-    setSaveError("Could not process that image. Try a different file.");
-  }
+  // Opens the crop popup instead of processing the file immediately — the
+  // existing resize pipeline (resizeImage) still runs afterward, unchanged,
+  // on whatever the crop step produces (see handleCropSave).
+  setPendingCropFile(file);
+  setPendingCropUrl(URL.createObjectURL(file));
 };
+
+  const handleCropCancel = () => {
+    if (pendingCropUrl) URL.revokeObjectURL(pendingCropUrl);
+    setPendingCropFile(null);
+    setPendingCropUrl("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleCropSave = async (cropX: number, cropY: number, cropSize: number) => {
+    const file = pendingCropFile;
+    const url = pendingCropUrl;
+    setPendingCropFile(null);
+    setPendingCropUrl("");
+    if (!file) return;
+
+    try {
+      const croppedFile = await cropImageToSquare(file, cropX, cropY, cropSize);
+      const resizedFile = await resizeImage(croppedFile, 512, 0.85);
+      setProfileFile(resizedFile);
+
+      const previewUrl = URL.createObjectURL(resizedFile);
+      setProfilePreview(previewUrl);
+    } catch (err) {
+      console.error("Failed to process image:", err);
+      setSaveError("Could not process that image. Try a different file.");
+    } finally {
+      if (url) URL.revokeObjectURL(url);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   const removeProfile = () => {
     setProfilePreview("");
@@ -490,6 +822,15 @@ export default function EditProfilePage() {
           </form>
         </div>
       </main>
+
+      {/* Crop Popup */}
+      {pendingCropUrl && (
+        <CropModal
+          imageUrl={pendingCropUrl}
+          onCancel={handleCropCancel}
+          onSave={handleCropSave}
+        />
+      )}
 
       {/* Discard Popup */}
       {showDiscardPopup && (
