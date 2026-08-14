@@ -1458,15 +1458,15 @@ useEffect(() => {
       )}
 
       {/* Main content */}
-      <div className="relative z-10 h-full flex flex-col items-center justify-around py-20 px-6">
+      <div className="relative z-10 h-full flex flex-col items-center justify-around py-8 px-6 md:py-20">
         {/* Goal info */}
-        <div className="flex items-center gap-3 mb-8">
-          <h1 className="text-5xl text-center text-white/40">
+        <div className="flex items-center gap-3 mb-4 md:mb-8">
+          <h1 className="text-2xl md:text-5xl text-center text-white/40">
             {isBreak ? "Take some rest" : goalData.title}
           </h1>
         </div>
-        <div className="flex flex-col items-center gap-4 mb-12">
-          <span className="text-7xl">{activityEmoji}</span>
+        <div className="flex flex-col items-center gap-4 mb-6 md:mb-12">
+          <span className="text-4xl md:text-7xl">{activityEmoji}</span>
           <p style={{ color: categoryColor }} className="text-xl font-bold">
             {activityLabel}
           </p>
@@ -1474,7 +1474,7 @@ useEffect(() => {
 
         {/* Timer */}
         <div
-          className="relative mb-8"
+          className="relative mb-4 md:mb-8"
           data-onboarding={isOwn ? "session-timer" : undefined}
         >
           {isRunning && (
@@ -1493,7 +1493,7 @@ useEffect(() => {
 
         {/* XP indicator */}
         <div
-          className="relative mb-12"
+          className="relative mb-6 md:mb-12"
           ref={statsRef}
           data-onboarding={isOwn ? "session-xp" : undefined}
         >
