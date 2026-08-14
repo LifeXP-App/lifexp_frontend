@@ -3,8 +3,17 @@
 import { FireIcon, InformationCircleIcon } from "@heroicons/react/24/solid";
 import { LiveAvatar } from "@/src/components/LiveAvatar";
 import { usePopup } from "@/src/context/PopupContext";
+import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
+
+type TodayGoal = {
+  uid: string;
+  emoji: string | null;
+  title: string | null;
+  completed: boolean;
+};
+
 type RightSidebarInfoProps = {
   user: {
     username: string;
@@ -29,6 +38,17 @@ type RightSidebarInfoProps = {
 
 export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
   const { openMasteryPopup } = usePopup();
+
+  const { data: todayGoals = [] } = useQuery({
+    queryKey: ["today-goals", user.username],
+    queryFn: async () => {
+      const res = await fetch("/api/goals/today", { cache: "no-store" });
+      if (!res.ok) return [] as TodayGoal[];
+      return (await res.json()) as TodayGoal[];
+    },
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
 
   return (
     <aside className="w-full hidden md:block ">
@@ -134,7 +154,56 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
           </div>
         </div>
       </div>
-      <div
+      {/* TODAY */}
+      {todayGoals.length > 0 && (
+        <div className="bg-white p-6 mb-4 rounded-xl border-2 border-gray-200 dark:bg-dark-2 dark:border-[var(--border)]">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-base font-semibold">Today</h3>
+            <span className="text-sm font-medium text-gray-400 dark:text-[var(--muted)]">
+              {todayGoals.filter((g) => !g.completed).length} Left
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            {todayGoals.map((goal) => (
+              <Link
+                key={goal.uid}
+                href={`/goals/${goal.uid}`}
+                className={`flex items-center gap-3 cursor-pointer hover:bg-gray-100 dark:bg-dark-3 dark:bg-opacity-50 rounded-md p-3 ${
+                  goal.completed ? "opacity-50" : ""
+                }`}
+              >
+                <span className="text-2xl shrink-0">{goal.emoji || "🎯"}</span>
+                <p className="text-sm font-medium truncate flex-1">
+                  {goal.title || "Untitled goal"}
+                </p>
+                {goal.completed ? (
+                  <span
+                    className="h-5 w-5 shrink-0 rounded-full flex items-center justify-center"
+                    style={{ backgroundColor: "var(--rookie-primary)" }}
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="white"
+                      strokeWidth={3}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="h-3 w-3"
+                    >
+                      <path d="M20 6 9 17l-5-5" />
+                    </svg>
+                  </span>
+                ) : (
+                  <span className="h-5 w-5 shrink-0 rounded-full border-2 border-gray-300 dark:border-[var(--border)]" />
+                )}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* <div
         id="next-level-tab"
         className="bg-white p-6 mb-4 rounded-xl border-2 border-gray-200 dark:bg-dark-2 dark:border-[var(--border)]"
       >
@@ -189,7 +258,9 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
             </div>
           </>
         )}
-      </div>
+      </div> */}
+
+      
     </aside>
   );
 }
