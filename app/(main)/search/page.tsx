@@ -7,11 +7,33 @@ import { useQuery } from "@tanstack/react-query";
 import { LiveAvatar } from "@/src/components/LiveAvatar";
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import posthog from "posthog-js";
 import { CheckBadgeIcon } from "@heroicons/react/24/solid";
 
 type FilterType = "posts" | "users" | "activities";
+
+const MOBILE_BREAKPOINT_QUERY = "(max-width: 767px)";
+const DESKTOP_DISCOVER_POSTS_LIMIT = 6;
+const MOBILE_DISCOVER_POSTS_LIMIT = 18;
+
+// Mirrors the `md:` Tailwind breakpoint (768px) already used to split this
+// page's mobile/desktop JSX — needed here in JS too so the discover-posts
+// fetch can request more posts on mobile's denser 3-col grid.
+function useIsMobileViewport(): boolean {
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== "undefined" && window.matchMedia(MOBILE_BREAKPOINT_QUERY).matches,
+  );
+
+  useEffect(() => {
+    const mql = window.matchMedia(MOBILE_BREAKPOINT_QUERY);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
+
+  return isMobile;
+}
 
 type DiscoverPost = {
   id: number;
@@ -55,7 +77,11 @@ type DiscoverActivity = {
 };
 
 export default function SearchPage() {
-  const { session, loading: authLoading } = useAuth();
+  const { loading: authLoading } = useAuth();
+  const isMobile = useIsMobileViewport();
+  const discoverPostsLimit = isMobile
+    ? MOBILE_DISCOVER_POSTS_LIMIT
+    : DESKTOP_DISCOVER_POSTS_LIMIT;
   const [activeFilters, setActiveFilters] = useState<FilterType[]>([
     "posts",
     "users",
@@ -68,13 +94,19 @@ export default function SearchPage() {
   // by the app-wide persister in providers.tsx) so re-entering the search
   // page shows the last-seen "recent" content instantly instead of a
   // skeleton every time, while still quietly refetching underneath.
-  const hasAccessToken = !authLoading && !!session?.access_token;
+  // Gated on authLoading only — these hit /api/discover/* Next proxy routes
+  // that read the httpOnly auth cookie server-side via authedFetch, not the
+  // client Supabase SDK's session, which can lag/fail to hydrate on mobile.
+  const isReady = !authLoading;
 
   const { data: recentPosts = [], isLoading: postsRecentLoading } = useQuery({
-    queryKey: ["discover-posts"],
+    queryKey: ["discover-posts", discoverPostsLimit],
     queryFn: async () => {
       try {
-        const res = await authedFetch("/api/discover/posts", { cache: "no-store" });
+        const res = await authedFetch(
+          `/api/discover/posts?limit=${discoverPostsLimit}`,
+          { cache: "no-store" },
+        );
         if (!res.ok) return [] as DiscoverPost[];
         const data = await res.json();
         return (data.results || data.posts || []) as DiscoverPost[];
@@ -83,7 +115,7 @@ export default function SearchPage() {
         return [] as DiscoverPost[];
       }
     },
-    enabled: hasAccessToken,
+    enabled: isReady,
     // Discover results are randomized server-side for variety on every
     // request — a long staleTime would just keep serving the same cached
     // sample, defeating that. Short enough to feel fresh on a revisit,
@@ -108,7 +140,7 @@ export default function SearchPage() {
         return [] as DiscoverUser[];
       }
     },
-    enabled: hasAccessToken,
+    enabled: isReady,
     staleTime: 30 * 1000,
     gcTime: 15 * 60 * 1000,
   });
@@ -126,7 +158,7 @@ export default function SearchPage() {
         return [] as DiscoverActivity[];
       }
     },
-    enabled: hasAccessToken,
+    enabled: isReady,
     staleTime: 30 * 1000,
     gcTime: 15 * 60 * 1000,
   });
@@ -153,15 +185,13 @@ export default function SearchPage() {
       limit: searchType === "global" ? 10 : 20,
       debounceMs: 500,
       autoSaveHistory: true,
-      accessToken: session?.access_token ?? null,
     },
   );
 
   // Search history hook
   const { history, deleteItem } = useSearchHistory({
     limit: 10,
-    autoFetch: Boolean(session?.access_token),
-    accessToken: session?.access_token ?? null,
+    autoFetch: isReady,
   });
 
 
@@ -240,7 +270,309 @@ export default function SearchPage() {
   const showContent = hasContent && !loadingRecent;
 
   return (
-    <div className="h-screen bg-gray-50 dark:bg-dark-1 overflow-hidden flex">
+    <>
+    {/* MOBILE LAYOUT */}
+    <div className="md:hidden min-h-screen bg-gray-50 dark:bg-dark-1">
+      <div className="sticky top-0 z-10 bg-gray-50 dark:bg-dark-1 px-4 pt-4 pb-3 border-b border-gray-200 dark:border-[var(--border)]">
+        <div className="relative mb-3">
+          <input
+            type="text"
+            placeholder="🔍 Start Searching..."
+            value={query}
+            onChange={(e) => handleSearchQueryChange(e.target.value)}
+            className="w-full px-4 py-3 border border-gray-300 dark:border-[var(--border)] rounded-lg bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-[var(--foreground)] outline-none focus:border-blue-500 dark:focus:border-blue-500 transition-colors"
+          />
+          {query && (
+            <button
+              onClick={() => setQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-[var(--foreground)]"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
+        <div className="flex flex-row gap-2 overflow-x-auto noscrollbar">
+          <button
+            onClick={() => toggleFilter("posts")}
+            className={`shrink-0 px-5 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              activeFilters.includes("posts")
+                ? "bg-blue-600 text-white"
+                : "bg-gray-200 dark:bg-[var(--dark-2)] text-gray-700 dark:text-[var(--muted)]"
+            }`}
+          >
+            Posts
+            {query && counts.posts > 0 && (
+              <span className="ml-2 text-xs opacity-75">({counts.posts})</span>
+            )}
+          </button>
+          <button
+            onClick={() => toggleFilter("users")}
+            className={`shrink-0 px-5 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              activeFilters.includes("users")
+                ? "bg-blue-600 text-white"
+                : "bg-gray-200 dark:bg-[var(--dark-2)] text-gray-700 dark:text-[var(--muted)]"
+            }`}
+          >
+            Users
+            {query && counts.users > 0 && (
+              <span className="ml-2 text-xs opacity-75">({counts.users})</span>
+            )}
+          </button>
+          <button
+            onClick={() => toggleFilter("activities")}
+            className={`shrink-0 px-5 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              activeFilters.includes("activities")
+                ? "bg-blue-600 text-white"
+                : "bg-gray-200 dark:bg-[var(--dark-2)] text-gray-700 dark:text-[var(--muted)]"
+            }`}
+          >
+            Activities
+            {query && counts.activities > 0 && (
+              <span className="ml-2 text-xs opacity-75">
+                ({counts.activities})
+              </span>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div className="mx-4 mt-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-3 rounded-lg">
+          {error}
+        </div>
+      )}
+
+      {/* Pre-search: discover posts grid only */}
+      {!query && (
+        <div className="grid grid-cols-3">
+          {postsRecentLoading
+            ? Array.from({ length: MOBILE_DISCOVER_POSTS_LIMIT }, (_, i) => i).map((i) => (
+                <div
+                  key={i}
+                  className="aspect-square bg-gray-200 dark:bg-[var(--dark-2)] animate-pulse"
+                />
+              ))
+            : recentPosts.map((post) =>
+                post.post_image ? (
+                  <Link
+                    key={post.id}
+                    href={`/goals/${post.uid}`}
+                    className="relative block aspect-square bg-gray-200 dark:bg-[var(--dark-2)] overflow-hidden"
+                  >
+                    <Image
+                      src={post.post_image}
+                      alt={post.title}
+                      fill
+                      sizes="33vw"
+                      className="object-cover"
+                    />
+                  </Link>
+                ) : (
+                  <Link
+                    key={post.id}
+                    href={`/goals/${post.uid}`}
+                    className="flex flex-col aspect-square p-2 bg-gray-200 dark:bg-[var(--dark-2)] overflow-hidden"
+                  >
+                    {post.emoji && (
+                      <div className="flex-1 flex items-center justify-center text-4xl">
+                        {post.emoji}
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-xs font-semibold text-gray-900 dark:text-[var(--foreground)] line-clamp-1">
+                        {post.title}
+                      </p>
+                      <p className="text-[10px] text-gray-600 dark:text-[var(--muted)] line-clamp-1">
+                        @{post.user?.username ?? "unknown"}
+                      </p>
+                    </div>
+                  </Link>
+                ),
+              )}
+        </div>
+      )}
+
+      {/* Post-search: users -> activities -> goals grid */}
+      {query && (
+        <div className="px-4 pt-4 pb-8">
+          {isLoading && !hasContent && (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center gap-4 p-3">
+                  <div className="w-12 h-12 bg-gray-300 dark:bg-[var(--dark-3)] rounded-full animate-pulse" />
+                  <div className="flex-1">
+                    <div className="h-4 w-32 bg-gray-300 dark:bg-[var(--dark-3)] rounded animate-pulse mb-2" />
+                    <div className="h-3 w-24 bg-gray-200 dark:bg-[var(--dark-2)] rounded animate-pulse" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {showEmptyResults && (
+            <div className="text-center py-16">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-[var(--foreground)] mb-2">
+                No results found
+              </h2>
+              <p className="text-gray-500 dark:text-[var(--muted)] text-sm">
+                Try different keywords or check your spelling
+              </p>
+            </div>
+          )}
+
+          {showContent && (
+            <div className="-mx-4">
+              {filteredResults.users.length > 0 && (
+                <div className="px-4 mb-6">
+                  <h3 className="text-base font-semibold text-gray-900 dark:text-[var(--foreground)] mb-2">
+                    Users
+                    {counts.users > 0 && (
+                      <span className="ml-2 text-sm opacity-70">
+                        ({counts.users})
+                      </span>
+                    )}
+                  </h3>
+                  <div>
+                    {filteredResults.users.map((user) => (
+                      <Link
+                        key={user.id}
+                        href={`/u/${user.username}`}
+                        className="flex items-center gap-3 py-2"
+                      >
+                        {user.profile_picture && (
+                          <LiveAvatar username={user.username}>
+                            <Image
+                              src={user.profile_picture}
+                              alt={user.fullname || user.username}
+                              width={44}
+                              height={44}
+                              className="w-11 h-11 rounded-full object-cover"
+                            />
+                          </LiveAvatar>
+                        )}
+                        <div>
+                          <p className="font-semibold text-sm text-gray-900 dark:text-[var(--foreground)]">
+                            {user.fullname}
+                          </p>
+                          <p className="text-xs opacity-70 text-gray-600 dark:text-[var(--muted)]">
+                            @{user.username}
+                          </p>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {filteredResults.activities.length > 0 && (
+                <div className="px-4 mb-6">
+                  <h3 className="text-base font-semibold text-gray-900 dark:text-[var(--foreground)] mb-2">
+                    Activities
+                    {counts.activities > 0 && (
+                      <span className="ml-2 text-sm opacity-70">
+                        ({counts.activities})
+                      </span>
+                    )}
+                  </h3>
+                  <div>
+                    {filteredResults.activities.map((activity) => (
+                      <Link
+                        key={activity.id}
+                        href={`/a/${activity.uid}`}
+                        className="flex items-center gap-3 py-2"
+                      >
+                        <div className="w-11 h-11 bg-gray-200 dark:bg-[var(--dark-3)] rounded-full flex items-center justify-center text-xl shrink-0">
+                          {activity.emoji}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-sm text-gray-900 dark:text-[var(--foreground)] flex items-center gap-1">
+                            {activity.name}
+                            {activity.verified && (
+                              <CheckBadgeIcon className="w-4 h-4 text-blue-500 shrink-0" />
+                            )}
+                          </p>
+                          <p className="text-xs opacity-70 text-gray-600 dark:text-[var(--muted)] capitalize">
+                            {activity.activity_type}
+                          </p>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {filteredResults.posts.length > 0 && (
+                <div>
+                  <h3 className="px-4 text-base font-semibold text-gray-900 dark:text-[var(--foreground)] mb-2">
+                    Goals
+                    {counts.posts > 0 && (
+                      <span className="ml-2 text-sm opacity-70">
+                        ({counts.posts})
+                      </span>
+                    )}
+                  </h3>
+                  <div className="grid grid-cols-3">
+                    {filteredResults.posts.map((post) =>
+                      post.post_image ? (
+                        <Link
+                          key={post.id}
+                          href={`/goals/${post.uid}`}
+                          className="relative block aspect-square bg-gray-200 dark:bg-[var(--dark-2)] overflow-hidden"
+                        >
+                          <Image
+                            src={post.post_image}
+                            alt={post.title}
+                            fill
+                            sizes="33vw"
+                            className="object-cover"
+                          />
+                        </Link>
+                      ) : (
+                        <Link
+                          key={post.id}
+                          href={`/goals/${post.uid}`}
+                          className="flex flex-col aspect-square p-2 bg-gray-200 dark:bg-[var(--dark-2)] overflow-hidden"
+                        >
+                          {post.emoji && (
+                            <div className="flex-1 flex items-center justify-center text-4xl">
+                              {post.emoji}
+                            </div>
+                          )}
+                          <div>
+                            <p className="text-xs font-semibold text-gray-900 dark:text-[var(--foreground)] line-clamp-1">
+                              {post.title}
+                            </p>
+                            <p className="text-[10px] text-gray-600 dark:text-[var(--muted)] line-clamp-1">
+                              @{post.user?.username ?? "unknown"}
+                            </p>
+                          </div>
+                        </Link>
+                      ),
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {pagination && pagination.has_more && (
+                <div className="text-center py-6 mt-2">
+                  <button
+                    onClick={loadMore}
+                    disabled={isLoading}
+                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {isLoading ? "Loading..." : "Load More"}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+
+    {/* DESKTOP LAYOUT */}
+    <div className="hidden md:flex h-screen bg-gray-50 dark:bg-dark-1 overflow-hidden">
       {/* Left Column - Search Sidebar */}
       <div className="w-96 border-r border-gray-200 dark:border-[var(--border)]  bg-white dark:bg-dark-2/50 flex flex-col h-screen overflow-y-auto">
         <div className="p-6">
@@ -619,5 +951,6 @@ export default function SearchPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

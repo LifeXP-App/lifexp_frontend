@@ -27,13 +27,6 @@ export function useSearchHistory(options: UseSearchHistoryOptions = {}) {
   const [error, setError] = useState<string | null>(null);
 
   const fetchHistory = useCallback(async () => {
-    if (!accessToken) {
-      setHistory([]);
-      setError(null);
-      setIsLoading(false);
-      return;
-    }
-
     setIsLoading(true);
     setError(null);
 
@@ -56,10 +49,6 @@ export function useSearchHistory(options: UseSearchHistoryOptions = {}) {
   const deleteItem = useCallback(
     async (id: number) => {
       try {
-        if (!accessToken) {
-          throw new Error("Not authenticated");
-        }
-
         await deleteSearchHistoryItem(id, accessToken);
         setHistory((prev) => prev.filter((item) => item.id !== id));
       } catch (err: unknown) {
@@ -73,10 +62,6 @@ export function useSearchHistory(options: UseSearchHistoryOptions = {}) {
   const clearAll = useCallback(
     async (filterType?: string) => {
       try {
-        if (!accessToken) {
-          throw new Error("Not authenticated");
-        }
-
         await clearSearchHistory(filterType, accessToken);
         setHistory([]);
       } catch (err: unknown) {

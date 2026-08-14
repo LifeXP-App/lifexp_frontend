@@ -87,6 +87,26 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
+const GOAL_TITLE_MOBILE_MAX_CHARS = 24;
+
+// Mirrors the `md:` Tailwind breakpoint (768px) used to split mobile/desktop
+// styling elsewhere in this file — needed here in JS too since the mobile
+// title crop is a hard character limit, not CSS truncation.
+function useIsMobileViewport(): boolean {
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches,
+  );
+
+  useEffect(() => {
+    const mql = window.matchMedia("(max-width: 767px)");
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
+
+  return isMobile;
+}
+
 function GoalCard({
   goal,
   primaryCta,
@@ -108,6 +128,11 @@ function GoalCard({
   spotlightPrimary?: boolean;
 }) {
   const isCompleted = goal.status === "completed";
+  const isMobile = useIsMobileViewport();
+  const displayTitle =
+    isMobile && goal.title.length > GOAL_TITLE_MOBILE_MAX_CHARS
+      ? `${goal.title.slice(0, GOAL_TITLE_MOBILE_MAX_CHARS)}..`
+      : goal.title;
 
   return (
     <div className="w-full rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-dark-2  p-4">
@@ -119,7 +144,7 @@ function GoalCard({
           <div className="w-full">
             <div className="flex w-full items-center justify-between gap-2">
               <p className="font-semibold text-lg text-black dark:text-[var(--foreground)] truncate">
-                {goal.title}
+                {displayTitle}
               </p>
 
               <div className="flex items-center gap-2 shrink-0">
@@ -185,7 +210,7 @@ function GoalCard({
 
       {/* Aspect chips */}
       {isCompleted && goal.aspectXP && (
-        <div className="mt-4 grid grid-cols-5 gap-2">
+        <div className="mt-4 grid grid-cols-5 gap-1 sm:gap-2">
           <AspectChip
             icon={<BiDumbbell className="w-4 h-4" />}
             value={goal.aspectXP.physique}
@@ -422,9 +447,8 @@ export default function GoalsPage() {
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
   const [deletingGoalId, setDeletingGoalId] = useState<string | null>(null);
 
-  const { me, session, loading: authLoading } = useAuth();
+  const { me, loading: authLoading } = useAuth();
   const username = me?.username;
-  const accessToken = session?.access_token;
 
   const [isEmptySession, setIsEmptySession] = useState(false);
 
@@ -449,19 +473,19 @@ export default function GoalsPage() {
   const { data: goals = [], isLoading: goalsLoading } = useQuery({
     queryKey: ["goals"],
     queryFn: async () => {
-      const res = await fetch(`/api/goals`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-        cache: "no-store",
-      });
+      // No client-sent Authorization header — /api/goals reads the httpOnly
+      // auth cookie itself (and refreshes it if stale). Gating/authing off
+      // the browser Supabase SDK's session was unreliable on mobile, where
+      // that client-side session can lag or fail to hydrate even though the
+      // cookie is perfectly valid, leaving this query permanently disabled.
+      const res = await fetch(`/api/goals`, { cache: "no-store" });
 
       if (!res.ok) throw new Error("Failed to fetch goals");
 
       const data = await res.json();
       return (Array.isArray(data.results) ? data.results : []) as GoalPost[];
     },
-    enabled: !authLoading && !!username && !!accessToken,
+    enabled: !authLoading && !!username,
     // Every create/update/delete/status-change mutation below explicitly
     // invalidates ["goals"], so this can cache generously without risking
     // stale data after a user's own edits.
@@ -480,12 +504,10 @@ export default function GoalsPage() {
   const { data: sidebarInfo = null, isLoading: sidebarLoading } = useQuery({
     queryKey: ["goals", "sidebar", username],
     queryFn: async () => {
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-
-      const res = await fetch(`${baseUrl}/api/v1/goals/info/${username}/`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
+      // Proxied through /api/goals/info/[username] (httpOnly-cookie auth,
+      // same reasoning as the goals list query above) instead of calling
+      // Django directly with the browser SDK's session token.
+      const res = await fetch(`/api/goals/info/${username}`, {
         cache: "no-store",
       });
 
@@ -493,7 +515,7 @@ export default function GoalsPage() {
 
       return (await res.json()) as UserGoalsInfo;
     },
-    enabled: !!username && !!accessToken,
+    enabled: !!username,
     // Key is prefixed with "goals", so it's also invalidated by every goal
     // mutation below; kept shorter than the list itself since XP/streak can
     // still change from session completions on other pages.
@@ -535,7 +557,6 @@ export default function GoalsPage() {
       const res = await fetch("/api/goals", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${session?.access_token ?? ""}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -740,9 +761,6 @@ export default function GoalsPage() {
 
       const res = await fetch(`/api/goals/${goalUid}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${session?.access_token ?? ""}`,
-        },
       });
 
       if (!res.ok) {
@@ -861,10 +879,10 @@ export default function GoalsPage() {
 
   return (
     <main className="h-screen w-full bg-gray-100 dark:bg-dark-1 overflow-hidden">
-      <div className="mx-auto w-full  px-4 py-6">
+      <div className="mx-auto w-full px-2 py-6 md:px-4">
         <div className="flex w-full gap-6">
           {/* LEFT MAIN CONTENT */}
-          <div className="flex-1 md:w-[90%] lg:w-[60%] h-screen overflow-scroll noscrollbar py-4 px-6 md:px-12">
+          <div className="flex-1 md:w-[90%] lg:w-[60%] h-screen overflow-scroll noscrollbar py-4 px-3 md:px-12">
             {/* Title */}
             <h1 className="text-xl font-bold text-black dark:text-[var(--foreground)] mb-4">
               Goals

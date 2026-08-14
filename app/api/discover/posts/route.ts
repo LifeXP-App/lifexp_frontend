@@ -3,7 +3,8 @@ import { sharedRefresh } from "@/src/lib/auth/refreshLock";
 import { refreshTokens } from "@/src/lib/auth/refreshTokens";
 import { NextResponse } from "next/server";
 
-const DESIRED_COUNT = 6;
+const DEFAULT_COUNT = 6;
+const MAX_COUNT = 30;
 
 async function safeJson(res: Response) {
   const text = await res.text();
@@ -26,7 +27,14 @@ export async function GET(request: Request) {
       );
     }
 
-    const target = `${baseUrl}/api/v1/discover/posts/?limit=${DESIRED_COUNT}`;
+    const { searchParams } = new URL(request.url);
+    const requestedLimit = Number(searchParams.get("limit"));
+    const limit =
+      Number.isFinite(requestedLimit) && requestedLimit > 0
+        ? Math.min(requestedLimit, MAX_COUNT)
+        : DEFAULT_COUNT;
+
+    const target = `${baseUrl}/api/v1/discover/posts/?limit=${limit}`;
 
     let res = await fetch(target, {
       headers: { Authorization: `Bearer ${access}` },

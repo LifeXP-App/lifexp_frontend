@@ -391,7 +391,7 @@ function getTimeAgo(dateString: string): string {
 
 export default function Home() {
 
-  const { me, session } = useAuth();
+  const { me, loading: authLoading } = useAuth();
 
   type ApiFriendStatus = {
     id: number;
@@ -442,7 +442,7 @@ export default function Home() {
         return [] as ApiFriendStatus[];
       }
     },
-    enabled: !!session?.access_token,
+    enabled: !authLoading && !!me,
     // "Did a friend do a session today" — live-ness itself comes from the
     // separate Convex subscription above, this is just the daily summary.
     staleTime: 2 * 60 * 1000,
@@ -515,7 +515,7 @@ export default function Home() {
         return { notifications: [] as NotificationDisplay[], unreadCount: 0 };
       }
     },
-    enabled: !!session?.access_token,
+    enabled: !authLoading && !!me,
     // Notifications must stay near-real-time — always revalidate on mount
     // rather than inheriting the global staleTime used elsewhere.
     staleTime: 0,
@@ -653,7 +653,7 @@ const {
   initialPageParam: 1,
   getNextPageParam: (lastPage, allPages) =>
     lastPage.hasMore ? allPages.length + 1 : undefined,
-  enabled: !!session?.access_token,
+  enabled: !authLoading && !!me,
   // Avoid a full refetch on quick back-navigation to the feed; still fresh
   // enough that new posts show up within a minute.
   staleTime: 60 * 1000,
@@ -813,7 +813,7 @@ const { data: discoverUsers = [], isLoading: discoverLoading } = useQuery({
       return [] as SuggestedUser[];
     }
   },
-  enabled: !!session?.access_token,
+  enabled: !authLoading && !!me,
   // Suggested-users widget — low volatility, safe to cache generously.
   staleTime: 5 * 60 * 1000,
   gcTime: 15 * 60 * 1000,

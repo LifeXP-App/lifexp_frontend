@@ -11,7 +11,7 @@ import { useAuth } from "@/src/context/AuthContext";
 import { usePopup } from "@/src/context/PopupContext";
 // Mock data removed - using real API data now
 import { UserProfile } from "@/src/lib/types";
-import { FireIcon, LockClosedIcon, PlusIcon, RocketLaunchIcon } from "@heroicons/react/24/solid";
+import { Cog6ToothIcon, FireIcon, LockClosedIcon, PlusIcon, RocketLaunchIcon } from "@heroicons/react/24/solid";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -79,7 +79,7 @@ type UserPost = {
 export default function ProfilePage({ params }: PageProps) {
   const { username } = use(params);
   const router = useRouter();
-  const { me, session, supabaseUser, loading: authLoading } = useAuth();
+  const { me, supabaseUser, loading: authLoading } = useAuth();
   const { openMasteryPopup } = usePopup();
   const queryClient = useQueryClient();
 
@@ -151,6 +151,7 @@ export default function ProfilePage({ params }: PageProps) {
   };
 
   const [isXlViewport, setIsXlViewport] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
 
   const [showShare, setShowShare] = useState(false);
   const [showFollowersPopup, setShowFollowersPopup] = useState(false);
@@ -274,6 +275,20 @@ export default function ProfilePage({ params }: PageProps) {
     };
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const mediaQuery = window.matchMedia("(max-width: 767px)");
+    const updateViewport = () => setIsMobileViewport(mediaQuery.matches);
+
+    updateViewport();
+    mediaQuery.addEventListener("change", updateViewport);
+
+    return () => {
+      mediaQuery.removeEventListener("change", updateViewport);
+    };
+  }, []);
+
   // Each profile section owns its request so a slower endpoint does not block
   // otherwise-ready content from being shown.
   const { data: ongoingGoals = [], isLoading: goalsLoading } = useQuery({
@@ -287,7 +302,12 @@ export default function ProfilePage({ params }: PageProps) {
       const data = await response.json();
       return (Array.isArray(data) ? data : data.results || []) as Goal[];
     },
-    enabled: !!username && !authLoading && !!session?.access_token,
+    // Gated on username/authLoading only — these hit Next proxy routes that
+    // read the httpOnly auth cookie server-side, not the client Supabase
+    // SDK's session, which can lag/fail to hydrate on mobile (leaving
+    // session?.access_token falsy indefinitely and these queries permanently
+    // disabled even though the user is genuinely authenticated).
+    enabled: !!username && !authLoading,
     staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
@@ -318,7 +338,12 @@ export default function ProfilePage({ params }: PageProps) {
           };
         });
     },
-    enabled: !!username && !authLoading && !!session?.access_token,
+    // Gated on username/authLoading only — these hit Next proxy routes that
+    // read the httpOnly auth cookie server-side, not the client Supabase
+    // SDK's session, which can lag/fail to hydrate on mobile (leaving
+    // session?.access_token falsy indefinitely and these queries permanently
+    // disabled even though the user is genuinely authenticated).
+    enabled: !!username && !authLoading,
     staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
@@ -333,7 +358,12 @@ export default function ProfilePage({ params }: PageProps) {
       const data = await response.json();
       return (Array.isArray(data) ? data : data.results || []) as Session[];
     },
-    enabled: !!username && !authLoading && !!session?.access_token,
+    // Gated on username/authLoading only — these hit Next proxy routes that
+    // read the httpOnly auth cookie server-side, not the client Supabase
+    // SDK's session, which can lag/fail to hydrate on mobile (leaving
+    // session?.access_token falsy indefinitely and these queries permanently
+    // disabled even though the user is genuinely authenticated).
+    enabled: !!username && !authLoading,
     staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
@@ -353,7 +383,7 @@ export default function ProfilePage({ params }: PageProps) {
       const data = await res.json();
       return (data.top_activities || []) as Activity[];
     },
-    enabled: !authLoading && !!profileUser?.id && !!session?.access_token,
+    enabled: !authLoading && !!profileUser?.id,
     // Top-activities ranking changes rarely — safe to cache generously.
     staleTime: 5 * 60 * 1000,
     gcTime: 15 * 60 * 1000,
@@ -983,6 +1013,15 @@ export default function ProfilePage({ params }: PageProps) {
       <div className="w-full bg-gray-100 dark:bg-dark-1 px-4 py-4 sm:px-6 md:px-8 lg:px-12 xl:px-24">
         {/* PROFILE HEADER */}
         <div className="relative rounded-xl flex flex-col md:flex-row justify-between w-full mb-4">
+          {me?.username === profileUser.username && (
+            <Link
+              href="/settings"
+              aria-label="Settings"
+              className="md:hidden absolute top-2 right-2 z-10 p-2 rounded-full text-foreground/70 dark:text-[var(--foreground)]/70 active:opacity-60"
+            >
+              <Cog6ToothIcon className="w-6 h-6" />
+            </Link>
+          )}
           <div className="pt-2 sm:p-2 mb-4 flex flex-col gap-2 w-full">
             <div className="flex flex-row items-center gap-4 sm:gap-8 w-full mb-4">
               <div className="shrink-0">
@@ -1126,12 +1165,12 @@ export default function ProfilePage({ params }: PageProps) {
               </>
             )}
 
-            <span className="flex flex-col sm:flex-row md:gap-2 gap-4 items-center w-full mt-2 sm:mt-4">
+            <span className="flex flex-row gap-2 sm:gap-2 items-center w-full mt-2 sm:mt-4">
               {me?.username === profileUser.username ? (
                 <button
                   onClick={() => router.push("/u/edit")}
                   style={{ backgroundColor: accent.primary }}
-                  className="w-full font-medium active:opacity-80 sm:w-auto p-2 rounded-lg cursor-pointer px-12 text-white "
+                  className="flex-1 min-w-0 sm:flex-none font-medium active:opacity-80 sm:w-auto p-2 rounded-lg cursor-pointer px-4 sm:px-12 text-white "
                 >
                   Edit Profile
                 </button>
@@ -1139,7 +1178,7 @@ export default function ProfilePage({ params }: PageProps) {
                 <button
                   onClick={handleUnfollow}
                   disabled={isFollowingLoading}
-                  className={`font-medium py-2 rounded-lg text-center w-48 text-white bg-gray-700 ${
+                  className={`flex-1 min-w-0 sm:flex-none font-medium py-2 rounded-lg text-center sm:w-48 text-white bg-gray-700 ${
                     isFollowingLoading ? "opacity-50 cursor-wait" : "cursor-pointer"
                   }`}
                 >
@@ -1149,7 +1188,7 @@ export default function ProfilePage({ params }: PageProps) {
                 <button
                   onClick={handleFollow}
                   disabled={isFollowingLoading}
-                  className={`font-medium py-2 rounded-lg text-center w-48 text-white ${
+                  className={`flex-1 min-w-0 sm:flex-none font-medium py-2 rounded-lg text-center sm:w-48 text-white ${
                     isFollowingLoading ? "opacity-50 cursor-wait" : "cursor-pointer"
                   }`}
                   style={{ backgroundColor: accent.primary }}
@@ -1160,7 +1199,7 @@ export default function ProfilePage({ params }: PageProps) {
 
               <button
                 onClick={() => setShowShare(true)}
-                className="cursor-pointer font-medium bg-black/70 hover:bg-black text-white text-center py-2 rounded-lg w-48 dark:hover:bg-gray-100 dark:bg-white dark:text-black"
+                className="flex-1 min-w-0 sm:flex-none cursor-pointer font-medium bg-black/70 hover:bg-black text-white text-center py-2 rounded-lg sm:w-48 dark:hover:bg-gray-100 dark:bg-white dark:text-black"
               >
                 Share
               </button>
@@ -1332,6 +1371,7 @@ export default function ProfilePage({ params }: PageProps) {
                   accentColor={accent.primary}
                   gradientStart={accent.gradStart}
                   gradientEnd={accent.gradEnd}
+                  compactMargins={isMobileViewport}
                 />
               </div>
               </div>

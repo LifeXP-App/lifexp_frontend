@@ -95,7 +95,10 @@ export function useSearch(options: UseSearchOptions) {
   const isDebouncing = trimmedQuery !== "" && trimmedQuery !== debouncedQuery;
 
   const queryClient = useQueryClient();
-  const enabled = Boolean(debouncedQuery && accessToken);
+  // Not gated on accessToken — these hit /api/search* Next proxy routes that
+  // read the httpOnly auth cookie server-side, not the client Supabase SDK's
+  // session, which can lag/fail to hydrate on mobile.
+  const enabled = Boolean(debouncedQuery);
 
   // ── Global search: single fetch across posts/users/activities, no pagination ──
   const globalQuery = useQuery({
@@ -144,7 +147,7 @@ export function useSearch(options: UseSearchOptions) {
   // mirrors the old hook's "only save on first page success" behavior.
   const historySavedForRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!autoSaveHistory || !debouncedQuery || !accessToken) return;
+    if (!autoSaveHistory || !debouncedQuery) return;
 
     const hasData =
       searchType === "global" ? globalQuery.data !== undefined : infiniteQuery.data !== undefined;

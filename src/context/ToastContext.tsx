@@ -98,7 +98,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
 
       {/* Toast stack */}
-      <div className="fixed z-[9999] bottom-4 right-4 left-4 sm:left-auto flex flex-col gap-2 items-center sm:items-end pointer-events-none">
+      <div className="fixed z-[9999] bottom-20 right-4 left-4 sm:left-auto md:bottom-4 flex flex-col gap-2 items-center sm:items-end pointer-events-none">
         {toasts.map((t) => (
           <Toast key={t.id} item={t} onDismiss={() => remove(t.id)} />
         ))}

@@ -47,7 +47,7 @@ export default function AfkSessionPopup() {
           : "Your session is paused. Tap to return to your timer.";
 
   return (
-    <div className="fixed bottom-[1.5rem] right-[1.5rem] z-[95] w-[min(340px,calc(100%-2rem))]">
+    <div className="fixed bottom-[5.5rem] right-[1.5rem] z-[95] w-[min(340px,calc(100%-2rem))] md:bottom-[1.5rem]">
       <Link
         href={`/goals/${goalId}/session/${sessionId}`}
         className="group relative block rounded-3xl border border-gray-200 bg-white/90 p-4 shadow-[0_24px_60px_rgba(0,0,0,0.38)] transition hover:-translate-y-0.25 hover:shadow-[0_32px_90px_rgba(0,0,0,0.4)] dark:border-[var(--border)] dark:bg-dark-2/90 backdrop-blur-sm"

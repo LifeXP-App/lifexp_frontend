@@ -68,7 +68,7 @@ function SkeletonValue() {
 }
 
 export default function SettingsPage() {
-  const { session, me, loading: authLoading, requestPasswordReset } = useAuth();
+  const { me, loading: authLoading, requestPasswordReset } = useAuth();
   const queryClient = useQueryClient();
 
   const [changePasswordStatus, setChangePasswordStatus] = useState<
@@ -89,11 +89,13 @@ export default function SettingsPage() {
   const { data: settingsData, isLoading: loadingSettings } = useQuery({
     queryKey: ["settings"],
     queryFn: async () => {
+      // No client-sent Authorization header — /api/users/settings reads the
+      // httpOnly auth cookie itself (and refreshes it if stale). Gating on
+      // the browser Supabase SDK's session was unreliable on mobile, where
+      // that client-side session can lag or fail to hydrate even though the
+      // cookie is perfectly valid — this is why Settings never loaded there.
       const res = await fetch("/api/users/settings", {
         method: "GET",
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-        },
         cache: "no-store",
       });
 
@@ -104,7 +106,7 @@ export default function SettingsPage() {
       const data: BackendSettings = await res.json();
       return backendToForm(data);
     },
-    enabled: !authLoading && !!session?.access_token,
+    enabled: !authLoading && !!me,
     // Save writes straight through to the cache via setQueryData below, so
     // this only needs a network hit on genuinely first-ever load.
     staleTime: 5 * 60 * 1000,
@@ -204,7 +206,6 @@ export default function SettingsPage() {
       const res = await fetch("/api/users/settings", {
         method: "PATCH",
         headers: {
-          Authorization: `Bearer ${session?.access_token ?? ""}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(backendPayload),
@@ -226,7 +227,7 @@ export default function SettingsPage() {
     } finally {
       setSaving(false);
     }
-  }, [initialForm, queryClient, session?.access_token]);
+  }, [initialForm, queryClient]);
 
   // ✅ unchanged check
   const isUnchanged = useMemo(() => {
@@ -402,6 +403,63 @@ export default function SettingsPage() {
           >
             Take Tour
           </Link>
+        </div>
+
+        {/* Mobile-only: the account/legal actions that live in the desktop
+            right rail (hidden md:block below) aren't reachable on mobile
+            otherwise, so surface the same items here with identical styling. */}
+        <div className="md:hidden mt-6 flex flex-col gap-4">
+          <div className="bg-white dark:bg-dark-2 p-6 rounded-xl border-2 border-gray-200 dark:border-[var(--border)] flex flex-col gap-4">
+            <button
+              onClick={handleChangePassword}
+              disabled={changePasswordStatus === "sending" || !me?.email}
+              className="cursor-pointer active:opacity-80 text-l font-semibold text-left text-gray-800 dark:text-[var(--foreground)] hover:text-gray-600 dark:hover:text-[var(--muted)] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {changePasswordStatus === "sending" ? "Sending..." : "Change Password"}
+            </button>
+            {changePasswordMessage && (
+              <p
+                className={`text-sm -mt-2 ${
+                  changePasswordStatus === "error"
+                    ? "text-red-600 dark:text-red-400"
+                    : "text-green-600 dark:text-green-400"
+                }`}
+              >
+                {changePasswordMessage}
+              </p>
+            )}
+
+            <button
+              onClick={() => {
+                setDeleteError(null);
+                setDeleteModalOpen(true);
+              }}
+              className="cursor-pointer active:opacity-80 text-l font-semibold text-left text-red-700 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
+            >
+              Delete Account
+            </button>
+          </div>
+
+          <div className="bg-white dark:bg-dark-2 p-6 rounded-xl border-2 border-gray-200 dark:border-[var(--border)] flex flex-col gap-4">
+            <a target="__blank" href="https://www.gamilife.com/privacy-policy" className="cursor-pointer active:opacity-80 text-l font-semibold text-left text-gray-800 dark:text-[var(--foreground)] hover:text-gray-600 dark:hover:text-[var(--muted)]">
+              Privacy Policy
+            </a>
+
+            <a target="__blank" href="https://www.gamilife.com/terms-of-service" className="cursor-pointer active:opacity-80 text-l font-semibold text-left text-gray-800 dark:text-[var(--foreground)] hover:text-gray-600 dark:hover:text-[var(--muted)]">
+              Terms of Service
+            </a>
+
+            <a target="__blank" href="https://www.gamilife.com/community" className="cursor-pointer active:opacity-80 text-l font-semibold text-left text-gray-800 dark:text-[var(--foreground)] hover:text-gray-600 dark:hover:text-[var(--muted)]">
+              Send Review
+            </a>
+
+            <button
+              onClick={handleLogout}
+              className="cursor-pointer active:opacity-80 text-l font-semibold text-left text-red-700 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
+            >
+              Log out
+            </button>
+          </div>
         </div>
 
         {/* Save button

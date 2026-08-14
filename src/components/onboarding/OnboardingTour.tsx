@@ -860,7 +860,7 @@ export function OnboardingTour() {
               }
             : undefined
         }
-        className={`tour-card fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-3 right-3 z-[90] max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-2xl border p-5 shadow-[0_24px_80px_rgba(8,12,30,0.32)] outline-none md:max-h-[calc(100dvh-3rem)] md:w-[370px] md:p-6 ${cardSurface} ${
+        className={`tour-card fixed bottom-[max(5rem,calc(4.25rem+env(safe-area-inset-bottom)))] left-3 right-3 z-[90] max-h-[calc(100dvh-6rem)] overflow-y-auto rounded-2xl border p-5 shadow-[0_24px_80px_rgba(8,12,30,0.32)] outline-none md:bottom-[max(0.75rem,env(safe-area-inset-bottom))] md:max-h-[calc(100dvh-3rem)] md:w-[370px] md:p-6 ${cardSurface} ${
           dialogPosition
             ? ""
             : "md:left-1/2 md:right-auto md:top-1/2 md:bottom-auto md:-translate-x-1/2 md:-translate-y-1/2"

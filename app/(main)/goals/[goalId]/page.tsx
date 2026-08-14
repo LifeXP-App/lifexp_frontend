@@ -663,7 +663,7 @@ export default function GoalDetailPage() {
       </div>
 
       {/* Mobile Layout Skeleton */}
-      <div className="block lg:hidden px-6 py-6 space-y-6 animate-pulse">
+      <div className="block lg:hidden px-4 py-4 space-y-6 animate-pulse">
         {/* Description */}
         <div className="space-y-3">
           <div className="h-4 w-40 bg-gray-200 dark:bg-dark-3 rounded" />
@@ -1042,7 +1042,34 @@ export default function GoalDetailPage() {
         </div>
 
         {/* Mobile Layout - Single Scroll */}
-        <div className="block lg:hidden px-6 py-6">
+        <div className="block lg:hidden px-4 py-4">
+          {/* Action Buttons — mobile: right below the header, above Created on */}
+          {!goalCompleted && isOwner && (
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              {goal.last_activity && (
+                <button
+                  className="py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80  cursor-pointer"
+                  style={{
+                    backgroundColor: "var(--rookie-primary)",
+                  }}
+                  onClick={handleStartSession}
+                >
+                  Start {goal.last_activity.name}
+                </button>
+              )}
+
+              <button
+                className={`py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80 cursor-pointer ${!goal.last_activity ? 'col-span-2' : ''}`}
+                style={{
+                  backgroundColor: goal.last_activity ? "#4a4a4a" : "var(--rookie-primary)",
+                }}
+                onClick={() => handleOpenNewActivity()}
+              >
+                New Session
+              </button>
+            </div>
+          )}
+
           {/* Creation Date */}
           <p className="text-sm mb-3" style={{ color: "var(--muted)" }}>
             Created on {formatDate(goal.created_at)}
@@ -1126,7 +1153,7 @@ export default function GoalDetailPage() {
             >
               Life Aspects
             </h3>
-            <div className="flex  justify-around gap-2">
+            <div className="flex justify-around gap-1">
               <AspectChip
                 icon={<BiDumbbell className="w-4 h-4" />}
                 value={aspectXp.physique}
@@ -1155,29 +1182,17 @@ export default function GoalDetailPage() {
             </div>
           </div>
 
-          {/* Action Buttons */}
+          {/* Complete Goal Button — mobile: right below the aspect chips */}
           {!goalCompleted && isOwner && (
-            <div className="grid grid-cols-2 gap-3 mb-8">
-              {goal.last_activity && (
-                <button
-                  className="py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80  cursor-pointer"
-                  style={{
-                    backgroundColor: "var(--rookie-primary)",
-                  }}
-                  onClick={handleStartSession}
-                >
-                  Start {goal.last_activity.name}
-                </button>
-              )}
-
+            <div className="mb-8">
               <button
-                className={`py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80 cursor-pointer ${!goal.last_activity ? 'col-span-2' : ''}`}
+                className="w-full py-3 rounded-2xl font-medium text-white text-md transition-all active:scale-95 cursor-pointer"
                 style={{
-                  backgroundColor: goal.last_activity ? "#4a4a4a" : "var(--rookie-primary)",
+                  backgroundColor: "var(--rookie-primary)",
                 }}
-                onClick={() => handleOpenNewActivity()}
+                onClick={handleOpenCompleteGoal}
               >
-                New Session
+                Complete Goal
               </button>
             </div>
           )}
@@ -1234,22 +1249,6 @@ export default function GoalDetailPage() {
               <p className="text-sm text-gray-500">No past sessions</p>
             )}
           </div>
-
-          {/* Complete Goal Button - Mobile */}
-
-          {!goalCompleted && isOwner && (
-            <div className="mb-6">
-              <button
-                className="w-full py-3 rounded-2xl font-medium text-white text-md transition-all active:scale-95 cursor-pointer"
-                style={{
-                  backgroundColor: "var(--rookie-primary)",
-                }}
-                onClick={handleOpenCompleteGoal}
-              >
-                Complete Goal
-              </button>
-            </div>
-          )}
         </div>
 
         {/* Desktop Layout - Two Column */}

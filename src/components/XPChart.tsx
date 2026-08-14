@@ -21,6 +21,8 @@ interface XPChartProps {
   accentColor: string;
   gradientStart: string;
   gradientEnd: string;
+  /** Tighter chart margins for narrow/mobile containers. Defaults to the original desktop margins. */
+  compactMargins?: boolean;
 }
 
 interface CustomTooltipProps {
@@ -49,6 +51,7 @@ export default function XPChart({
   username,
   totalXP,
   accentColor,
+  compactMargins = false,
 }: XPChartProps) {
   // Generate dynamic dates based on today
   const generateDates = () => {
@@ -75,7 +78,11 @@ export default function XPChart({
       <ResponsiveContainer width="100%" height="100%">
         <LineChart
           data={dynamicData}
-          margin={{ top: 30, right: 10, bottom: 20, left: 0 }} // ✅ tighter sides
+          margin={
+            compactMargins
+              ? { top: 12, right: 4, bottom: 4, left: 0 }
+              : { top: 30, right: 10, bottom: 20, left: 0 } // ✅ tighter sides
+          }
         >
           <CartesianGrid vertical={false} stroke="#dcdcdc" strokeWidth={1} className="dark:stroke-gray-700" />
 

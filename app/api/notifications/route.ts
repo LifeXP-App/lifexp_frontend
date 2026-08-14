@@ -31,9 +31,15 @@ export async function GET(req: Request) {
     // ✅ allow query params (unread=true etc.)
     const { searchParams } = new URL(req.url);
     const unread = searchParams.get("unread") || "true";
+    const limit = searchParams.get("limit");
+    const page = searchParams.get("page");
+
+    const params = new URLSearchParams({ unread });
+    if (limit) params.set("limit", limit);
+    if (page) params.set("page", page);
 
     // ✅ Django best practice = trailing slash
-    const target = `${baseUrl}/api/v1/notifications/?unread=${unread}`;
+    const target = `${baseUrl}/api/v1/notifications/?${params.toString()}`;
 
     // 1) try request with current access
     let res = await fetch(target, {

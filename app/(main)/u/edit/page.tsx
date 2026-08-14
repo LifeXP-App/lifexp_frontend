@@ -7,8 +7,8 @@ import { useRouter } from "next/navigation";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 function EditProfileSkeleton() {
   return (
-    <main className="flex h-screen w-full overflow-hidden">
-      <div className="mx-auto w-full p-8" style={{ width: "80%" }}>
+    <main className="flex h-screen w-full overflow-y-auto md:overflow-hidden">
+      <div className="mx-auto w-full p-4 md:p-8 md:w-[80%]">
         {/* Header */}
         <div className="mb-8 animate-pulse">
           <div className="h-6 w-40 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
@@ -708,8 +708,8 @@ export default function EditProfilePage() {
 
   return (
     <>
-      <main className="flex h-screen w-full overflow-hidden">
-        <div className="mx-auto w-full p-8" style={{ width: "80%" }}>
+      <main className="flex h-screen w-full overflow-y-auto md:overflow-hidden">
+        <div className="mx-auto w-full p-4 md:p-8 md:w-[80%]">
           <h2 className="mb-6 text-2xl font-semibold">Edit Profile</h2>
 
           <form onSubmit={handleSubmit} className="space-y-6">
