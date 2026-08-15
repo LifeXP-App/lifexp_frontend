@@ -10,6 +10,8 @@ interface Activity {
   uid?: string;
   name: string;
   type: ActivityType;
+  emoji?: string;
+  total_xp?: number;
   verified?: boolean;
 }
 
@@ -100,6 +102,72 @@ function ActivitySelectButton({
 }
 
 export default React.memo(ActivitySelectButton);
+
+interface ActivityGridCardProps {
+  activity: Activity;
+  onSelect: (activity: Activity) => void;
+  isSelected?: boolean;
+}
+
+// Compact card for the maximized picker's 6-column grid: white/dark surface
+// card with a big emoji, the activity name, and an XP/hr pill tinted by the
+// activity's aspect — a different visual language from ActivitySelectButton's
+// full-width tinted row.
+function ActivityGridCard({
+  activity,
+  onSelect,
+  isSelected = false,
+}: ActivityGridCardProps) {
+  const meta = ACTIVITY_META[activity.type];
+
+  return (
+    <button
+      onClick={() => onSelect(activity)}
+      title={activity.name}
+      className={`flex flex-col items-center gap-4 p-4 rounded-2xl transition-all cursor-pointer group relative overflow-hidden active:scale-[0.98] border ${
+        isSelected
+          ? "border"
+          : "bg-white dark:bg-dark-2 border-gray-200 dark:border-[var(--border)]"
+      }`}
+      style={
+        isSelected
+          ? {
+              backgroundColor: `rgba(${meta.cssColorVarRgb}, 0.1)`,
+              borderColor: `rgba(${meta.cssColorVarRgb}, 0.3)`,
+            }
+          : undefined
+      }
+    >
+      {typeof activity.total_xp === "number" && (
+        <span
+          className="text-xs font-bold px-2 py-0.5 rounded-full bg-gray-500/10 text-gray-500/80"
+          // style={{
+          //   backgroundColor: `rgba(${meta.cssColorVarRgb}, 0.15)`,
+          //   color: meta.cssColorVar,
+          // }}
+        >
+          {activity.total_xp}/hr
+        </span>
+      )}
+      <span className="text-4xl">{activity.emoji || meta.icon}</span>
+
+      <span style={{ color: meta.cssColorVar }} className="text-[14px] font-bold tracking-tight text-center line-clamp-2 text-foreground dark:text-[var(--foreground)] flex items-center gap-1">
+        {activity.name}
+        {activity.verified && (
+          <CheckBadgeIcon
+            className="w-3.5 h-3.5 shrink-0"
+            style={{ color: meta.cssColorVar }}
+            title={VERIFIED_TITLE}
+          />
+        )}
+      </span>
+
+      
+    </button>
+  );
+}
+
+export { ActivityGridCard };
 
 interface AiSuggestionButtonProps {
   query: string;

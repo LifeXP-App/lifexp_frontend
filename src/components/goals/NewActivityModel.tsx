@@ -1,8 +1,13 @@
 import ActivitySelectButton, {
+  ActivityGridCard,
   AiSuggestionButton,
 } from "@/src/components/goals/ActivityResult";
 import { ActivitiesService } from "@/src/lib/services/activities";
-import { ActivityType } from "@/src/lib/types/activityMeta";
+import { ACTIVITY_META, ActivityType } from "@/src/lib/types/activityMeta";
+import {
+  ArrowsPointingInIcon,
+  ArrowsPointingOutIcon,
+} from "@heroicons/react/24/outline";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -12,6 +17,7 @@ interface Activity {
   pk?: number;
   name: string;
   type: ActivityType;
+  emoji?: string;
   total_xp?: number;
   xp_distribution?: Record<string, number>;
   verified?: boolean;
@@ -59,6 +65,9 @@ interface NewActivityModalProps {
 }
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
+// Maximized view shows a denser 6-col grid — load more per page (and per
+// scroll-triggered page) than the normal row list's server defaults.
+const MAXIMIZED_PAGE_SIZE = 25;
 
 const mapActivity = (activity: ApiActivity): Activity => ({
   id: String(activity.uid ?? activity.id),
@@ -66,6 +75,7 @@ const mapActivity = (activity: ApiActivity): Activity => ({
   pk: activity.id,
   name: activity.name,
   type: activity.activity_type,
+  emoji: activity.emoji,
   total_xp: activity.total_xp,
   xp_distribution: activity.xp_distribution,
   verified: activity.verified,
@@ -115,18 +125,39 @@ export default function NewActivityModal({
 }: NewActivityModalProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
+  const [isMaximized, setIsMaximized] = useState(false);
+  // Aspect-type filter pills — only surfaced (and usable) in the maximized
+  // layout. "all" mirrors sending no `type` param at all.
+  const [activeType, setActiveType] = useState<ActivityType | "all">("all");
 
-  // The default (non-search) first page is cached per-goal, so switching
-  // between goals in the picker (it stays mounted as one instance while
-  // `goalUid` changes) shows that goal's own last-fetched list instantly
-  // instead of flashing the previously selected goal's list for a moment.
-  const defaultListKey = ["activities", "picker", goalUid ?? "none"];
+  // Don't carry the maximized size over to the next time this modal opens.
+  useEffect(() => {
+    if (!isOpen) {
+      setIsMaximized(false);
+      setActiveType("all");
+    }
+  }, [isOpen]);
+
+  // The default (non-search) first page is cached per-goal+type+size, so
+  // switching between goals in the picker (it stays mounted as one instance
+  // while `goalUid` changes) shows that goal's own last-fetched list
+  // instantly instead of flashing the previously selected goal's list for a
+  // moment.
+  const defaultListKey = [
+    "activities",
+    "picker",
+    goalUid ?? "none",
+    activeType,
+    isMaximized ? MAXIMIZED_PAGE_SIZE : "default",
+  ];
 
   const { data: defaultFirstPage, isFetching: defaultListFetching } = useQuery({
     queryKey: defaultListKey,
     queryFn: async () => {
       const params = new URLSearchParams({ page: "1" });
       if (goalUid) params.set("goal", goalUid);
+      if (activeType !== "all") params.set("type", activeType);
+      if (isMaximized) params.set("page_size", String(MAXIMIZED_PAGE_SIZE));
 
       const res = await fetch(
         `${baseUrl}/api/v1/activities/?${params.toString()}`,
@@ -244,6 +275,8 @@ export default function NewActivityModal({
       try {
         const params = new URLSearchParams({ page: String(pageNumber) });
         if (goalUid) params.set("goal", goalUid);
+        if (activeType !== "all") params.set("type", activeType);
+        if (isMaximized) params.set("page_size", String(MAXIMIZED_PAGE_SIZE));
 
         const res = await fetch(
           `${baseUrl}/api/v1/activities/?${params.toString()}`,
@@ -269,7 +302,7 @@ export default function NewActivityModal({
         }
       }
     },
-    [goalUid],
+    [goalUid, activeType, isMaximized],
   );
 
   const searchActivities = useCallback(
@@ -284,6 +317,8 @@ export default function NewActivityModal({
           q: query,
           page: String(pageNumber),
         });
+        if (activeType !== "all") params.set("type", activeType);
+        if (isMaximized) params.set("limit", String(MAXIMIZED_PAGE_SIZE));
         const res = await fetch(
           `${baseUrl}/api/v1/search/activities/?${params.toString()}`,
         );
@@ -316,7 +351,7 @@ export default function NewActivityModal({
         }
       }
     },
-    [],
+    [activeType, isMaximized],
   );
 
   // Clear the highlighted selection whenever the modal closes or the query
@@ -352,6 +387,23 @@ export default function NewActivityModal({
 
     return () => window.clearTimeout(timeout);
   }, [searchQuery, isOpen, searchActivities]);
+
+  // Switching the aspect-type pill, or toggling maximize (which changes the
+  // page size), re-runs whichever list is active: for a search, re-query
+  // with the new params; for the default list, just reset local pagination —
+  // the cached query above (keyed on both) supplies page 1.
+  useEffect(() => {
+    if (!isOpen) return;
+    const query = searchQuery.trim();
+    if (query) {
+      searchActivities(query, 1);
+    } else {
+      setExtraPages([]);
+      setPage(1);
+      setHasMore(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeType, isMaximized]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -419,17 +471,34 @@ export default function NewActivityModal({
         onClick={onClose}
       >
         <div
-          className="bg-gray-100 dark:bg-dark-1 dark:border dark:border-[var(--border)] rounded-3xl shadow-2xl w-full max-w-lg h-[78vh] max-h-[720px] overflow-hidden flex flex-col"
+          className={`bg-gray-100 dark:bg-dark-1 dark:border dark:border-[var(--border)] rounded-3xl shadow-2xl w-full overflow-hidden flex flex-col transition-all duration-200 ${
+            isMaximized
+              ? "max-w-4xl h-[92vh] max-h-[92vh]"
+              : "max-w-lg h-[78vh] max-h-[720px]"
+          }`}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
           <div
-            className="flex bg-white dark:bg-[var(--dark-2)] items-center  px-5 pt-5 pb-4 border-b"
+            className="flex bg-white dark:bg-[var(--dark-2)] items-center justify-between px-5 pt-5 pb-4 border-b"
             style={{ borderColor: "var(--border)" }}
           >
             <h2 className="text-xl font-bold text-foreground dark:text-[var(--foreground)]">
               Pick Activity
             </h2>
+            <button
+              type="button"
+              onClick={() => setIsMaximized((prev) => !prev)}
+              aria-label={isMaximized ? "Minimize" : "Maximize"}
+              title={isMaximized ? "Minimize" : "Maximize"}
+              className="hidden md:block p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:text-[var(--muted)] dark:hover:text-[var(--foreground)] hover:bg-gray-100 dark:hover:bg-[var(--dark-1)] transition-colors cursor-pointer"
+            >
+              {isMaximized ? (
+                <ArrowsPointingInIcon className="w-5 h-5" />
+              ) : (
+                <ArrowsPointingOutIcon className="w-5 h-5" />
+              )}
+            </button>
           </div>
 
           {/* Search */}
@@ -460,6 +529,43 @@ export default function NewActivityModal({
                 />
               </div>
             </div>
+
+            {/* Aspect-type tab pills — maximized view only */}
+            {isMaximized && (
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveType("all")}
+                  className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-colors cursor-pointer ${
+                    activeType === "all"
+                      ? "text-white"
+                      : "bg-gray-200 dark:bg-[var(--dark-2)] text-gray-700 dark:text-[var(--muted)] hover:bg-gray-300 dark:hover:bg-[var(--dark-3)]"
+                  }`}
+                  style={activeType === "all" ? { backgroundColor: "var(--rookie-primary)" } : undefined}
+                >
+                  All
+                </button>
+                {(Object.keys(ACTIVITY_META) as ActivityType[]).map((type) => {
+                  const meta = ACTIVITY_META[type];
+                  const isActive = activeType === type;
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setActiveType(type)}
+                      className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-colors cursor-pointer ${
+                        isActive
+                          ? "text-white"
+                          : "bg-gray-200 dark:bg-[var(--dark-2)] text-gray-700 dark:text-[var(--muted)] hover:bg-gray-300 dark:hover:bg-[var(--dark-3)]"
+                      }`}
+                      style={isActive ? { backgroundColor: "var(--rookie-primary)" } : undefined}
+                    >
+                      {meta.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Content */}
@@ -472,18 +578,27 @@ export default function NewActivityModal({
                 {sectionTitle}
               </h3>
 
-              <div className="space-y-2">
-                {filteredActivities.map((activity) => (
-                  <ActivitySelectButton
-                    key={activity.id}
-                    activity={activity}
-                    onSelect={setSelectedActivity}
-                    isSelected={selectedActivity?.id === activity.id}
-                  />
-                ))}
+              <div className={isMaximized ? "grid grid-cols-6 gap-2" : "space-y-2"}>
+                {filteredActivities.map((activity) =>
+                  isMaximized ? (
+                    <ActivityGridCard
+                      key={activity.id}
+                      activity={activity}
+                      onSelect={setSelectedActivity}
+                      isSelected={selectedActivity?.id === activity.id}
+                    />
+                  ) : (
+                    <ActivitySelectButton
+                      key={activity.id}
+                      activity={activity}
+                      onSelect={setSelectedActivity}
+                      isSelected={selectedActivity?.id === activity.id}
+                    />
+                  ),
+                )}
 
                 {creating ? (
-                  <div className="w-full flex items-center gap-3 p-3.5 rounded-2xl bg-blue-600/10 border border-blue-500/25">
+                  <div className={`w-full flex items-center gap-3 p-3.5 rounded-2xl bg-blue-600/10 border border-blue-500/25 ${isMaximized ? "col-span-6" : ""}`}>
                     <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-blue-500/15">
                       <span className="block w-5 h-5 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
                     </div>
@@ -497,14 +612,16 @@ export default function NewActivityModal({
                     </div>
                   </div>
                 ) : shouldShowAiSuggestion ? (
-                  <AiSuggestionButton
-                    query={searchQuery}
-                    onSelect={handleCreateCustom}
-                  />
+                  <div className={isMaximized ? "col-span-6" : ""}>
+                    <AiSuggestionButton
+                      query={searchQuery}
+                      onSelect={handleCreateCustom}
+                    />
+                  </div>
                 ) : null}
 
                 {suggestions && suggestions.length > 0 && (
-                  <div className="w-full p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 space-y-2">
+                  <div className={`w-full p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 space-y-2 ${isMaximized ? "col-span-6" : ""}`}>
                     <p className="text-xs font-medium text-amber-700 dark:text-amber-300">
                       {creationError ?? "That name is a bit complex."} Try one
                       of these instead:
@@ -528,30 +645,45 @@ export default function NewActivityModal({
                 )}
 
                 {creationError && !(suggestions && suggestions.length > 0) && (
-                  <p className="text-sm text-red-500 px-1">{creationError}</p>
+                  <p className={`text-sm text-red-500 px-1 ${isMaximized ? "col-span-6" : ""}`}>{creationError}</p>
                 )}
 
                 {isLoadingList && (hasMore || page === 1) && (
-                  <div className="space-y-2 animate-pulse">
-                    {[1, 2, 3, 4].map((i) => (
-                      <div
-                        key={i}
-                        className="flex items-center gap-3 px-3 py-3 bg-white dark:bg-dark-1 rounded-xl border border-gray-200 dark:border-[var(--border)]"
-                      >
-                        {/* Emoji circle */}
-                        <div className="w-10 h-10 rounded-full bg-gray-300 dark:bg-[var(--dark-2)]" />
-
-                        {/* Text area */}
-                        <div className="flex-1 space-y-2">
-                          <div className="h-4 w-40 bg-gray-300 dark:bg-[var(--dark-2)] rounded" />
-                          <div className="h-3 w-24 bg-gray-200 dark:bg-[var(--dark-2)] rounded" />
+                  isMaximized ? (
+                    <div className="col-span-6 grid grid-cols-6 gap-2 animate-pulse">
+                      {[1, 2, 3, 4, 5, 6].map((i) => (
+                        <div
+                          key={i}
+                          className="flex flex-col items-center gap-4 p-4 bg-white dark:bg-dark-2 rounded-2xl border border-gray-200 dark:border-[var(--border)]"
+                        >
+                          <div className="h-4 w-10 bg-gray-200 dark:bg-[var(--dark-3)] rounded-full" />
+                          <div className="w-10 h-10 rounded-full bg-gray-300 dark:bg-[var(--dark-3)]" />
+                          <div className="h-3 w-16 bg-gray-300 dark:bg-[var(--dark-3)] rounded" />
                         </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-2 animate-pulse">
+                      {[1, 2, 3, 4].map((i) => (
+                        <div
+                          key={i}
+                          className="flex items-center gap-3 px-3 py-3 bg-white dark:bg-dark-1 rounded-xl border border-gray-200 dark:border-[var(--border)]"
+                        >
+                          {/* Emoji circle */}
+                          <div className="w-10 h-10 rounded-full bg-gray-300 dark:bg-[var(--dark-2)]" />
 
-                        {/* XP badge placeholder */}
-                        <div className="w-12 h-6 bg-gray-300 dark:bg-[var(--dark-2)] rounded-full" />
-                      </div>
-                    ))}
-                  </div>
+                          {/* Text area */}
+                          <div className="flex-1 space-y-2">
+                            <div className="h-4 w-40 bg-gray-300 dark:bg-[var(--dark-2)] rounded" />
+                            <div className="h-3 w-24 bg-gray-200 dark:bg-[var(--dark-2)] rounded" />
+                          </div>
+
+                          {/* XP badge placeholder */}
+                          <div className="w-12 h-6 bg-gray-300 dark:bg-[var(--dark-2)] rounded-full" />
+                        </div>
+                      ))}
+                    </div>
+                  )
                 )}
               </div>
             </div>
