@@ -1377,6 +1377,8 @@ useEffect(() => {
 
   const activityType = session?.activityType;
   const isBreak = pomodoroPhase === "break";
+  const displayGoalTitle =
+    goalData.title.length > 24 ? `${goalData.title.slice(0, 24)}...` : goalData.title;
   const categoryColor = isBreak
     ? "var(--rookie-primary)"
     : activityType && activityTypeColors[activityType]
@@ -1461,8 +1463,8 @@ useEffect(() => {
       <div className="relative z-10 h-full flex flex-col items-center justify-around py-8 px-6 md:py-20">
         {/* Goal info */}
         <div className="flex items-center gap-3 mb-4 md:mb-8">
-          <h1 className="text-2xl md:text-5xl text-center text-white/40">
-            {isBreak ? "Take some rest" : goalData.title}
+          <h1 className="text-4xl md:text-5xl text-center text-white/40">
+            {isBreak ? "Take some rest" : displayGoalTitle}
           </h1>
         </div>
         <div className="flex flex-col items-center gap-4 mb-6 md:mb-12">

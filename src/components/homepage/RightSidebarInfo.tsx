@@ -4,8 +4,23 @@ import { FireIcon, InformationCircleIcon } from "@heroicons/react/24/solid";
 import { LiveAvatar } from "@/src/components/LiveAvatar";
 import { usePopup } from "@/src/context/PopupContext";
 import { useQuery } from "@tanstack/react-query";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+
+const NewActivityModal = dynamic(
+  () => import("@/src/components/goals/NewActivityModel"),
+);
+
+// Mirrors NewActivityModal's own Activity shape — kept local since this file
+// only needs it to build the session-start URL, not the modal's full picker state.
+type PickedActivity = {
+  id: string;
+  uid?: string;
+  xp_distribution?: Record<string, number>;
+};
 
 type TodayGoal = {
   uid: string;
@@ -38,6 +53,7 @@ type RightSidebarInfoProps = {
 
 export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
   const { openMasteryPopup } = usePopup();
+  const router = useRouter();
 
   const { data: todayGoals = [] } = useQuery({
     queryKey: ["today-goals", user.username],
@@ -49,6 +65,48 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
     staleTime: 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
+
+  const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
+  const [activityPickerGoalUid, setActivityPickerGoalUid] = useState<string | null>(null);
+
+  const handleOpenActivityPicker = (goalUid: string) => {
+    setActivityPickerGoalUid(goalUid);
+    setIsActivityModalOpen(true);
+  };
+
+  const handleSelectActivity = (activity: PickedActivity) => {
+    setIsActivityModalOpen(false);
+    if (!activityPickerGoalUid) return;
+
+    // Django's session register resolves activities by uid, so never send
+    // the integer pk — a pk-only reference 400s the register.
+    const activityRef = activity.uid ?? activity.id;
+
+    const dist = activity.xp_distribution ?? {};
+    const SECONDS_PER_HOUR = 3600;
+    const aspects = ["physique", "energy", "logic", "creativity", "social"] as const;
+    const totalXp = aspects.reduce((s, k) => s + (dist[k] ?? 0), 0);
+    const rates =
+      totalXp > 0
+        ? aspects.reduce((acc, k) => {
+            acc[k] = Math.round(((dist[k] ?? 0) / SECONDS_PER_HOUR) * 10000) / 10000;
+            return acc;
+          }, {} as Record<string, number>)
+        : {};
+    const ratesParam =
+      Object.keys(rates).length > 0
+        ? `&rates=${encodeURIComponent(JSON.stringify(rates))}`
+        : "";
+
+    router.push(`/goals/${activityPickerGoalUid}/session/new?activity=${activityRef}${ratesParam}`);
+  };
+
+  const handleGenerateNewActivity = (query: string) => {
+    setIsActivityModalOpen(false);
+    if (activityPickerGoalUid) {
+      router.push(`/goals/${activityPickerGoalUid}?q=${encodeURIComponent(query)}`);
+    }
+  };
 
   return (
     <aside className="w-full hidden md:block ">
@@ -165,19 +223,17 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
           </div>
 
           <div className="flex flex-col gap-2">
-            {todayGoals.map((goal) => (
-              <Link
-                key={goal.uid}
-                href={`/goals/${goal.uid}`}
-                className={`flex items-center gap-3 cursor-pointer hover:bg-gray-100 dark:bg-dark-3 dark:bg-opacity-50 rounded-md p-3 ${
-                  goal.completed ? "opacity-50" : ""
-                }`}
-              >
-                <span className="text-2xl shrink-0">{goal.emoji || "🎯"}</span>
-                <p className="text-sm font-medium truncate flex-1">
-                  {goal.title || "Untitled goal"}
-                </p>
-                {goal.completed ? (
+            {todayGoals.map((goal) =>
+              goal.completed ? (
+                <Link
+                  key={goal.uid}
+                  href={`/goals/${goal.uid}`}
+                  className="flex items-center gap-3 cursor-pointer hover:bg-gray-100 dark:bg-dark-3 dark:bg-opacity-50 rounded-md p-3 opacity-50"
+                >
+                  <span className="text-2xl shrink-0">{goal.emoji || "🎯"}</span>
+                  <p className="text-sm font-medium truncate flex-1">
+                    {goal.title || "Untitled goal"}
+                  </p>
                   <span
                     className="h-5 w-5 shrink-0 rounded-full flex items-center justify-center"
                     style={{ backgroundColor: "var(--rookie-primary)" }}
@@ -194,14 +250,33 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
                       <path d="M20 6 9 17l-5-5" />
                     </svg>
                   </span>
-                ) : (
+                </Link>
+              ) : (
+                <button
+                  key={goal.uid}
+                  type="button"
+                  onClick={() => handleOpenActivityPicker(goal.uid)}
+                  className="flex items-center gap-3 cursor-pointer hover:bg-gray-100 dark:bg-dark-3 dark:bg-opacity-50 rounded-md p-3 text-left w-full"
+                >
+                  <span className="text-2xl shrink-0">{goal.emoji || "🎯"}</span>
+                  <p className="text-sm font-medium truncate flex-1">
+                    {goal.title || "Untitled goal"}
+                  </p>
                   <span className="h-5 w-5 shrink-0 rounded-full border-2 border-gray-300 dark:border-[var(--border)]" />
-                )}
-              </Link>
-            ))}
+                </button>
+              ),
+            )}
           </div>
         </div>
       )}
+
+      <NewActivityModal
+        isOpen={isActivityModalOpen}
+        onClose={() => setIsActivityModalOpen(false)}
+        onSelectActivity={handleSelectActivity}
+        onGenerateNew={handleGenerateNewActivity}
+        goalUid={activityPickerGoalUid}
+      />
 
       {/* <div
         id="next-level-tab"
