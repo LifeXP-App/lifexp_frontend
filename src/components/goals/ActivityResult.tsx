@@ -5,6 +5,15 @@ import { ACTIVITY_META, ActivityType } from "@/src/lib/types/activityMeta";
 const VERIFIED_TITLE =
   "Verified Activities have reliable XP distributions reviewed and approved by the developers and the community";
 
+const GRID_CARD_NAME_MAX_CHARS = 12;
+const GRID_CARD_NAME_TRUNCATE_AT = 9;
+
+function truncateGridCardName(name: string): string {
+  return name.length > GRID_CARD_NAME_MAX_CHARS
+    ? `${name.slice(0, GRID_CARD_NAME_TRUNCATE_AT)}...`
+    : name;
+}
+
 interface Activity {
   id: string;
   uid?: string;
@@ -146,13 +155,13 @@ function ActivityGridCard({
           //   color: meta.cssColorVar,
           // }}
         >
-          {activity.total_xp}/hr
+          {activity.total_xp} XP/hr
         </span>
       )}
       <span className="text-4xl">{activity.emoji || meta.icon}</span>
 
-      <span style={{ color: meta.cssColorVar }} className="text-[14px] font-bold tracking-tight text-center line-clamp-2 text-foreground dark:text-[var(--foreground)] flex items-center gap-1">
-        {activity.name}
+      <span style={{ color: meta.cssColorVar }} className="text-[14px] font-bold tracking-tight text-center whitespace-nowrap text-foreground dark:text-[var(--foreground)] flex items-center gap-1">
+        {truncateGridCardName(activity.name)}
         {activity.verified && (
           <CheckBadgeIcon
             className="w-3.5 h-3.5 shrink-0"

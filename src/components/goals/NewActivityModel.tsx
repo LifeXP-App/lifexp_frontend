@@ -9,6 +9,7 @@ import {
   ArrowsPointingOutIcon,
 } from "@heroicons/react/24/outline";
 import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 interface Activity {
@@ -123,6 +124,7 @@ export default function NewActivityModal({
   onSelectActivity,
   goalUid,
 }: NewActivityModalProps) {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [isMaximized, setIsMaximized] = useState(false);
@@ -690,13 +692,27 @@ export default function NewActivityModal({
           </div>
 
           {/* Bottom Buttons */}
-          <div className="p-5 pt-3 grid grid-cols-2 gap-3 border-t bg-white dark:bg-[var(--dark-1)] border-gray-200 dark:border-[var(--border)]">
+          <div
+            className={`p-5 pt-3 grid gap-3 border-t bg-white dark:bg-[var(--dark-1)] border-gray-200 dark:border-[var(--border)] ${
+              isMaximized ? "grid-cols-3" : "grid-cols-2"
+            }`}
+          >
             <button
               onClick={onClose}
               className="py-3 px-4 rounded-xl font-medium active:opacity-80  text-white bg-gray-600 dark:bg-[var(--dark-3)] hover:bg-gray-700 dark:hover:bg-[var(--dark-3)] transition-all cursor-pointer "
             >
               Close
             </button>
+
+            {isMaximized && (
+              <button
+                onClick={() => selectedActivity?.uid && router.push(`/a/${selectedActivity.uid}`)}
+                disabled={!selectedActivity?.uid}
+                className="py-3 px-4 rounded-xl font-medium active:opacity-80 text-white bg-gray-600 dark:bg-[var(--dark-3)] hover:bg-gray-700 dark:hover:bg-[var(--dark-3)] transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                View Activity
+              </button>
+            )}
 
             <button
               onClick={() => selectedActivity && onSelectActivity(selectedActivity)}
