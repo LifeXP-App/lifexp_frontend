@@ -9,6 +9,7 @@ import { getResponseError } from "@/src/lib/api/responseError";
 import { GoalsService } from "@/src/lib/services/goals";
 import {
   BoltIcon,
+  ChevronLeftIcon,
   ChevronUpIcon,
   PauseIcon,
   PlayIcon,
@@ -1415,6 +1416,14 @@ useEffect(() => {
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-[120px] opacity-20"
         style={{ backgroundColor: categoryColor }}
       />
+
+      <button
+        onClick={() => router.back()}
+        aria-label="Go back"
+        className="absolute left-5 top-5 z-30 flex h-10 w-10 items-center justify-center rounded-full bg-gray-900/90 text-white/80 border border-white/10 backdrop-blur hover:text-white transition-colors cursor-pointer"
+      >
+        <ChevronLeftIcon className="w-5 h-5" />
+      </button>
 
       {allSpectators.length > 0 && (
         <aside

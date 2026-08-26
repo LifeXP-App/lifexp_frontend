@@ -351,28 +351,28 @@ function SessionPostComponent({ session }: { session: ApiSessionPost }) {
 
         {/* ACTION BAR */}
         <div className="flex items-center mt-6 gap-6 justify-between px-1">
-          <div
-            className="flex items-center gap-2 cursor-pointer"
+          <button
+            type="button"
             onClick={handleNudge}
+            disabled={nudging}
+            className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold border transition-all cursor-pointer active:scale-95 disabled:cursor-default disabled:opacity-70 ${
+              hasNudged
+                ? "hover:brightness-95 dark:hover:brightness-125"
+                : "bg-gray-100 border-gray-200 text-gray-600 hover:bg-gray-200 dark:bg-dark-3 dark:border-[var(--border)] dark:text-[var(--muted)] dark:hover:bg-dark-3/70"
+            }`}
+            style={
+              hasNudged
+                ? {
+                    color: `var(--aspect-${activity.type.toLowerCase()})`,
+                    backgroundColor: `rgba(var(--aspect-${activity.type.toLowerCase()}-rgb), 0.15)`,
+                    borderColor: `rgba(var(--aspect-${activity.type.toLowerCase()}-rgb), 0.35)`,
+                  }
+                : undefined
+            }
           >
-            <span
-              className="text-md font-medium transition-all border-2 rounded-md px-2 py-1"
-              style={
-                hasNudged
-                  ? {
-                      color: `var(--aspect-${activity.type.toLowerCase()})`,
-                      borderColor: `var(--aspect-${activity.type.toLowerCase()})`,
-                      backgroundColor: `color-mix(in srgb, var(--aspect-${activity.type.toLowerCase()}) 12%, transparent)`,
-                    }
-                  : {
-                      color: "rgb(100 100 100)",
-                      borderColor: "rgb(100 100 100)",
-                    }
-              }
-            >
-              <b>👋 {nudgeCount}</b>&nbsp; {hasNudged ? "Nudged" : "Nudge"}
-            </span>
-          </div>
+            <span className="text-base leading-none">👋</span>
+            <span>{nudgeCount}</span>
+          </button>
 
           <div
             className="flex items-center gap-2 cursor-pointer"

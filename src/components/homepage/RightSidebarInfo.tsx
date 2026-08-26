@@ -151,7 +151,7 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
 
         {/* STATS */}
         <div className="mt-4 flex justify-between text-sm">
-          <Stat label="Life Level" value={user.lifelevel} />
+          <Stat label="Level" value={user.lifelevel} />
           <Stat label="Posts" value={user.posts} />
           <Stat label="Followers" value={user.followers} />
           <Stat label="Following" value={user.following} />
@@ -159,7 +159,8 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
 
         {/* XP BAR */}
         <div
-          className="w-full relative rounded-full h-4 my-4 ml-1 overflow-hidden"
+          title={`${user.totalXp} / ${user.nextLevelXp} XP`}
+          className="w-full relative rounded-full cursor-pointer h-6 my-4 ml-1 overflow-hidden"
           style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
         >
           <div
@@ -170,7 +171,7 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
             }}
           />
           <p className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-white">
-            {user.totalXp} / {user.nextLevelXp}
+            Level {user.lifelevel} ({user.totalXp} XP)
           </p>
         </div>
 
