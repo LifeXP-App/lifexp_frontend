@@ -668,6 +668,21 @@ export default function GoalsPage() {
     setIsModalOpen(false);
     setEditingGoal(null);
 
+    // Optimistic update — show the edited title/description/date on the
+    // card immediately instead of waiting on the PATCH + refetch.
+    queryClient.setQueryData<GoalPost[]>(["goals"], (prev = []) =>
+      prev.map((g) =>
+        g.uid === goalId
+          ? {
+              ...g,
+              title: data.title,
+              description: data.description,
+              ...(data.finishBy ? { finish_by: data.finishBy } : {}),
+            }
+          : g
+      )
+    );
+
     try {
       await GoalsService.updateGoal(goalId, {
         title: data.title,
@@ -679,6 +694,8 @@ export default function GoalsPage() {
     } catch (error) {
       console.error("Failed to update goal:", error);
       toast.error("Failed to update goal. Please try again.");
+
+      // Revert optimistic update on error
       queryClient.invalidateQueries({ queryKey: ["goals"] });
     }
   };
@@ -944,7 +961,7 @@ export default function GoalsPage() {
                   <GoalsSectionSkeleton count={2} />
                 </>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-4 animate-content-in">
                   {ongoingGoals.map((goal, index) => (
                     <GoalCard
                       key={goal.id}
@@ -989,7 +1006,7 @@ export default function GoalsPage() {
                   <GoalsSectionSkeleton count={2} />
                 </>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-4 animate-content-in">
                   {plannedGoals.map((goal, index) => (
                     <GoalCard
                       key={goal.id}
@@ -1044,7 +1061,7 @@ export default function GoalsPage() {
                   <GoalsSectionSkeleton count={2} />
                 </>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-4 animate-content-in">
                   {completedGoals.map((goal) => (
                     <GoalCard
                       key={goal.id}
@@ -1085,7 +1102,7 @@ export default function GoalsPage() {
                   <GoalsSectionSkeleton count={1} />
                 </>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-4 animate-content-in">
                   {pausedGoals.map((goal) => (
                     <GoalCard
                       key={goal.id}
@@ -1128,7 +1145,7 @@ export default function GoalsPage() {
                   <GoalsSectionSkeleton count={1} />
                 </>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-4 animate-content-in">
                   {abandonedGoals.map((goal) => (
                     <GoalCard
                       key={goal.id}

@@ -166,6 +166,35 @@ body {
 .animate-backdrop-in { animation: toast-backdrop-in 0.18s ease-out; }
 .animate-dialog-in { animation: toast-dialog-in 0.22s cubic-bezier(0.16, 1, 0.3, 1); }
 
+/* Skeleton -> real content swap: a quick fade-in instead of an instant pop,
+   same easing as the toast/dialog entrances above. */
+@keyframes content-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-content-in { animation: content-in 0.18s cubic-bezier(0.16, 1, 0.3, 1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-content-in {
+    animation: none;
+  }
+}
+
+/* Streak-revived reveal: the count briefly overshoots as it lands on its
+   new value, echoing the "+1" tick without a separate label. */
+@keyframes streak-count-pulse {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+.animate-streak-pulse { animation: streak-count-pulse 1.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-streak-pulse {
+    animation: none;
+  }
+}
+
 .tour-card {
   transition: opacity 180ms cubic-bezier(0.23, 1, 0.32, 1);
 }
@@ -213,6 +242,29 @@ body {
 svg:focus,
 svg:focus-visible {
   outline: none !important;
+}
+
+/* Global tap/press feedback for anything already marked clickable in this
+   app (the existing "cursor-pointer" convention). Declared via @utility so it
+   lives in the same cascade layer as Tailwind's own utilities - an element
+   that already sets its own custom active state class keeps that instead of
+   this, decided by normal class-order rules within that layer, same as any
+   other Tailwind utility conflict. */
+@utility cursor-pointer {
+  cursor: pointer;
+  transition: transform 120ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  &:active {
+    transform: scale(0.97);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+
+    &:active {
+      transform: none;
+    }
+  }
 }
 
 

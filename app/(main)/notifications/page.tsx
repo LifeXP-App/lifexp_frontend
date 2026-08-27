@@ -128,7 +128,7 @@ export default function NotificationsPage() {
               <p className="text-sm opacity-70">You&apos;re all caught up</p>
             </div>
           ) : (
-            <ul className="divide-y divide-gray-100 dark:divide-[var(--border)]">
+            <ul className="divide-y divide-gray-100 dark:divide-[var(--border)] animate-content-in">
               {notifications.map((n) => (
                 <li key={n.id}>
                   <Link

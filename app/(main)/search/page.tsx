@@ -345,7 +345,10 @@ export default function SearchPage() {
 
       {/* Pre-search: discover posts grid only */}
       {!query && (
-        <div className="grid grid-cols-3">
+        <div
+          key={postsRecentLoading ? "loading" : "loaded"}
+          className={`grid grid-cols-3 ${postsRecentLoading ? "" : "animate-content-in"}`}
+        >
           {postsRecentLoading
             ? Array.from({ length: MOBILE_DISCOVER_POSTS_LIMIT }, (_, i) => i).map((i) => (
                 <div

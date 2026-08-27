@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/src/context/AuthContext";
+import { useToast } from "@/src/context/ToastContext";
 import { supabase } from "@/src/lib/supabase";
 
 const DeleteAccountModal = dynamic(
@@ -70,6 +71,7 @@ function SkeletonValue() {
 export default function SettingsPage() {
   const { me, loading: authLoading, requestPasswordReset } = useAuth();
   const queryClient = useQueryClient();
+  const toast = useToast();
 
   const [changePasswordStatus, setChangePasswordStatus] = useState<
     "idle" | "sending" | "sent" | "error"
@@ -215,6 +217,8 @@ export default function SettingsPage() {
 
       if (!res.ok) {
         console.error("❌ Failed saving settings:", data);
+        toast.error("Failed to save settings. Please try again.");
+        setForm(initialForm);
         return;
       }
 
@@ -224,10 +228,12 @@ export default function SettingsPage() {
       queryClient.setQueryData(["settings"], payload);
     } catch (err) {
       console.error("❌ Failed saving settings:", err);
+      toast.error("Failed to save settings. Please try again.");
+      setForm(initialForm);
     } finally {
       setSaving(false);
     }
-  }, [initialForm, queryClient]);
+  }, [initialForm, queryClient, toast]);
 
   // ✅ unchanged check
   const isUnchanged = useMemo(() => {

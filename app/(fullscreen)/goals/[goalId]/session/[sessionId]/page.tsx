@@ -80,35 +80,121 @@ function normalizeRates(r: Record<string, unknown> | null | undefined): XpRates 
   };
 }
 
+// Bounded retry for transient failures (network error, timeouts, 5xx) on the
+// Django session-sync calls only. Never wraps a Convex mutation/query — a
+// standing Convex-side retry (a 5-minute cron that ran forever and never did
+// anything but log) is what burned through the Convex plan before; this is
+// strictly a client-side HTTP retry with a fixed, small attempt count.
+const SYNC_RETRY_DELAYS_MS = [500, 1500];
+
+async function fetchWithRetry(
+  attempt: () => Promise<Response>,
+): Promise<Response> {
+  let lastRes: Response | undefined;
+  for (let i = 0; i <= SYNC_RETRY_DELAYS_MS.length; i++) {
+    try {
+      lastRes = await attempt();
+    } catch {
+      // Network-level failure (offline, DNS, aborted) — treat like a
+      // retryable server error and fall through to the same backoff.
+      lastRes = undefined;
+    }
+    if (lastRes && (lastRes.ok || (lastRes.status < 500 && lastRes.status !== 0))) {
+      return lastRes;
+    }
+    if (i < SYNC_RETRY_DELAYS_MS.length) {
+      await new Promise((r) => setTimeout(r, SYNC_RETRY_DELAYS_MS[i]));
+    }
+  }
+  if (lastRes) return lastRes;
+  throw new Error("Network error while syncing session to Django");
+}
+
+// Registers the Convex session with Django. Used both at session-start and,
+// if the completion PUT ever 404s (meaning the start-time registration never
+// actually landed), as a one-shot repair immediately before retrying the
+// PUT — using data already present on the live Convex session doc, so this
+// never issues a new Convex call of its own.
+async function createDjangoSession(
+  sessionId: string,
+  goalIntId: number | null,
+  activityIdStr: string,
+  isEmptySession: boolean,
+) {
+  return fetchWithRetry(() =>
+    authedFetch("/api/sessions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        session_id: sessionId,
+        ...(isEmptySession ? {} : { goal: goalIntId }),
+        activity: activityIdStr,
+        device_platform: "web",
+      }),
+    }),
+  );
+}
+
 async function syncSessionToDjango(
   sessionId: string,
   stats: SessionFinalStats,
   completedReason: "manual" | "abandoned",
+  repairContext?: { goalIntId: number | null; activityIdStr: string; isEmptySession: boolean },
 ) {
   // Convex is the source of truth for session timing and XP (it tracks pauses,
   // breaks, and per-second accrual live — what the player actually watched
   // during the session); Django persists these numbers rather than
   // recomputing them from its own clock.
-  const res = await authedFetch(`/api/sessions/${sessionId}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      status: completedReason === "abandoned" ? "abandoned" : "completed",
-      ended_at: new Date(stats.endedAt).toISOString(),
-      total_duration_seconds: Math.floor(stats.totalDurationSeconds),
-      focused_duration_seconds: Math.floor(stats.focusedDurationSeconds),
-      // Django stores xp_* as integers; the Convex breakdown is fractional
-      // (rate × seconds), so round before sending.
-      xp_total: Math.round(stats.xpTotal),
-      xp_physique: Math.round(stats.xpBreakdown.physique),
-      xp_energy: Math.round(stats.xpBreakdown.energy),
-      xp_logic: Math.round(stats.xpBreakdown.logic),
-      xp_creativity: Math.round(stats.xpBreakdown.creativity),
-      xp_social: Math.round(stats.xpBreakdown.social),
-      completed_reason: completedReason,
-      device_platform: "web",
-    }),
+  const putBody = JSON.stringify({
+    status: completedReason === "abandoned" ? "abandoned" : "completed",
+    ended_at: new Date(stats.endedAt).toISOString(),
+    total_duration_seconds: Math.floor(stats.totalDurationSeconds),
+    focused_duration_seconds: Math.floor(stats.focusedDurationSeconds),
+    // Django stores xp_* as integers; the Convex breakdown is fractional
+    // (rate × seconds), so round before sending.
+    xp_total: Math.round(stats.xpTotal),
+    xp_physique: Math.round(stats.xpBreakdown.physique),
+    xp_energy: Math.round(stats.xpBreakdown.energy),
+    xp_logic: Math.round(stats.xpBreakdown.logic),
+    xp_creativity: Math.round(stats.xpBreakdown.creativity),
+    xp_social: Math.round(stats.xpBreakdown.social),
+    completed_reason: completedReason,
+    device_platform: "web",
   });
+
+  let res = await fetchWithRetry(() =>
+    authedFetch(`/api/sessions/${sessionId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: putBody,
+    }),
+  );
+
+  // 404 here means the start-time POST to Django never actually created the
+  // row (silently failed, e.g. a network blip that outlasted its own
+  // retries). Repair it once — using data already on the Convex session,
+  // no new Convex call — then retry the PUT exactly once more.
+  if (res.status === 404 && repairContext) {
+    console.warn(
+      `Session ${sessionId} was never registered with Django; attempting repair before giving up.`,
+    );
+    const createRes = await createDjangoSession(
+      sessionId,
+      repairContext.goalIntId,
+      repairContext.activityIdStr,
+      repairContext.isEmptySession,
+    );
+    if (createRes.ok) {
+      res = await fetchWithRetry(() =>
+        authedFetch(`/api/sessions/${sessionId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: putBody,
+        }),
+      );
+    }
+  }
+
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(
@@ -645,18 +731,11 @@ export default function SessionTimer({ params }: SessionTimerProps) {
         // Register the session with Django BEFORE navigating. This must be awaited:
         // router.replace below changes the route and can abort an in-flight
         // fire-and-forget request, leaving Django with no session record — which
-        // then makes completion (PUT) and reflection (GET) 404.
+        // then makes completion (PUT) and reflection (GET) 404. createDjangoSession
+        // retries transient failures a couple of times before giving up; if it
+        // still fails, syncSessionToDjango repairs it at completion time instead.
         try {
-          const res = await authedFetch("/api/sessions", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              session_id: id,
-              ...(isEmptySession ? {} : { goal: goalIntId }),
-              activity: activityIdStr,
-              device_platform: "web",
-            }),
-          });
+          const res = await createDjangoSession(id, goalIntId, activityIdStr, isEmptySession);
           if (res.ok) {
             const data = await res.json();
             const activityUid =
@@ -1058,7 +1137,11 @@ useEffect(() => {
           xpTotal: session.xpTotal,
           xpBreakdown: session.xpBreakdown,
         };
-        await syncSessionToDjango(sessionId, finalStats, "abandoned");
+        await syncSessionToDjango(sessionId, finalStats, "abandoned", {
+          goalIntId,
+          activityIdStr: session.activity_uid ?? session.activityId,
+          isEmptySession,
+        });
         await markSyncedMutation({ sessionId });
       } catch (err) {
         console.error("Failed to sync stale-abandoned session to Django:", err);
@@ -1082,6 +1165,7 @@ useEffect(() => {
     sessionSynced,
     isSyncing,
     goalId,
+    goalIntId,
     isEmptySession,
     router,
     markSyncedMutation,
@@ -1185,7 +1269,11 @@ useEffect(() => {
 
       if (!sessionSynced) {
         try {
-          await syncSessionToDjango(sessionId, finalStats, "manual");
+          await syncSessionToDjango(sessionId, finalStats, "manual", {
+            goalIntId,
+            activityIdStr: session?.activity_uid ?? session?.activityId ?? "",
+            isEmptySession,
+          });
           await markSyncedMutation({ sessionId });
           invalidateAfterSessionSync();
         } catch (err) {
@@ -1214,6 +1302,9 @@ useEffect(() => {
     isActive,
     isSyncing,
     sessionSynced,
+    session,
+    goalIntId,
+    isEmptySession,
     completeMutation,
     markSyncedMutation,
     invalidateAfterSessionSync,
@@ -1240,7 +1331,11 @@ useEffect(() => {
 
       if (!sessionSynced) {
         try {
-          await syncSessionToDjango(sessionId, finalStats, "abandoned");
+          await syncSessionToDjango(sessionId, finalStats, "abandoned", {
+            goalIntId,
+            activityIdStr: session?.activity_uid ?? session?.activityId ?? "",
+            isEmptySession,
+          });
           await markSyncedMutation({ sessionId });
           invalidateAfterSessionSync();
         } catch (err) {
@@ -1265,6 +1360,8 @@ useEffect(() => {
     isActive,
     isSyncing,
     sessionSynced,
+    session,
+    goalIntId,
     abandonMutation,
     markSyncedMutation,
     invalidateAfterSessionSync,
@@ -1420,7 +1517,7 @@ useEffect(() => {
       <button
         onClick={() => router.back()}
         aria-label="Go back"
-        className="absolute left-5 top-5 z-30 flex h-10 w-10 items-center justify-center rounded-full bg-gray-900/90 text-white/80 border border-white/10 backdrop-blur hover:text-white transition-colors cursor-pointer"
+        className="absolute left-5 top-5 z-30 flex h-10 w-10 items-center justify-center rounded-full bg-gray-900/40 text-white/80 border border-white/10 backdrop-blur-2xl hover:text-white hover:bg-gray-900/55 transition-colors cursor-pointer"
       >
         <ChevronLeftIcon className="w-5 h-5" />
       </button>
@@ -1600,7 +1697,7 @@ useEffect(() => {
                 onClick={() => handleAdjustTime(-60)}
                 disabled={isSyncing}
                 title="Subtract 60 seconds"
-                className="h-16 w-16 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-medium transition-colors cursor-pointer disabled:opacity-40"
+                className="h-16 w-16 rounded-full bg-gray-900/40 hover:bg-gray-900/55 backdrop-blur-2xl border border-white/10 text-white font-medium transition-colors cursor-pointer disabled:opacity-40"
               >
                 -60
               </button>
@@ -1609,7 +1706,7 @@ useEffect(() => {
                 onClick={() => handleAdjustTime(60)}
                 disabled={isSyncing}
                 title="Add 60 seconds"
-                className="h-16 w-16 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-medium transition-colors cursor-pointer disabled:opacity-40"
+                className="h-16 w-16 rounded-full bg-gray-900/40 hover:bg-gray-900/55 backdrop-blur-2xl border border-white/10 text-white font-medium transition-colors cursor-pointer disabled:opacity-40"
               >
                 +60
               </button>
@@ -1623,7 +1720,7 @@ useEffect(() => {
                 <button
                   onClick={handleSkipBreak}
                   disabled={isSyncing || isSkippingBreak}
-                  className="h-14 w-24 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-medium transition-colors cursor-pointer disabled:opacity-40"
+                  className="h-14 w-24 rounded-full bg-gray-900/40 hover:bg-gray-900/55 backdrop-blur-2xl border border-white/10 text-white font-medium transition-colors cursor-pointer disabled:opacity-40"
                 >
                   {isSkippingBreak ? "Skipping…" : "Skip"}
                 </button>
@@ -1645,7 +1742,7 @@ useEffect(() => {
                 <button
                   onClick={handleFinish}
                   disabled={isSyncing}
-                  className="px-6 h-14 w-24 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-medium transition-colors cursor-pointer disabled:opacity-40"
+                  className="px-6 h-14 w-24 rounded-full bg-gray-900/40 hover:bg-gray-900/55 backdrop-blur-2xl border border-white/10 text-white font-medium transition-colors cursor-pointer disabled:opacity-40"
                 >
                   {isSyncing ? "Saving…" : "Finish"}
                 </button>
@@ -1658,7 +1755,7 @@ useEffect(() => {
                 <button
                   onClick={handleDiscard}
                   disabled={isSyncing}
-                  className="h-14 w-24 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-medium transition-colors cursor-pointer disabled:opacity-40"
+                  className="h-14 w-24 rounded-full bg-gray-900/40 hover:bg-gray-900/55 backdrop-blur-2xl border border-white/10 text-white font-medium transition-colors cursor-pointer disabled:opacity-40"
                 >
                   Discard
                 </button>
@@ -1680,7 +1777,7 @@ useEffect(() => {
                 <button
                   onClick={handleFinish}
                   disabled={isSyncing}
-                  className="px-6 h-14 w-24 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-medium transition-colors cursor-pointer disabled:opacity-40"
+                  className="px-6 h-14 w-24 rounded-full bg-gray-900/40 hover:bg-gray-900/55 backdrop-blur-2xl border border-white/10 text-white font-medium transition-colors cursor-pointer disabled:opacity-40"
                 >
                   {isSyncing ? "Saving…" : "Finish"}
                 </button>

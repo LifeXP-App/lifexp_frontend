@@ -79,24 +79,3 @@ export const cleanupStaleSessions = internalMutation({
   },
 });
 
-export const retryDjangoSync = internalMutation({
-  handler: async (ctx) => {
-    const unsynced = await ctx.db
-      .query("sessions")
-      .withIndex("by_sync", (q) => q.eq("syncedToDjango", false))
-      .collect();
-
-    const completed = unsynced.filter((s) => s.status === "completed");
-
-    for (const session of completed) {
-      // TODO: Implement HTTP action to PUT completed payload to Django
-      // POST /api/v1/sessions/<session_id>/ with completion data
-      // On success:
-      //   await ctx.db.patch(session._id, {
-      //     syncedToDjango: true,
-      //     lastSyncedAt: Date.now(),
-      //   });
-      console.log(`[retryDjangoSync] Session ${session._id} needs sync to Django`);
-    }
-  },
-});

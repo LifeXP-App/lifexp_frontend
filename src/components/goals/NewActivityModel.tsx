@@ -469,11 +469,11 @@ export default function NewActivityModal({
   return (
     <>
       <div
-        className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4"
+        className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4 animate-backdrop-in"
         onClick={onClose}
       >
         <div
-          className={`bg-gray-100 dark:bg-dark-1 dark:border dark:border-[var(--border)] rounded-3xl shadow-2xl w-full overflow-hidden flex flex-col transition-all duration-200 ${
+          className={`bg-gray-100 dark:bg-dark-1 dark:border dark:border-[var(--border)] rounded-3xl shadow-2xl w-full overflow-hidden flex flex-col transition-all duration-200 animate-dialog-in ${
             isMaximized
               ? "max-w-4xl h-[92vh] max-h-[92vh]"
               : "max-w-lg h-[78vh] max-h-[720px]"

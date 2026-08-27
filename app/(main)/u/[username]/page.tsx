@@ -1334,7 +1334,7 @@ export default function ProfilePage({ params }: PageProps) {
                 <div className="relative h-48 sm:h-64 rounded-xl bg-gray-200 dark:bg-dark-3" />
               </div>
             ) : (
-              <div className="p-4 sm:p-6 my-4 bg-white dark:bg-dark-2 dark:border-[var(--border)] border-2 border-gray-200 rounded-2xl w-full">
+              <div className="p-4 sm:p-6 my-4 bg-white dark:bg-dark-2 dark:border-[var(--border)] border-2 border-gray-200 rounded-2xl w-full animate-content-in">
               <div className="flex justify-between items-center mb-4">
                 <span className="flex gap-3 items-center">
                   {profileUser.avatar ? (

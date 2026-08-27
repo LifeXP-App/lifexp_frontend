@@ -48,10 +48,29 @@ export function useSearchHistory(options: UseSearchHistoryOptions = {}) {
 
   const deleteItem = useCallback(
     async (id: number) => {
+      // Optimistic removal — restore the item (at its original position) if
+      // the request fails, instead of waiting on the round trip to hide it.
+      let removedItem: SearchHistoryItem | undefined;
+      let removedIndex = -1;
+      setHistory((prev) => {
+        removedIndex = prev.findIndex((item) => item.id === id);
+        if (removedIndex === -1) return prev;
+        removedItem = prev[removedIndex];
+        return prev.filter((item) => item.id !== id);
+      });
+
       try {
         await deleteSearchHistoryItem(id, accessToken);
-        setHistory((prev) => prev.filter((item) => item.id !== id));
       } catch (err: unknown) {
+        if (removedItem) {
+          const itemToRestore = removedItem;
+          const indexToRestore = removedIndex;
+          setHistory((prev) => {
+            const next = [...prev];
+            next.splice(indexToRestore, 0, itemToRestore);
+            return next;
+          });
+        }
         setError(getErrorMessage(err, "Failed to delete search history item"));
         throw err;
       }

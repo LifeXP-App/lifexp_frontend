@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Image from "next/image";
 import { useParams } from "next/navigation";
 import { Link } from 'lucide-react';
+import { FireIcon } from "@heroicons/react/24/solid";
 import posthog from "posthog-js";
 import { useQuery } from "convex/react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -37,6 +38,82 @@ interface ReflectionResponse {
     emoji: string
     type: string
   }
+  streak_revived: boolean
+  streak_count: number
+}
+
+// Mirrors the phrase bank used on the Flutter reflection screen
+// (lifexp_flutter/lib/features/session/screens/session_reflection_screen.dart)
+// so the streak-revived moment reads the same across clients.
+const STREAK_PHRASES = [
+  'Streaks are built one day at a time. See you tomorrow.',
+  "Don't break the chain. Show up again tomorrow.",
+  'One session down. Consistency is the whole game.',
+  'Discipline beats motivation. Come back and prove it.',
+  'Your streak is alive. Keep feeding it daily.',
+  "You showed up today, that's the habit forming.",
+  'Small reps, every day. Feel the streak inside you grow.',
+  "Momentum is real. Don't let it cool off.",
+  'This is how habits get built. One day, then the next.',
+  'The hardest part is showing up. You just did it again.',
+]
+
+// Celebratory chime + haptic for the streak-count-up moment (icon gray ->
+// orange, count pulsing to its new value). Synthesized via Web Audio instead
+// of a bundled asset, same approach as the session page's phase-end chime.
+function playStreakRevivedChime() {
+  if (typeof window === "undefined") return
+
+  try {
+    const AudioContextClass =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext?: typeof AudioContext })
+        .webkitAudioContext
+
+    if (!AudioContextClass) return
+
+    const ctx = new AudioContextClass()
+
+    function playNote(freq: number, start: number, duration: number, volume = 0.2) {
+      const tri = ctx.createOscillator()
+      tri.type = "triangle"
+      tri.frequency.value = freq
+
+      const sine = ctx.createOscillator()
+      sine.type = "sine"
+      sine.frequency.value = freq * 2
+
+      const gain = ctx.createGain()
+      gain.gain.setValueAtTime(0.0001, start)
+      gain.gain.exponentialRampToValueAtTime(volume, start + 0.015)
+      gain.gain.exponentialRampToValueAtTime(volume * 0.5, start + duration * 0.4)
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration)
+
+      tri.connect(gain)
+      sine.connect(gain)
+      gain.connect(ctx.destination)
+
+      tri.start(start)
+      sine.start(start)
+      tri.stop(start + duration)
+      sine.stop(start + duration)
+    }
+
+    const now = ctx.currentTime
+    // Rising triad landing on the octave — a quick "level up" flourish.
+    playNote(659.25, now, 0.16)          // E5
+    playNote(987.77, now + 0.09, 0.18)   // B5
+    playNote(1318.51, now + 0.18, 0.5)   // E6
+
+    setTimeout(() => ctx.close(), 1200)
+  } catch (err) {
+    console.error("Failed to play streak-revived chime:", err)
+  }
+}
+
+function vibrateStreakRevived() {
+  if (typeof navigator === "undefined" || !navigator.vibrate) return
+  navigator.vibrate([30, 40, 30, 40, 60])
 }
 
 
@@ -82,6 +159,41 @@ const DayCompletePage = () => {
 
   
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  // Shown in place of the normal reflection content when Done is first
+  // clicked, if this session is the one that revived the streak
+  // (reflection.streak_revived). Clicking Continue from there is what
+  // actually navigates home.
+  const [showingStreakRevived, setShowingStreakRevived] = useState(false);
+  // Starts false so the icon/count render in their "before" (gray, count-1)
+  // state for one frame, then flips true to trigger the transition to the
+  // "after" (orange, count) state once the screen has actually mounted.
+  const [streakAnimated, setStreakAnimated] = useState(false);
+  // The phrase fades in a beat after the icon/count flip so the two don't
+  // compete for attention.
+  const [showStreakPhrase, setShowStreakPhrase] = useState(false);
+  // Held back until the phrase has finished fading in, so Continue doesn't
+  // appear (and become clickable) while the reveal is still playing out.
+  const [showStreakButton, setShowStreakButton] = useState(false);
+  const streakPhraseRef = useRef(
+    STREAK_PHRASES[Math.floor(Math.random() * STREAK_PHRASES.length)]
+  );
+
+  useEffect(() => {
+    if (!showingStreakRevived) return;
+    const revealTimer = setTimeout(() => {
+      setStreakAnimated(true);
+      playStreakRevivedChime();
+      vibrateStreakRevived();
+    }, 1000);
+    const phraseTimer = setTimeout(() => setShowStreakPhrase(true), 2000);
+    const buttonTimer = setTimeout(() => setShowStreakButton(true), 2800);
+    return () => {
+      clearTimeout(revealTimer);
+      clearTimeout(phraseTimer);
+      clearTimeout(buttonTimer);
+    };
+  }, [showingStreakRevived]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -382,6 +494,85 @@ const DayCompletePage = () => {
   const totalDuration = formatDuration(reflection.total_duration_seconds)
   const focusedDuration = formatDuration(reflection.focused_duration_seconds)
 
+  const goHomeHref = isEmptySession ? "/goals" : `/goals/${goalId}`
+
+  const handleDoneClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (reflection.streak_revived && !showingStreakRevived) {
+      e.preventDefault()
+      setShowingStreakRevived(true)
+      return
+    }
+  }
+
+  if (showingStreakRevived) {
+    return (
+      <div
+        className="min-h-screen overflow-hidden w-full flex items-center justify-center"
+        style={{ backgroundColor: 'var(--background)' }}
+      >
+        <div className="w-full max-w-2xl min-h-[720px] rounded-3xl overflow-hidden flex flex-col animate-content-in">
+
+          <div className="flex-1 flex flex-col items-center justify-center px-6 py-10">
+
+            <div className="flex items-center gap-3 mb-10">
+              <FireIcon
+                className={`w-16 h-16 transition-colors ease-in-out ${
+                  streakAnimated ? "text-orange-500" : "text-gray-400"
+                }`}
+                style={{ transitionDuration: "1500ms" }}
+              />
+              <span
+                key={streakAnimated ? "after" : "before"}
+                className={`text-6xl font-extrabold ${streakAnimated ? "animate-streak-pulse" : ""}`}
+              >
+                {streakAnimated
+                  ? reflection.streak_count
+                  : Math.max(0, reflection.streak_count - 1)}
+              </span>
+            </div>
+
+            <h1 className="text-3xl font-bold mb-6 text-center">
+              Streak Revived!
+            </h1>
+
+            <p
+              className={`text-lg text-center text-gray-500 max-w-sm transition-opacity ease-out ${
+                showStreakPhrase ? "opacity-100" : "opacity-0"
+              }`}
+              style={{ transitionDuration: "800ms" }}
+            >
+              {streakPhraseRef.current}
+            </p>
+
+          </div>
+
+          {/* Continue Button */}
+
+          <div className="px-6 py-8">
+
+            <a
+              href={goHomeHref}
+              className={`w-full block transition-opacity ease-out ${
+                showStreakButton ? "opacity-100" : "opacity-0 pointer-events-none"
+              }`}
+              style={{ transitionDuration: "800ms" }}
+              aria-hidden={!showStreakButton}
+              tabIndex={showStreakButton ? undefined : -1}
+            >
+              <button
+                className="w-full py-4 cursor-pointer rounded-2xl font-semibold text-white text-lg active:opacity-75"
+                style={{ backgroundColor: activity.color }}
+              >
+                Continue
+              </button>
+            </a>
+
+          </div>
+
+        </div>
+      </div>
+    )
+  }
 
 
   return (
@@ -611,7 +802,7 @@ const DayCompletePage = () => {
 
           <div className="px-6 py-8">
 
-                <a href={isEmptySession ? "/goals" : `/goals/${goalId}`} >
+                <a href={goHomeHref} onClick={handleDoneClick}>
             <button
               className="w-full py-4 cursor-pointer rounded-2xl font-semibold text-white text-lg active:opacity-75"
               style={{ backgroundColor: activity.color }}
