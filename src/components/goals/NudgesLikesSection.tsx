@@ -102,7 +102,7 @@ export function NudgesLikesSection() {
 
         <div className="max-h-80 overflow-y-auto scrollbar-hide">
           <ul className="flex flex-col gap-4 h-16 p-2">
-            {interactions.map((i) => (
+            {interactions.slice(0, 3).map((i) => (
               <Link key={i.id} href={i.href}>
                 <li className="cursor-pointer">
                   <div className="flex gap-4">

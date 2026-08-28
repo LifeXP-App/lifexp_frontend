@@ -2,6 +2,7 @@
 
 import { CommentSection } from "@/src/components/homepage/CommentSection";
 import { LiveAvatar } from "@/src/components/LiveAvatar";
+import SessionInfoPopup from "@/src/components/goals/SessionInfoPopup";
 import { useToast } from "@/src/context/ToastContext";
 import { getResponseError } from "@/src/lib/api/responseError";
 import { supabase } from "@/src/lib/supabase";
@@ -101,6 +102,27 @@ function getTimeAgo(dateString: string): string {
   });
 }
 
+// Mirrors the goal detail page's SessionInfoPopup formatting
+// (app/(main)/goals/[goalId]/page.tsx) so the popup reads identically here.
+function formatPopupDuration(seconds: number | null): string {
+  if (!seconds) return "00:00:00";
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  return `${h > 0 ? h + ":" : ""}${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+}
+
+function formatPopupDate(dateString: string): string {
+  const date = new Date(dateString);
+  return date.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 function formatSessionTime(dateString: string): string {
   const date = new Date(dateString);
   const time = date.toLocaleTimeString(undefined, {
@@ -130,6 +152,7 @@ function SessionPostComponent({ session }: { session: ApiSessionPost }) {
   );
   const [nudging, setNudging] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [isSessionPopupOpen, setIsSessionPopupOpen] = useState(false);
 
   const handleShare = (uid: string) => {
     copyGoalLink(uid);
@@ -299,10 +322,13 @@ function SessionPostComponent({ session }: { session: ApiSessionPost }) {
 
       {/* SESSION BLOCK */}
       <div className="px-2 md:px-0">
-        <div className="flex gap-4 ">
+        <div
+          className="flex gap-4 cursor-pointer"
+          onClick={() => setIsSessionPopupOpen(true)}
+        >
           {/* 1:1 image or emoji placeholder */}
 
-          <Link href={goalHref} className="shrink-0">
+          <div className="shrink-0">
             {session.completion_picture ? (
               <Image
                 width={96}
@@ -319,7 +345,7 @@ function SessionPostComponent({ session }: { session: ApiSessionPost }) {
                 <span className="text-4xl">{activity.emoji}</span>
               </div>
             )}
-          </Link>
+          </div>
 
           {/* Middle info */}
           <div className="flex flex-col justify-between gap-1  w-full min-w-0">
@@ -330,11 +356,9 @@ function SessionPostComponent({ session }: { session: ApiSessionPost }) {
               {activity.name}
             </p>
 
-            <Link href={goalHref}>
-              <p className="text-sm font-semibold text-gray-500 dark:text-[var(--muted)]">
-                Session {session.session_number} {goal?.title ?? ""}
-              </p>
-            </Link>
+            <p className="text-sm font-semibold text-gray-500 dark:text-[var(--muted)]">
+              Session {session.session_number} {goal?.title ?? ""}
+            </p>
 
             <p className="text-sm text-gray-500 dark:text-[var(--muted)]">
               {session.xp_total} XP • {formatSessionTime(session.started_at)}
@@ -385,6 +409,26 @@ function SessionPostComponent({ session }: { session: ApiSessionPost }) {
           </div>
         </div>
       </div>
+
+      <SessionInfoPopup
+        isOpen={isSessionPopupOpen}
+        onClose={() => setIsSessionPopupOpen(false)}
+        sessionNumber={session.session_number}
+        dateText={formatPopupDate(session.started_at)}
+        coverImageUrl={session.completion_picture || undefined}
+        totalDuration={formatPopupDuration(session.total_duration_seconds)}
+        focusedDuration={formatPopupDuration(session.focused_duration_seconds)}
+        xpEarned={session.xp_total}
+        xpDistribution={session.xp_distribution}
+        nudgeCount={session.nudge_count ?? 0}
+        nudgeAvatars={[]}
+        activity={{
+          uid: undefined,
+          name: activity.name,
+          emoji: activity.emoji,
+          color: `var(--aspect-${activity.type.toLowerCase()})`,
+        }}
+      />
     </div>
   );
 }

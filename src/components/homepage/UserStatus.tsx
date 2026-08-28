@@ -64,7 +64,13 @@ export function UserStatus({ player }: UserStatusProps) {
             ) : (
               <FireIcon className="w-4 h-4 text-gray-400 ml-1 flex-shrink-0" />
             )}
-            <p className="font-semibold text-xs truncate flex-shrink-0">
+            <p
+              className={`font-semibold text-xs truncate flex-shrink-0 ${
+                player.streak_active
+                  ? ""
+                  : "text-gray-400 dark:text-gray-600is"
+              }`}
+            >
               {player.streak_count}
             </p>
            
