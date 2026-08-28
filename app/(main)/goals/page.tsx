@@ -5,7 +5,7 @@ import StatusChangeConfirmationModal from "@/src/components/goals/StatusChangeCo
 import { useAuth } from "@/src/context/AuthContext";
 import { useToast, useConfirm } from "@/src/context/ToastContext";
 import { usePopup } from "@/src/context/PopupContext";
-import { ActivityType } from "@/src/lib/types/activityMeta";
+import { ACTIVITY_META, ActivityType } from "@/src/lib/types/activityMeta";
 import { BoltIcon, PlayIcon, PlusIcon, UsersIcon } from "@heroicons/react/24/solid";
 import FireIcon from "@heroicons/react/24/solid/FireIcon";
 import { RocketLaunchIcon } from "@heroicons/react/24/outline";
@@ -24,6 +24,13 @@ type AspectKey = "physique" | "energy" | "social" | "creativity" | "logic";
 
 type GoalStatus = "ongoing" | "planned" | "completed" | "paused" | "abandoned";
 
+// Sunday(0)-indexed week of session activity for an ongoing goal — see
+// WeekProgressBars below for how this is rendered.
+type WeekProgress = {
+  today: number;
+  progress: string[];
+};
+
 type Goal = {
   id: string;
   emoji: string;
@@ -39,6 +46,9 @@ type Goal = {
   xpReward?: number;
 
   aspectXP?: Record<AspectKey, number>;
+
+  // ongoing-only: this week's per-day session activity
+  weekProgress?: WeekProgress;
 };
 
 type UserGoalsInfo = {
@@ -74,6 +84,8 @@ type GoalPost = {
   finish_by?: string | null;
   total_xp?: number;
   xp_distribution?: Record<AspectKey, number>;
+  // Present on ongoing goals only.
+  week_progress?: WeekProgress;
 };
 
 import { NudgesLikesSection } from "@/src/components/goals/NudgesLikesSection";
@@ -135,143 +147,146 @@ function GoalCard({
       : goal.title;
 
   return (
-    <div className="w-full rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-dark-2  p-4">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3">
-        <div className=" w-full flex items-start gap-3">
-          <div className="text-xl leading-none mt-1">{goal.emoji}</div>
+    <div className="w-full flex gap-3">
+      <div className="w-full min-w-0 rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-dark-2  p-4">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-3">
+          <div className=" w-full flex items-start gap-3">
+            <div className="text-xl leading-none mt-1">{goal.emoji}</div>
 
-          <div className="w-full">
-            <div className="flex w-full items-center justify-between gap-2">
-              <p className="font-semibold text-lg text-black dark:text-[var(--foreground)] truncate">
-                {displayTitle}
-              </p>
+            <div className="w-full">
+              <div className="flex w-full items-center justify-between gap-2">
+                <p className="font-semibold text-lg text-black dark:text-[var(--foreground)] truncate">
+                  {displayTitle}
+                </p>
 
-              <div className="flex items-center gap-2 shrink-0">
-
-
-                {isCompleted && typeof goal.xpReward === "number" && (
-                  <span
-                    style={{
-                      backgroundColor: "var(--rookie-primary)",
-                    }}
-                    className="rounded-full px-3 py-1 text-xs font-semibold text-white"
-                  >
-                    {goal.xpReward}XP
-                  </span>
-                )}
+                <div className="flex items-center gap-2 shrink-0">
+                  {isCompleted && typeof goal.xpReward === "number" && (
+                    <span
+                      style={{
+                        backgroundColor: "var(--rookie-primary)",
+                      }}
+                      className="rounded-full px-3 py-1 text-xs font-semibold text-white"
+                    >
+                      {goal.xpReward}XP
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
+
+          {/* 3-dot Status Menu */}
+          {onStatusChange && onEdit && onDelete && (
+            <GoalStatusMenu
+              goalId={goal.id}
+              currentStatus={goal.status}
+              onEdit={onEdit}
+              onStatusChange={onStatusChange}
+              onDelete={onDelete}
+            />
+          )}
+
+          {/* Right meta */}
+          {!isCompleted && goal.metaRight && !onStatusChange && (
+            <p className="text-xs text-gray-400 dark:text-[var(--muted)] italic whitespace-nowrap mt-1">
+              {goal.metaRight}
+            </p>
+          )}
         </div>
-
-        {/* 3-dot Status Menu */}
-        {onStatusChange && onEdit && onDelete && (
-          <GoalStatusMenu
-            goalId={goal.id}
-            currentStatus={goal.status}
-            onEdit={onEdit}
-            onStatusChange={onStatusChange}
-            onDelete={onDelete}
-          />
+        <p className="text-sm text-gray-500 dark:text-[var(--muted)] mt-3 line-clamp-2 min-h-10">
+          {goal.description}
+        </p>
+        {/* Completed extra row */}
+        {isCompleted && goal.timeSummary && (
+          <div className="mt-3 flex items-center gap-2 text-sm text-gray-500 dark:text-[var(--muted)]">
+            <span className="inline-flex items-center justify-center">
+              {/* clock icon */}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                className="h-4 w-4 text-gray-400 dark:text-[var(--muted)]"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25Zm.75 5.25a.75.75 0 0 0-1.5 0v4.25c0 .2.08.39.22.53l2.5 2.5a.75.75 0 1 0 1.06-1.06l-2.28-2.28V7.5Z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </span>
+            <span>{goal.timeSummary}</span>
+          </div>
         )}
 
-        {/* Right meta */}
-        {!isCompleted && goal.metaRight && !onStatusChange && (
-          <p className="text-xs text-gray-400 dark:text-[var(--muted)] italic whitespace-nowrap mt-1">
-            {goal.metaRight}
-          </p>
+        {/* Aspect chips */}
+        {isCompleted && goal.aspectXP && (
+          <div className="mt-4 grid grid-cols-5 gap-1 sm:gap-2">
+            <AspectChip
+              icon={<BiDumbbell className="w-4 h-4" />}
+              value={goal.aspectXP.physique}
+              tint="physique"
+            />
+            <AspectChip
+              icon={<BoltIcon className="w-4 h-4" />}
+              value={goal.aspectXP.energy}
+              tint="energy"
+            />
+            <AspectChip
+              icon={<UsersIcon className="w-4 h-4" />}
+              value={goal.aspectXP.social}
+              tint="social"
+            />
+            <AspectChip
+              icon={<FaBrain className="w-4 h-4" />}
+              value={goal.aspectXP.creativity}
+              tint="creativity"
+            />
+            <AspectChip
+              icon={<FaHammer className="w-4 h-4" />}
+              value={goal.aspectXP.logic}
+              tint="logic"
+            />
+          </div>
         )}
-      </div>
-      <p className="text-sm text-gray-500 dark:text-[var(--muted)] mt-3 line-clamp-2">
-        {goal.description}
-      </p>
-      {/* Completed extra row */}
-      {isCompleted && goal.timeSummary && (
-        <div className="mt-3 flex items-center gap-2 text-sm text-gray-500 dark:text-[var(--muted)]">
-          <span className="inline-flex items-center justify-center">
-            {/* clock icon */}
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              className="h-4 w-4 text-gray-400 dark:text-[var(--muted)]"
+
+        {/* Buttons */}
+        <div className="mt-6  flex gap-3">
+          {primaryCta && (
+            <button
+              onClick={primaryCta.onClick}
+              data-onboarding={spotlightPrimary ? "goal-session-cta" : undefined}
+              style={{
+                backgroundColor: "var(--rookie-primary)",
+              }}
+              className="flex-1 rounded-xl cursor-pointer text-white font-semibold py-3 hover:bg-blue-700 dark:hover:bg-blue-600 transition"
             >
-              <path
-                fillRule="evenodd"
-                d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25Zm.75 5.25a.75.75 0 0 0-1.5 0v4.25c0 .2.08.39.22.53l2.5 2.5a.75.75 0 1 0 1.06-1.06l-2.28-2.28V7.5Z"
-                clipRule="evenodd"
-              />
-            </svg>
-          </span>
-          <span>{goal.timeSummary}</span>
+              {primaryCta.label}
+            </button>
+          )}
+
+          {secondaryCta && (
+            <button
+              onClick={secondaryCta.onClick}
+              className="flex-1 rounded-xl cursor-pointer bg-gray-700 dark:bg-[var(--dark-3)] text-white font-semibold py-3 hover:bg-gray-800 dark:hover:bg-[var(--dark-3)] transition"
+            >
+              {secondaryCta.label}
+            </button>
+          )}
+
+          {showAchievementCta && (
+            <button
+              onClick={showAchievementCta.onClick}
+              className="w-full rounded-xl cursor-pointer bg-gray-700 dark:bg-[var(--dark-3)] text-white font-semibold py-3 hover:bg-gray-800 dark:hover:bg-[var(--dark-3)] transition"
+            >
+              {showAchievementCta.label}
+            </button>
+          )}
         </div>
-      )}
-
-      {/* Aspect chips */}
-      {isCompleted && goal.aspectXP && (
-        <div className="mt-4 grid grid-cols-5 gap-1 sm:gap-2">
-          <AspectChip
-            icon={<BiDumbbell className="w-4 h-4" />}
-            value={goal.aspectXP.physique}
-            tint="physique"
-          />
-          <AspectChip
-            icon={<BoltIcon className="w-4 h-4" />}
-            value={goal.aspectXP.energy}
-            tint="energy"
-          />
-          <AspectChip
-            icon={<UsersIcon className="w-4 h-4" />}
-            value={goal.aspectXP.social}
-            tint="social"
-          />
-          <AspectChip
-            icon={<FaBrain className="w-4 h-4" />}
-            value={goal.aspectXP.creativity}
-            tint="creativity"
-          />
-          <AspectChip
-            icon={<FaHammer className="w-4 h-4" />}
-            value={goal.aspectXP.logic}
-            tint="logic"
-          />
-        </div>
-      )}
-
-      {/* Buttons */}
-      <div className="mt-6  flex gap-3">
-        {primaryCta && (
-          <button
-            onClick={primaryCta.onClick}
-            data-onboarding={spotlightPrimary ? "goal-session-cta" : undefined}
-            style={{
-              backgroundColor: "var(--rookie-primary)",
-            }}
-            className="flex-1 rounded-xl cursor-pointer text-white font-semibold py-3 hover:bg-blue-700 dark:hover:bg-blue-600 transition"
-          >
-            {primaryCta.label}
-          </button>
-        )}
-
-        {secondaryCta && (
-          <button
-            onClick={secondaryCta.onClick}
-            className="flex-1 rounded-xl cursor-pointer bg-gray-700 dark:bg-[var(--dark-3)] text-white font-semibold py-3 hover:bg-gray-800 dark:hover:bg-[var(--dark-3)] transition"
-          >
-            {secondaryCta.label}
-          </button>
-        )}
-
-        {showAchievementCta && (
-          <button
-            onClick={showAchievementCta.onClick}
-            className="w-full rounded-xl cursor-pointer bg-gray-700 dark:bg-[var(--dark-3)] text-white font-semibold py-3 hover:bg-gray-800 dark:hover:bg-[var(--dark-3)] transition"
-          >
-            {showAchievementCta.label}
-          </button>
-        )}
       </div>
+      {goal.weekProgress && (
+        <WeekProgressBars weekProgress={goal.weekProgress} />
+      )}
     </div>
   );
 }
@@ -313,6 +328,47 @@ function GoalsSectionSkeleton({ count = 2 }: { count?: number }) {
           <GoalCardSkeleton key={i} />
         ))}
       </div>
+    </div>
+  );
+}
+
+// 7 bars, Sunday(0) through Saturday(6). Each day is one of:
+// - future (dayIndex > today): empty, bordered only
+// - today, no session yet: bg-white/dark-3 with a thicker border
+// - today, completed: full-opacity aspect-color bg, no border
+// - past, completed: low-opacity aspect-color bg with a full-opacity aspect-color border
+// - past, no session: muted, no border
+function WeekProgressBars({ weekProgress }: { weekProgress: WeekProgress }) {
+  const { today, progress } = weekProgress;
+
+  return (
+    <div className="flex py-3 flex-col gap-1.5 shrink-0 self-stretch justify-between ">
+      {progress.map((value, dayIndex) => {
+        const isFuture = dayIndex > today;
+        const isToday = dayIndex === today;
+        const aspectKey = value.toLowerCase() as AspectKey;
+        const hasValue = value !== "" && aspectKey in ACTIVITY_META;
+        const aspectColor = hasValue ? ACTIVITY_META[aspectKey].cssColorVar : undefined;
+        const aspectColorRgb = hasValue ? ACTIVITY_META[aspectKey].cssColorVarRgb : undefined;
+
+        let className = "w-2 flex-1 rounded-full";
+        let style: React.CSSProperties | undefined;
+
+        if (isFuture) {
+          className += " border bg-gray-50 dark:bg-dark-2 border-gray-300 dark:border-[var(--border)]";
+        } else if (isToday && !hasValue) {
+          className += " border animate-pulse bg-white dark:bg-dark-3 border-gray-300 dark:border-[var(--border)]";
+        } else if (isToday && hasValue) {
+          style = { backgroundColor: aspectColor };
+        } else if (hasValue) {
+          className += " ";
+          style = { backgroundColor: `rgba(${aspectColorRgb}, 0.6)`, borderColor:  `rgba(${aspectColorRgb}, 0.5)` };
+        } else {
+          className += " bg-gray-300 dark:bg-dark-3/60";
+        }
+
+        return <div key={dayIndex} className={className} style={style} />;
+      })}
     </div>
   );
 }
@@ -483,7 +539,16 @@ export default function GoalsPage() {
       if (!res.ok) throw new Error("Failed to fetch goals");
 
       const data = await res.json();
-      return (Array.isArray(data.results) ? data.results : []) as GoalPost[];
+      const results = (Array.isArray(data.results) ? data.results : []) as GoalPost[];
+      // TEMP DEBUG: remove after confirming week_progress payload
+      console.log("[DEBUG] /api/goals raw results:", results);
+      const ongoing = results.find((g) => g.status === "ongoing");
+      console.log(
+        "[DEBUG] first ongoing goal keys:",
+        ongoing ? Object.keys(ongoing) : "no ongoing goal found",
+      );
+      console.log("[DEBUG] first ongoing goal week_progress:", ongoing?.week_progress);
+      return results;
     },
     enabled: !authLoading && !!username,
     // Every create/update/delete/status-change mutation below explicitly
@@ -975,6 +1040,7 @@ export default function GoalsPage() {
                         metaRight: goal.duration_display
                           ? `${goal.duration_display} spent`
                           : undefined,
+                        weekProgress: goal.week_progress,
                       }}
                       primaryCta={{
                         label: "New Session",
@@ -1018,6 +1084,7 @@ export default function GoalsPage() {
                         description: getGoalDescription(goal),
                         status: "planned",
                         metaRight: "Planned",
+                        weekProgress: goal.week_progress,
                       }}
                       primaryCta={{
                         label: "Start",
