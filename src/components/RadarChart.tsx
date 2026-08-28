@@ -143,17 +143,20 @@ export default function RadarChart({
 
           <Tooltip content={<CustomTooltip />} />
 
-          {/* Primary user radar (You) */}
+          {/* Primary user radar (You). In comparison mode (viewing someone
+              else's profile) this goes gray so the profile being viewed's
+              aspect color reads as the highlighted series, not your own —
+              single-series callers (no comparisonMode) keep the aspect color. */}
           <Radar
             name={"You"}
             dataKey="value"
-            stroke={color}
+            stroke={comparisonMode ? "#888888" : color}
             strokeWidth={2}
-            fill={color}
-            fillOpacity={0.25}
+            fill={comparisonMode ? "rgba(136, 136, 136, 0.15)" : color}
+            fillOpacity={comparisonMode ? 1 : 0.25}
             dot={{
               r: 3,
-              fill: color,
+              fill: comparisonMode ? "#888888" : color,
               stroke: "#ffffff",
               strokeWidth: 1.5,
             }}
@@ -165,12 +168,13 @@ export default function RadarChart({
             <Radar
               name={comparisonUsername || "Them"}
               dataKey="comparisonValue"
-              stroke="#888888"
+              stroke={color}
               strokeWidth={2}
-              fill="rgba(136, 136, 136, 0.15)"
+              fill={color}
+              fillOpacity={0.25}
               dot={{
                 r: 3,
-                fill: "#888888",
+                fill: color,
                 stroke: "#ffffff",
                 strokeWidth: 1.5,
               }}

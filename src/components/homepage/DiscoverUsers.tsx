@@ -2,6 +2,7 @@
 import { toggleFollow } from "@/lib/api/users";
 import { LiveAvatar } from "@/src/components/LiveAvatar";
 import { useAuth } from "@/src/context/AuthContext";
+import { useMasteryAccent } from "@/src/lib/hooks/useMasteryAccent";
 import { useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
@@ -23,6 +24,7 @@ type DiscoverUsersProps = {
 export function DiscoverUsers({ suggestedUsers }: DiscoverUsersProps) {
   const { me } = useAuth();
   const queryClient = useQueryClient();
+  const accent = useMasteryAccent();
 
   // Track follow state for each user
   const [followStates, setFollowStates] = useState<
@@ -144,7 +146,7 @@ export function DiscoverUsers({ suggestedUsers }: DiscoverUsersProps) {
                     : "cursor-pointer active:opacity-80"
                 } ${followStates[u.id] ? "bg-gray-700" : ""}`}
                 style={{
-                  backgroundColor: followStates[u.id] ? undefined : "#4168e2",
+                  backgroundColor: followStates[u.id] ? undefined : accent.primary,
                 }}
               >
                 {loadingStates[u.id]

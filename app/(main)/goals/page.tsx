@@ -3,6 +3,7 @@
 import GoalStatusMenu from "@/src/components/goals/GoalStatusMenu";
 import StatusChangeConfirmationModal from "@/src/components/goals/StatusChangeConfirmationModal";
 import { useAuth } from "@/src/context/AuthContext";
+import { useMasteryAccent } from "@/src/lib/hooks/useMasteryAccent";
 import { useToast, useConfirm } from "@/src/context/ToastContext";
 import { usePopup } from "@/src/context/PopupContext";
 import { ACTIVITY_META, ActivityType } from "@/src/lib/types/activityMeta";
@@ -141,6 +142,7 @@ function GoalCard({
 }) {
   const isCompleted = goal.status === "completed";
   const isMobile = useIsMobileViewport();
+  const accent = useMasteryAccent();
   const displayTitle =
     isMobile && goal.title.length > GOAL_TITLE_MOBILE_MAX_CHARS
       ? `${goal.title.slice(0, GOAL_TITLE_MOBILE_MAX_CHARS)}..`
@@ -257,9 +259,9 @@ function GoalCard({
               onClick={primaryCta.onClick}
               data-onboarding={spotlightPrimary ? "goal-session-cta" : undefined}
               style={{
-                backgroundColor: "var(--rookie-primary)",
+                backgroundColor: accent.primary,
               }}
-              className="flex-1 rounded-xl cursor-pointer text-white font-semibold py-3 hover:bg-blue-700 dark:hover:bg-blue-600 transition"
+              className="flex-1 rounded-xl cursor-pointer text-white font-semibold py-3 hover:opacity-90 transition"
             >
               {primaryCta.label}
             </button>

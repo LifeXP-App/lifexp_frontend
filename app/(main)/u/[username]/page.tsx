@@ -11,6 +11,7 @@ import { useAuth } from "@/src/context/AuthContext";
 import { usePopup } from "@/src/context/PopupContext";
 // Mock data removed - using real API data now
 import { UserProfile } from "@/src/lib/types";
+import { toRoman } from "@/src/lib/utils/toRoman";
 import { Cog6ToothIcon, FireIcon, LockClosedIcon, PlusIcon, RocketLaunchIcon } from "@heroicons/react/24/solid";
 import Image from "next/image";
 import Link from "next/link";
@@ -1063,6 +1064,7 @@ export default function ProfilePage({ params }: PageProps) {
                     style={{ color: accent.text }}
                   >
                     {profileUser.masteryTitle}
+                    {profileUser.masteryLevel > 0 && ` ${toRoman(profileUser.masteryLevel)}`}
                   </p>
                   <button
                     type="button"
@@ -1070,7 +1072,16 @@ export default function ProfilePage({ params }: PageProps) {
                     className="mastery-info flex float-right cursor-pointer"
                   >
                     <svg
-                      className="w-4 h-4 ms-2 text-gray-400 dark:text-[var(--muted)] group-hover:text-gray-500 dark:group-hover:text-gray-400 transition-colors"
+                      className={`w-4 h-4 ms-2 transition-colors ${
+                        profileUser.masteryTitle === "Rookie"
+                          ? "text-gray-400 dark:text-[var(--muted)] group-hover:text-gray-500 dark:group-hover:text-gray-400"
+                          : ""
+                      }`}
+                      style={
+                        profileUser.masteryTitle === "Rookie"
+                          ? undefined
+                          : { color: accent.primary }
+                      }
                       aria-hidden="true"
                       fill="currentColor"
                       viewBox="0 0 24 24"
@@ -1216,6 +1227,7 @@ export default function ProfilePage({ params }: PageProps) {
                   username={profileUser.username}
                   comparisonMode={currentUser.username !== profileUser.username}
                   comparisonUsername={profileUser.username}
+                  color={accent.primary}
                 />
               </div>
             </div>
@@ -1240,6 +1252,7 @@ export default function ProfilePage({ params }: PageProps) {
                     username={profileUser.username}
                     comparisonMode={true}
                     comparisonUsername={profileUser.username}
+                    color={accent.primary}
                   />
                 </div>
               </div>
@@ -1287,8 +1300,16 @@ export default function ProfilePage({ params }: PageProps) {
                 </span>
               </div>
 
-              {/* XP */}
-              <div className="bg-gray-200 dark:bg-dark-2 border-2 rounded-xl border-gray-200 dark:border-[var(--border)] w-full flex flex-col rounded-md items-center justify-between p-4">
+              {/* XP — Rookie keeps the muted "locked" look (padlock, gray
+                  background); any unlocked mastery matches the streak/life
+                  level cards (white background, no padlock). */}
+              <div
+                className={`border-2 rounded-xl border-gray-200 dark:border-[var(--border)] w-full flex flex-col rounded-md items-center justify-between p-4 ${
+                  profileUser.masteryTitle === "Rookie"
+                    ? "bg-gray-200 dark:bg-dark-2"
+                    : "bg-white dark:bg-dark-2"
+                }`}
+              >
                 <span className="flex items-center justify-center gap-1">
                   <p
                     style={{ color: accent.text }}
@@ -1298,18 +1319,20 @@ export default function ProfilePage({ params }: PageProps) {
                   </p>
                 </span>
                 <span className="flex items-center justify-center gap-1">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="#AAA"
-                    className="h-4 w-4 dark:fill-gray-500"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M12 1.5a5.25 5.25 0 0 0-5.25 5.25v3a3 3 0 0 0-3 3v6.75a3 3 0 0 0 3 3h10.5a3 3 0 0 0 3-3v-6.75a3 3 0 0 0-3-3v-3c0-2.9-2.35-5.25-5.25-5.25Zm3.75 8.25v-3a3.75 3.75 0 1 0-7.5 0v3h7.5Z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
+                  {profileUser.masteryTitle === "Rookie" && (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="#AAA"
+                      className="h-4 w-4 dark:fill-gray-500"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M12 1.5a5.25 5.25 0 0 0-5.25 5.25v3a3 3 0 0 0-3 3v6.75a3 3 0 0 0 3 3h10.5a3 3 0 0 0 3-3v-6.75a3 3 0 0 0-3-3v-3c0-2.9-2.35-5.25-5.25-5.25Zm3.75 8.25v-3a3.75 3.75 0 1 0-7.5 0v3h7.5Z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  )}
                   <p
                     style={{ fontSize: "11px" }}
                     className="text-gray-400 dark:text-[var(--muted)]"

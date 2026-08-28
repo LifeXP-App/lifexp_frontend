@@ -12,6 +12,9 @@ type Me = {
   fullname?: string;
   profile_picture?: string | null;
   created_at?: string | null;
+  // Drives the site-wide "Mastery Theme" — non-Rookie titles swap the
+  // rookie-blue accent for the matching aspect color across the app.
+  masteryTitle?: string;
 };
 
 type AuthStatus = "loading" | "authenticated" | "unauthenticated" | "error";
@@ -121,6 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         profile_picture: data.profile_picture ?? null,
         created_at:
           data.joined_date ?? data.date_joined ?? data.created_at ?? data.createdAt ?? null,
+        masteryTitle: data.masterytitle ?? data.masteryTitle ?? undefined,
       });
       setAuthStatus("authenticated");
     } catch (err) {

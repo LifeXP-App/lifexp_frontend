@@ -1,5 +1,6 @@
 "use client";
 import { useAuth } from "@/src/context/AuthContext";
+import { useMasteryAccent } from "@/src/lib/hooks/useMasteryAccent";
 import { useSearch } from "@/src/lib/hooks/useSearch";
 import { useSearchHistory } from "@/src/lib/hooks/useSearchHistory";
 import { authedFetch } from "@/src/lib/api/authedFetch";
@@ -78,6 +79,7 @@ type DiscoverActivity = {
 
 export default function SearchPage() {
   const { loading: authLoading } = useAuth();
+  const accent = useMasteryAccent();
   const isMobile = useIsMobileViewport();
   const discoverPostsLimit = isMobile
     ? MOBILE_DISCOVER_POSTS_LIMIT
@@ -297,9 +299,10 @@ export default function SearchPage() {
             onClick={() => toggleFilter("posts")}
             className={`shrink-0 px-5 py-1.5 rounded-full text-sm font-medium transition-colors ${
               activeFilters.includes("posts")
-                ? "bg-blue-600 text-white"
+                ? "text-white"
                 : "bg-gray-200 dark:bg-[var(--dark-2)] text-gray-700 dark:text-[var(--muted)]"
             }`}
+            style={activeFilters.includes("posts") ? { backgroundColor: accent.primary } : undefined}
           >
             Posts
             {query && counts.posts > 0 && (
@@ -310,9 +313,10 @@ export default function SearchPage() {
             onClick={() => toggleFilter("users")}
             className={`shrink-0 px-5 py-1.5 rounded-full text-sm font-medium transition-colors ${
               activeFilters.includes("users")
-                ? "bg-blue-600 text-white"
+                ? "text-white"
                 : "bg-gray-200 dark:bg-[var(--dark-2)] text-gray-700 dark:text-[var(--muted)]"
             }`}
+            style={activeFilters.includes("users") ? { backgroundColor: accent.primary } : undefined}
           >
             Users
             {query && counts.users > 0 && (
@@ -323,9 +327,10 @@ export default function SearchPage() {
             onClick={() => toggleFilter("activities")}
             className={`shrink-0 px-5 py-1.5 rounded-full text-sm font-medium transition-colors ${
               activeFilters.includes("activities")
-                ? "bg-blue-600 text-white"
+                ? "text-white"
                 : "bg-gray-200 dark:bg-[var(--dark-2)] text-gray-700 dark:text-[var(--muted)]"
             }`}
+            style={activeFilters.includes("activities") ? { backgroundColor: accent.primary } : undefined}
           >
             Activities
             {query && counts.activities > 0 && (
@@ -608,9 +613,10 @@ export default function SearchPage() {
               onClick={() => toggleFilter("posts")}
               className={`px-6 py-2 rounded-full text-sm font-medium transition-colors ${
                 activeFilters.includes("posts")
-                  ? "bg-blue-600 text-white"
+                  ? "text-white"
                   : "bg-gray-200 dark:bg-[var(--dark-2)] text-gray-700 dark:text-[var(--muted)] hover:bg-gray-300 dark:hover:bg-[var(--dark-3)]"
               }`}
+              style={activeFilters.includes("posts") ? { backgroundColor: accent.primary } : undefined}
             >
               Posts
               {query && counts.posts > 0 && (
@@ -623,9 +629,10 @@ export default function SearchPage() {
               onClick={() => toggleFilter("users")}
               className={`px-6 py-2 rounded-full text-sm font-medium transition-colors ${
                 activeFilters.includes("users")
-                  ? "bg-blue-600 text-white"
+                  ? "text-white"
                   : "bg-gray-200 dark:bg-[var(--dark-2)] text-gray-700 dark:text-[var(--muted)] hover:bg-gray-300 dark:hover:bg-[var(--dark-3)]"
               }`}
+              style={activeFilters.includes("users") ? { backgroundColor: accent.primary } : undefined}
             >
               Users
               {query && counts.users > 0 && (
@@ -638,9 +645,10 @@ export default function SearchPage() {
               onClick={() => toggleFilter("activities")}
               className={`px-6 py-2 rounded-full text-sm font-medium transition-colors ${
                 activeFilters.includes("activities")
-                  ? "bg-blue-600 text-white"
+                  ? "text-white"
                   : "bg-gray-200 dark:bg-[var(--dark-2)] text-gray-700 dark:text-[var(--muted)] hover:bg-gray-300 dark:hover:bg-[var(--dark-3)]"
               }`}
+              style={activeFilters.includes("activities") ? { backgroundColor: accent.primary } : undefined}
             >
               Activities
               {query && counts.activities > 0 && (

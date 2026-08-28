@@ -12,6 +12,7 @@ import { RightSidebarInfo } from "@/src/components/homepage/RightSidebarInfo";
 import { RightSidebarNotifications } from "@/src/components/homepage/RightSidebarNotifications";
 import { DiscoverUsers } from "@/src/components/homepage/DiscoverUsers";
 import { useAuth } from "@/src/context/AuthContext";
+import getAccentColors from "@/src/components/UserAccent";
 import { authedFetch } from "@/src/lib/api/authedFetch";
 import type { ActivityType } from "@/src/lib/types/activityMeta";
 
@@ -711,7 +712,7 @@ const postsLoading = postsInitialLoading;
       streak_count: userData.streak_count,
       streak_active: userData.streak_active,
       masterytitle: userData.masteryTitle,
-      primary_accent_color: "#4168e2",
+      primary_accent_color: getAccentColors(userData.masteryTitle).primary,
       profile_picture:
         userData.avatar ||
         "https://res.cloudinary.com/dfohn9dcz/image/upload/f_auto,q_auto,w_80,h_80,c_thumb/v1752327292/lfco9m4hqq9yin7adl6e.jpg",
@@ -737,7 +738,7 @@ const postsLoading = postsInitialLoading;
       fullname: userData.fullname,
       profile_picture: userData.avatar || player.profile_picture,
       mastery: userData.masteryTitle,
-      masteryColor: "#4168e2",
+      masteryColor: getAccentColors(userData.masteryTitle).primary,
       lifelevel: userData.lifeLevel,
       posts: userData.posts_count,
       followers: userData.followers_count,

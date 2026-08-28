@@ -442,6 +442,52 @@ export const resumeSession = mutation({
   },
 });
 
+// Reverts a session Convex just marked "completed" back to "paused", used
+// ONLY when the Django sync that must accompany completion (see
+// handleFinish/handleDiscard in the session timer page) fails even after its
+// own bounded retries. Convex must never be left "completed" while Django's
+// Session row is still active/live — this is the escape hatch for that,
+// called at most once per failed completion attempt (never looped; the
+// Django-side retry that already ran is what's bounded, not this).
+export const uncompleteSession = mutation({
+  args: {
+    sessionId: v.id("sessions"),
+    // Guards against reverting a session that changed state for an unrelated
+    // reason between the failed sync and this rollback call (e.g. deleted).
+    expectedCompletedReason: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const session = await ctx.db.get(args.sessionId);
+    if (!session) return;
+    if (session.status !== "completed") return;
+    if (
+      args.expectedCompletedReason !== undefined &&
+      session.completedReason !== args.expectedCompletedReason
+    ) {
+      return;
+    }
+
+    const now = Date.now();
+    const intervals = [...session.pauseIntervals];
+    // completeSession/abandonSession may have closed the trailing pause
+    // interval when finishing from paused/afk — reopen it so the session
+    // reads as still paused, not as having a phantom resumedAt in the past.
+    const lastInterval = intervals[intervals.length - 1];
+    if (lastInterval && lastInterval.resumedAt !== undefined) {
+      intervals[intervals.length - 1] = { ...lastInterval, resumedAt: undefined };
+    }
+
+    await ctx.db.patch(args.sessionId, {
+      status: "paused",
+      endedAt: undefined,
+      completedReason: undefined,
+      interruptionReason: undefined,
+      pauseIntervals: intervals,
+      lastHeartbeatAt: now,
+    });
+  },
+});
+
 export const completeSession = mutation({
   args: {
     sessionId: v.id("sessions"),

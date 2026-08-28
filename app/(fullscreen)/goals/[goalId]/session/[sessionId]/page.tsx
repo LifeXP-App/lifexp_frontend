@@ -572,6 +572,7 @@ export default function SessionTimer({ params }: SessionTimerProps) {
   );
   const completeMutation = useMutation(api.sessions.completeSession);
   const abandonMutation = useMutation(api.sessions.abandonSession);
+  const uncompleteMutation = useMutation(api.sessions.uncompleteSession);
   const updateInitialRatesMutation = useMutation(api.sessions.updateInitialRates);
   const adjustFocusTimeMutation = useMutation(
     api.sessions.adjustFocusTime,
@@ -1380,7 +1381,23 @@ useEffect(() => {
           invalidateAfterSessionSync();
         } catch (err) {
           console.error("Failed to sync completed session to Django:", err);
-          // Don't block redirect — Convex session is complete; Django sync can be retried later
+          // Django's record of this session must never disagree with Convex's
+          // — syncSessionToDjango already retried transient failures on its
+          // own bounded schedule, so a failure here means it's genuinely
+          // stuck. Revert Convex back to paused (a single call, not a retry
+          // loop) rather than leaving it "completed" while Django still shows
+          // the session active, and let the user try Finish again.
+          await uncompleteMutation({
+            sessionId,
+            expectedCompletedReason: "manual",
+          }).catch((revertErr) =>
+            console.error("Failed to revert session after sync failure:", revertErr),
+          );
+          toast.error(
+            "Couldn't save your session — check your connection and try Finish again.",
+          );
+          setIsSyncing(false);
+          return;
         }
       }
 
@@ -1409,7 +1426,9 @@ useEffect(() => {
     isEmptySession,
     completeMutation,
     markSyncedMutation,
+    uncompleteMutation,
     invalidateAfterSessionSync,
+    toast,
     router,
     goalId,
   ]);
@@ -1442,6 +1461,20 @@ useEffect(() => {
           invalidateAfterSessionSync();
         } catch (err) {
           console.error("Failed to sync abandoned session to Django:", err);
+          // Same invariant as handleFinish — Convex must never sit
+          // "completed" while Django still shows the session active. Revert
+          // (single call, not a retry loop) and let the user try again.
+          await uncompleteMutation({
+            sessionId,
+            expectedCompletedReason: "abandoned",
+          }).catch((revertErr) =>
+            console.error("Failed to revert session after sync failure:", revertErr),
+          );
+          toast.error(
+            "Couldn't discard your session — check your connection and try again.",
+          );
+          setIsSyncing(false);
+          return;
         }
       }
 
@@ -1466,7 +1499,9 @@ useEffect(() => {
     goalIntId,
     abandonMutation,
     markSyncedMutation,
+    uncompleteMutation,
     invalidateAfterSessionSync,
+    toast,
     router,
     goalId,
     isEmptySession,

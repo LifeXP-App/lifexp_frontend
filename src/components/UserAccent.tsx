@@ -42,10 +42,11 @@ function readCssVar(name: string) {
 
 export default function getAccentColors(masterTitle: string): Accent {
 	const slug = (masterTitle || "rookie").toLowerCase().replace(/\s+/g, "-");
-	// Try CSS variables first: --mastery-{slug}-primary / --mastery-{slug}-secondary
-	const primaryVar = readCssVar(`--mastery-${slug}-primary`);
-	const textVar = readCssVar(`--mastery-${slug}-text`);
-	const secondaryVar = readCssVar(`--mastery-${slug}-secondary`);
+	// Try CSS variables first: --{slug}-primary / --{slug}-secondary / --{slug}-text
+	// (defined in app/globals.css, e.g. --warrior-primary, --warrior-text).
+	const primaryVar = readCssVar(`--${slug}-primary`);
+	const textVar = readCssVar(`--${slug}-text`);
+	const secondaryVar = readCssVar(`--${slug}-secondary`);
 
 	const primary =
 		primaryVar || FALLBACKS[slug as keyof typeof FALLBACKS]?.primary || FALLBACKS.rookie.primary;
