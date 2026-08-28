@@ -39,7 +39,7 @@ export type ApiSessionPost = {
   completed_reason: string | null;
   nudge_count: number;
   is_nudged: boolean;
-  activity: { name: string; type: string; emoji: string };
+  activity: { uid?: string; name: string; type: string; emoji: string };
   goal: { id: number; uid: string; title: string; emoji: string } | null;
   user: {
     username: string;
@@ -423,7 +423,7 @@ function SessionPostComponent({ session }: { session: ApiSessionPost }) {
         nudgeCount={session.nudge_count ?? 0}
         nudgeAvatars={[]}
         activity={{
-          uid: undefined,
+          uid: activity.uid,
           name: activity.name,
           emoji: activity.emoji,
           color: `var(--aspect-${activity.type.toLowerCase()})`,

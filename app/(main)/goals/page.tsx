@@ -351,7 +351,7 @@ function WeekProgressBars({ weekProgress }: { weekProgress: WeekProgress }) {
         const aspectColor = hasValue ? ACTIVITY_META[aspectKey].cssColorVar : undefined;
         const aspectColorRgb = hasValue ? ACTIVITY_META[aspectKey].cssColorVarRgb : undefined;
 
-        let className = "w-2 flex-1 rounded-full";
+        let className = "w-2 flex-1 rounded-xs";
         let style: React.CSSProperties | undefined;
 
         if (isFuture) {
@@ -979,7 +979,7 @@ export default function GoalsPage() {
                 className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-gray-200 dark:bg-dark-2 text-black dark:text-[var(--foreground)] font-semibold py-4 px-5 hover:bg-gray-300 dark:hover:bg-dark-3 transition cursor-pointer"
               >
                 <PlayIcon className="w-5 h-5" />
-                <span>Empty Session</span>
+                <span>Free Session</span>
               </button>
               <button
                 type="button"
@@ -988,7 +988,7 @@ export default function GoalsPage() {
                 className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-gray-200 dark:bg-dark-2 text-black dark:text-[var(--foreground)] font-semibold py-4 px-5 hover:bg-gray-300 dark:hover:bg-dark-3 transition cursor-pointer"
               >
                 <PlusIcon className="w-5 h-5" />
-                <span>Create New Goal</span>
+                <span>New Goal</span>
               </button>
             </div>
 
