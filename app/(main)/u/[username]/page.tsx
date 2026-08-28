@@ -1189,9 +1189,10 @@ export default function ProfilePage({ params }: PageProps) {
                 <button
                   onClick={handleUnfollow}
                   disabled={isFollowingLoading}
-                  className={`flex-1 min-w-0 sm:flex-none font-medium py-2 rounded-lg text-center sm:w-48 text-white bg-gray-700 ${
+                  className={`flex-1 min-w-0 sm:flex-none font-medium py-2 rounded-lg text-center sm:w-48 text-white ${
                     isFollowingLoading ? "opacity-50 cursor-wait" : "cursor-pointer"
                   }`}
+                  style={{ backgroundColor: accent.primary }}
                 >
                   {isFollowingLoading ? "Loading..." : "Unfollow"}
                 </button>
@@ -1301,14 +1302,22 @@ export default function ProfilePage({ params }: PageProps) {
               </div>
 
               {/* XP — Rookie keeps the muted "locked" look (padlock, gray
-                  background); any unlocked mastery matches the streak/life
-                  level cards (white background, no padlock). */}
+                  background, gray border); any unlocked mastery gets the
+                  aspect color as both border and a 50%-opacity fill. */}
               <div
-                className={`border-2 rounded-xl border-gray-200 dark:border-[var(--border)] w-full flex flex-col rounded-md items-center justify-between p-4 ${
+                className={`border-2 rounded-xl w-full flex flex-col rounded-md items-center justify-between p-4 ${
                   profileUser.masteryTitle === "Rookie"
-                    ? "bg-gray-200 dark:bg-dark-2"
-                    : "bg-white dark:bg-dark-2"
+                    ? "bg-gray-200 dark:bg-dark-2 border-gray-200 dark:border-[var(--border)]"
+                    : ""
                 }`}
+                style={
+                  profileUser.masteryTitle === "Rookie"
+                    ? undefined
+                    : {
+                        backgroundColor: hexToRgbaUtil(accent.primary, 0.5),
+                        borderColor: accent.primary,
+                      }
+                }
               >
                 <span className="flex items-center justify-center gap-1">
                   <p
@@ -1337,9 +1346,11 @@ export default function ProfilePage({ params }: PageProps) {
                     style={{ fontSize: "11px" }}
                     className="text-gray-400 dark:text-[var(--muted)]"
                   >
-                    {profileUser.xp_to_next_master_level
-                      ? `${profileUser.xp_to_next_master_level.toLocaleString()} XP to next mastery`
-                      : "Mastery progress"}
+                    {profileUser.masteryTitle === "Rookie"
+                      ? profileUser.xp_to_next_master_level
+                        ? `${profileUser.xp_to_next_master_level.toLocaleString()} XP to next mastery`
+                        : "Mastery progress"
+                      : `To ${profileUser.masteryTitle} ${toRoman(profileUser.masteryLevel + 1)}`}
                   </p>
                 </span>
               </div>
