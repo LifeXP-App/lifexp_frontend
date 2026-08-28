@@ -1314,7 +1314,7 @@ export default function ProfilePage({ params }: PageProps) {
                   profileUser.masteryTitle === "Rookie"
                     ? undefined
                     : {
-                        backgroundColor: hexToRgbaUtil(accent.primary, 0.5),
+                        backgroundColor: hexToRgbaUtil(accent.primary, 0.15),
                         borderColor: accent.primary,
                       }
                 }
