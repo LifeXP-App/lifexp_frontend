@@ -172,7 +172,19 @@ export function NudgesLikesSection() {
               ))}
 
             {!loading && interactions.length === 0 && (
-              <li className="text-sm text-gray-400">No recent interactions</li>
+              <li className="flex flex-col items-center justify-center py-2 text-gray-400 dark:text-[var(--muted)]">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  className="w-10 h-10 mb-2 opacity-70"
+                >
+                  <path d="M12 2a6 6 0 0 0-6 6v3.6l-1.8 3.6A1 1 0 0 0 5 17h14a1 1 0 0 0 .8-1.8L18 11.6V8a6 6 0 0 0-6-6zm0 20a3 3 0 0 0 2.83-2H9.17A3 3 0 0 0 12 22z" />
+                </svg>
+
+                <p className="text-sm font-medium">No recent interactions</p>
+                <p className="text-xs opacity-70">You&apos;re all caught up</p>
+              </li>
             )}
           </ul>
         </div>

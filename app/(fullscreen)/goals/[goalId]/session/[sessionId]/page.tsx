@@ -17,7 +17,7 @@ import {
 } from "@heroicons/react/24/solid";
 import { useMutation, useQuery } from "convex/react";
 import { useQueryClient } from "@tanstack/react-query";
-import { DumbbellIcon } from "lucide-react";
+import { Clock, DumbbellIcon, Timer } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -546,6 +546,13 @@ export default function SessionTimer({ params }: SessionTimerProps) {
       if (last && last.resumedAt === undefined) {
         intervals[intervals.length - 1] = { ...last, resumedAt: Date.now() };
       }
+      // Timer mode: each new focus phase after a break starts a fresh 25:00,
+      // rebased to the current cumulative focus total. Stopwatch mode must
+      // keep showing the SAME running value it had before the break, not
+      // restart at 0 — leave focusPhaseStartSeconds untouched for it.
+      const wasOnBreak = last?.reason === "break_started";
+      const rebaseForNewPhase = wasOnBreak && (current.clockType ?? "timer") === "timer";
+
       localStore.setQuery(
         api.sessions.getSession,
         { sessionId: args.sessionId },
@@ -553,7 +560,7 @@ export default function SessionTimer({ params }: SessionTimerProps) {
           ...current,
           status: "live",
           pauseIntervals: intervals,
-          ...(last?.reason === "break_started"
+          ...(rebaseForNewPhase
             ? {
                 focusPhaseStartSeconds: current.focusedDurationSeconds,
                 focusAdjustSeconds: 0,
@@ -583,6 +590,41 @@ export default function SessionTimer({ params }: SessionTimerProps) {
     );
   });
   const markSyncedMutation = useMutation(api.sessions.markSyncedToDjango);
+  const setClockTypeMutation = useMutation(
+    api.sessions.setClockType,
+  ).withOptimisticUpdate((localStore, args) => {
+    const current = localStore.getQuery(api.sessions.getSession, {
+      sessionId: args.sessionId,
+    });
+    if (!current) return;
+
+    // Mirror setClockType's server-side rebase (convex/sessions.ts): switching
+    // to timer always starts a fresh 25:00 rather than resuming wherever the
+    // stopwatch left off, by pinning focusPhaseStartSeconds to the session's
+    // current cumulative focused time.
+    let focusedNow = current.focusedDurationSeconds;
+    if (args.clockType === "timer") {
+      const now = Date.now();
+      let pausedMs = 0;
+      for (const interval of current.pauseIntervals) {
+        pausedMs += (interval.resumedAt ?? now) - interval.pausedAt;
+      }
+      focusedNow = Math.max(0, (now - current.startedAt) / 1000 - pausedMs / 1000);
+    }
+
+    localStore.setQuery(
+      api.sessions.getSession,
+      { sessionId: args.sessionId },
+      {
+        ...current,
+        clockType: args.clockType,
+        focusAdjustSeconds: 0,
+        ...(args.clockType === "timer"
+          ? { focusPhaseStartSeconds: focusedNow }
+          : {}),
+      },
+    );
+  });
   const enterAsSpectatorMutation = useMutation(
     api.sessions.enterSessionAsSpectator,
   );
@@ -875,11 +917,26 @@ export default function SessionTimer({ params }: SessionTimerProps) {
   const pomodoroPhase: "focus" | "break" =
     isOnBreak && !breakFinishedAwaitingResume ? "break" : "focus";
 
+  // A running high-water mark for focusPhaseStartSeconds, set right when the
+  // user clicks "switch to timer" (see the top-right toggle button below).
+  // focusPhaseStartSeconds only ever increases while a session is live (both
+  // the clockType-switch and break-resume rebases push it forward, never
+  // back), so clamping against this floor is always safe — it exists purely
+  // to guard the single render where `session` still reflects the pre-switch
+  // value, which otherwise showed a stale countdown before snapping to 25:00.
+  const clockTypeSwitchFloorRef = useRef<number | null>(null);
+
   // Focus countdown is derived from Convex's focusedDurationSeconds (already
   // accounts for pauses/AFK/reload) plus any manual +60/-60 adjustment, so it
   // survives a page reload without any local persistence of its own.
   const focusAdjustSeconds = session?.focusAdjustSeconds ?? 0;
-  const focusPhaseStartSeconds = session?.focusPhaseStartSeconds ?? 0;
+  // Clamped against clockTypeSwitchFloorRef below — see its comment — so a
+  // switch to timer can never display less than a fresh 25:00, even for the
+  // single render where session still reflects the pre-switch value.
+  const focusPhaseStartSeconds = Math.max(
+    session?.focusPhaseStartSeconds ?? 0,
+    clockTypeSwitchFloorRef.current ?? 0,
+  );
   const currentPhaseFocusedSeconds = Math.max(
     0,
     localFocusedDurationSeconds - focusPhaseStartSeconds,
@@ -894,36 +951,66 @@ export default function SessionTimer({ params }: SessionTimerProps) {
     ? FOCUS_SECONDS
     : Math.max(0, FOCUS_SECONDS + focusAdjustSeconds - Math.floor(currentPhaseFocusedSeconds));
 
+  // Stopwatch mode always shows the session's TOTAL focused time, full stop —
+  // deliberately bypassing focusPhaseStartSeconds (unlike currentPhaseFocusedSeconds
+  // above), since that field exists purely for the timer's 25:00 phase
+  // baselines and must never make the stopwatch appear to reset or skip
+  // forward when switching modes or coming out of a break.
+  const clockType: "timer" | "stopwatch" = session?.clockType ?? "timer";
+  const focusSecondsElapsed = Math.floor(localFocusedDurationSeconds);
+
   // Break isn't time-tracked in Convex (no XP accrues on break, and breaks
   // aren't meant to survive a reload) — this remains a local-only countdown,
   // reset to a fresh BREAK_SECONDS whenever we detect a new break starting.
   const [breakSecondsLeft, setBreakSecondsLeft] = useState(BREAK_SECONDS);
   const [isBreakRunning, setIsBreakRunning] = useState(false);
+  // Stopwatch mode's break has no fixed length — it's a plain elapsed-time
+  // ticker shown alongside the (paused/frozen) main stopwatch, always running
+  // while on break, and reset to 0 the instant break ends.
+  const [breakSecondsElapsed, setBreakSecondsElapsed] = useState(0);
   const wasOnBreakRef = useRef(false);
   useEffect(() => {
     if (isOnBreak && !wasOnBreakRef.current) {
       setBreakSecondsLeft(BREAK_SECONDS);
       setIsBreakRunning(false);
+      setBreakSecondsElapsed(0);
       setBreakFinishedAwaitingResume(false);
     }
-    if (!isOnBreak) setBreakFinishedAwaitingResume(false);
+    if (!isOnBreak) {
+      setBreakFinishedAwaitingResume(false);
+      setBreakSecondsElapsed(0);
+    }
     wasOnBreakRef.current = isOnBreak;
   }, [isOnBreak]);
 
-  const phaseSecondsLeft = pomodoroPhase === "focus" ? focusSecondsLeft : breakSecondsLeft;
+  const phaseSecondsLeft =
+    pomodoroPhase === "focus"
+      ? clockType === "stopwatch"
+        ? focusSecondsElapsed
+        : focusSecondsLeft
+      : clockType === "stopwatch"
+        ? focusSecondsElapsed // main stopwatch stays frozen at its paused value during break
+        : breakSecondsLeft;
 
   useEffect(() => {
     // Only the owner runs the local pomodoro state machine — a spectator's
     // countdown is unrelated to the actual session and must never pause it.
     if (!isOwn) return;
-    if (pomodoroPhase === "break") {
-      if (!isBreakRunning) return;
+    if (pomodoroPhase !== "break") return;
+
+    if (clockType === "stopwatch") {
       const id = setInterval(() => {
-        setBreakSecondsLeft((prev) => Math.max(0, prev - 1));
+        setBreakSecondsElapsed((prev) => prev + 1);
       }, 1000);
       return () => clearInterval(id);
     }
-  }, [isBreakRunning, pomodoroPhase, isOwn]);
+
+    if (!isBreakRunning) return;
+    const id = setInterval(() => {
+      setBreakSecondsLeft((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [isBreakRunning, pomodoroPhase, isOwn, clockType]);
 
   // ── Spectator elapsed-time ticker ──
   // Non-owners see a plain elapsed-time counter (mirrors Convex's
@@ -1211,8 +1298,21 @@ useEffect(() => {
   const handleToggle = useCallback(async () => {
     if (!sessionId || !isActive) return;
     if (isRunning) {
-      await pauseMutation({ sessionId, reason: "user_initiated" });
+      // A timer-mode pause is just a pause. A stopwatch never hits a 25:00
+      // countdown to auto-transition into a break (phaseSecondsLeft only
+      // counts up), so pausing is the only way to reach a break — pause it
+      // the same way the countdown's own auto-transition does (see the
+      // phaseSecondsLeft-hits-zero effect above), so isOnBreak picks it up
+      // identically.
+      await pauseMutation({
+        sessionId,
+        reason: clockType === "stopwatch" ? "break_started" : "user_initiated",
+      });
       posthog.capture("session_paused", { session_id: sessionId, goal_id: goalId });
+      // Timer mode's own countdown-hits-zero effect plays this chime on its
+      // own auto-transition into break; stopwatch mode has no such countdown,
+      // so this manual pause is the only place that edge happens for it.
+      if (clockType === "stopwatch") playPhaseEndChime("break");
     } else if (isAfk) {
       // AFK always lands on paused, never straight back to live — the user
       // must explicitly press play again to actually resume ticking.
@@ -1222,12 +1322,14 @@ useEffect(() => {
       posthog.capture("session_resumed", { session_id: sessionId, goal_id: goalId });
       // isOnBreak flips false once Convex updates, which also clears
       // breakFinishedAwaitingResume and resets focusAdjustSeconds server-side.
+      if (clockType === "stopwatch") playPhaseEndChime("focus");
     }
   }, [
     isRunning,
     isAfk,
     isPaused,
     isActive,
+    clockType,
     sessionId,
     goalId,
     pauseMutation,
@@ -1378,13 +1480,17 @@ useEffect(() => {
       await resumeMutation({ sessionId });
       // isOnBreak flips false once Convex updates, flipping the phase back
       // to "focus" with a fresh countdown.
+      // In stopwatch mode this button IS the break's "resume" action (see the
+      // break-controls JSX below), not a skip past a fixed duration — play
+      // the same continue-into-focus chime handleToggle's resume branch does.
+      if (clockType === "stopwatch") playPhaseEndChime("focus");
     } catch (err) {
       console.error("Failed to skip break:", err);
     } finally {
       setIsSkippingBreak(false);
     }
     setIsBreakRunning(false);
-  }, [sessionId, isSkippingBreak, resumeMutation]);
+  }, [sessionId, isSkippingBreak, resumeMutation, clockType]);
 
   const handleToggleBreak = useCallback(() => {
     setIsBreakRunning((prev) => !prev);
@@ -1403,6 +1509,31 @@ useEffect(() => {
     },
     [pomodoroPhase, sessionId, adjustFocusTimeMutation],
   );
+
+  const handleToggleClockType = useCallback(() => {
+    if (!sessionId || !session) return;
+    const nextClockType = clockType === "timer" ? "stopwatch" : "timer";
+
+    if (nextClockType === "timer") {
+      // Pin the local floor to the same "current cumulative focused time"
+      // formula the optimistic update and the server mutation both use, so
+      // this render (and every one until the server value catches up) can
+      // never show less than a fresh 25:00 — see clockTypeSwitchFloorRef.
+      const now = Date.now();
+      let pausedMs = 0;
+      for (const interval of session.pauseIntervals) {
+        pausedMs += (interval.resumedAt ?? now) - interval.pausedAt;
+      }
+      clockTypeSwitchFloorRef.current = Math.max(
+        0,
+        (now - session.startedAt) / 1000 - pausedMs / 1000,
+      );
+    }
+
+    void setClockTypeMutation({ sessionId, clockType: nextClockType }).catch((err) => {
+      console.error("Failed to switch clock type:", err);
+    });
+  }, [sessionId, session, clockType, setClockTypeMutation]);
 
   // ── Keyboard shortcuts (owner only — spectators have no session controls) ──
   useEffect(() => {
@@ -1522,6 +1653,29 @@ useEffect(() => {
         <ChevronLeftIcon className="w-5 h-5" />
       </button>
 
+      {isOwn && (
+        <button
+          onClick={handleToggleClockType}
+          disabled={isSyncing}
+          aria-label={
+            clockType === "timer" ? "Switch to stopwatch" : "Switch to timer"
+          }
+          title={
+            clockType === "timer" ? "Switch to stopwatch" : "Switch to timer"
+          }
+          className="absolute right-5 top-5 z-30 flex h-10 items-center gap-2 rounded-full bg-gray-900/40 px-4 text-white/80 border border-white/10 backdrop-blur-2xl hover:text-white hover:bg-gray-900/55 transition-colors cursor-pointer disabled:opacity-40"
+        >
+          {clockType === "timer" ? (
+            <Timer className="w-5 h-5" strokeWidth={1.75} />
+          ) : (
+            <Clock className="w-5 h-5" strokeWidth={1.75} />
+          )}
+          <span className="text-sm font-medium">
+            {clockType === "timer" ? "Stopwatch" : "Timer"}
+          </span>
+        </button>
+      )}
+
       {allSpectators.length > 0 && (
         <aside
           className="absolute right-5 top-1/2 z-30 flex -translate-y-1/2 flex-col items-center gap-3"
@@ -1568,7 +1722,7 @@ useEffect(() => {
       {/* Main content */}
       <div className="relative z-10 h-full flex flex-col items-center justify-around py-8 px-6 md:py-20">
         {/* Goal info */}
-        <div className="flex items-center gap-3 mb-4 md:mb-8">
+        <div className="flex items-center gap-3 mt-8 md:mt-0 mb-4 md:mb-8">
           <h1 className="text-4xl md:text-5xl text-center text-white/40">
             {isBreak ? "Take some rest" : displayGoalTitle}
           </h1>
@@ -1597,6 +1751,18 @@ useEffect(() => {
           >
             {isOwn ? formatTime(phaseSecondsLeft) : formatTime(spectatorElapsed)}
           </div>
+
+          {isOwn && clockType === "stopwatch" && (
+            <div
+              className={`mt-2 text-2xl font-medium text-white/50 tabular-nums text-center ${
+                pomodoroPhase === "break" ? "" : "invisible"
+              }`}
+              style={{ fontVariantNumeric: "tabular-nums" }}
+              aria-hidden={pomodoroPhase !== "break"}
+            >
+              {formatTime(breakSecondsElapsed)}
+            </div>
+          )}
         </div>
 
         {/* XP indicator */}
@@ -1682,9 +1848,12 @@ useEffect(() => {
           />
         ) : (
           <div className="flex flex-col items-center gap-4">
-            {/* Time adjustment — shown for both focus and break; kept in
-                place (not unmounted) while paused so the layout doesn't
-                shift, just faded out and made non-interactive */}
+            {/* Time adjustment — shown for both focus and break, but not in
+                stopwatch mode (a stopwatch just counts up, there's nothing to
+                adjust, in focus or in its uncapped break). Kept in place (not
+                unmounted) while paused so the layout doesn't shift, just
+                faded out and made non-interactive. */}
+            {clockType !== "stopwatch" && (
             <div
               className={`flex items-center gap-4 transition-opacity duration-200 ${
                 (isBreak ? isBreakRunning : isRunning)
@@ -1711,28 +1880,45 @@ useEffect(() => {
                 +60
               </button>
             </div>
+            )}
 
             {isBreak ? (
               <div
                 className="flex items-center gap-4"
                 data-onboarding="session-controls"
               >
-                <button
-                  onClick={handleSkipBreak}
-                  disabled={isSyncing || isSkippingBreak}
-                  className="h-14 w-24 rounded-full bg-gray-900/40 hover:bg-gray-900/55 backdrop-blur-2xl border border-white/10 text-white font-medium transition-colors cursor-pointer disabled:opacity-40"
-                >
-                  {isSkippingBreak ? "Skipping…" : "Skip"}
-                </button>
+                {clockType === "timer" ? (
+                  <button
+                    onClick={handleSkipBreak}
+                    disabled={isSyncing || isSkippingBreak}
+                    className="h-14 w-24 rounded-full bg-gray-900/40 hover:bg-gray-900/55 backdrop-blur-2xl border border-white/10 text-white font-medium transition-colors cursor-pointer disabled:opacity-40"
+                  >
+                    {isSkippingBreak ? "Skipping…" : "Skip"}
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleDiscard}
+                    disabled={isSyncing}
+                    className="h-14 w-24 rounded-full bg-gray-900/40 hover:bg-gray-900/55 backdrop-blur-2xl border border-white/10 text-white font-medium transition-colors cursor-pointer disabled:opacity-40"
+                  >
+                    Discard
+                  </button>
+                )}
 
                 <button
-                  onClick={handleToggleBreak}
-                  disabled={isSyncing}
+                  onClick={clockType === "stopwatch" ? handleSkipBreak : handleToggleBreak}
+                  disabled={isSyncing || (clockType === "stopwatch" && isSkippingBreak)}
                   className="w-20 h-20 rounded-full flex items-center justify-center transition-all cursor-pointer hover:scale-105 disabled:opacity-40"
                   style={{ backgroundColor: categoryColor }}
-                  title={isBreakRunning ? "Pause" : "Start"}
+                  title={
+                    clockType === "stopwatch"
+                      ? "Resume"
+                      : isBreakRunning
+                        ? "Pause"
+                        : "Start"
+                  }
                 >
-                  {isBreakRunning ? (
+                  {clockType === "timer" && isBreakRunning ? (
                     <PauseIcon className="w-8 h-8 text-white" />
                   ) : (
                     <PlayIcon className="w-8 h-8 text-white ml-1" />
@@ -1787,21 +1973,6 @@ useEffect(() => {
         )}
       </div>
 
-      {/* Keyboard hints */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 items-center gap-4 text-gray-600 text-xs hidden md:flex">
-        <span>
-          <kbd className="px-1.5 py-0.5 bg-gray-800 rounded text-gray-500 mr-1">
-            Space
-          </kbd>
-          {isBreak ? "Skip break" : (isRunning ? "Pause" : "Resume")}
-        </span>
-        <span>
-          <kbd className="px-1.5 py-0.5 bg-gray-800 rounded text-gray-500 mr-1">
-            Esc
-          </kbd>
-          Finish
-        </span>
-      </div>
     </div>
   );
 }

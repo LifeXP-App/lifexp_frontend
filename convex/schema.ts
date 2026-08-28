@@ -71,6 +71,16 @@ export default defineSchema({
     // Cumulative seconds added/subtracted via the timer's +60/-60 buttons
     // during the current focus phase. Reset whenever a new focus phase starts.
     focusAdjustSeconds: v.optional(v.number()),
+    // Display mode for the focus-phase clock: "timer" counts down from 25:00
+    // (the default); "stopwatch" counts up from the session's focused time
+    // instead, with no +60/-60 adjustment available. Optional for sessions
+    // created before this field was introduced (treated as "timer").
+    clockType: v.optional(
+      v.union(
+        v.literal("timer"),
+        v.literal("stopwatch")
+      )
+    ),
 
     // ── XP Rates ──
     rateSegments: v.array(

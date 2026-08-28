@@ -203,6 +203,7 @@ const sessionId = await ctx.db.insert("sessions", {
   sessionMode: "focus",
   focusPhaseStartSeconds: 0,
   focusAdjustSeconds: 0,
+  clockType: "timer",
 
   rateSegments: [
     {
@@ -418,15 +419,20 @@ export const resumeSession = mutation({
     // The client uses this as the zero point for the next 25-minute phase.
     const updates = recalculate({ ...session, pauseIntervals: intervals }, now);
 
+    // Timer mode: each new focus phase after a break starts a fresh 25:00
+    // countdown, so rebase to the current cumulative focus total. Stopwatch
+    // mode has no phases to reset — resuming must continue the SAME stopwatch
+    // value it was showing before the break, not restart it at 0, so leave
+    // focusPhaseStartSeconds untouched.
+    const rebaseForNewPhase = wasOnBreak && (session.clockType ?? "timer") === "timer";
+
     await ctx.db.patch(args.sessionId, {
       status: "live",
       lastResumedAt: now,
       lastHeartbeatAt: now,
       pauseIntervals: intervals,
       ...updates,
-      // A break just ended and focus resumed — start the new focus phase's
-      // countdown from the current cumulative focus total instead of zero.
-      ...(wasOnBreak
+      ...(rebaseForNewPhase
         ? {
             focusPhaseStartSeconds: updates.focusedDurationSeconds,
             focusAdjustSeconds: 0,
@@ -710,6 +716,39 @@ export const adjustFocusTime = mutation({
 
     await ctx.db.patch(args.sessionId, {
       focusAdjustSeconds: (session.focusAdjustSeconds ?? 0) + args.deltaSeconds,
+    });
+  },
+});
+
+export const setClockType = mutation({
+  args: {
+    sessionId: v.id("sessions"),
+    clockType: v.union(v.literal("timer"), v.literal("stopwatch")),
+  },
+  handler: async (ctx, args) => {
+    const session = await ctx.db.get(args.sessionId);
+    if (!session) throw new Error("Session not found");
+
+    // Switching to stopwatch mode changes only how the clock is displayed
+    // (counting up from the session's focused time instead of counting down
+    // from 25:00) -- focusedDurationSeconds already IS that value, so no
+    // other field needs to change. Any leftover +60/-60 adjustment from timer
+    // mode no longer applies once the clock is a stopwatch.
+    //
+    // Switching to timer mode always starts a fresh 25:00 rather than
+    // resuming wherever the stopwatch left off -- rebase focusPhaseStartSeconds
+    // to the session's current cumulative focused time (same baseline reset
+    // resumeSession does when a break ends into a new focus phase) and clear
+    // any stale adjustment.
+    const now = Date.now();
+    const updates = recalculate(session, now);
+
+    await ctx.db.patch(args.sessionId, {
+      clockType: args.clockType,
+      focusAdjustSeconds: 0,
+      ...(args.clockType === "timer"
+        ? { focusPhaseStartSeconds: updates.focusedDurationSeconds }
+        : {}),
     });
   },
 });

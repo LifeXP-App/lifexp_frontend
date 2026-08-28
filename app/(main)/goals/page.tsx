@@ -355,16 +355,17 @@ function WeekProgressBars({ weekProgress }: { weekProgress: WeekProgress }) {
         let style: React.CSSProperties | undefined;
 
         if (isFuture) {
-          className += " border bg-gray-50 dark:bg-dark-2 border-gray-300 dark:border-[var(--border)]";
+          className += " border bg-gray-50 dark:bg-dark-1 border-gray-300 dark:border-[var(--border)]";
         } else if (isToday && !hasValue) {
-          className += " border animate-pulse bg-white dark:bg-dark-3 border-gray-300 dark:border-[var(--border)]";
+          className += " border animate-pulse dark:animate-none bg-white dark:bg-dark-2 border-gray-300 dark:border-gray-500/50";
         } else if (isToday && hasValue) {
           style = { backgroundColor: aspectColor };
+
         } else if (hasValue) {
           className += " ";
           style = { backgroundColor: `rgba(${aspectColorRgb}, 0.6)`, borderColor:  `rgba(${aspectColorRgb}, 0.5)` };
         } else {
-          className += " bg-gray-300 dark:bg-dark-3/60";
+          className += " bg-gray-300 dark:bg-dark-3";
         }
 
         return <div key={dayIndex} className={className} style={style} />;
