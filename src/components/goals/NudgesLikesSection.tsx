@@ -1,6 +1,7 @@
 "use client";
 
 import { LiveAvatar } from "@/src/components/LiveAvatar";
+import { BellSlashIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "@/src/context/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
@@ -101,7 +102,7 @@ export function NudgesLikesSection() {
         </div>
 
         <div className="max-h-80 overflow-y-auto scrollbar-hide">
-          <ul className="flex flex-col gap-4 h-16 p-2">
+          <ul className="flex flex-col gap-4 min-h-16 p-2">
             {interactions.slice(0, 3).map((i) => (
               <Link key={i.id} href={i.href}>
                 <li className="cursor-pointer">
@@ -172,18 +173,9 @@ export function NudgesLikesSection() {
               ))}
 
             {!loading && interactions.length === 0 && (
-              <li className="flex flex-col items-center justify-center py-2 text-gray-400 dark:text-[var(--muted)]">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  className="w-10 h-10 mb-2 opacity-70"
-                >
-                  <path d="M12 2a6 6 0 0 0-6 6v3.6l-1.8 3.6A1 1 0 0 0 5 17h14a1 1 0 0 0 .8-1.8L18 11.6V8a6 6 0 0 0-6-6zm0 20a3 3 0 0 0 2.83-2H9.17A3 3 0 0 0 12 22z" />
-                </svg>
-
-                <p className="text-sm font-medium">No recent interactions</p>
-                <p className="text-xs opacity-70">You&apos;re all caught up</p>
+              <li className="flex flex-col items-center justify-center gap-2 py-4 text-gray-400 dark:text-[var(--muted)] opacity-60">
+                <BellSlashIcon className="w-6 h-6" strokeWidth={1.5} />
+                <p className="text-xs font-medium">No interactions yet</p>
               </li>
             )}
           </ul>
