@@ -1,0 +1,1550 @@
+"use client";
+
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
+import Image from "next/image";
+import { RadarChart } from "@/src/components/charts/LazyCharts";
+import AspectChip from "@/src/components/goals/AspectChip";
+import DeleteSessionConfirmationModal from "@/src/components/goals/DeleteSessionConfirmationModal";
+import NewGoalModal from "@/src/components/goals/NewGoalModal";
+import NewSessionPopup from "@/src/components/goals/NewSessionPopup";
+import SessionInfoPopup from "@/src/components/goals/SessionInfoPopup";
+import SharePopup from "@/src/components/SharePopup";
+import { useAuth } from "@/src/context/AuthContext";
+import { useToast, useConfirm } from "@/src/context/ToastContext";
+import { supabase } from "@/src/lib/supabase";
+import { useGoal } from "@/src/lib/hooks/useGoals";
+import { GoalsService, Session } from "@/src/lib/services/goals";
+import { ActivityType } from "@/src/lib/types/activityMeta";
+import { compressImageForUpload, SANITY_CAP_BYTES } from "@/src/lib/utils/compressImage";
+import { BoltIcon, ShareIcon, UsersIcon } from "@heroicons/react/24/solid";
+import { useMutation } from "convex/react";
+import { useQueryClient } from "@tanstack/react-query";
+import dynamic from "next/dynamic";
+import Link from "next/link";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import React, { useCallback, useMemo, useState } from "react";
+import { BiDumbbell } from "react-icons/bi";
+import { FaBrain, FaHammer } from "react-icons/fa";
+
+const CompleteGoalPopup = dynamic(
+  () => import("@/src/components/goals/CompleteGoalPopup"),
+);
+const NewActivityModal = dynamic(
+  () => import("@/src/components/goals/NewActivityModel"),
+);
+
+interface Activity {
+  id: string;
+  uid?: string;
+  name: string;
+  type: ActivityType;
+  total_xp?: number;
+  xp_distribution?: Record<string, number>;
+}
+
+const aspectColors: Record<string, string> = {
+  physique: "#8d2e2e",
+  energy: "#c49352",
+  logic: "#713599",
+  creativity: "#4187a2",
+  social: "#31784e",
+};
+
+
+
+interface SessionItemProps {
+  completion_picture?: string | null;
+  sessionNumber?: number;
+  activity?: string;
+  xpEarned?: number;
+  dateTime?: string;
+  duration?: string;
+  thumbnail?: string;
+  emoji?: string;
+  onClick?: () => void;
+  onDelete?: () => void;
+  color?: string;
+}
+
+// Separate component for SessionItem to avoid re-renders of the list
+const SessionItem = React.memo(function SessionItem({
+  completion_picture,
+  sessionNumber,
+  activity,
+  xpEarned,
+  dateTime,
+  duration,
+  thumbnail,
+  emoji,
+  onClick,
+  onDelete,
+  color
+}: SessionItemProps) {
+  const [open, setOpen] = React.useState(false);
+  const menuRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+  return (
+    <div
+      onClick={onClick}
+      className="flex items-center gap-4 p-4 bg-white dark:bg-dark-2 rounded-2xl border transition-shadow cursor-pointer"
+      style={{ borderColor: "var(--border)" }}
+    >
+      <div className="w-20 h-20 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden bg-gray-100 dark:bg-dark-3">
+        {completion_picture ? (
+        <Image
+            src={completion_picture}
+            alt="Session thumbnail"
+            width={80}
+            height={80}
+            className="w-full h-full object-cover"
+          />
+        )
+
+        :
+        emoji ? (
+          <span className="text-3xl">{emoji}</span>
+        ) : thumbnail ? (
+          <Image
+            src={thumbnail}
+            alt="Session"
+            width={80}
+            height={80}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <Image
+            src="https://res.cloudinary.com/dfohn9dcz/image/upload/f_auto,q_auto,w_800,c_fill/v1/posts/user_7/ske_20251115103836"
+            alt="Session thumbnail"
+            width={80}
+            height={80}
+            className="w-full h-full object-cover"
+          />
+        )}
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <h3 className="font-semibold text-lg text-foreground dark:text-[var(--foreground)]">
+          Session {sessionNumber || "?"}
+        </h3>
+        <p
+          className="text-sm font-bold"
+          style={{ color: color || "var(--muted)" }}
+        >
+          {activity}
+        </p>
+        <p
+          className="text-xs mt-1 font-medium"
+          style={{ color: "var(--muted)" }}
+        >
+          {xpEarned} XP Earned • {dateTime}
+        </p>
+      </div>
+
+      {/* Right side: duration + menu */}
+      <div className="flex items-center gap-3">
+        <div className="text-right">
+          <div className="font-semibold text-lg text-foreground dark:text-[var(--foreground)]">
+            {duration}
+          </div>
+        </div>
+
+        {/* Triple-dot dropdown */}
+        <div ref={menuRef} className="relative">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setOpen((prev) => !prev);
+            }}
+            className="w-9 h-9 cursor-pointer flex items-center justify-center rounded-full hover:opacity-70 active:opacity-40 transition-all"
+          >
+            {/* 3-dot SVG */}
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="5" r="1.8" fill="currentColor" />
+              <circle cx="12" cy="12" r="1.8" fill="currentColor" />
+              <circle cx="12" cy="19" r="1.8" fill="currentColor" />
+            </svg>
+          </button>
+
+          {open && (
+            <div
+              className="absolute left-0 top-10 w-44 bg-white dark:bg-dark-2 border rounded-md shadow-lg overflow-hidden z-20"
+              style={{ borderColor: "var(--border)" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                className="w-full cursor-pointer font-medium text-left py-3 px-4 text-sm hover:bg-gray-100 dark:hover:bg-dark-3 transition-colors"
+                onClick={() => {
+                  setOpen(false);
+                }}
+              >
+                Repeat Session
+              </button>
+
+              <button
+                type="button"
+                className="w-full   cursor-pointer font-medium text-left py-3 px-4 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-dark-3 transition-colors"
+                onClick={() => {
+                  setOpen(false);
+                  onDelete?.();
+                }}
+              >
+                Delete Session
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+});
+
+export default function GoalDetailClient() {
+  const params = useParams();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const goalId = params.goalId as string;
+  const feedOwner = searchParams.get("owner");
+
+  const { me } = useAuth();
+  const toast = useToast();
+  const confirm = useConfirm();
+  const queryClient = useQueryClient();
+  const startSessionMutation = useMutation(api.sessions.startSession);
+  const updateInitialRatesMutation = useMutation(api.sessions.updateInitialRates);
+  const deleteConvexSessionMutation = useMutation(api.sessions.deleteSession);
+
+  const { goal, sessions: rawSessions, loading, error, refetch } = useGoal(goalId);
+
+  // Session/goal changes here ripple into the goals list, the home feed and
+  // dashboard widgets, and (when it's the signed-in user's own goal) their
+  // profile stats — `refetch()` above only covers this page's own
+  // ["goal", goalId] cache, so every other page needs an explicit nudge.
+  const invalidateRelatedCaches = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["goals"] });
+    queryClient.invalidateQueries({ queryKey: ["feed"] });
+    if (me?.username) {
+      queryClient.invalidateQueries({
+        queryKey: ["user-profile-widget", me.username],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["profile-stats", me.username],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["profile-posts", me.username],
+      });
+    }
+  }, [queryClient, me?.username]);
+
+  // Sessions the user just deleted, hidden immediately (before the delete
+  // request even resolves) rather than waiting on a refetch to disappear.
+  const [deletedSessionIds, setDeletedSessionIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const sessions = useMemo(
+    () => rawSessions.filter((s) => !deletedSessionIds.has(s.id)),
+    [rawSessions, deletedSessionIds],
+  );
+
+  // Helper to format duration seconds into HH:MM:SS
+  const formatDuration = (seconds: number | null) => {
+    if (!seconds) return "00:00:00";
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return `${h > 0 ? h + ":" : ""}${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  };
+
+  // Helper to format date
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const [isNewActivityModalOpen, setIsNewActivityModalOpen] = useState(false);
+  const [isNewSessionPopupOpen, setIsNewSessionPopupOpen] = useState(false);
+
+  const createAndNavigate = useCallback(async (
+    activityId: string,
+    activityName: string,
+    xpDistribution?: Record<string, number>,
+  ) => {
+    if (!me) {
+      toast.error("You must be logged in to start a session.");
+      return;
+    }
+
+    try {
+      // 1. Compute XP rates from activity distribution
+      const SECONDS_PER_HOUR = 3600;
+      const aspects = ['physique', 'energy', 'logic', 'creativity', 'social'] as const;
+      const dist = xpDistribution ?? {};
+      const totalXp = aspects.reduce((s, k) => s + (dist[k] ?? 0), 0);
+      const rates = totalXp > 0
+        ? {
+            physique: Math.round((dist.physique ?? 0) / SECONDS_PER_HOUR * 10000) / 10000,
+            energy: Math.round((dist.energy ?? 0) / SECONDS_PER_HOUR * 10000) / 10000,
+            logic: Math.round((dist.logic ?? 0) / SECONDS_PER_HOUR * 10000) / 10000,
+            creativity: Math.round((dist.creativity ?? 0) / SECONDS_PER_HOUR * 10000) / 10000,
+            social: Math.round((dist.social ?? 0) / SECONDS_PER_HOUR * 10000) / 10000,
+          }
+        : { physique: 0, energy: 0, logic: 0, creativity: 0, social: 0 };
+
+      // 2. Create Convex session (source of truth for live timer state)
+      const convexId = await startSessionMutation({
+        userId: String(me.id),
+        username: me.username,
+        userFullname: me.fullname ?? undefined,
+        userProfile: me.profile_picture ?? undefined,
+        goalId,
+        goalTitle: goal?.title,
+        activityId,
+        rates,
+        activityName,
+        deviceContext: {
+          platform: "web",
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          locale: navigator.language,
+        },
+      });
+      // 3. Register the session with Django and save the authoritative rates back to Convex
+      const { data: { session: supaSession } } = await supabase.auth.getSession();
+      const djangoRes = await fetch("/api/sessions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(supaSession?.access_token ? { Authorization: `Bearer ${supaSession.access_token}` } : {}),
+        },
+        body: JSON.stringify({
+          session_id: convexId,
+          goal: parseInt(goal?.id ?? "0", 10),
+          activity: activityId,
+          device_platform: "web",
+        }),
+      });
+      if (djangoRes.ok) {
+        const djangoData = await djangoRes.json();
+        const r = djangoData.xp_increase_rate_per_second;
+        const djangoActivityUid =
+          djangoData.activity_uid === undefined
+            ? undefined
+            : String(djangoData.activity_uid);
+        // SessionCreateView returns activity metadata flat and camelCase
+        // (activityName/activityEmoji/activityType) — it does not nest
+        // under an `activity` key like SessionListSerializer does.
+        if (
+          r &&
+          typeof r.physique === "number" &&
+          typeof r.energy === "number" &&
+          typeof r.logic === "number" &&
+          typeof r.creativity === "number" &&
+          typeof r.social === "number"
+        ) {
+          await updateInitialRatesMutation({
+            sessionId: convexId,
+            rates: {
+              physique: r.physique,
+              energy: r.energy,
+              logic: r.logic,
+              creativity: r.creativity,
+              social: r.social,
+            },
+            activityId: djangoActivityUid,
+            activity_uid: djangoActivityUid,
+            activityName: djangoData.activityName,
+            activityEmoji: djangoData.activityEmoji,
+            activityType: djangoData.activityType,
+          });
+        } else {
+          await updateInitialRatesMutation({
+            sessionId: convexId,
+            activityId: djangoActivityUid,
+            activity_uid: djangoActivityUid,
+            activityName: djangoData.activityName,
+            activityEmoji: djangoData.activityEmoji,
+            activityType: djangoData.activityType,
+          });
+        }
+      }
+
+      router.push(`/goals/${goalId}/session/${convexId}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("already has a live") || msg.includes("already has a paused")) {
+        toast.info("You already have an active session. Please finish it first.");
+      } else {
+        console.error("Failed to start session:", err);
+        toast.error("Failed to start session. Please try again.");
+      }
+    }
+  }, [me, startSessionMutation, updateInitialRatesMutation, goalId, goal?.id, goal?.title, router]);
+
+  const handleStartSession = useCallback(async () => {
+    if (!goal?.last_activity?.uid) return;
+    const ok = await confirm({
+      title: "Start session",
+      message: `Start a session for "${goal.last_activity.name}"?`,
+      confirmText: "Start",
+    });
+    if (!ok) return;
+    await createAndNavigate(goal.last_activity.uid, goal.last_activity.name);
+  }, [goal?.last_activity, createAndNavigate, confirm]);
+
+  const handleSelectActivity = useCallback(async (activity: Activity) => {
+    setIsNewActivityModalOpen(false);
+    setIsNewSessionPopupOpen(false);
+    await createAndNavigate(activity.uid ?? activity.id, activity.name, activity.xp_distribution);
+  }, [createAndNavigate]);
+
+  const handleGenerateNew = useCallback(async (query: string) => {
+    setIsNewActivityModalOpen(false);
+
+    try {
+      const response = await fetch("/api/activities", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: query, ai_generated: true }),
+      });
+
+      if (!response.ok) throw new Error("Failed to create activity");
+
+      const activity = await response.json();
+      await createAndNavigate(activity.uid ?? activity.id, query, activity.xp_distribution);
+    } catch (error) {
+      console.error("Failed to generate activity:", error);
+      toast.error("Failed to create activity. Please try again.");
+    }
+  }, [createAndNavigate]);
+
+  const handleOpenNewActivity = () => {
+    setIsNewSessionPopupOpen(false);
+    setIsNewActivityModalOpen(true);
+  };
+
+  const [isSessionPopupOpen, setIsSessionPopupOpen] = useState(false);
+  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+
+  const handleOpenSessionPopup = (session: Session) => {
+    setSelectedSession(session);
+    setIsSessionPopupOpen(true);
+  };
+
+  const [rowDeleteSession, setRowDeleteSession] = useState<Session | null>(null);
+
+  const handleDeleteSession = async (session: Session | null = selectedSession) => {
+    if (!session) return;
+    const sessionId = session.id;
+
+    // Hide it immediately — don't wait on the network round-trip to make
+    // the list feel like it responded.
+    setDeletedSessionIds((prev) => new Set(prev).add(sessionId));
+    setIsSessionPopupOpen(false);
+    setSelectedSession(null);
+    setRowDeleteSession(null);
+
+    try {
+      await GoalsService.deleteSession(sessionId);
+      await deleteConvexSessionMutation({
+        sessionId: sessionId as Id<"sessions">,
+      });
+      refetch();
+      invalidateRelatedCaches();
+    } catch (err) {
+      console.error("Failed to delete session:", err);
+      toast.error(err instanceof Error ? err.message : "Failed to delete session.");
+      // Roll back — the delete didn't actually happen, so bring it back.
+      setDeletedSessionIds((prev) => {
+        const next = new Set(prev);
+        next.delete(sessionId);
+        return next;
+      });
+    }
+  };
+
+  const [isCompleteGoalOpen, setIsCompleteGoalOpen] = useState(false);
+
+  const handleOpenCompleteGoal = () => {
+    if (!goal || goal.status === "completed") return;
+    const ownsGoal = feedOwner
+      ? !!me?.username && feedOwner === me.username
+      : goal.is_owner === true ||
+        (!!me?.username && goal.username === me.username);
+    if (!ownsGoal) return;
+    setIsCompleteGoalOpen(true);
+  };
+  const handleCloseCompleteGoal = () => setIsCompleteGoalOpen(false);
+
+  // Turn a failed complete-goal response into a short, human-readable message.
+  // Never surface raw server bodies (nginx/Django HTML error pages) to the user.
+  const messageForCompleteError = (statusCode: number, body: string): string => {
+    if (statusCode === 413) {
+      return "That photo is too large to upload. Please pick a smaller image and try again.";
+    }
+    if (statusCode === 401 || statusCode === 403) {
+      return "You don't have permission to complete this goal.";
+    }
+    if (statusCode === 404) {
+      return "This goal could not be found. It may have been deleted.";
+    }
+    // Try to pull a clean message out of a JSON error, ignoring HTML payloads.
+    try {
+      const data = JSON.parse(body);
+      const detail = data?.error ?? data?.detail ?? data?.message;
+      if (typeof detail === "string" && detail.trim() && !detail.trim().startsWith("<")) {
+        return detail.trim();
+      }
+    } catch {
+      // not JSON — fall through to a generic message
+    }
+    if (statusCode >= 500) {
+      return "Something went wrong on our end. Please try again in a moment.";
+    }
+    return "Couldn't complete your goal. Please try again.";
+  };
+
+  const handlePostAchievement = async ({
+    title,
+    description,
+    finishBy,
+    image,
+  }: {
+    title: string;
+    description: string;
+    finishBy?: string;
+    image?: File | null;
+  }) => {
+    // --- Guard: a goal cannot be completed without an image ---
+    if (!image) {
+      throw new Error("Please add a photo before posting your achievement.");
+    }
+
+    if (image.size > SANITY_CAP_BYTES) {
+      throw new Error("That image is too large. Please pick a smaller file.");
+    }
+
+    const uploadFile = await compressImageForUpload(image);
+
+    const formData = new FormData();
+    formData.append("title", title);
+    formData.append("description", description);
+    if (finishBy) formData.append("finish_by", finishBy);
+    formData.append("completion_picture", uploadFile); // Django's GoalCompleteView reads this key, not "image"
+
+    let res: Response;
+    try {
+      res = await fetch(`/api/goals/${goalId}/complete/`, {
+        method: "POST",
+        body: formData,
+        credentials: "same-origin",
+      });
+    } catch (err) {
+      console.error("Failed to complete goal (network)", err);
+      throw new Error("Network error. Check your connection and try again.");
+    }
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      console.error("Complete goal failed:", res.status, body);
+      throw new Error(messageForCompleteError(res.status, body));
+    }
+
+    setIsCompleteGoalOpen(false);
+    // Status flips to "completed" and an achievement post is created —
+    // this goal's own cache, the goals list, the feed, and (own) profile
+    // stats all need to drop their stale copy.
+    queryClient.invalidateQueries({ queryKey: ["goal", goalId] });
+    invalidateRelatedCaches();
+    router.push("/");
+    router.refresh();
+  };
+  const handleDeleteGoal = async () => {
+    const ok = await confirm({
+      title: "Delete goal",
+      message: "Are you sure you want to delete this goal? This cannot be undone.",
+      confirmText: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      await GoalsService.deleteGoal(goalId);
+      toast.success("Goal deleted.");
+      // Without this, the goals list we're about to navigate to can still
+      // be serving its cached copy that includes the goal we just deleted.
+      queryClient.invalidateQueries({ queryKey: ["goal", goalId] });
+      invalidateRelatedCaches();
+      router.push("/goals");
+    } catch (err) {
+      console.error("Failed to delete goal:", err);
+      toast.error("Failed to delete goal. Please try again.");
+    }
+  };
+
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const moreMenuRef = React.useRef<HTMLDivElement>(null);
+
+  const [showShare, setShowShare] = useState(false);
+  const [goalUrl, setGoalUrl] = useState("");
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      setGoalUrl(`${window.location.origin}/goals/${goalId}`);
+    }
+  }, [goalId]);
+
+  React.useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        moreMenuRef.current &&
+        !moreMenuRef.current.contains(e.target as Node)
+      ) {
+        setIsMoreMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const handleCreateGoal = async (data: {
+    title: string;
+    description: string;
+    finishBy: string;
+  }) => {
+    try {
+      await GoalsService.updateGoal(goalId, {
+        title: data.title,
+        description: data.description,
+        ...(data.finishBy ? { finish_by: data.finishBy } : {}),
+      });
+      await refetch();
+      // Title/description also render on the goals list cards.
+      queryClient.invalidateQueries({ queryKey: ["goals"] });
+    } catch (err) {
+      console.error("Failed to update goal:", err);
+      toast.error("Failed to update goal. Please try again.");
+    }
+    setIsModalOpen(false);
+  };
+
+  // Always leave goal details through the goals list. Using browser history
+  // here can return to a just-completed session/reflection route, whose
+  // completed-session redirect sends the user back there in a loop.
+  const onBack = () => router.replace("/goals");
+
+  if (loading) {
+  return (
+    <div
+      className="min-h-screen"
+      style={{ backgroundColor: "var(--background)" }}
+    >
+      {/* Header Skeleton */}
+      <div
+        className="bg-white dark:bg-dark-2 sticky top-0 z-10 border-b px-6 py-4"
+        style={{ borderColor: "var(--border)" }}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+             <div className="w-8 h-8 rounded-lg bg-gray-200 dark:bg-dark-3 animate-pulse" />
+          <div className="h-6 w-48 rounded bg-gray-200 dark:bg-dark-3 animate-pulse" />
+
+          </div>
+         
+          <div className="w-8 h-8 rounded-lg bg-gray-200 dark:bg-dark-3 animate-pulse" />
+        </div>
+      </div>
+
+      {/* Mobile Layout Skeleton */}
+      <div className="block lg:hidden px-4 py-4 space-y-6 animate-pulse">
+        {/* Description */}
+        <div className="space-y-3">
+          <div className="h-4 w-40 bg-gray-200 dark:bg-dark-3 rounded" />
+          <div className="h-4 w-full bg-gray-200 dark:bg-dark-3 rounded" />
+          <div className="h-4 w-5/6 bg-gray-200 dark:bg-dark-3 rounded" />
+        </div>
+
+        {/* Stats */}
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex justify-between">
+              <div className="h-4 w-24 bg-gray-200 dark:bg-dark-3 rounded" />
+              <div className="h-5 w-16 bg-gray-200 dark:bg-dark-3 rounded" />
+            </div>
+          ))}
+        </div>
+
+        {/* Aspect Chips */}
+        <div className="flex justify-around">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div
+              key={i}
+              className="w-14 h-8 bg-gray-200 dark:bg-dark-3 rounded-full"
+            />
+          ))}
+        </div>
+
+        {/* Session Cards */}
+        {[1, 2, 3].map((i) => (
+          <div
+            key={i}
+            className="flex gap-4 p-4 bg-white dark:bg-dark-2 rounded-2xl border"
+            style={{ borderColor: "var(--border)" }}
+          >
+            <div className="w-20 h-20 rounded-xl bg-gray-200 dark:bg-dark-3" />
+            <div className="flex-1 space-y-3">
+              <div className="h-4 w-32 bg-gray-200 dark:bg-dark-3 rounded" />
+              <div className="h-3 w-24 bg-gray-200 dark:bg-dark-3 rounded" />
+              <div className="h-3 w-40 bg-gray-200 dark:bg-dark-3 rounded" />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop Layout Skeleton */}
+      <div className="hidden lg:flex gap-6 px-6 py-6 animate-pulse">
+        {/* Left Column */}
+        <div className="flex-1 space-y-6">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="flex gap-4 p-4 bg-white dark:bg-dark-2 rounded-2xl border"
+              style={{ borderColor: "var(--border)" }}
+            >
+              <div className="w-20 h-20 rounded-xl bg-gray-200 dark:bg-dark-3" />
+              <div className="flex-1 space-y-3">
+                <div className="h-4 w-32 bg-gray-200 dark:bg-dark-3 rounded" />
+                <div className="h-3 w-24 bg-gray-200 dark:bg-dark-3 rounded" />
+                <div className="h-3 w-40 bg-gray-200 dark:bg-dark-3 rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Right Sidebar */}
+        <div
+          style={{ width: "450px",borderColor: "var(--border)" }}
+          className="bg-white dark:bg-dark-2 rounded-2xl p-6 border space-y-6"
+        >
+          <div className="h-[220px] bg-gray-200 dark:bg-dark-3 rounded-xl" />
+          <div className="flex justify-around">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div
+                key={i}
+                className="w-14 h-8 bg-gray-200 dark:bg-dark-3 rounded-full"
+              />
+            ))}
+          </div>
+          <div className="space-y-3">
+            <div className="h-4 w-40 bg-gray-200 dark:bg-dark-3 rounded" />
+            <div className="h-4 w-full bg-gray-200 dark:bg-dark-3 rounded" />
+            <div className="h-4 w-5/6 bg-gray-200 dark:bg-dark-3 rounded" />
+            <div className="h-4 w-40 bg-gray-200 dark:bg-dark-3 rounded" />
+            <div className="h-4 w-24 bg-gray-200 dark:bg-dark-3 rounded" />
+          </div>
+           <div className="space-y-4">
+            <div className="h-8 w-full bg-gray-200 dark:bg-dark-3 rounded" />
+            <div className="h-8 w-full bg-gray-200 dark:bg-dark-3 rounded" />
+            <div className="h-8 w-full bg-gray-200 dark:bg-dark-3 rounded" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+  if (error || !goal) {
+    return (
+      <div
+        className="min-h-screen flex items-center justify-center flex-col gap-4"
+        style={{ backgroundColor: "var(--background)" }}
+      >
+        <p className="text-red-500">{error || "Goal not found"}</p>
+        <button onClick={onBack} className="text-blue-500 hover:underline">
+          Go Back
+        </button>
+      </div>
+    );
+  }
+
+  const isOwner = feedOwner
+    ? !!me?.username && feedOwner === me.username
+    : goal.is_owner === true ||
+      (!!me?.username && goal.username === me.username);
+  const goalCompleted = goal.status === "completed";
+  const goalDescription = goal.description || "";
+  const statusText = `${goal.days_completed} / ${goal.days_total} days completed`;
+
+  // Calculate stats from sessions
+  const totalDurationSeconds = sessions.reduce(
+    (acc, s) => acc + (s.total_duration_seconds || 0),
+    0,
+  );
+  const totalXpFromSessions = sessions.reduce((acc, s) => acc + s.xp_total, 0);
+  const totalXp =
+    sessions.length > 0
+      ? totalXpFromSessions
+      : typeof goal.total_xp === "number"
+        ? goal.total_xp
+        : 0;
+
+  // Aspect XP totals across all sessions
+  const aspectXpFromSessions = {
+    physique: sessions.reduce((acc, s) => acc + s.xp_physique, 0),
+    energy: sessions.reduce((acc, s) => acc + s.xp_energy, 0),
+    logic: sessions.reduce((acc, s) => acc + s.xp_logic, 0),
+    creativity: sessions.reduce((acc, s) => acc + s.xp_creativity, 0),
+    social: sessions.reduce((acc, s) => acc + s.xp_social, 0),
+  };
+
+  const aspectXp =
+    sessions.length > 0
+      ? aspectXpFromSessions
+      : {
+          physique: goal.xp_distribution?.physique ?? 0,
+          energy: goal.xp_distribution?.energy ?? 0,
+          logic: goal.xp_distribution?.logic ?? 0,
+          creativity: goal.xp_distribution?.creativity ?? 0,
+          social: goal.xp_distribution?.social ?? 0,
+        };
+
+  const maxAspectXp = Math.max(...Object.values(aspectXp), 1);
+
+  interface XPDistribution {
+  physique: number;
+  energy: number;
+  social: number;
+  creativity: number;
+  logic: number;
+}
+
+  // Session number map: #1 = oldest, #N = most recent
+  const sessionNumberMap = Object.fromEntries(
+    [...sessions]
+      .sort(
+        (a, b) =>
+          new Date(a.started_at).getTime() - new Date(b.started_at).getTime(),
+      )
+      .map((s, i) => [s.id, i + 1]),
+  );
+
+  // Group sessions
+  const today = new Date().toDateString();
+  const todaySessions = sessions.filter(
+    (s) => new Date(s.started_at).toDateString() === today,
+  );
+  const otherSessions = sessions.filter(
+    (s) => new Date(s.started_at).toDateString() !== today,
+  ); // Simplified logic for demo
+
+  return (
+    <>
+      <style jsx global>{`
+        .bg-dark-2 {
+          background-color: var(--dark-2);
+        }
+
+        .bg-dark-3 {
+          background-color: var(--dark-3);
+        }
+
+        .dark\\:bg-dark-2.dark {
+          background-color: var(--dark-2);
+        }
+
+        .dark\\:bg-dark-3.dark {
+          background-color: var(--dark-3);
+        }
+
+        .dark\\:hover\\:bg-dark-3:hover {
+          background-color: var(--dark-3);
+        }
+
+        body {
+          margin: 0;
+          font-family:
+            "DM Sans",
+            -apple-system,
+            BlinkMacSystemFont,
+            sans-serif;
+          -webkit-font-smoothing: antialiased;
+        }
+      `}</style>
+
+      <div
+        className="min-h-screen"
+        style={{ backgroundColor: "var(--bg-dark-1)" }}
+      >
+        <SharePopup
+          isOpen={showShare}
+          onClose={() => setShowShare(false)}
+          url={goalUrl}
+          heading="Share Goal"
+          accentColor="var(--rookie-primary)"
+        />
+
+        <SessionInfoPopup
+          isOpen={isSessionPopupOpen}
+          onClose={() => setIsSessionPopupOpen(false)}
+          sessionNumber={
+            selectedSession ? (sessionNumberMap[selectedSession.id] ?? 0) : 0
+          }
+          dateText={
+            selectedSession ? formatDate(selectedSession.started_at) : ""
+          }
+          totalDuration={
+            selectedSession
+              ? formatDuration(selectedSession.total_duration_seconds)
+              : ""
+          }
+          coverImageUrl ={selectedSession?.completion_picture || undefined}    
+          xpDistribution={{
+            physique: selectedSession?.xp_physique || 0, 
+            energy: selectedSession?.xp_energy || 0,
+            logic: selectedSession?.xp_logic || 0,
+            creativity: selectedSession?.xp_creativity || 0,
+            social: selectedSession?.xp_social || 0,
+          }}
+          
+          focusedDuration={
+            selectedSession
+              ? formatDuration(selectedSession.focused_duration_seconds)
+              : "--"
+          }
+          nudgeCount={0}
+          nudgeAvatars={[]}
+          activity={{
+            uid: selectedSession?.activity?.uid,
+            name: selectedSession?.activity?.name ?? "Activity",
+            emoji: selectedSession?.activity?.emoji ?? "🎯",
+            color: `var(--aspect-${selectedSession?.activity?.type || "muted"})`,
+          }}
+          onDelete={handleDeleteSession}
+        />
+
+        <DeleteSessionConfirmationModal
+          isOpen={!!rowDeleteSession}
+          onClose={() => setRowDeleteSession(null)}
+          onConfirm={() => handleDeleteSession(rowDeleteSession)}
+          xpEarned={rowDeleteSession?.xp_total ?? 0}
+        />
+
+        <CompleteGoalPopup
+          isOpen={isCompleteGoalOpen}
+          onClose={handleCloseCompleteGoal}
+          onPost={handlePostAchievement}
+          defaultTitle={goal.title}
+          defaultDescription={goalDescription || statusText}
+          timeSpent={formatDuration(totalDurationSeconds)}
+          xpGained={totalXp}
+          sessionsCount={sessions.length}
+        />
+
+        <NewGoalModal
+          key={goal.updated_at}
+          isOpen={isModalOpen}
+          isEdit={true}
+          goalCompleted={goalCompleted}
+          onClose={() => setIsModalOpen(false)}
+          onSubmit={handleCreateGoal}
+          initialGoal={{
+            title: goal.title,
+            description: goalDescription,
+            finishBy: goal.finish_by || "",
+          }}
+        />
+
+        {/* Header */}
+        <div
+          className="bg-white dark:bg-dark-2 sticky top-0 z-10 border-b"
+          style={{ borderColor: "var(--border)" }}
+        >
+          <div className="flex items-center justify-between px-6 py-4">
+            <Link  href="/goals"
+              className="p-2 -ml-2 cursor-pointer  rounded-lg transition-colors"
+
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M15 18L9 12L15 6"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </Link>
+
+            <h1 className="text-xl font-bold flex-1 ml-2 text-foreground dark:text-[var(--foreground)]">
+              {goal.username && goal.username !== me?.username ? (
+                <>
+                  <Link href={`/u/${goal.username}`} className="hover:underline">
+                    {goal.username}
+                  </Link>
+                  {" / "}
+                </>
+              ) : null}
+              {goal.title}
+            </h1>
+
+            <button
+              type="button"
+              aria-label="Share goal"
+              title="Share goal"
+              className="p-2 cursor-pointer rounded-lg transition-colors"
+              onClick={() => setShowShare(true)}
+            >
+              <ShareIcon className="w-5 h-5" />
+            </button>
+
+            <div ref={moreMenuRef} className="relative">
+              <button
+                className="p-2 cursor-pointer rounded-lg transition-colors"
+                onClick={() => setIsMoreMenuOpen((prev) => !prev)}
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="6" r="1.5" fill="currentColor" />
+                  <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+                  <circle cx="12" cy="18" r="1.5" fill="currentColor" />
+                </svg>
+              </button>
+
+              {isMoreMenuOpen && (
+                <div
+                  className="absolute right-0 top-12 w-44 bg-white dark:bg-dark-2 border rounded-sm shadow-lg overflow-hidden z-50"
+                  style={{ borderColor: "var(--border)" }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    type="button"
+                    className="w-full cursor-pointer text-left font-medium py-3 px-4 text-sm hover:bg-gray-100 dark:hover:bg-dark-3 transition-colors"
+                    onClick={() => {
+                      setIsMoreMenuOpen(false);
+                      setIsModalOpen(true);
+                    }}
+                  >
+                    Edit Goal
+                  </button>
+
+                  <button
+                    type="button"
+                    className="w-full cursor-pointer text-left font-medium py-3 px-4 text-sm hover:bg-gray-100 dark:hover:bg-dark-3 transition-colors"
+                    onClick={() => {
+                      setIsMoreMenuOpen(false);
+                    }}
+                  >
+                    Reset Progress
+                  </button>
+
+                  <button
+                    type="button"
+                    className="w-full cursor-pointer text-left font-medium py-3 px-4 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-dark-3 transition-colors"
+                    onClick={() => {
+                      setIsMoreMenuOpen(false);
+                      handleDeleteGoal();
+                    }}
+                  >
+                    Delete Goal
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Layout - Single Scroll */}
+        <div className="block lg:hidden px-4 py-4">
+          {/* Action Buttons — mobile: right below the header, above Created on */}
+          {!goalCompleted && isOwner && (
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              {goal.last_activity && (
+                <button
+                  className="py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80  cursor-pointer"
+                  style={{
+                    backgroundColor: "var(--rookie-primary)",
+                  }}
+                  onClick={handleStartSession}
+                >
+                  Start {goal.last_activity.name}
+                </button>
+              )}
+
+              <button
+                className={`py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80 cursor-pointer ${!goal.last_activity ? 'col-span-2' : ''}`}
+                style={{
+                  backgroundColor: goal.last_activity ? "#4a4a4a" : "var(--rookie-primary)",
+                }}
+                onClick={() => handleOpenNewActivity()}
+              >
+                New Session
+              </button>
+            </div>
+          )}
+
+          {/* Creation Date */}
+          <p className="text-sm mb-3" style={{ color: "var(--muted)" }}>
+            Created on {formatDate(goal.created_at)}
+          </p>
+
+          {/* Description */}
+          {goalDescription && (
+            <p className="text-base mb-4 text-foreground dark:text-[var(--foreground)]">
+              {goalDescription}
+            </p>
+          )}
+          <p className="text-sm mb-6" style={{ color: "var(--muted)" }}>
+            {statusText}
+          </p>
+
+          {/* Stats */}
+          <div className="space-y-4 mb-6">
+            <div className="flex items-center justify-between">
+              <span className="text-sm" style={{ color: "var(--muted)" }}>
+                Time Spent
+              </span>
+              <span className="text-lg font-bold text-foreground dark:text-[var(--foreground)]">
+                {formatDuration(totalDurationSeconds)}
+              </span>
+            </div>
+
+            <div
+              className="h-px"
+              style={{ backgroundColor: "var(--border)" }}
+            />
+
+            <div className="flex items-center justify-between">
+              <span className="text-sm" style={{ color: "var(--muted)" }}>
+                XP gained
+              </span>
+              <span className="text-lg font-bold text-foreground dark:text-[var(--foreground)]">
+                {totalXp}
+              </span>
+            </div>
+
+            <div
+              className="h-px"
+              style={{ backgroundColor: "var(--border)" }}
+            />
+
+            <div className="flex items-center justify-between">
+              <span className="text-sm" style={{ color: "var(--muted)" }}>
+                Likes
+              </span>
+<div className="flex items-center gap-1">
+
+  <div className="flex -space-x-2">
+    {goal.top_likes?.slice(0, 3).map((user) => (
+      <a key={user.username} href={`/u/${user.username}`}>
+        <Image
+          src={user.profile_picture ?? "/default_pfp.png"}
+          alt={user.username}
+          width={28}
+          height={28}
+          className="w-7 h-7 rounded-full border-2 border-white object-cover"
+        />
+      </a>
+    ))}
+  </div>
+
+  {goal.likes_count && goal.likes_count > 3 && (
+    <span className="text-sm text-gray-500">
+      +{goal.likes_count - 3}
+    </span>
+  )}
+</div>
+
+            </div>
+          </div>
+
+          {/* Aspect Chips */}
+          <div className="mb-6">
+            <h3
+              className="text-sm font-semibold mb-3"
+              style={{ color: "var(--muted)" }}
+            >
+              Life Aspects
+            </h3>
+            <div className="flex justify-around gap-1">
+              <AspectChip
+                icon={<BiDumbbell className="w-4 h-4" />}
+                value={aspectXp.physique}
+                tint="physique"
+              />
+              <AspectChip
+                icon={<BoltIcon className="w-4 h-4" />}
+                value={aspectXp.energy}
+                tint="energy"
+              />
+              <AspectChip
+                icon={<UsersIcon className="w-4 h-4" />}
+                value={aspectXp.social}
+                tint="social"
+              />
+              <AspectChip
+                icon={<FaBrain className="w-4 h-4" />}
+                value={aspectXp.creativity}
+                tint="creativity"
+              />
+              <AspectChip
+                icon={<FaHammer className="w-4 h-4" />}
+                value={aspectXp.logic}
+                tint="logic"
+              />
+            </div>
+          </div>
+
+          {/* Complete Goal Button — mobile: right below the aspect chips */}
+          {!goalCompleted && isOwner && (
+            <div className="mb-8">
+              <button
+                className="w-full py-3 rounded-2xl font-medium text-white text-md transition-all active:scale-95 cursor-pointer"
+                style={{
+                  backgroundColor: "var(--rookie-primary)",
+                }}
+                onClick={handleOpenCompleteGoal}
+              >
+                Complete Goal
+              </button>
+            </div>
+          )}
+
+          <h2 className="text-xl font-bold my-4 text-foreground dark:text-[var(--foreground)]">
+            Today
+          </h2>
+          <div className="space-y-3">
+            {todaySessions.map((session) => (
+              <SessionItem
+                completion_picture={session.completion_picture}
+                key={session.id}
+                sessionNumber={sessionNumberMap[session.id] || 0}
+                activity={session.activity?.name || "Activity"}
+                xpEarned={session.xp_total}
+                dateTime={formatDate(session.started_at)}
+                duration={formatDuration(
+                  session.focused_duration_seconds ?? session.total_duration_seconds,
+                )}
+                emoji={session.activity?.emoji}
+                onClick={() => handleOpenSessionPopup(session)}
+                onDelete={() => setRowDeleteSession(session)}
+                color={aspectColors[session?.activity?.type ?? "muted"] || "#9ca3af"}
+              />
+            ))}
+            {todaySessions.length === 0 && (
+              <p className="text-sm text-gray-500">No sessions today</p>
+            )}
+          </div>
+
+          {/* Sessions - Earlier */}
+          <h2 className="text-xl font-bold my-4 text-foreground dark:text-[var(--foreground)]">
+            History
+          </h2>
+          <div className="space-y-3">
+            {otherSessions.map((session) => (
+              <SessionItem
+                key={session.id}
+                completion_picture={session.completion_picture}
+                sessionNumber={sessionNumberMap[session.id] || 0}
+                activity={session.activity?.name || "Activity"}
+                xpEarned={session.xp_total}
+                dateTime={formatDate(session.started_at)}
+                duration={formatDuration(
+                  session.focused_duration_seconds ?? session.total_duration_seconds,
+                )}
+                emoji={session.activity?.emoji}
+                onClick={() => handleOpenSessionPopup(session)}
+                onDelete={() => setRowDeleteSession(session)}
+                color={aspectColors[session?.activity?.type ?? "muted"] || "#9ca3af"}
+              />
+            ))}
+            {otherSessions.length === 0 && (
+              <p className="text-sm text-gray-500">No past sessions</p>
+            )}
+          </div>
+        </div>
+
+        {/* Desktop Layout - Two Column */}
+        <div className="hidden lg:flex gap-6 px-6 py-6">
+          {/* Left Column - Main Content */}
+          <div className="flex-1">
+            {/* Action Buttons */}
+            {!goalCompleted && isOwner && (
+              <div className="grid grid-cols-2 gap-3 mb-8">
+                <button
+                  className="py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80  cursor-pointer"
+                  style={{
+                    backgroundColor: "var(--rookie-primary)",
+                  }}
+                  onClick={handleStartSession}
+                >
+                  Start {goal.last_activity?.name || "Activity"}
+                </button>
+
+                <button
+                  className="py-3 rounded-2xl text-md bg-gray-700 dark:bg-dark-3 font-medium text-white text-base transition-all active:opacity-80 cursor-pointer"
+                  
+                  onClick={() => setIsNewActivityModalOpen(true)}
+                >
+                  New Session
+                </button>
+              </div>
+            )}
+
+            {/* Sessions - Today */}
+            <h2 className="text-xl font-bold my-4 text-foreground dark:text-[var(--foreground)]">
+              Today
+            </h2>
+            <div className="space-y-3">
+              {todaySessions.map((session) => (
+                <SessionItem
+                  completion_picture={session.completion_picture}
+                  key={session.id}
+                  
+                  sessionNumber={sessionNumberMap[session.id] || 0}
+                  activity={session.activity?.name || "Activity"}
+                  xpEarned={session.xp_total}
+                  dateTime={formatDate(session.started_at)}
+                  duration={formatDuration(
+                    session.focused_duration_seconds ?? session.total_duration_seconds,
+                  )}
+                  emoji={session.activity?.emoji}
+                  onClick={() => handleOpenSessionPopup(session)}
+                onDelete={() => setRowDeleteSession(session)}
+                  color={aspectColors[session?.activity?.type ?? "muted"] || "#9ca3af"}
+                />
+              ))}
+              {todaySessions.length === 0 && (
+                <p className="text-sm text-gray-500">No sessions today</p>
+              )}
+            </div>
+
+            {/* Sessions - History */}
+            <h2 className="text-xl font-bold my-4 text-foreground dark:text-[var(--foreground)]">
+              History
+            </h2>
+            <div className="space-y-3">
+              {otherSessions.map((session) => (
+                <SessionItem
+                  completion_picture={session.completion_picture}
+                  key={session.id}
+                  sessionNumber={sessionNumberMap[session.id] || 0}
+                  activity={session.activity?.name || "Activity"}
+                  xpEarned={session.xp_total}
+                  dateTime={formatDate(session.started_at)}
+                  duration={formatDuration(
+                    session.focused_duration_seconds ?? session.total_duration_seconds,
+                  )}
+                  emoji={session.activity?.emoji}
+                  onClick={() => handleOpenSessionPopup(session)}
+                onDelete={() => setRowDeleteSession(session)}
+                  color={aspectColors[session?.activity?.type ?? "muted"] || "#9ca3af"}
+                />
+              ))}
+              {otherSessions.length === 0 && (
+                <p className="text-sm text-gray-500">No past sessions</p>
+              )}
+            </div>
+          </div>
+
+          {/* Right Sidebar - Desktop Only */}
+          <div style={{ width: "450px" }} className="flex-shrink-0">
+            <div
+              className="sticky top-24 space-y-6 bg-white dark:bg-dark-2 rounded-2xl p-6 border"
+              style={{ borderColor: "var(--border)" }}
+            >
+              <div className="w-full h-[220px]">
+                <RadarChart
+                  data={[
+                    {
+                      aspect: "Physique",
+                      value: aspectXp.physique,
+                      fullMark: maxAspectXp,
+                    },
+                    {
+                      aspect: "Energy",
+                      value: aspectXp.energy,
+                      fullMark: maxAspectXp,
+                    },
+                    {
+                      aspect: "Social",
+                      value: aspectXp.social,
+                      fullMark: maxAspectXp,
+                    },
+                    {
+                      aspect: "Creativity",
+                      value: aspectXp.creativity,
+                      fullMark: maxAspectXp,
+                    },
+                    {
+                      aspect: "Logic",
+                      value: aspectXp.logic,
+                      fullMark: maxAspectXp,
+                    },
+                  ]}
+                  masteryTitle={"Beginner"}
+                  username={"User"}
+                />
+              </div>
+
+              {/* Aspect Chips */}
+              <div>
+                <div className="flex  justify-around gap-2">
+                  <AspectChip
+                    icon={<BiDumbbell className="w-4 h-4" />}
+                    value={aspectXp.physique}
+                    tint="physique"
+                  />
+                  <AspectChip
+                    icon={<BoltIcon className="w-4 h-4" />}
+                    value={aspectXp.energy}
+                    tint="energy"
+                  />
+                  <AspectChip
+                    icon={<UsersIcon className="w-4 h-4" />}
+                    value={aspectXp.social}
+                    tint="social"
+                  />
+                  <AspectChip
+                    icon={<FaBrain className="w-4 h-4" />}
+                    value={aspectXp.creativity}
+                    tint="creativity"
+                  />
+                  <AspectChip
+                    icon={<FaHammer className="w-4 h-4" />}
+                    value={aspectXp.logic}
+                    tint="logic"
+                  />
+                </div>
+              </div>
+
+              {/* Creation Date */}
+
+              <p className="text-sm" style={{ color: "var(--muted)" }}>
+                Created on {formatDate(goal.created_at)}
+              </p>
+
+              {/* Description */}
+              {goalDescription && (
+                <p className="text-md text-foreground dark:text-[var(--foreground)]">
+                  {goalDescription}
+                </p>
+              )}
+              <p className="text-sm" style={{ color: "var(--muted)" }}>
+                {statusText}
+              </p>
+
+              {/* Stats */}
+              <div className="space-y-4">
+                {/* Time Spent */}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm" style={{ color: "var(--muted)" }}>
+                    Time Spent
+                  </span>
+                  <span className="text-lg font-bold text-foreground dark:text-[var(--foreground)]">
+                    {formatDuration(totalDurationSeconds)}
+                  </span>
+                </div>
+
+                <div
+                  className="h-px"
+                  style={{ backgroundColor: "var(--border)" }}
+                />
+
+                {/* XP Gained */}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm" style={{ color: "var(--muted)" }}>
+                    XP gained
+                  </span>
+                  <span className="text-lg font-bold text-foreground dark:text-[var(--foreground)]">
+                    {totalXp}
+                  </span>
+                </div>
+
+                <div
+                  className="h-px"
+                  style={{ backgroundColor: "var(--border)" }}
+                />
+
+                {/* Likes */}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm" style={{ color: "var(--muted)" }}>
+                    Likes
+                  </span>
+<div className="flex items-center gap-1">
+
+  <div className="flex -space-x-2">
+    {goal.top_likes?.slice(0, 3).map((user) => (
+      <a key={user.username} href={`/u/${user.username}`}>
+        <Image
+          src={user.profile_picture ?? "/default_pfp.png"}
+          alt={user.username}
+          width={28}
+          height={28}
+          className="w-7 h-7 rounded-full border-2 border-white object-cover"
+        />
+      </a>
+    ))}
+  </div>
+
+  {goal.likes_count && goal.likes_count > 3 && (
+    <span className="text-sm text-gray-500">
+      +{goal.likes_count - 3}
+    </span>
+  )}
+
+</div>
+
+</div>
+              </div>
+
+              {/* Complete Goal Button */}
+              {!goalCompleted && isOwner && (
+                <button
+                  className="w-full py-3 rounded-2xl font-medium text-white text-md transition-all active:scale-95 cursor-pointer"
+                  style={{
+                    backgroundColor: "var(--rookie-primary)",
+                  }}
+                  onClick={handleOpenCompleteGoal}
+                >
+                  Complete Goal
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* New Session Popup - minimalistic */}
+      <NewSessionPopup
+        isOpen={isNewSessionPopupOpen}
+        onClose={() => setIsNewSessionPopupOpen(false)}
+        onSelectActivity={handleSelectActivity}
+        onNewActivity={handleOpenNewActivity}
+      />
+
+      {/* New Activity Modal - full activity picker */}
+      <NewActivityModal
+        isOpen={isNewActivityModalOpen}
+        onClose={() => setIsNewActivityModalOpen(false)}
+        onSelectActivity={handleSelectActivity}
+        onGenerateNew={handleGenerateNew}
+        goalUid={goalId}
+      />
+    </>
+  );
+}
