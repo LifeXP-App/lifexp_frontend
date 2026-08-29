@@ -9,6 +9,22 @@ export const contentType = "image/png";
 
 type Aspect = "physique" | "energy" | "social" | "creativity" | "logic";
 
+// @vercel/og (which next/og wraps) renders emoji by fetching each glyph as an
+// SVG from a remote CDN (cdn.jsdelivr.net/twemoji) at render time. If that
+// fetch is slow/blocked/rate-limited in the serverless environment, it throws
+// and the whole ImageResponse fails — which is exactly what happened here (a
+// real fullname/goal emoji crashed the image). A share-preview image doesn't
+// need pixel-perfect emoji, so strip them entirely instead of depending on
+// that network call succeeding.
+function stripEmoji(text: string): string {
+  return text
+    .replace(/\p{Extended_Pictographic}/gu, "")
+    .replace(/[\u{1F1E6}-\u{1F1FF}]/gu, "") // regional indicator flags
+    .replace(/️/gu, "") // variation selector-16
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 type ProfileData = {
   fullname?: string;
   username: string;
@@ -20,7 +36,7 @@ type ProfileData = {
   aspects?: Record<Aspect, { currentXP: number }>;
 };
 
-type Goal = { title: string; emoji?: string | null };
+type Goal = { title: string };
 
 async function fetchProfile(username: string): Promise<ProfileData | null> {
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -96,6 +112,29 @@ function buildRadarPolygon(
   return { grid, polygon, points: dataPoints };
 }
 
+function fallbackImage() {
+  return new ImageResponse(
+    (
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#0E0E12",
+          color: "#ffffff",
+          fontSize: 48,
+          fontWeight: 700,
+        }}
+      >
+        LifeXP
+      </div>
+    ),
+    { ...size },
+  );
+}
+
 export default async function Image({
   params,
 }: {
@@ -105,46 +144,41 @@ export default async function Image({
   const profile = await fetchProfile(username);
 
   if (!profile) {
-    return new ImageResponse(
-      (
-        <div
-          style={{
-            width: "100%",
-            height: "100%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "#0E0E12",
-            color: "#ffffff",
-            fontSize: 48,
-            fontWeight: 700,
-          }}
-        >
-          LifeXP
-        </div>
-      ),
-      { ...size },
-    );
+    return fallbackImage();
   }
 
-  const accent = getAccentColors(profile.masteryTitle || "rookie");
-  const isRookie = (profile.masteryTitle || "Rookie") === "Rookie";
-  const isPrivate = profile.visibility === "private";
+  // Everything below renders through Satori, which has sharp edges (remote
+  // image fetches, emoji glyph resolution) that can throw well after the
+  // profile data itself was fine — never let that surface as a 500 to
+  // whatever crawler is unfurling this link. Fall back to the plain card
+  // instead of a broken image.
+  //
+  // react-hooks/error-boundaries assumes normal React reconciliation (JSX
+  // construction is lazy, so try/catch around it does nothing there).
+  // ImageResponse/Satori is NOT React rendering: `new ImageResponse(jsx,
+  // opts)` synchronously walks this tree right here to produce PNG bytes, so
+  // this try/catch genuinely does catch its rendering failures.
+  /* eslint-disable react-hooks/error-boundaries */
+  try {
+    const accent = getAccentColors(profile.masteryTitle || "rookie");
+    const isRookie = (profile.masteryTitle || "Rookie") === "Rookie";
+    const isPrivate = profile.visibility === "private";
 
-  const goals = isPrivate ? [] : await fetchOngoingGoals(username);
+    const goals = isPrivate ? [] : await fetchOngoingGoals(username);
 
-  const aspectValues = ASPECT_ORDER.map(
-    ({ key }) => profile.aspects?.[key]?.currentXP ?? 0,
-  );
-  const { grid, polygon } = buildRadarPolygon(aspectValues, 160, 130);
+    const aspectValues = ASPECT_ORDER.map(
+      ({ key }) => profile.aspects?.[key]?.currentXP ?? 0,
+    );
+    const { grid, polygon } = buildRadarPolygon(aspectValues, 160, 130);
 
-  const displayName = profile.fullname || profile.username;
-  const masteryLabel = `${profile.masteryTitle || "Rookie"}${
-    !isRookie && profile.masteryLevel ? ` ${toRoman(profile.masteryLevel)}` : ""
-  }`;
+    const rawDisplayName = profile.fullname || profile.username;
+    const displayName = stripEmoji(rawDisplayName) || profile.username;
+    const masteryLabel = `${profile.masteryTitle || "Rookie"}${
+      !isRookie && profile.masteryLevel ? ` ${toRoman(profile.masteryLevel)}` : ""
+    }`;
 
-  return new ImageResponse(
-    (
+    return new ImageResponse(
+      (
       <div
         style={{
           width: "100%",
@@ -218,8 +252,7 @@ export default async function Image({
                     border: `1px solid ${accent.primary}`,
                   }}
                 >
-                  <span>{goal.emoji || "🎯"}</span>
-                  <span>{goal.title}</span>
+                  <span>{stripEmoji(goal.title) || goal.title}</span>
                 </div>
               ))}
             </div>
@@ -244,7 +277,12 @@ export default async function Image({
           </div>
         )}
       </div>
-    ),
-    { ...size },
-  );
+      ),
+      { ...size },
+    );
+  } catch (err) {
+    console.error("Failed to render profile opengraph-image:", err);
+    return fallbackImage();
+  }
+  /* eslint-enable react-hooks/error-boundaries */
 }
