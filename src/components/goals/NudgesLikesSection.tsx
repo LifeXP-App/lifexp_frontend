@@ -136,7 +136,7 @@ export function NudgesLikesSection() {
                         <span className="font-semibold">{i.username}</span>{" "}
                         {i.type === "nudge" ? (
                           <>
-                            nudged you during your{" "}
+                            nudged your {" "}
                             <span className="font-semibold">
                               {i.activityName ?? "session"}
                             </span>{" "}
