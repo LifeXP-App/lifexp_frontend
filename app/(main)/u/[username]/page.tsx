@@ -1211,7 +1211,19 @@ export default function ProfilePage({ params }: PageProps) {
 
               <button
                 onClick={() => setShowShare(true)}
-                className="flex-1 min-w-0 sm:flex-none cursor-pointer font-medium bg-black/70 hover:bg-black text-white text-center py-2 rounded-lg sm:w-48 dark:hover:bg-gray-100 dark:bg-white dark:text-black"
+                className={
+                  profileUser.masteryTitle === "Rookie"
+                    ? "flex-1 min-w-0 sm:flex-none cursor-pointer font-medium bg-black/70 hover:bg-black text-white text-center py-2 rounded-lg sm:w-48 dark:hover:bg-gray-100 dark:bg-white dark:text-black"
+                    : "flex-1 min-w-0 sm:flex-none cursor-pointer font-medium text-center py-2 rounded-lg sm:w-48"
+                }
+                style={
+                  profileUser.masteryTitle === "Rookie"
+                    ? undefined
+                    : {
+                        backgroundColor: hexToRgbaUtil(accent.primary, 0.15),
+                        color: accent.primary,
+                      }
+                }
               >
                 Share
               </button>
