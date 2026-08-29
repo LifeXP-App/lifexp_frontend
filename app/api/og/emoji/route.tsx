@@ -70,13 +70,17 @@ function whiteSquare() {
   );
 }
 
+// Shared link-preview image for anything that wants "an emoji on a white
+// square, falling back to some other image if the emoji can't be rendered" —
+// used by the goal page (falls back to the owner's profile picture) and the
+// activity page (falls back to the GamiLife logo).
 export async function GET(req: NextRequest) {
   const emoji = req.nextUrl.searchParams.get("emoji");
-  const avatar = req.nextUrl.searchParams.get("avatar");
+  const fallback = req.nextUrl.searchParams.get("fallback");
 
   if (!emoji) {
-    if (avatar) {
-      return Response.redirect(avatar, 302);
+    if (fallback) {
+      return Response.redirect(fallback, 302);
     }
     return whiteSquare();
   }
@@ -112,16 +116,16 @@ export async function GET(req: NextRequest) {
         { width: SIZE, height: SIZE },
       );
     } catch (err) {
-      console.error("Failed to render goal-emoji og image:", err);
-      // Fall through to the avatar/white-square fallback below.
+      console.error("Failed to render emoji og image:", err);
+      // Fall through to the fallback/white-square below.
     }
   }
   /* eslint-enable react-hooks/error-boundaries */
 
-  // No emoji artwork available — fall back to the goal owner's profile
-  // picture if one was provided, otherwise a plain white square.
-  if (avatar) {
-    return Response.redirect(avatar, 302);
+  // No emoji artwork available — fall back to the caller-provided image if
+  // one was given, otherwise a plain white square.
+  if (fallback) {
+    return Response.redirect(fallback, 302);
   }
   return whiteSquare();
 }

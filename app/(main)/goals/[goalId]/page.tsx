@@ -33,10 +33,10 @@ async function fetchPublicGoal(goalId: string): Promise<PublicGoal | null> {
 
 // Link-preview metadata for /goals/<goalId> — title is "@username / Goal
 // title", description is the goal's own description, image is the goal's
-// completion picture if it has one, else /api/og/goal-emoji: real emoji
-// artwork on a white square when it can fetch one, else the goal owner's own
-// profile picture, else a plain white square (see that route for why the
-// emoji can't just be drawn as plain JSX/SVG text).
+// completion picture if it has one, else /api/og/emoji: real emoji artwork on
+// a white square when it can fetch one, else the goal owner's own profile
+// picture, else a plain white square (see that route for why the emoji can't
+// just be drawn as plain JSX/SVG text).
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { goalId } = await params;
   const goal = await fetchPublicGoal(goalId);
@@ -59,9 +59,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const imageUrl = goal.completion_picture_url
     ? goal.completion_picture_url
     : origin
-      ? `${origin}/api/og/goal-emoji?${new URLSearchParams({
+      ? `${origin}/api/og/emoji?${new URLSearchParams({
           emoji: goal.emoji || "🎯",
-          ...(goal.avatar ? { avatar: goal.avatar } : {}),
+          ...(goal.avatar ? { fallback: goal.avatar } : {}),
         })}`
       : undefined;
 

@@ -46,6 +46,9 @@ type AchievementProps = {
   accent?: Accent;
   stats?: AspectXP;
   compact?: boolean;
+  /** Rookie keeps the original two-tone gradient pill; any unlocked mastery
+   * shows a solid aspect color instead. */
+  isRookie?: boolean;
 };
 
 export default function Achievement({
@@ -59,8 +62,12 @@ export default function Achievement({
   accent = { primary: "var(--rookie-primary)", secondary: "#4168e2" },
   stats = { physique: 0, energy: 0, social: 0, creativity: 0, logic: 0 },
   compact = false,
+  isRookie = true,
 }: AchievementProps) {
   const secondary = accent.secondary ?? "#4168e2";
+  const xpPillBackground = isRookie
+    ? `linear-gradient(135deg, ${accent.primary}, ${secondary})`
+    : accent.primary;
 
   const chips = [
     { icon: <BiDumbbell className="w-3.5 h-3.5" />, value: stats.physique, tint: "physique" as AspectTint },
@@ -83,9 +90,7 @@ export default function Achievement({
               </p>
               <span
                 className="shrink-0 rounded-full px-3 py-1 text-xs font-bold text-white"
-                style={{
-                  background: `linear-gradient(135deg, ${accent.primary}, ${secondary})`,
-                }}
+                style={{ background: xpPillBackground }}
               >
                 +{xp} {xpLabel}
               </span>
@@ -159,9 +164,7 @@ export default function Achievement({
         <div className="absolute top-3 right-3">
           <span
             className="rounded-full px-3 py-1 text-xs font-bold text-white border border-white/20 backdrop-blur-sm"
-            style={{
-              background: `linear-gradient(135deg, ${accent.primary}, ${secondary})`,
-            }}
+            style={{ background: xpPillBackground }}
           >
             +{xp} {xpLabel}
           </span>

@@ -1559,6 +1559,7 @@ export default function ProfileClient({ params }: PageProps) {
                       post.completion_picture_url || post.post_image_url || null,
                     timeText: getTimeAgo(post.created_at),
                     accent: { primary: accent.primary, secondary: accent.secondary },
+                    isRookie: profileUser.masteryTitle === "Rookie",
                     stats: {
                       physique: post.xp_distribution.physique,
                       energy: post.xp_distribution.energy,
