@@ -9,6 +9,7 @@ type PublicProfile = {
   fullname?: string;
   username: string;
   avatar?: string | null;
+  bio?: string | null;
 };
 
 // Server-side only — runs unauthenticated (link-preview crawlers carry no
@@ -28,8 +29,9 @@ async function fetchPublicProfile(username: string): Promise<PublicProfile | nul
 }
 
 // Link-preview metadata for /u/<username> — title is the display name,
-// description is @username, image is their actual profile picture (no
-// generated composite image; that approach kept failing in production).
+// description is their bio (falling back to @username when no bio is set),
+// image is their actual profile picture (no generated composite image; that
+// approach kept failing in production).
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { username } = await params;
   const profile = await fetchPublicProfile(username);
@@ -38,8 +40,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     return { title: "GamiLife", description: "Redefine your Life" };
   }
 
-  const displayName = profile.fullname || profile.username;
-  const description = `@${profile.username}`;
+  const displayName = profile.fullname ? `${profile.fullname} (@${profile.username})` : `${profile.username} - Gamilife`;
+  const description = profile.bio || `@${profile.username}`;
 
   return {
     title: displayName,
