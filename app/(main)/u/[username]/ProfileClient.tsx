@@ -12,6 +12,7 @@ import { useAuth } from "@/src/context/AuthContext";
 import { usePopup } from "@/src/context/PopupContext";
 // Mock data removed - using real API data now
 import { UserProfile } from "@/src/lib/types";
+import { ACTIVITY_META, ActivityType } from "@/src/lib/types/activityMeta";
 import { toRoman } from "@/src/lib/utils/toRoman";
 import { Cog6ToothIcon, FireIcon, LockClosedIcon, PlusIcon, RocketLaunchIcon } from "@heroicons/react/24/solid";
 import Image from "next/image";
@@ -149,6 +150,7 @@ export default function ProfileClient({ params }: PageProps) {
     title: string;
     emoji?: string;
     status: string;
+    xp_distribution?: Record<ActivityType, number>;
   };
 
   const [isXlViewport, setIsXlViewport] = useState(false);
@@ -1068,20 +1070,52 @@ export default function ProfileClient({ params }: PageProps) {
                         />
                       ))
                     ) : ongoingGoals.length > 0 ? (
-                      ongoingGoals.map((goal) => (
-                        <span
-                          key={goal.id || goal.uid}
-                          className="px-3 py-1.5 rounded-full text-xs font-medium flex gap-2 items-center"
-                          style={{
-                            backgroundColor: hexToRgba(accent.primary, 0.15),
-                            border: `1px solid ${accent.primary}`,
-                            color: accent.primary,
-                          }}
-                        >
-                          <p className="text-md">{goal.emoji || "🎯"}</p>
-                          {goal.title}
-                        </span>
-                      ))
+                      ongoingGoals.map((goal) => {
+                        // Goals have no single "activity type" field of their
+                        // own — xp_distribution (summed across the goal's
+                        // sessions) is what actually carries it, so the
+                        // dominant aspect (highest XP) is this goal's color.
+                        // Falls back to the mastery accent for goals with no
+                        // XP yet (freshly created, no sessions logged).
+                        const dist = goal.xp_distribution;
+                        const dominantAspect = dist
+                          ? (Object.keys(dist) as ActivityType[]).reduce<ActivityType | null>(
+                              (best, key) =>
+                                !best || dist[key] > dist[best] ? key : best,
+                              null,
+                            )
+                          : null;
+                        const hasAspectColor = !!(
+                          dominantAspect && dist && dist[dominantAspect] > 0
+                        );
+                        // ACTIVITY_META's colors are CSS var references
+                        // ("var(--aspect-x)"), not hex strings — hexToRgba
+                        // (built for accent.primary's hex fallback table)
+                        // can't parse those, so the 15%-alpha background uses
+                        // the var's paired "-rgb" companion instead when an
+                        // aspect color is in play.
+                        const goalColor = hasAspectColor
+                          ? ACTIVITY_META[dominantAspect!].cssColorVar
+                          : accent.primary;
+                        const goalBackground = hasAspectColor
+                          ? `rgba(${ACTIVITY_META[dominantAspect!].cssColorVarRgb}, 0.15)`
+                          : hexToRgba(accent.primary, 0.15);
+
+                        return (
+                          <span
+                            key={goal.id || goal.uid}
+                            className="px-3 py-1.5 rounded-full text-xs font-medium flex gap-2 items-center"
+                            style={{
+                              backgroundColor: goalBackground,
+                              border: `1px solid ${goalColor}`,
+                              color: goalColor,
+                            }}
+                          >
+                            <p className="text-md">{goal.emoji || "🎯"}</p>
+                            {goal.title}
+                          </span>
+                        );
+                      })
                     ) : (
                       <p className="text-gray-500 dark:text-[var(--muted)] text-sm">
                         No ongoing goals
