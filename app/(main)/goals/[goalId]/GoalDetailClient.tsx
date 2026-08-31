@@ -68,6 +68,7 @@ interface SessionItemProps {
   onDelete?: () => void;
   onEdit?: () => void;
   color?: string;
+  isOwner?: boolean;
 }
 
 // Separate component for SessionItem to avoid re-renders of the list
@@ -84,7 +85,8 @@ const SessionItem = React.memo(function SessionItem({
   onClick,
   onDelete,
   onEdit,
-  color
+  color,
+  isOwner = false,
 }: SessionItemProps) {
   const [open, setOpen] = React.useState(false);
   const menuRef = React.useRef<HTMLDivElement>(null);
@@ -164,54 +166,56 @@ const SessionItem = React.memo(function SessionItem({
           </div>
         </div>
 
-        {/* Triple-dot dropdown */}
-        <div ref={menuRef} className="relative">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setOpen((prev) => !prev);
-            }}
-            className="w-9 h-9 cursor-pointer flex items-center justify-center rounded-full hover:opacity-70 active:opacity-40 transition-all"
-          >
-            {/* 3-dot SVG */}
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="5" r="1.8" fill="currentColor" />
-              <circle cx="12" cy="12" r="1.8" fill="currentColor" />
-              <circle cx="12" cy="19" r="1.8" fill="currentColor" />
-            </svg>
-          </button>
-
-          {open && (
-            <div
-              className="absolute left-0 top-10 w-44 bg-white dark:bg-dark-2 border rounded-md shadow-lg overflow-hidden z-20"
-              style={{ borderColor: "var(--border)" }}
-              onClick={(e) => e.stopPropagation()}
+        {/* Triple-dot dropdown — owner only, since it edits/deletes the session */}
+        {isOwner && (
+          <div ref={menuRef} className="relative">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpen((prev) => !prev);
+              }}
+              className="w-9 h-9 cursor-pointer flex items-center justify-center rounded-full hover:opacity-70 active:opacity-40 transition-all"
             >
-              <button
-                type="button"
-                className="w-full cursor-pointer font-medium text-left py-3 px-4 text-sm hover:bg-gray-100 dark:hover:bg-dark-3 transition-colors"
-                onClick={() => {
-                  setOpen(false);
-                  onEdit?.();
-                }}
-              >
-                Edit Session
-              </button>
+              {/* 3-dot SVG */}
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="5" r="1.8" fill="currentColor" />
+                <circle cx="12" cy="12" r="1.8" fill="currentColor" />
+                <circle cx="12" cy="19" r="1.8" fill="currentColor" />
+              </svg>
+            </button>
 
-              <button
-                type="button"
-                className="w-full   cursor-pointer font-medium text-left py-3 px-4 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-dark-3 transition-colors"
-                onClick={() => {
-                  setOpen(false);
-                  onDelete?.();
-                }}
+            {open && (
+              <div
+                className="absolute left-0 top-10 w-44 bg-white dark:bg-dark-2 border rounded-md shadow-lg overflow-hidden z-20"
+                style={{ borderColor: "var(--border)" }}
+                onClick={(e) => e.stopPropagation()}
               >
-                Delete Session
-              </button>
-            </div>
-          )}
-        </div>
+                <button
+                  type="button"
+                  className="w-full cursor-pointer font-medium text-left py-3 px-4 text-sm hover:bg-gray-100 dark:hover:bg-dark-3 transition-colors"
+                  onClick={() => {
+                    setOpen(false);
+                    onEdit?.();
+                  }}
+                >
+                  Edit Session
+                </button>
+
+                <button
+                  type="button"
+                  className="w-full   cursor-pointer font-medium text-left py-3 px-4 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-dark-3 transition-colors"
+                  onClick={() => {
+                    setOpen(false);
+                    onDelete?.();
+                  }}
+                >
+                  Delete Session
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -921,6 +925,7 @@ export default function GoalDetailClient() {
           isOpen={isSessionPopupOpen}
           onClose={() => setIsSessionPopupOpen(false)}
           sessionId={selectedSession?.id}
+          canEdit={isOwner}
           sessionNumber={
             selectedSession ? (sessionNumberMap[selectedSession.id] ?? 0) : 0
           }
@@ -1281,6 +1286,7 @@ export default function GoalDetailClient() {
                 onClick={() => handleOpenSessionPopup(session)}
                 onDelete={() => setRowDeleteSession(session)}
                 onEdit={() => handleOpenEditSession(session)}
+                isOwner={isOwner}
                 color={aspectColors[session?.activity?.type ?? "muted"] || "#9ca3af"}
               />
             ))}
@@ -1310,6 +1316,7 @@ export default function GoalDetailClient() {
                 onClick={() => handleOpenSessionPopup(session)}
                 onDelete={() => setRowDeleteSession(session)}
                 onEdit={() => handleOpenEditSession(session)}
+                isOwner={isOwner}
                 color={aspectColors[session?.activity?.type ?? "muted"] || "#9ca3af"}
               />
             ))}
@@ -1368,6 +1375,7 @@ export default function GoalDetailClient() {
                   onClick={() => handleOpenSessionPopup(session)}
                 onDelete={() => setRowDeleteSession(session)}
                 onEdit={() => handleOpenEditSession(session)}
+                isOwner={isOwner}
                   color={aspectColors[session?.activity?.type ?? "muted"] || "#9ca3af"}
                 />
               ))}
@@ -1397,6 +1405,7 @@ export default function GoalDetailClient() {
                   onClick={() => handleOpenSessionPopup(session)}
                 onDelete={() => setRowDeleteSession(session)}
                 onEdit={() => handleOpenEditSession(session)}
+                isOwner={isOwner}
                   color={aspectColors[session?.activity?.type ?? "muted"] || "#9ca3af"}
                 />
               ))}

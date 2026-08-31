@@ -1218,7 +1218,7 @@ export default function ActivityClient({
                     totalDurationSeconds={session.totalDurationSeconds}
                     onClick={() =>
                       router.push(
-                        `/goals/${session.goalId}/session/${session._id}`,
+                        `/goals/${session.goalId || "none"}/session/${session._id}`,
                       )
                     }
                   />
@@ -1357,7 +1357,7 @@ export default function ActivityClient({
                       totalDurationSeconds={session.totalDurationSeconds}
                       onClick={() =>
                         router.push(
-                          `/goals/${session.goalId}/session/${session._id}`,
+                          `/goals/${session.goalId || "none"}/session/${session._id}`,
                         )
                       }
                     />

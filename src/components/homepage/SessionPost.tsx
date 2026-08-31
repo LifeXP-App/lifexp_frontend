@@ -3,6 +3,7 @@
 import { CommentSection } from "@/src/components/homepage/CommentSection";
 import { LiveAvatar } from "@/src/components/LiveAvatar";
 import SessionInfoPopup from "@/src/components/goals/SessionInfoPopup";
+import { useAuth } from "@/src/context/AuthContext";
 import { useToast } from "@/src/context/ToastContext";
 import { getResponseError } from "@/src/lib/api/responseError";
 import { supabase } from "@/src/lib/supabase";
@@ -139,8 +140,10 @@ function formatSessionTime(dateString: string): string {
 
 function SessionPostComponent({ session }: { session: ApiSessionPost }) {
   const toast = useToast();
+  const { me } = useAuth();
   const queryClient = useQueryClient();
   const { user, goal, activity } = session;
+  const isOwnSession = !!me?.username && me.username === user.username;
   const goalHref = goal?.uid
     ? `/goals/${goal.uid}?owner=${encodeURIComponent(user.username)}`
     : "#";
@@ -437,6 +440,7 @@ function SessionPostComponent({ session }: { session: ApiSessionPost }) {
         isOpen={isSessionPopupOpen}
         onClose={() => setIsSessionPopupOpen(false)}
         sessionId={session.id}
+        canEdit={isOwnSession}
         sessionNumber={session.session_number}
         name={session.name}
         onNameSaved={handleNameSaved}

@@ -66,7 +66,7 @@ export function LiveAvatar({
   const goToSession = (e: MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    router.push(`/goals/${live.goalId}/session/${live._id}`);
+    router.push(`/goals/${live.goalId || "none"}/session/${live._id}`);
   };
 
   return (

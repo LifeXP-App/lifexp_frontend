@@ -75,7 +75,7 @@ export function LiveSessionStatus({ session }: LiveSessionStatusProps) {
     : "#f59e0b";
 
   return (
-    <Link href={`/goals/${session.goalId}/session/${session.sessionId}`}>
+    <Link href={`/goals/${session.goalId || "none"}/session/${session.sessionId}`}>
       <div className="bg-white dark:bg-dark-2 border-2 border-gray-200 dark:border-[var(--border)] flex p-3 rounded-xl gap-3 min-w-[220px] max-w-[220px] items-center cursor-pointer flex-shrink-0">
         <div className="relative h-14 w-14 flex-shrink-0">
           {session.userProfile ? (

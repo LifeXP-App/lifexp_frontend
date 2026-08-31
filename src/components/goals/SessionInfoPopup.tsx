@@ -36,6 +36,7 @@ interface SessionInfoPopupProps {
   onClose: () => void;
 
   sessionId?: string;
+  canEdit?: boolean;
   sessionNumber?: number;
   name?: string;
   onNameSaved?: (name: string) => void;
@@ -63,6 +64,7 @@ const SessionInfoPopup: React.FC<SessionInfoPopupProps> = ({
   onClose,
 
   sessionId,
+  canEdit = false,
   sessionNumber,
   name,
   onNameSaved,
@@ -103,7 +105,7 @@ const SessionInfoPopup: React.FC<SessionInfoPopupProps> = ({
 
   const handleSaveName = async (rawValue: string) => {
     const trimmed = rawValue.trim();
-    if (!sessionId || trimmed === (name || "")) return;
+    if (!sessionId || !canEdit || trimmed === (name || "")) return;
     try {
       const res = await authedFetch(`/api/sessions/${sessionId}/edit`, {
         method: "PATCH",
@@ -193,10 +195,10 @@ const SessionInfoPopup: React.FC<SessionInfoPopupProps> = ({
           {/* Header */}
           <div className="px-6 pt-7 pb-4 text-center">
             <h1
-              contentEditable={!!sessionId}
+              contentEditable={!!sessionId && canEdit}
               suppressContentEditableWarning
               onFocus={(e) => {
-                if (!sessionId) return;
+                if (!sessionId || !canEdit) return;
                 const range = document.createRange();
                 range.selectNodeContents(e.currentTarget);
                 const sel = window.getSelection();
@@ -204,13 +206,13 @@ const SessionInfoPopup: React.FC<SessionInfoPopupProps> = ({
                 sel?.addRange(range);
               }}
               onBlur={(e) => {
-                if (!sessionId) return;
+                if (!sessionId || !canEdit) return;
                 const value = e.currentTarget.textContent || "";
                 setSessionName(value.trim());
                 handleSaveName(value);
               }}
               onInput={(e) => {
-                if (!sessionId) return;
+                if (!sessionId || !canEdit) return;
                 const value = e.currentTarget.textContent || "";
                 if (value.length > 25) {
                   e.currentTarget.textContent = value.slice(0, 25);
@@ -223,7 +225,7 @@ const SessionInfoPopup: React.FC<SessionInfoPopupProps> = ({
                 }
               }}
               onKeyDown={(e) => {
-                if (!sessionId) return;
+                if (!sessionId || !canEdit) return;
                 if (e.key === "Enter") {
                   e.preventDefault();
                   e.currentTarget.blur();
@@ -234,7 +236,7 @@ const SessionInfoPopup: React.FC<SessionInfoPopupProps> = ({
                 }
               }}
               className={`text-2xl font-bold mb-2 outline-none rounded-lg px-2 -mx-2 transition ${
-                sessionId
+                sessionId && canEdit
                   ? "cursor-text hover:bg-gray-100 dark:hover:bg-white/5 focus:bg-gray-100 dark:focus:bg-white/5"
                   : ""
               }`}
