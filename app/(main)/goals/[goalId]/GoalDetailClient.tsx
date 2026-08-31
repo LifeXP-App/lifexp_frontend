@@ -920,10 +920,16 @@ export default function GoalDetailClient() {
         <SessionInfoPopup
           isOpen={isSessionPopupOpen}
           onClose={() => setIsSessionPopupOpen(false)}
+          sessionId={selectedSession?.id}
           sessionNumber={
             selectedSession ? (sessionNumberMap[selectedSession.id] ?? 0) : 0
           }
           name={selectedSession?.name}
+          onNameSaved={(savedName) => {
+            setSelectedSession((prev) => (prev ? { ...prev, name: savedName } : prev));
+            refetch();
+            invalidateRelatedCaches();
+          }}
           dateText={
             selectedSession ? formatDate(selectedSession.started_at) : ""
           }

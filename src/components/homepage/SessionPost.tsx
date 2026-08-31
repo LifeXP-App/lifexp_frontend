@@ -232,6 +232,26 @@ function SessionPostComponent({ session }: { session: ApiSessionPost }) {
     }
   };
 
+  const handleNameSaved = (savedName: string) => {
+    queryClient.setQueriesData<CachedFeedData>(
+      { queryKey: ["feed"] },
+      (cached) => {
+        if (!cached?.pages) return cached;
+        return {
+          ...cached,
+          pages: cached.pages.map((page) => ({
+            ...page,
+            list: page.list.map((item) =>
+              item.type === "session" && item.id === session.id
+                ? { ...item, name: savedName }
+                : item,
+            ),
+          })),
+        };
+      },
+    );
+  };
+
   return (
     <div
       id="post-card"
@@ -416,8 +436,10 @@ function SessionPostComponent({ session }: { session: ApiSessionPost }) {
       <SessionInfoPopup
         isOpen={isSessionPopupOpen}
         onClose={() => setIsSessionPopupOpen(false)}
+        sessionId={session.id}
         sessionNumber={session.session_number}
         name={session.name}
+        onNameSaved={handleNameSaved}
         dateText={formatPopupDate(session.started_at)}
         coverImageUrl={session.completion_picture || undefined}
         totalDuration={formatPopupDuration(session.total_duration_seconds)}

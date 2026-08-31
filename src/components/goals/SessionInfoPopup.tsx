@@ -9,6 +9,8 @@ import DeleteSessionConfirmationModal from "@/src/components/goals/DeleteSession
 import { BoltIcon, UsersIcon } from "@heroicons/react/24/solid";
 import { FaBrain, FaHammer } from "react-icons/fa";
 import { BiDumbbell } from "react-icons/bi";
+import { authedFetch } from "@/src/lib/api/authedFetch";
+import { useToast } from "@/src/context/ToastContext";
 
 interface ActivityType {
   uid?: string;
@@ -33,8 +35,10 @@ interface SessionInfoPopupProps {
   isOpen: boolean;
   onClose: () => void;
 
+  sessionId?: string;
   sessionNumber?: number;
   name?: string;
+  onNameSaved?: (name: string) => void;
   dateText?: string;
 
   coverImageUrl?: string;
@@ -58,8 +62,10 @@ const SessionInfoPopup: React.FC<SessionInfoPopupProps> = ({
   isOpen,
   onClose,
 
+  sessionId,
   sessionNumber,
   name,
+  onNameSaved,
   dateText,
 
   coverImageUrl ,
@@ -79,15 +85,45 @@ const SessionInfoPopup: React.FC<SessionInfoPopupProps> = ({
 }) => {
   const [isAnimating, setIsAnimating] = useState(true);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [sessionName, setSessionName] = useState(name || "");
+  const toast = useToast();
 
   useEffect(() => {
     if (!isOpen) return;
 
-    /* eslint-disable-next-line react-hooks/set-state-in-effect */
     setIsAnimating(true);
     const t = setTimeout(() => setIsAnimating(false), 350);
     return () => clearTimeout(t);
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setSessionName(name || "");
+  }, [isOpen, name]);
+
+  const handleSaveName = async (rawValue: string) => {
+    const trimmed = rawValue.trim();
+    if (!sessionId || trimmed === (name || "")) return;
+    try {
+      const res = await authedFetch(`/api/sessions/${sessionId}/edit`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmed }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || err.error || "Failed to save session name.");
+      }
+      const data = await res.json();
+      const savedName = data.name ?? trimmed;
+      setSessionName(savedName);
+      onNameSaved?.(savedName);
+    } catch (err) {
+      console.error("Failed to save session name", err);
+      toast.error(err instanceof Error ? err.message : "Failed to save session name.");
+      setSessionName(name || "");
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -157,13 +193,57 @@ const SessionInfoPopup: React.FC<SessionInfoPopupProps> = ({
           {/* Header */}
           <div className="px-6 pt-7 pb-4 text-center">
             <h1
-              className="text-2xl font-bold mb-2"
+              contentEditable={!!sessionId}
+              suppressContentEditableWarning
+              onFocus={(e) => {
+                if (!sessionId) return;
+                const range = document.createRange();
+                range.selectNodeContents(e.currentTarget);
+                const sel = window.getSelection();
+                sel?.removeAllRanges();
+                sel?.addRange(range);
+              }}
+              onBlur={(e) => {
+                if (!sessionId) return;
+                const value = e.currentTarget.textContent || "";
+                setSessionName(value.trim());
+                handleSaveName(value);
+              }}
+              onInput={(e) => {
+                if (!sessionId) return;
+                const value = e.currentTarget.textContent || "";
+                if (value.length > 25) {
+                  e.currentTarget.textContent = value.slice(0, 25);
+                  const range = document.createRange();
+                  range.selectNodeContents(e.currentTarget);
+                  range.collapse(false);
+                  const sel = window.getSelection();
+                  sel?.removeAllRanges();
+                  sel?.addRange(range);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (!sessionId) return;
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  e.currentTarget.blur();
+                }
+                if (e.key === "Escape") {
+                  e.currentTarget.textContent = name || "";
+                  e.currentTarget.blur();
+                }
+              }}
+              className={`text-2xl font-bold mb-2 outline-none rounded-lg px-2 -mx-2 transition ${
+                sessionId
+                  ? "cursor-text hover:bg-gray-100 dark:hover:bg-white/5 focus:bg-gray-100 dark:focus:bg-white/5"
+                  : ""
+              }`}
               style={{
                 animation: isAnimating ? "slideUp 0.25s ease-out 0.02s both" : "none",
                 color: "var(--foreground)",
               }}
             >
-              {name || `Session ${sessionNumber}`}
+              {sessionName || `Session ${sessionNumber}`}
             </h1>
 
             <p
