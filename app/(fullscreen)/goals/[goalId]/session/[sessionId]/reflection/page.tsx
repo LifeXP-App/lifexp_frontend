@@ -18,6 +18,7 @@ import { compressImageForUpload, SANITY_CAP_BYTES } from "@/src/lib/utils/compre
 interface ReflectionResponse {
   id: string
   uid: string
+  name: string
   day: number
   completion_picture: string | null
   total_duration_seconds: number | null
@@ -159,6 +160,8 @@ const DayCompletePage = () => {
 
   
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  const [sessionName, setSessionName] = useState("");
 
   // Shown in place of the normal reflection content when Done is first
   // clicked, if this session is the one that revived the streak
@@ -338,6 +341,7 @@ const DayCompletePage = () => {
         if (cancelled) return
 
         setReflection(data)
+        setSessionName(data.name || "")
         if (data.completion_picture) {
           setImagePreview(data.completion_picture)
         }
@@ -496,6 +500,30 @@ const DayCompletePage = () => {
 
   const goHomeHref = isEmptySession ? "/goals" : `/goals/${goalId}`
 
+  const handleSaveName = async (rawValue: string) => {
+    const trimmed = rawValue.trim()
+    if (trimmed === (reflection.name || "")) return
+    try {
+      const res = await authedFetch(`/api/sessions/${uid}/edit`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmed }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.detail || err.error || "Failed to save session name.")
+      }
+      const data = await res.json()
+      setReflection((prev) => (prev ? { ...prev, name: data.name ?? trimmed } : prev))
+      setSessionName(data.name ?? trimmed)
+      invalidateSessionCaches()
+    } catch (err) {
+      console.error("Failed to save session name", err)
+      toast.error(err instanceof Error ? err.message : "Failed to save session name.")
+      setSessionName(reflection.name || "")
+    }
+  }
+
   const handleDoneClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (reflection.streak_revived && !showingStreakRevived) {
       e.preventDefault()
@@ -586,21 +614,10 @@ const DayCompletePage = () => {
 
           {/* Header */}
 
-          <div className="px-6 pt-8 pb-4 text-center">
-
-            <h1 className="text-3xl font-bold mb-2">
-              Day {reflection.day} Complete!
-            </h1>
-
-            <p className="text-sm text-gray-500">
-              Keep it up, we&apos;ll see you in the next session
-            </p>
-
-          </div>
 
           {/* IMAGE PICKER */}
 
-          <div className="px-6 pb-6">
+          <div className="px-6 pt-8 w-full flex items-center justify-center">
 
             <div
               data-onboarding="reflection-share"
@@ -627,7 +644,7 @@ const DayCompletePage = () => {
 
               }}
               style={{ borderColor: 'var(--border)' }}
-              className="relative w-full h-[280px] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer overflow-hidden bg-white dark:bg-dark-2 transition-all hover:scale-[1.01] active:scale-[0.99]"
+              className="relative w-[350px] h-[280px] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer overflow-hidden bg-white dark:bg-dark-2 transition-all hover:scale-[1.01] active:scale-[0.99]"
             >
 
               {imagePreview ? (
@@ -688,6 +705,55 @@ const DayCompletePage = () => {
               onChange={handleImageChange}
               className="hidden"
             />
+
+          </div>
+
+          <div className="px-6 pt-8 pb-4 text-center">
+
+            <h1
+              contentEditable
+              suppressContentEditableWarning
+              onFocus={(e) => {
+                // Select-all on focus so the placeholder-ish default text is
+                // trivial to replace, matching a normal text-field's feel.
+                const range = document.createRange()
+                range.selectNodeContents(e.currentTarget)
+                const sel = window.getSelection()
+                sel?.removeAllRanges()
+                sel?.addRange(range)
+              }}
+              onBlur={(e) => {
+                const value = e.currentTarget.textContent || ""
+                setSessionName(value.trim())
+                handleSaveName(value)
+              }}
+              onInput={(e) => {
+                const value = e.currentTarget.textContent || ""
+                if (value.length > 25) {
+                  e.currentTarget.textContent = value.slice(0, 25)
+                  const range = document.createRange()
+                  range.selectNodeContents(e.currentTarget)
+                  range.collapse(false)
+                  const sel = window.getSelection()
+                  sel?.removeAllRanges()
+                  sel?.addRange(range)
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault()
+                  e.currentTarget.blur()
+                }
+                if (e.key === "Escape") {
+                  e.currentTarget.textContent = reflection.name || ""
+                  e.currentTarget.blur()
+                }
+              }}
+              className="text-3xl font-bold mb-2 text-center outline-none rounded-lg px-2 -mx-2 cursor-text hover:bg-gray-100 dark:hover:bg-white/5 focus:bg-gray-100 dark:focus:bg-white/5 transition empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400"
+              data-placeholder="Untitled Session"
+            >
+              {sessionName}
+            </h1>
 
           </div>
 

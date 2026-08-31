@@ -6,6 +6,7 @@ import Image from "next/image";
 import { RadarChart } from "@/src/components/charts/LazyCharts";
 import AspectChip from "@/src/components/goals/AspectChip";
 import DeleteSessionConfirmationModal from "@/src/components/goals/DeleteSessionConfirmationModal";
+import EditSessionPopup from "@/src/components/goals/EditSessionPopup";
 import NewGoalModal from "@/src/components/goals/NewGoalModal";
 import NewSessionPopup from "@/src/components/goals/NewSessionPopup";
 import SessionInfoPopup from "@/src/components/goals/SessionInfoPopup";
@@ -56,6 +57,7 @@ const aspectColors: Record<string, string> = {
 interface SessionItemProps {
   completion_picture?: string | null;
   sessionNumber?: number;
+  name?: string;
   activity?: string;
   xpEarned?: number;
   dateTime?: string;
@@ -64,6 +66,7 @@ interface SessionItemProps {
   emoji?: string;
   onClick?: () => void;
   onDelete?: () => void;
+  onEdit?: () => void;
   color?: string;
 }
 
@@ -71,6 +74,7 @@ interface SessionItemProps {
 const SessionItem = React.memo(function SessionItem({
   completion_picture,
   sessionNumber,
+  name,
   activity,
   xpEarned,
   dateTime,
@@ -79,6 +83,7 @@ const SessionItem = React.memo(function SessionItem({
   emoji,
   onClick,
   onDelete,
+  onEdit,
   color
 }: SessionItemProps) {
   const [open, setOpen] = React.useState(false);
@@ -134,8 +139,8 @@ const SessionItem = React.memo(function SessionItem({
       </div>
 
       <div className="flex-1 min-w-0">
-        <h3 className="font-semibold text-lg text-foreground dark:text-[var(--foreground)]">
-          Session {sessionNumber || "?"}
+        <h3 className="font-semibold text-lg text-foreground dark:text-[var(--foreground)] truncate">
+          {name || `Session ${sessionNumber || "?"}`}
         </h3>
         <p
           className="text-sm font-bold"
@@ -188,9 +193,10 @@ const SessionItem = React.memo(function SessionItem({
                 className="w-full cursor-pointer font-medium text-left py-3 px-4 text-sm hover:bg-gray-100 dark:hover:bg-dark-3 transition-colors"
                 onClick={() => {
                   setOpen(false);
+                  onEdit?.();
                 }}
               >
-                Repeat Session
+                Edit Session
               </button>
 
               <button
@@ -448,6 +454,18 @@ export default function GoalDetailClient() {
   };
 
   const [rowDeleteSession, setRowDeleteSession] = useState<Session | null>(null);
+
+  const [editingSession, setEditingSession] = useState<Session | null>(null);
+
+  const handleOpenEditSession = (session: Session) => {
+    setEditingSession(session);
+  };
+
+  const handleSessionEdited = () => {
+    setEditingSession(null);
+    refetch();
+    invalidateRelatedCaches();
+  };
 
   const handleDeleteSession = async (session: Session | null = selectedSession) => {
     if (!session) return;
@@ -905,6 +923,7 @@ export default function GoalDetailClient() {
           sessionNumber={
             selectedSession ? (sessionNumberMap[selectedSession.id] ?? 0) : 0
           }
+          name={selectedSession?.name}
           dateText={
             selectedSession ? formatDate(selectedSession.started_at) : ""
           }
@@ -943,6 +962,18 @@ export default function GoalDetailClient() {
           onClose={() => setRowDeleteSession(null)}
           onConfirm={() => handleDeleteSession(rowDeleteSession)}
           xpEarned={rowDeleteSession?.xp_total ?? 0}
+        />
+
+        <EditSessionPopup
+          isOpen={!!editingSession}
+          onClose={() => setEditingSession(null)}
+          sessionId={editingSession?.id ?? ""}
+          sessionNumber={
+            editingSession ? sessionNumberMap[editingSession.id] || 0 : 0
+          }
+          initialName={editingSession?.name || ""}
+          initialCompletionPicture={editingSession?.completion_picture ?? null}
+          onSaved={handleSessionEdited}
         />
 
         <CompleteGoalPopup
@@ -1233,6 +1264,7 @@ export default function GoalDetailClient() {
                 completion_picture={session.completion_picture}
                 key={session.id}
                 sessionNumber={sessionNumberMap[session.id] || 0}
+                name={session.name}
                 activity={session.activity?.name || "Activity"}
                 xpEarned={session.xp_total}
                 dateTime={formatDate(session.started_at)}
@@ -1242,6 +1274,7 @@ export default function GoalDetailClient() {
                 emoji={session.activity?.emoji}
                 onClick={() => handleOpenSessionPopup(session)}
                 onDelete={() => setRowDeleteSession(session)}
+                onEdit={() => handleOpenEditSession(session)}
                 color={aspectColors[session?.activity?.type ?? "muted"] || "#9ca3af"}
               />
             ))}
@@ -1260,6 +1293,7 @@ export default function GoalDetailClient() {
                 key={session.id}
                 completion_picture={session.completion_picture}
                 sessionNumber={sessionNumberMap[session.id] || 0}
+                name={session.name}
                 activity={session.activity?.name || "Activity"}
                 xpEarned={session.xp_total}
                 dateTime={formatDate(session.started_at)}
@@ -1269,6 +1303,7 @@ export default function GoalDetailClient() {
                 emoji={session.activity?.emoji}
                 onClick={() => handleOpenSessionPopup(session)}
                 onDelete={() => setRowDeleteSession(session)}
+                onEdit={() => handleOpenEditSession(session)}
                 color={aspectColors[session?.activity?.type ?? "muted"] || "#9ca3af"}
               />
             ))}
@@ -1314,8 +1349,9 @@ export default function GoalDetailClient() {
                 <SessionItem
                   completion_picture={session.completion_picture}
                   key={session.id}
-                  
+
                   sessionNumber={sessionNumberMap[session.id] || 0}
+                  name={session.name}
                   activity={session.activity?.name || "Activity"}
                   xpEarned={session.xp_total}
                   dateTime={formatDate(session.started_at)}
@@ -1325,6 +1361,7 @@ export default function GoalDetailClient() {
                   emoji={session.activity?.emoji}
                   onClick={() => handleOpenSessionPopup(session)}
                 onDelete={() => setRowDeleteSession(session)}
+                onEdit={() => handleOpenEditSession(session)}
                   color={aspectColors[session?.activity?.type ?? "muted"] || "#9ca3af"}
                 />
               ))}
@@ -1343,6 +1380,7 @@ export default function GoalDetailClient() {
                   completion_picture={session.completion_picture}
                   key={session.id}
                   sessionNumber={sessionNumberMap[session.id] || 0}
+                  name={session.name}
                   activity={session.activity?.name || "Activity"}
                   xpEarned={session.xp_total}
                   dateTime={formatDate(session.started_at)}
@@ -1352,6 +1390,7 @@ export default function GoalDetailClient() {
                   emoji={session.activity?.emoji}
                   onClick={() => handleOpenSessionPopup(session)}
                 onDelete={() => setRowDeleteSession(session)}
+                onEdit={() => handleOpenEditSession(session)}
                   color={aspectColors[session?.activity?.type ?? "muted"] || "#9ca3af"}
                 />
               ))}

@@ -34,6 +34,7 @@ interface SessionInfoPopupProps {
   onClose: () => void;
 
   sessionNumber?: number;
+  name?: string;
   dateText?: string;
 
   coverImageUrl?: string;
@@ -58,6 +59,7 @@ const SessionInfoPopup: React.FC<SessionInfoPopupProps> = ({
   onClose,
 
   sessionNumber,
+  name,
   dateText,
 
   coverImageUrl ,
@@ -161,7 +163,7 @@ const SessionInfoPopup: React.FC<SessionInfoPopupProps> = ({
                 color: "var(--foreground)",
               }}
             >
-              Session {sessionNumber}
+              {name || `Session ${sessionNumber}`}
             </h1>
 
             <p

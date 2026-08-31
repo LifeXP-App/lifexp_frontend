@@ -47,6 +47,10 @@ export function useGoal(goalId: string) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return convexSessions.map((convexSession: any) => ({
       id: convexSession._id,
+      // Convex has no writer for this field at all (it's edited via the new
+      // Django-only SessionEditView) — always backfilled from Django below,
+      // same as completion_picture.
+      name: "",
       completion_picture: convexSession.completionPicture ?? null,
       started_at: new Date(convexSession.startedAt).toISOString(),
       ended_at: convexSession.endedAt
@@ -76,15 +80,17 @@ export function useGoal(goalId: string) {
     const convexIds = new Set(convexMapped.map((s) => s.id));
     const historicalOnly = djangoSessions.filter((s) => !convexIds.has(s.id));
 
-    // Convex has no completionPicture writer anywhere (it's uploaded via the
-    // reflection page straight to Django/Cloudinary), so convexMapped's copy
-    // is always null. Without this, "Convex wins" would clobber a real
-    // completion picture Django already has with null on every render.
-    const convexWithPictures = convexMapped.map((s) =>
-      s.completion_picture
-        ? s
-        : { ...s, completion_picture: djangoById.get(s.id)?.completion_picture ?? null },
-    );
+    // Convex has no completionPicture or name writer anywhere (both are
+    // edited straight against Django — the picture via the reflection page,
+    // the name via SessionEditView), so convexMapped's copies are always
+    // null/empty. Without this, "Convex wins" would clobber the real values
+    // Django already has on every render.
+    const convexWithPictures = convexMapped.map((s) => ({
+      ...s,
+      completion_picture:
+        s.completion_picture || djangoById.get(s.id)?.completion_picture || null,
+      name: s.name || djangoById.get(s.id)?.name || "",
+    }));
 
     return [...convexWithPictures, ...historicalOnly].sort(
       (a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime()

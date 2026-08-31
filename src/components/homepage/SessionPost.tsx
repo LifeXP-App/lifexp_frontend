@@ -19,6 +19,7 @@ export type ApiSessionPost = {
   type: "session";
   id: string;
   uid: string;
+  name: string;
   session_number: number;
   day: number;
   status: string;
@@ -357,7 +358,9 @@ function SessionPostComponent({ session }: { session: ApiSessionPost }) {
             </p>
 
             <p className="text-sm font-semibold text-gray-500 dark:text-[var(--muted)]">
-              Session {session.session_number} {goal?.title ?? ""}
+              {session.name
+                ? `${session.name} ${goal?.title ? `(${goal.title.slice(0, 30)})` : ""}`
+                : `Session ${session.session_number} ${goal?.title ?? ""}`}
             </p>
 
             <p className="text-sm text-gray-500 dark:text-[var(--muted)]">
@@ -414,6 +417,7 @@ function SessionPostComponent({ session }: { session: ApiSessionPost }) {
         isOpen={isSessionPopupOpen}
         onClose={() => setIsSessionPopupOpen(false)}
         sessionNumber={session.session_number}
+        name={session.name}
         dateText={formatPopupDate(session.started_at)}
         coverImageUrl={session.completion_picture || undefined}
         totalDuration={formatPopupDuration(session.total_duration_seconds)}
