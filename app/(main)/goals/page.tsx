@@ -16,9 +16,13 @@ import Image from "next/image";
 import dynamic from "next/dynamic";
 import React, { useEffect, useState } from "react";
 import { FaBrain, FaHammer } from "react-icons/fa";
+import type { ClockType } from "@/src/components/goals/PickTimerModePopup";
 
 const NewActivityModal = dynamic(
   () => import("@/src/components/goals/NewActivityModel"),
+);
+const PickTimerModePopup = dynamic(
+  () => import("@/src/components/goals/PickTimerModePopup"),
 );
 
 type AspectKey = "physique" | "energy" | "social" | "creativity" | "logic";
@@ -504,6 +508,7 @@ export default function GoalsPage() {
   const [editingGoal, setEditingGoal] = useState<GoalPost | null>(null);
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
+  const [pendingActivity, setPendingActivity] = useState<Activity | null>(null);
   const [deletingGoalId, setDeletingGoalId] = useState<string | null>(null);
 
   const { me, loading: authLoading } = useAuth();
@@ -804,16 +809,32 @@ export default function GoalsPage() {
   };
 
   const handleSelectActivity = (activity: Activity) => {
+    // Don't start the session yet — hand off to the timer-mode popup so the
+    // user picks Timer/Stopwatch first. The activity modal stays mounted
+    // (just hidden) so "Back" from the timer popup can reopen it instantly.
     setIsActivityModalOpen(false);
+    setPendingActivity(activity);
+  };
+
+  const handleBackToActivityPicker = () => {
+    setPendingActivity(null);
+    setIsActivityModalOpen(true);
+  };
+
+  const handleStartWithMode = (clockType: ClockType, durationSeconds: number) => {
+    const activity = pendingActivity;
+    if (!activity) return;
+    setPendingActivity(null);
 
     // Django's session register resolves activities by uid, so never send the
     // integer pk — a pk-only reference 400s the register and the session never
     // reaches Django (reflection then 404s).
     const activityRef = activity.uid ?? activity.id;
     const ratesParam = buildRatesParam(activity);
+    const modeParam = `&clockType=${clockType}${clockType === "timer" ? `&duration=${durationSeconds}` : ""}`;
 
     if (isEmptySession) {
-      router.push(`/goals/none/session/new?activity=${activityRef}${ratesParam}`);
+      router.push(`/goals/none/session/new?activity=${activityRef}${ratesParam}${modeParam}`);
       return;
     }
 
@@ -823,7 +844,7 @@ export default function GoalsPage() {
       return;
     }
 
-    router.push(`/goals/${goalId}/session/new?activity=${activityRef}${ratesParam}`);
+    router.push(`/goals/${goalId}/session/new?activity=${activityRef}${ratesParam}${modeParam}`);
   };
 
   const handleGenerateNewActivity = (query: string) => {
@@ -1286,6 +1307,19 @@ export default function GoalsPage() {
         onGenerateNew={handleGenerateNewActivity}
         goalUid={selectedGoalId}
       />
+
+      {/* Pick Timer Mode Popup — conditionally mounted so its internal
+          Timer/Stopwatch selection always starts fresh on each open */}
+      {pendingActivity && (
+        <PickTimerModePopup
+          isOpen
+          activityUid={pendingActivity.uid ?? pendingActivity.id}
+          activityName={pendingActivity.name}
+          onBack={handleBackToActivityPicker}
+          onClose={() => setPendingActivity(null)}
+          onStart={handleStartWithMode}
+        />
+      )}
 
       {/* Status Change Confirmation Modal */}
       <StatusChangeConfirmationModal

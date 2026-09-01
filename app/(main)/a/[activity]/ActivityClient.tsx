@@ -29,9 +29,13 @@ import {
   UsersIcon,
 } from "@heroicons/react/24/solid";
 import { FaBrain, FaHammer } from "react-icons/fa";
+import type { ClockType } from "@/src/components/goals/PickTimerModePopup";
 
 const NewActivityModal = dynamic(
   () => import("@/src/components/goals/NewActivityModel"),
+);
+const PickTimerModePopup = dynamic(
+  () => import("@/src/components/goals/PickTimerModePopup"),
 );
 
 interface Session {
@@ -632,12 +636,27 @@ export default function ActivityClient({
 
   const [isNewActivityModalOpen, setIsNewActivityModalOpen] = useState(false);
   const [isNewSessionPopupOpen, setIsNewSessionPopupOpen] = useState(false);
+  const [pendingActivity, setPendingActivity] = useState<Activity | null>(null);
 
   const handleSelectActivity = (activity: Activity) => {
+    // Hide both pickers (whichever is open) and hand off to the timer-mode
+    // popup — it doesn't start the session itself.
     setIsNewActivityModalOpen(false);
     setIsNewSessionPopupOpen(false);
-    // Navigate to session page with new session
-    router.push(`/goals/${uid}/session/new?activity=${activity.id}`);
+    setPendingActivity(activity);
+  };
+
+  const handleBackToActivityPicker = () => {
+    setPendingActivity(null);
+    setIsNewActivityModalOpen(true);
+  };
+
+  const handleStartWithMode = (clockType: ClockType, durationSeconds: number) => {
+    const activity = pendingActivity;
+    if (!activity) return;
+    setPendingActivity(null);
+    const modeParam = `&clockType=${clockType}${clockType === "timer" ? `&duration=${durationSeconds}` : ""}`;
+    router.push(`/goals/${uid}/session/new?activity=${activity.id}${modeParam}`);
   };
 
   const handleGenerateNew = () => {
@@ -1506,6 +1525,17 @@ export default function ActivityClient({
         onSelectActivity={handleSelectActivity}
         onGenerateNew={handleGenerateNew}
       />
+
+      {pendingActivity && (
+        <PickTimerModePopup
+          isOpen
+          activityUid={pendingActivity.id}
+          activityName={pendingActivity.name}
+          onBack={handleBackToActivityPicker}
+          onClose={() => setPendingActivity(null)}
+          onStart={handleStartWithMode}
+        />
+      )}
     </>
   );
 }

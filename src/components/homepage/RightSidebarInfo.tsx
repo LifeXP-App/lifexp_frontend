@@ -9,9 +9,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import type { ClockType } from "@/src/components/goals/PickTimerModePopup";
 
 const NewActivityModal = dynamic(
   () => import("@/src/components/goals/NewActivityModel"),
+);
+const PickTimerModePopup = dynamic(
+  () => import("@/src/components/goals/PickTimerModePopup"),
 );
 
 // Mirrors NewActivityModal's own Activity shape — kept local since this file
@@ -68,6 +72,7 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
 
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
   const [activityPickerGoalUid, setActivityPickerGoalUid] = useState<string | null>(null);
+  const [pendingActivity, setPendingActivity] = useState<PickedActivity | null>(null);
 
   const handleOpenActivityPicker = (goalUid: string) => {
     setActivityPickerGoalUid(goalUid);
@@ -75,8 +80,22 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
   };
 
   const handleSelectActivity = (activity: PickedActivity) => {
+    // Hand off to the timer-mode popup before actually starting anything —
+    // the activity modal stays hidden (not closed) so "Back" can reopen it.
     setIsActivityModalOpen(false);
     if (!activityPickerGoalUid) return;
+    setPendingActivity(activity);
+  };
+
+  const handleBackToActivityPicker = () => {
+    setPendingActivity(null);
+    setIsActivityModalOpen(true);
+  };
+
+  const handleStartWithMode = (clockType: ClockType, durationSeconds: number) => {
+    const activity = pendingActivity;
+    if (!activity || !activityPickerGoalUid) return;
+    setPendingActivity(null);
 
     // Django's session register resolves activities by uid, so never send
     // the integer pk — a pk-only reference 400s the register.
@@ -97,8 +116,9 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
       Object.keys(rates).length > 0
         ? `&rates=${encodeURIComponent(JSON.stringify(rates))}`
         : "";
+    const modeParam = `&clockType=${clockType}${clockType === "timer" ? `&duration=${durationSeconds}` : ""}`;
 
-    router.push(`/goals/${activityPickerGoalUid}/session/new?activity=${activityRef}${ratesParam}`);
+    router.push(`/goals/${activityPickerGoalUid}/session/new?activity=${activityRef}${ratesParam}${modeParam}`);
   };
 
   const handleGenerateNewActivity = (query: string) => {
@@ -278,6 +298,16 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
         onGenerateNew={handleGenerateNewActivity}
         goalUid={activityPickerGoalUid}
       />
+
+      {pendingActivity && (
+        <PickTimerModePopup
+          isOpen
+          activityUid={pendingActivity.uid ?? pendingActivity.id}
+          onBack={handleBackToActivityPicker}
+          onClose={() => setPendingActivity(null)}
+          onStart={handleStartWithMode}
+        />
+      )}
 
       {/* <div
         id="next-level-tab"

@@ -9,6 +9,7 @@ import DeleteSessionConfirmationModal from "@/src/components/goals/DeleteSession
 import EditSessionPopup from "@/src/components/goals/EditSessionPopup";
 import NewGoalModal from "@/src/components/goals/NewGoalModal";
 import NewSessionPopup from "@/src/components/goals/NewSessionPopup";
+import type { ClockType } from "@/src/components/goals/PickTimerModePopup";
 import SessionInfoPopup from "@/src/components/goals/SessionInfoPopup";
 import SharePopup from "@/src/components/SharePopup";
 import { useAuth } from "@/src/context/AuthContext";
@@ -33,6 +34,9 @@ const CompleteGoalPopup = dynamic(
 );
 const NewActivityModal = dynamic(
   () => import("@/src/components/goals/NewActivityModel"),
+);
+const PickTimerModePopup = dynamic(
+  () => import("@/src/components/goals/PickTimerModePopup"),
 );
 
 interface Activity {
@@ -235,6 +239,7 @@ export default function GoalDetailClient() {
   const startSessionMutation = useMutation(api.sessions.startSession);
   const updateInitialRatesMutation = useMutation(api.sessions.updateInitialRates);
   const deleteConvexSessionMutation = useMutation(api.sessions.deleteSession);
+  const setClockTypeMutation = useMutation(api.sessions.setClockType);
 
   const { goal, sessions: rawSessions, loading, error, refetch } = useGoal(goalId);
 
@@ -296,6 +301,8 @@ export default function GoalDetailClient() {
     activityId: string,
     activityName: string,
     xpDistribution?: Record<string, number>,
+    clockType: ClockType = "timer",
+    durationSeconds: number = 25 * 60,
   ) => {
     if (!me) {
       toast.error("You must be logged in to start a session.");
@@ -395,7 +402,18 @@ export default function GoalDetailClient() {
         }
       }
 
-      router.push(`/goals/${goalId}/session/${convexId}`);
+      // startSession always creates the session as clockType "timer" —
+      // apply the stopwatch choice from the timer-mode popup before the
+      // timer page's first render of the clock.
+      if (clockType === "stopwatch") {
+        await setClockTypeMutation({ sessionId: convexId, clockType: "stopwatch" }).catch(
+          (err) => console.error("Failed to apply stopwatch mode to new session:", err),
+        );
+      }
+
+      // `duration` is read once by the session page on mount (see
+      // FOCUS_SECONDS/focusSeconds there) — it's not persisted to Convex.
+      router.push(`/goals/${goalId}/session/${convexId}?duration=${durationSeconds}`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.includes("already has a live") || msg.includes("already has a paused")) {
@@ -405,7 +423,7 @@ export default function GoalDetailClient() {
         toast.error("Failed to start session. Please try again.");
       }
     }
-  }, [me, startSessionMutation, updateInitialRatesMutation, goalId, goal?.id, goal?.title, router]);
+  }, [me, startSessionMutation, setClockTypeMutation, updateInitialRatesMutation, goalId, goal?.id, goal?.title, router]);
 
   const handleStartSession = useCallback(async () => {
     if (!goal?.last_activity?.uid) return;
@@ -418,11 +436,33 @@ export default function GoalDetailClient() {
     await createAndNavigate(goal.last_activity.uid, goal.last_activity.name);
   }, [goal?.last_activity, createAndNavigate, confirm]);
 
-  const handleSelectActivity = useCallback(async (activity: Activity) => {
+  const [pendingActivity, setPendingActivity] = useState<Activity | null>(null);
+
+  const handleSelectActivity = useCallback((activity: Activity) => {
+    // Hide both pickers (whichever is open) and hand off to the timer-mode
+    // popup — it doesn't start the session itself.
     setIsNewActivityModalOpen(false);
     setIsNewSessionPopupOpen(false);
-    await createAndNavigate(activity.uid ?? activity.id, activity.name, activity.xp_distribution);
-  }, [createAndNavigate]);
+    setPendingActivity(activity);
+  }, []);
+
+  const handleBackToActivityPicker = useCallback(() => {
+    setPendingActivity(null);
+    setIsNewActivityModalOpen(true);
+  }, []);
+
+  const handleStartWithMode = useCallback(async (clockType: ClockType, durationSeconds: number) => {
+    const activity = pendingActivity;
+    if (!activity) return;
+    setPendingActivity(null);
+    await createAndNavigate(
+      activity.uid ?? activity.id,
+      activity.name,
+      activity.xp_distribution,
+      clockType,
+      durationSeconds,
+    );
+  }, [pendingActivity, createAndNavigate]);
 
   const handleGenerateNew = useCallback(async (query: string) => {
     setIsNewActivityModalOpen(false);
@@ -1599,6 +1639,17 @@ export default function GoalDetailClient() {
         onGenerateNew={handleGenerateNew}
         goalUid={goalId}
       />
+
+      {pendingActivity && (
+        <PickTimerModePopup
+          isOpen
+          activityUid={pendingActivity.uid ?? pendingActivity.id}
+          activityName={pendingActivity.name}
+          onBack={handleBackToActivityPicker}
+          onClose={() => setPendingActivity(null)}
+          onStart={handleStartWithMode}
+        />
+      )}
     </>
   );
 }

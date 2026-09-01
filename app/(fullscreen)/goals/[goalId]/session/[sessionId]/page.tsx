@@ -55,6 +55,7 @@ type SessionFinalStats = {
 };
 
 const FOCUS_SECONDS = 25 * 60;
+const MAX_FOCUS_SECONDS = 3 * 60 * 60;
 const BREAK_SECONDS = 5 * 60;
 const HEARTBEAT_SECONDS = 5;
 
@@ -436,6 +437,21 @@ export default function SessionTimer({ params }: SessionTimerProps) {
     useState<Id<"sessions"> | null>(null);
   const creatingRef = useRef(false);
 
+  // The focus phase length for this session, in seconds. Set once from the
+  // `duration` URL param the timer-mode popup passes when starting a brand
+  // new session (clamped to (0, MAX_FOCUS_SECONDS]); falls back to the
+  // classic 25:00 Pomodoro length for joined/rejoined sessions where the
+  // param isn't present. Client-side only (see FOCUS_SECONDS) — not
+  // persisted to Convex, so it resets to 25:00 on reload of an existing session.
+  const [focusSeconds] = useState<number>(() => {
+    const raw = searchParams.get("duration");
+    const parsed = raw ? parseInt(raw, 10) : NaN;
+    if (Number.isFinite(parsed) && parsed > 0 && parsed <= MAX_FOCUS_SECONDS) {
+      return parsed;
+    }
+    return FOCUS_SECONDS;
+  });
+
   const sessionId = isNew ? createdSessionId : (sessionIdStr as Id<"sessions">);
 
   // ── Goal data from Django ──
@@ -766,6 +782,17 @@ export default function SessionTimer({ params }: SessionTimerProps) {
           },
         });
 
+        // startSession always creates the session as clockType "timer" —
+        // apply the stopwatch choice from the timer-mode popup right away if
+        // that's what was picked, before the page's first render of the
+        // clock. No optimistic update needed here (unlike the mid-session
+        // toggle below): nothing has rendered this session's clock yet.
+        if (searchParams.get("clockType") === "stopwatch") {
+          await setClockTypeMutation({ sessionId: id, clockType: "stopwatch" }).catch(
+            (err) => console.error("Failed to apply stopwatch mode to new session:", err),
+          );
+        }
+
         // startSession already creates the session as "live" — a brand-new
         // session autostarts focus immediately rather than landing paused,
         // so the user doesn't have to press play right after picking an
@@ -831,6 +858,7 @@ export default function SessionTimer({ params }: SessionTimerProps) {
     isEmptySession,
     searchParams,
     startMutation,
+    setClockTypeMutation,
     updateInitialRatesMutation,
     router,
   ]);
@@ -949,8 +977,8 @@ export default function SessionTimer({ params }: SessionTimerProps) {
   // display read e.g. 2:00 instead of 25:00 if the prior phase had been
   // adjusted down. The upcoming phase always starts at a clean baseline.
   const focusSecondsLeft = breakFinishedAwaitingResume
-    ? FOCUS_SECONDS
-    : Math.max(0, FOCUS_SECONDS + focusAdjustSeconds - Math.floor(currentPhaseFocusedSeconds));
+    ? focusSeconds
+    : Math.max(0, focusSeconds + focusAdjustSeconds - Math.floor(currentPhaseFocusedSeconds));
 
   // Stopwatch mode always shows the session's TOTAL focused time, full stop —
   // deliberately bypassing focusPhaseStartSeconds (unlike currentPhaseFocusedSeconds
