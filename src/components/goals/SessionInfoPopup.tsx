@@ -20,7 +20,9 @@ interface ActivityType {
 }
 
 interface AvatarType {
-  color: string;
+  color?: string;
+  profilePicture?: string;
+  username?: string;
 }
 
 interface XPDistribution {
@@ -329,29 +331,34 @@ const SessionInfoPopup: React.FC<SessionInfoPopupProps> = ({
 
             <div className="text-center">
               <div className="flex items-center justify-center gap-1 mb-1">
-                {nudgeCount > 3 ? (
+                {nudgeCount > 0 && nudgeAvatars?.length ? (
                   <>
-                    <div className="flex -space-x-2">
-                      {nudgeAvatars?.slice(0, 3).map((avatar, i) => (
-                        <div
-                          key={i}
-                          className="w-7 h-7 rounded-full border-2 border-white dark:border-dark-2"
-                          style={{ backgroundColor: avatar.color }}
-                        />
-                      ))}
+                    <div className="flex items-center gap-1">
+                      {nudgeAvatars.slice(0, 4).map((avatar, i) =>
+                        avatar.profilePicture ? (
+                          <Image
+                            key={`${avatar.username ?? "nudge"}-${i}`}
+                            src={avatar.profilePicture}
+                            alt={avatar.username ? `${avatar.username}'s profile picture` : "User who nudged"}
+                            width={28}
+                            height={28}
+                            className="h-7 w-7 rounded-full border-2 border-white object-cover dark:border-dark-2"
+                          />
+                        ) : (
+                          <div
+                            key={`${avatar.username ?? "nudge"}-${i}`}
+                            className="h-7 w-7 rounded-full border-2 border-white dark:border-dark-2"
+                            style={{ backgroundColor: avatar.color }}
+                          />
+                        ),
+                      )}
                     </div>
-                    <span className="text-xl font-medium">+{nudgeCount - 3}</span>
+                    {nudgeCount > 4 && (
+                      <span className="text-xl font-medium" aria-label={`${nudgeCount - 4} more nudges`}>
+                        +
+                      </span>
+                    )}
                   </>
-                ) : nudgeCount > 0 ? (
-                  <div className="flex -space-x-2">
-                    {nudgeAvatars?.slice(0, 3).map((avatar, i) => (
-                      <div
-                        key={i}
-                        className="w-7 h-7 rounded-full border-2 border-white dark:border-dark-2"
-                        style={{ backgroundColor: avatar.color }}
-                      />
-                    ))}
-                  </div>
                 ) : (
                   <span className="text-2xl font-bold">{nudgeCount}</span>
                 )}
