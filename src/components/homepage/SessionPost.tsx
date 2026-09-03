@@ -41,6 +41,11 @@ export type ApiSessionPost = {
   completed_reason: string | null;
   nudge_count: number;
   is_nudged: boolean;
+  nudge_users?: Array<{
+    id?: number | string;
+    username: string;
+    profile_picture: string | null;
+  }>;
   activity: { uid?: string; name: string; type: string; emoji: string };
   goal: { id: number; uid: string; title: string; emoji: string } | null;
   user: {
@@ -450,8 +455,11 @@ function SessionPostComponent({ session }: { session: ApiSessionPost }) {
         focusedDuration={formatPopupDuration(session.focused_duration_seconds)}
         xpEarned={session.xp_total}
         xpDistribution={session.xp_distribution}
-        nudgeCount={session.nudge_count ?? 0}
-        nudgeAvatars={[]}
+        nudgeCount={nudgeCount}
+        nudgeAvatars={(session.nudge_users ?? []).map((user) => ({
+          username: user.username,
+          profilePicture: user.profile_picture || "/default_pfp.png",
+        }))}
         activity={{
           uid: activity.uid,
           name: activity.name,
