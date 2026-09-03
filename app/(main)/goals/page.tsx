@@ -17,6 +17,7 @@ import dynamic from "next/dynamic";
 import React, { useEffect, useState } from "react";
 import { FaBrain, FaHammer } from "react-icons/fa";
 import type { ClockType } from "@/src/components/goals/PickTimerModePopup";
+import { hexToRgba } from "@/src/components/UserAccent";
 
 const NewActivityModal = dynamic(
   () => import("@/src/components/goals/NewActivityModel"),
@@ -1384,6 +1385,7 @@ export default function GoalsPage() {
 
 function RightSidebar({ user }: { user: UserGoalsInfo }) {
   const { openMasteryPopup } = usePopup();
+  const isMastery = user.mastery !== "Rookie";
   return (
     <aside className="w-[400px] hidden md:block">
       {/* PROFILE CARD */}
@@ -1411,7 +1413,10 @@ function RightSidebar({ user }: { user: UserGoalsInfo }) {
                 viewBox="0 0 24 24"
                 fill="currentColor"
                 onClick={openMasteryPopup}
-                className="w-4 h-4 text-gray-400 dark:text-[var(--muted)]"
+                className={
+                  isMastery ? "w-4 h-4" : "w-4 h-4 text-gray-400 dark:text-[var(--muted)]"
+                }
+                style={isMastery ? { color: user.masteryTextColor, opacity: 0.5 } : undefined}
               >
                 <path
                   fillRule="evenodd"
@@ -1442,14 +1447,24 @@ function RightSidebar({ user }: { user: UserGoalsInfo }) {
 
         {/* XP + STREAK */}
         <div className="mt-4 flex justify-between text-sm gap-4">
-          <div className="bg-gray-100 dark:bg-dark-3 w-full flex flex-col rounded-md items-center justify-between p-4">
+          <div
+            className={
+              isMastery
+                ? "w-full flex flex-col rounded-md items-center justify-between p-4"
+                : "bg-gray-100 dark:bg-dark-3 w-full flex flex-col rounded-md items-center justify-between p-4"
+            }
+            style={isMastery ? { backgroundColor: hexToRgba(user.masteryTextColor, 0.12) } : undefined}
+          >
             <p
               className="text-lg font-bold"
               style={{ color: user.masteryTextColor }}
             >
               {user.totalXp} XP
             </p>
-            <p className="text-xs text-gray-500 dark:text-[var(--muted)]">
+            <p
+              className={isMastery ? "text-xs" : "text-xs text-gray-500 dark:text-[var(--muted)]"}
+              style={isMastery ? { color: user.masteryTextColor, opacity: 0.5 } : undefined}
+            >
               Overall ranked <b>#{user.rank}</b>
             </p>
           </div>
