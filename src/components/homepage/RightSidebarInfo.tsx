@@ -10,6 +10,27 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { ClockType } from "@/src/components/goals/PickTimerModePopup";
+import { hexToRgba } from "@/src/components/UserAccent";
+import { toRoman } from "@/src/lib/utils/toRoman";
+
+// Darkens a hex color by a fraction (0-1) toward black — used for the mastery
+// progress bar's filled portion so it reads as a deeper shade of the mastery
+// color rather than the flat color itself.
+function darkenHex(hex: string, amount: number) {
+  const cleaned = hex.replace("#", "");
+  const full =
+    cleaned.length === 3
+      ? cleaned
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      : cleaned;
+  const intVal = parseInt(full, 16);
+  const r = Math.round(((intVal >> 16) & 255) * (1 - amount));
+  const g = Math.round(((intVal >> 8) & 255) * (1 - amount));
+  const b = Math.round((intVal & 255) * (1 - amount));
+  return `rgb(${r}, ${g}, ${b})`;
+}
 
 const NewActivityModal = dynamic(
   () => import("@/src/components/goals/NewActivityModel"),
@@ -39,6 +60,7 @@ type RightSidebarInfoProps = {
     fullname: string;
     profile_picture: string;
     mastery: string;
+    masteryLevel?: number;
     masteryColor: string;
     lifelevel: number;
     posts: number;
@@ -128,6 +150,12 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
     }
   };
 
+  const isMastery = user.mastery !== "Rookie";
+  const masteryLevelLabel =
+    isMastery && user.masteryLevel && user.masteryLevel > 0
+      ? `${user.mastery} ${toRoman(user.masteryLevel)}`
+      : user.mastery;
+
   return (
     <aside className="w-full hidden md:block ">
       {/* PROFILE CARD */}
@@ -155,7 +183,14 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
               onClick={openMasteryPopup}
               className="mastery-info flex cursor-pointer"
             >
-              <InformationCircleIcon className="w-4 h-4 text-gray-400 dark:text-[var(--muted)] dark:hover:text-[var(--muted)]" />
+              <InformationCircleIcon
+                className={
+                  isMastery
+                    ? "w-4 h-4"
+                    : "w-4 h-4 text-gray-400 dark:text-[var(--muted)] dark:hover:text-[var(--muted)]"
+                }
+                style={isMastery ? { color: user.masteryColor, opacity: 0.5 } : undefined}
+              />
             </button>
             <p
               className="text-sm font-bold"
@@ -163,7 +198,7 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
                 color: user.mastery == "Rookie" ? "#9aa0ae" : user.masteryColor,
               }}
             >
-              {user.mastery}
+              {masteryLevelLabel}
             </p>
             <span className="w-4" />
           </span>
@@ -181,14 +216,20 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
         <div
           title={`${user.totalXp} / ${user.nextLevelXp} XP`}
           className="w-full relative rounded-full cursor-pointer h-6 my-4 ml-1 overflow-hidden"
-          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+          style={{
+            backgroundColor: isMastery ? hexToRgba(user.masteryColor, 0.15) : "rgba(0,0,0,0.5)",
+          }}
         >
           <div
             className="h-6"
-            style={{
-              width: `${user.progressPercent}%`,
-              background: `linear-gradient(to right, ${user.masteryColor}60 0%, ${user.masteryColor} 100%)`,
-            }}
+            style={
+              isMastery
+                ? { width: `${user.progressPercent}%`, backgroundColor: darkenHex(user.masteryColor, 0.35) }
+                : {
+                    width: `${user.progressPercent}%`,
+                    background: `linear-gradient(to right, ${user.masteryColor}60 0%, ${user.masteryColor} 100%)`,
+                  }
+            }
           />
           <p className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-white">
             Level {user.lifelevel} ({user.totalXp} XP)
@@ -197,7 +238,14 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
 
         {/* XP + STREAK */}
         <div className="mt-4 flex justify-between text-sm gap-4">
-          <div className="bg-gray-100 dark:bg-dark-3 cursor-pointer w-full flex flex-col rounded-md items-center justify-center p-4 dark:bg-[var(--dark-1)] dark:bg-opacity-50">
+          <div
+            className={
+              isMastery
+                ? "cursor-pointer w-full flex flex-col rounded-md items-center justify-center p-4"
+                : "bg-gray-100 dark:bg-dark-3 cursor-pointer w-full flex flex-col rounded-md items-center justify-center p-4 dark:bg-[var(--dark-1)] dark:bg-opacity-50"
+            }
+            style={isMastery ? { backgroundColor: hexToRgba(user.masteryColor, 0.12) } : undefined}
+          >
             <p
               className="text-lg font-bold"
               style={{
@@ -206,7 +254,6 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
             >
               {user.totalXp} XP
             </p>
-            
           </div>
 
           <div className={`bg-gray-100 dark:bg-dark-3 cursor-pointer w-full flex flex-col rounded-md items-center justify-between p-4 ${
@@ -249,7 +296,7 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
                 <Link
                   key={goal.uid}
                   href={`/goals/${goal.uid}`}
-                  className="flex items-center gap-3 cursor-pointer hover:bg-gray-100 dark:bg-dark-3 dark:bg-opacity-50 rounded-md p-3 opacity-50"
+                  className="flex items-center gap-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-dark-3 rounded-md p-3 opacity-50"
                 >
                   <span className="text-2xl shrink-0">{goal.emoji || "🎯"}</span>
                   <p className="text-sm font-medium truncate flex-1">
@@ -277,13 +324,13 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
                   key={goal.uid}
                   type="button"
                   onClick={() => handleOpenActivityPicker(goal.uid)}
-                  className="flex items-center gap-3 cursor-pointer hover:bg-gray-100 dark:bg-dark-3 dark:bg-opacity-50 rounded-md p-3 text-left w-full"
+                  className="flex items-center gap-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-dark-3/50  rounded-md p-3 text-left w-full"
                 >
                   <span className="text-2xl shrink-0">{goal.emoji || "🎯"}</span>
                   <p className="text-sm font-medium truncate flex-1">
                     {goal.title || "Untitled goal"}
                   </p>
-                  <span className="h-5 w-5 shrink-0 rounded-full border-2 border-gray-300 dark:border-[var(--border)]" />
+                  <span className="h-5 w-5 shrink-0 rounded-full border-2 border-gray-300 dark:border-dark-3" />
                 </button>
               ),
             )}

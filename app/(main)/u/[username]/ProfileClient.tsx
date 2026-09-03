@@ -998,7 +998,7 @@ export default function ProfileClient({ params }: PageProps) {
                       style={
                         profileUser.masteryTitle === "Rookie"
                           ? undefined
-                          : { color: accent.primary }
+                          : { color: accent.primary, opacity: 0.5 }
                       }
                       aria-hidden="true"
                       fill="currentColor"
@@ -1076,7 +1076,10 @@ export default function ProfileClient({ params }: PageProps) {
                         // sessions) is what actually carries it, so the
                         // dominant aspect (highest XP) is this goal's color.
                         // Falls back to the mastery accent for goals with no
-                        // XP yet (freshly created, no sessions logged).
+                        // XP yet (freshly created, no sessions logged), and
+                        // ALWAYS uses the mastery accent once the profile
+                        // owner has an actual mastery (not Rookie) — mastery
+                        // color takes over from per-goal aspect coloring.
                         const dist = goal.xp_distribution;
                         const dominantAspect = dist
                           ? (Object.keys(dist) as ActivityType[]).reduce<ActivityType | null>(
@@ -1085,9 +1088,9 @@ export default function ProfileClient({ params }: PageProps) {
                               null,
                             )
                           : null;
-                        const hasAspectColor = !!(
-                          dominantAspect && dist && dist[dominantAspect] > 0
-                        );
+                        const hasAspectColor =
+                          profileUser.masteryTitle === "Rookie" &&
+                          !!(dominantAspect && dist && dist[dominantAspect] > 0);
                         // ACTIVITY_META's colors are CSS var references
                         // ("var(--aspect-x)"), not hex strings — hexToRgba
                         // (built for accent.primary's hex fallback table)
@@ -1305,14 +1308,24 @@ export default function ProfileClient({ params }: PageProps) {
                     </svg>
                   )}
                   <p
-                    style={{ fontSize: "11px" }}
-                    className="text-gray-400 dark:text-[var(--muted)]"
+                    style={
+                      profileUser.masteryTitle === "Rookie"
+                        ? { fontSize: "11px" }
+                        : { fontSize: "11px", color: accent.primary, opacity: 0.5 }
+                    }
+                    className={
+                      profileUser.masteryTitle === "Rookie"
+                        ? "text-gray-400 dark:text-[var(--muted)]"
+                        : undefined
+                    }
                   >
                     {profileUser.masteryTitle === "Rookie"
                       ? profileUser.xp_to_next_master_level
                         ? `${profileUser.xp_to_next_master_level.toLocaleString()} XP to next mastery`
                         : "Mastery progress"
-                      : `To ${profileUser.masteryTitle} ${toRoman(profileUser.masteryLevel + 1)}`}
+                      : profileUser.xp_to_next_master_level
+                        ? `${Math.max(0, profileUser.xp_to_next_master_level - profileUser.totalXP).toLocaleString()} to ${profileUser.masteryTitle} ${toRoman(profileUser.masteryLevel + 1)}`
+                        : `To ${profileUser.masteryTitle} ${toRoman(profileUser.masteryLevel + 1)}`}
                   </p>
                 </span>
               </div>

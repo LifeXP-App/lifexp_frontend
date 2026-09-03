@@ -738,6 +738,7 @@ const postsLoading = postsInitialLoading;
       fullname: userData.fullname,
       profile_picture: userData.avatar || player.profile_picture,
       mastery: userData.masteryTitle,
+      masteryLevel: userData.masteryLevel,
       masteryColor: getAccentColors(userData.masteryTitle).primary,
       lifelevel: userData.lifeLevel,
       posts: userData.posts_count,
