@@ -1105,27 +1105,53 @@ useEffect(() => {
   const rateSocial = currentRates?.social ?? 0;
 
   // ── Heartbeat every 5s when live (owner only — spectators never heartbeat) ──
+  // Sends real wall-clock elapsed time (Date.now() delta) rather than
+  // assuming exactly HEARTBEAT_SECONDS passed. Browsers throttle
+  // setInterval in backgrounded/inactive tabs (often to ~once a minute or
+  // slower), so a naive fixed-5s heartbeat can silently go quiet for 5+
+  // minutes just from normal tab-switching -- long enough for the
+  // cleanupStaleSessions cron (convex/sessionJobs.ts) to mark the session
+  // AFK, which is what "the timer randomly stops" turned out to be. Also
+  // fires one catch-up beat immediately on visibilitychange -> visible, so
+  // a backgrounded tab reports in the moment the user returns instead of
+  // waiting for the next (possibly still-throttled) tick.
   useEffect(() => {
     if (!isOwn) return;
     if (!isRunning) return;
     if (!sessionId) return;
     if (pomodoroPhase !== "focus") return;
 
-    const interval = setInterval(() => {
+    let lastBeatAt = Date.now();
+
+    const beat = () => {
+      const now = Date.now();
+      const elapsedSeconds = Math.max(0, (now - lastBeatAt) / 1000);
+      lastBeatAt = now;
+      if (elapsedSeconds <= 0) return;
+
       heartbeatMutation({
         sessionId,
-        elapsedSeconds: HEARTBEAT_SECONDS,
+        elapsedSeconds,
         xpDelta: {
-          physique: ratePhysique * HEARTBEAT_SECONDS,
-          energy: rateEnergy * HEARTBEAT_SECONDS,
-          logic: rateLogic * HEARTBEAT_SECONDS,
-          creativity: rateCreativity * HEARTBEAT_SECONDS,
-          social: rateSocial * HEARTBEAT_SECONDS,
+          physique: ratePhysique * elapsedSeconds,
+          energy: rateEnergy * elapsedSeconds,
+          logic: rateLogic * elapsedSeconds,
+          creativity: rateCreativity * elapsedSeconds,
+          social: rateSocial * elapsedSeconds,
         },
       }).catch(console.error);
-    }, HEARTBEAT_SECONDS * 1000);
+    };
 
-    return () => clearInterval(interval);
+    const interval = setInterval(beat, HEARTBEAT_SECONDS * 1000);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") beat();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [
     isOwn,
     isRunning,

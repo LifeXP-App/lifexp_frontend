@@ -21,17 +21,26 @@ function formatTime(seconds: number) {
 
 // Mirrors the Flutter app's compact live-session bar
 // (lifexp_flutter/lib/widgets/layout/main_shell.dart, _LiveSessionBar):
-// derives the current Pomodoro focus phase's remaining seconds live from
-// startedAt/pauseIntervals rather than waiting on the ~5s Convex heartbeat,
-// so the countdown ticks smoothly every second even between syncs.
-function useLiveFocusSecondsLeft(session: {
+// derives the current Pomodoro focus phase's remaining/elapsed seconds live
+// from startedAt/pauseIntervals rather than waiting on the ~5s Convex
+// heartbeat, so the display ticks smoothly every second even between syncs.
+//
+// Uses the exact same pause-aware wall-clock math as the real timer page
+// (app/(fullscreen)/goals/[goalId]/session/[sessionId]/page.tsx) so this
+// pill never drifts from what the timer page itself shows. One known,
+// accepted gap: a custom timer duration picked in PickTimerModePopup isn't
+// stored in Convex (client-side/URL-param only, by design — see that
+// component), so "timer" mode here always counts down from the 25:00
+// default rather than the session's actual chosen length.
+function useLiveFocusSeconds(session: {
   startedAt: number;
   pauseIntervals: { pausedAt: number; resumedAt?: number }[];
   focusPhaseStartSeconds?: number;
   focusAdjustSeconds?: number;
+  clockType?: "timer" | "stopwatch";
   status: string;
 } | null) {
-  const [secondsLeft, setSecondsLeft] = useState(FOCUS_SECONDS);
+  const [seconds, setSeconds] = useState(FOCUS_SECONDS);
 
   useEffect(() => {
     if (!session) return;
@@ -43,6 +52,14 @@ function useLiveFocusSecondsLeft(session: {
         pausedMs += (interval.resumedAt ?? now) - interval.pausedAt;
       }
       const liveFocusedSecs = Math.max(0, (now - session.startedAt) / 1000 - pausedMs / 1000);
+
+      if (session.clockType === "stopwatch") {
+        // Same value the real timer page shows for a stopwatch session:
+        // total accrued focused time, full stop.
+        setSeconds(Math.floor(liveFocusedSecs));
+        return;
+      }
+
       const currentPhaseFocusedSecs = Math.max(
         0,
         liveFocusedSecs - (session.focusPhaseStartSeconds ?? 0),
@@ -51,7 +68,7 @@ function useLiveFocusSecondsLeft(session: {
         0,
         FOCUS_SECONDS + (session.focusAdjustSeconds ?? 0) - Math.floor(currentPhaseFocusedSecs),
       );
-      setSecondsLeft(left);
+      setSeconds(left);
     };
 
     tick();
@@ -60,7 +77,7 @@ function useLiveFocusSecondsLeft(session: {
     return () => clearInterval(id);
   }, [session]);
 
-  return secondsLeft;
+  return seconds;
 }
 
 export default function AfkSessionPopup() {
@@ -68,11 +85,13 @@ export default function AfkSessionPopup() {
   const userId = me ? String(me.id) : null;
   const { session } = useConvexActiveSession(userId);
 
-  const secondsLeft = useLiveFocusSecondsLeft(session ?? null);
+  const seconds = useLiveFocusSeconds(session ?? null);
 
   if (!session) {
     return null;
   }
+
+  const clockType = session.clockType ?? "timer";
 
   const sessionId = session._id;
   const goalId = session.goalId;
@@ -123,12 +142,18 @@ export default function AfkSessionPopup() {
             </p>
           </div>
 
-          {!isOnBreak && (
+          {/* Stopwatch has no break countdown to hide behind — it just
+              keeps showing the same frozen elapsed value the real timer
+              page does. Timer mode's break countdown is local-only state
+              on the timer page itself (see its own comment on
+              breakSecondsLeft), which this pill doesn't replicate, so it
+              hides the number rather than show a stale/misleading one. */}
+          {(clockType === "stopwatch" || !isOnBreak) && (
             <span
               className="shrink-0 text-[17px] font-bold tabular-nums"
               style={{ color: aspectColor }}
             >
-              {formatTime(secondsLeft)}
+              {formatTime(seconds)}
             </span>
           )}
         </div>
