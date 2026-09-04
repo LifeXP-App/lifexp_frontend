@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { LiveAvatar } from "@/src/components/LiveAvatar";
 import { useAuth } from "@/src/context/AuthContext";
+import { authedFetch } from "@/src/lib/api/authedFetch";
 
 type ApiNotification = {
   id: number | string;
@@ -59,7 +60,7 @@ export default function NotificationsPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["notifications", "full"],
     queryFn: async () => {
-      const res = await fetch("/api/notifications?unread=false&limit=50", {
+      const res = await authedFetch("/api/notifications?unread=false&limit=50", {
         method: "GET",
         cache: "no-store",
       });

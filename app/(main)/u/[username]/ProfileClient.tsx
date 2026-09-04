@@ -21,6 +21,7 @@ import { useRouter } from "next/navigation";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { toggleFollow } from "@/lib/api/users";
+import { authedFetch } from "@/src/lib/api/authedFetch";
 import posthog from "posthog-js";
 
 interface PageProps {
@@ -197,14 +198,14 @@ export default function ProfileClient({ params }: PageProps) {
     queryKey: ["profile-users", username, me?.username],
     queryFn: async () => {
       const [profileResponse, currentResponse] = await Promise.all([
-        fetch(`/api/users/profile/${username}`, {
+        authedFetch(`/api/users/profile/${username}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
           },
           cache: "no-store",
         }),
-        fetch(`/api/users/profile/${me?.username}`, {
+        authedFetch(`/api/users/profile/${me?.username}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -318,7 +319,7 @@ export default function ProfileClient({ params }: PageProps) {
   const { data: weeklyXP = [], isLoading: weeklyXPLoading } = useQuery({
     queryKey: ["profile-stats", username, "weekly-xp"],
     queryFn: async () => {
-      const response = await fetch(`/api/stats/weekly?username=${username}`, {
+      const response = await authedFetch(`/api/stats/weekly?username=${username}`, {
         cache: "no-store",
       });
       if (!response.ok) return [] as { date: string; xp: number }[];
@@ -354,7 +355,7 @@ export default function ProfileClient({ params }: PageProps) {
   const { data: recentSessions = [], isLoading: sessionsLoading } = useQuery({
     queryKey: ["profile-stats", username, "recent-sessions", 5],
     queryFn: async () => {
-      const response = await fetch(`/api/users/${username}/sessions?limit=5`, {
+      const response = await authedFetch(`/api/users/${username}/sessions?limit=5`, {
         cache: "no-store",
       });
       if (!response.ok) return [] as Session[];

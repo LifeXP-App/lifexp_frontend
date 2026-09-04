@@ -1,4 +1,5 @@
 "use client";
+import { authedFetch } from "@/src/lib/api/authedFetch";
 
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -9,7 +10,6 @@ import SessionInfoPopup from "@/src/components/goals/SessionInfoPopup";
 import { useAuth } from "@/src/context/AuthContext";
 import { useToast } from "@/src/context/ToastContext";
 import { mockUser } from "@/src/lib/mock/userData";
-import { supabase } from "@/src/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
 import { useMutation, useQuery } from "convex/react";
 import dynamic from "next/dynamic";
@@ -835,20 +835,7 @@ export default function ActivityClient({
 
     const fetchFriendsSessions = async () => {
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        const authHeader = session?.access_token
-          ? { Authorization: `Bearer ${session.access_token}` }
-          : {};
-        const headers: HeadersInit = {};
-
-        if (session?.access_token) {
-          headers.Authorization = `Bearer ${session.access_token}`;
-        }
-
-        const res = await fetch(`/api/a/${uid}/sessions/friends/`, {
-          headers,
+        const res = await authedFetch(`/api/a/${uid}/sessions/friends/`, {
           credentials: "include",
         });
         const data = await res.json();
@@ -883,19 +870,7 @@ export default function ActivityClient({
 
     const fetchLeaderboard = async () => {
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-
-        const headers: HeadersInit = {};
-
-        if (session?.access_token) {
-          headers.Authorization = `Bearer ${session.access_token}`;
-        }
-
-        const res = await fetch(`/api/a/${uid}/leaderboard/`, {
-          headers,
-        });
+        const res = await authedFetch(`/api/a/${uid}/leaderboard/`);
 
         const data = await res.json();
 
@@ -928,18 +903,7 @@ export default function ActivityClient({
 
     const fetchSessions = async () => {
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-
-        const headers: HeadersInit = {};
-
-        if (session?.access_token) {
-          headers.Authorization = `Bearer ${session.access_token}`;
-        }
-
-        const res = await fetch(`/api/a/${uid}/sessions/mine/`, {
-          headers,
+        const res = await authedFetch(`/api/a/${uid}/sessions/mine/`, {
           credentials: "include",
         });
 

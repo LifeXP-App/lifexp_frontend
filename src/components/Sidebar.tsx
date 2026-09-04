@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { authedFetch } from "@/src/lib/api/authedFetch";
 import { useMasteryAccent } from "@/src/lib/hooks/useMasteryAccent";
 import { BottomNav } from "./BottomNav";
 import { Navigation } from "./Navigation";
@@ -23,7 +24,7 @@ export function Sidebar() {
   const { data: viewedProfile } = useQuery({
     queryKey: ["sidebar-viewed-mastery", viewedUsername],
     queryFn: async () => {
-      const res = await fetch(`/api/users/profile/${viewedUsername}`, {
+      const res = await authedFetch(`/api/users/profile/${viewedUsername}`, {
         cache: "no-store",
       });
       if (!res.ok) return null;

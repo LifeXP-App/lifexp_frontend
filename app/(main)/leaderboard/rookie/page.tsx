@@ -3,6 +3,7 @@
 import LeaderboardSwitcher from "@/src/components/LeaderboardSwitcher";
 import { LiveAvatar } from "@/src/components/LiveAvatar";
 import { useAuth } from "@/src/context/AuthContext";
+import { authedFetch } from "@/src/lib/api/authedFetch";
 import { FireIcon } from "@heroicons/react/24/solid";
 import Image from "next/image";
 import Link from "next/link";
@@ -226,7 +227,7 @@ export default function RookieLeaderboard() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/xp/leaderboard", { cache: "no-store" });
+      const res = await authedFetch("/api/xp/leaderboard", { cache: "no-store" });
 
       if (!res.ok) throw new Error("Failed to fetch leaderboard");
 

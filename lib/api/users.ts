@@ -1,3 +1,5 @@
+import { authedFetch } from "@/src/lib/api/authedFetch";
+
 // User API Types
 export interface FollowResponse {
   following: boolean;
@@ -10,7 +12,7 @@ export interface FollowResponse {
  * Uses optimistic UI pattern - caller should handle state updates
  */
 export async function toggleFollow(userId: string | number): Promise<FollowResponse> {
-  const response = await fetch(`/api/users/${userId}/follow`, {
+  const response = await authedFetch(`/api/users/${userId}/follow`, {
     method: "POST",
     cache: "no-store",
   });

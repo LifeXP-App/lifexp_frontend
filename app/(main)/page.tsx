@@ -429,7 +429,7 @@ export default function Home() {
     queryKey: ["friends-status"],
     queryFn: async () => {
       try {
-        const res = await fetch("/api/users/friends-status", {
+        const res = await authedFetch("/api/users/friends-status", {
           method: "GET",
           cache: "no-store",
         });
@@ -478,7 +478,7 @@ export default function Home() {
     queryKey: ["notifications"],
     queryFn: async () => {
       try {
-        const res = await fetch("/api/notifications", {
+        const res = await authedFetch("/api/notifications", {
           method: "GET",
           cache: "no-store",
         });
@@ -636,7 +636,7 @@ const {
 } = useInfiniteQuery({
   queryKey: ["feed", me?.id],
   queryFn: async ({ pageParam }) => {
-    const res = await fetch(`/api/feed?page=${pageParam}&limit=10`, {
+    const res = await authedFetch(`/api/feed?page=${pageParam}&limit=10`, {
       method: "GET",
       cache: "no-store",
     });

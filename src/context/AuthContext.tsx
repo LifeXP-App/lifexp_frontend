@@ -2,6 +2,11 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/src/lib/supabase";
+import { syncServerSession } from "@/src/lib/auth/syncServerSession";
+import {
+  ensureFreshServerSession,
+  refreshBrowserSession,
+} from "@/src/lib/auth/refreshBrowserSession";
 import type { Session, User } from "@supabase/supabase-js";
 import posthog from "posthog-js";
 
@@ -58,30 +63,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [authStatus, setAuthStatus] = useState<AuthStatus>("loading");
 
   /**
-   * Keep the cookie-backed server session on the exact same token generation
-   * as the browser SDK. Supabase access tokens are intentionally short-lived;
-   * every browser refresh must therefore rotate the server cookies too.
-   */
-  const syncServerSession = useCallback(async (currentSession: Session) => {
-    try {
-      const res = await fetch("/api/auth/set-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          access_token: currentSession.access_token,
-          refresh_token: currentSession.refresh_token,
-        }),
-        cache: "no-store",
-      });
-
-      return res.ok;
-    } catch (err) {
-      console.error("Failed to sync server auth session:", err);
-      return false;
-    }
-  }, []);
-
-  /**
    * Fetch Player data from Django backend using Supabase session token
    */
   const refreshMe = useCallback(async () => {
@@ -93,11 +74,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // server-side token refresh the localStorage session can be absent/stale
       // while the httpOnly cookie is still valid. Gating here left `me` null for
       // logged-in users, which routed every Profile link to `/u/undefined`.
-      const res = await fetch("/api/auth/me", {
-        method: "GET",
-        cache: "no-store",
-        credentials: "include",
-      });
+      const requestMe = () =>
+        fetch("/api/auth/me", {
+          method: "GET",
+          cache: "no-store",
+          credentials: "include",
+        });
+
+      let res = await requestMe();
+
+      // A 401 here means the mirrored `sb-access-token` cookie is stale, which
+      // is the normal state after a tab has been asleep past the access-token
+      // lifetime. The server deliberately cannot refresh it (that would spend
+      // the refresh token the browser SDK owns and get everyone signed out), so
+      // refresh here, re-sync the cookies and ask once more. Only a refresh
+      // that fails outright means the session is really gone — which is the
+      // difference between healing a stale cookie and bouncing the user to the
+      // login page for no reason.
+      if (res.status === 401 && (await refreshBrowserSession())) {
+        res = await requestMe();
+      }
 
       if (!res.ok) {
         if (res.status === 401) {
@@ -164,7 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     posthog.capture("user_signed_in", { email, method: "email" });
 
     return { error: null };
-  }, [refreshMe, syncServerSession]);
+  }, [refreshMe]);
 
   /**
    * Sign up with email and password
@@ -321,11 +317,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
+    // Waking from sleep is the moment the mirrored cookie is most likely to be
+    // stale: the SDK's 30s auto-refresh tick does not fire while the machine is
+    // suspended, so the access token can be long expired by the time the first
+    // request goes out. Re-sync eagerly on wake so the many components that
+    // call `/api/*` with a plain fetch (and therefore have no retry of their
+    // own) see a fresh cookie instead of a 401.
+    const revalidate = () => {
+      if (document.visibilityState !== "visible") return;
+      void ensureFreshServerSession();
+    };
+
+    document.addEventListener("visibilitychange", revalidate);
+    window.addEventListener("online", revalidate);
+
     return () => {
       active = false;
       subscription.unsubscribe();
+      document.removeEventListener("visibilitychange", revalidate);
+      window.removeEventListener("online", revalidate);
     };
-  }, [refreshMe, syncServerSession]);
+  }, [refreshMe]);
 
   const value = useMemo<AuthContextType>(
     () => ({

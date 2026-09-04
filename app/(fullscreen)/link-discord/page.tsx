@@ -21,6 +21,7 @@ import { useEffect, useRef, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/src/context/AuthContext";
 import { supabase } from "@/src/lib/supabase";
+import { authedFetch } from "@/src/lib/api/authedFetch";
 
 // "checking-auth" / "ready" / "needs-login" are derived from authStatus at
 // render time (see `status` below), not stored — only the async-action
@@ -86,7 +87,7 @@ function LinkDiscordPage() {
       }
 
       try {
-        const res = await fetch("/api/auth/discord-link", {
+        const res = await authedFetch("/api/auth/discord-link", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ token, discord_uid: discordUid }),

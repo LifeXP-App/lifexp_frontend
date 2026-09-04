@@ -4,6 +4,7 @@ import { FireIcon, InformationCircleIcon } from "@heroicons/react/24/solid";
 import { LiveAvatar } from "@/src/components/LiveAvatar";
 import { usePopup } from "@/src/context/PopupContext";
 import { useQuery } from "@tanstack/react-query";
+import { authedFetch } from "@/src/lib/api/authedFetch";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
@@ -84,7 +85,7 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
   const { data: todayGoals = [] } = useQuery({
     queryKey: ["today-goals", user.username],
     queryFn: async () => {
-      const res = await fetch("/api/goals/today", { cache: "no-store" });
+      const res = await authedFetch("/api/goals/today", { cache: "no-store" });
       if (!res.ok) return [] as TodayGoal[];
       return (await res.json()) as TodayGoal[];
     },
