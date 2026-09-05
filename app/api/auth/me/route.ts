@@ -84,10 +84,18 @@ export async function GET() {
     const tokens = await sharedRefresh(refreshTokens);
 
     if (!tokens?.access) {
-      const out = NextResponse.json({ detail: "Session expired" }, { status: 401 });
-      out.cookies.set("sb-access-token", "", { path: "/", maxAge: 0 });
-      out.cookies.set("sb-refresh-token", "", { path: "/", maxAge: 0 });
-      return removeDuplicateAuthCookies(out);
+      // The server cannot refresh: the browser SDK is the only owner of the
+      // refresh token (see src/lib/auth/refreshTokens.ts). So this 401 means
+      // "the mirrored access token is stale", NOT "this session is dead", and
+      // the cookies must survive — the client refreshes through the SDK,
+      // re-syncs them via /api/auth/set-session and retries. Clearing them here
+      // used to turn an ordinary expired access token into a hard sign-out.
+      return removeDuplicateAuthCookies(
+        NextResponse.json(
+          { detail: "Session expired", code: "TOKEN_EXPIRED" },
+          { status: 401 }
+        )
+      );
     }
 
     res = await fetch(`${baseUrl}/api/v1/auth/me/`, {

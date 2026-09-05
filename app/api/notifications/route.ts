@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { getAuthToken } from "@/src/lib/auth/getAuthToken";
+import { refreshTokens } from "@/src/lib/auth/refreshTokens";
+import { sharedRefresh } from "@/src/lib/auth/refreshLock";
 
 async function safeJson(res: Response) {
   const text = await res.text();
@@ -49,35 +50,25 @@ export async function GET(req: Request) {
     });
 
     // 2) if expired -> shared refresh -> retry once
+    //
+    // This used to POST to a hardcoded "http://localhost:3000/api/auth/refresh"
+    // (the legacy Django refresh route, which writes the old `access`/`refresh`
+    // cookies) and then read a nonexistent `access` cookie. In any deployment
+    // that is not a dev box on port 3000 the fetch failed outright, so
+    // notifications answered 401 forever once the access token expired.
     if (res.status === 401) {
-      const refreshRes = await fetch("http://localhost:3000/api/auth/refresh", {
-        method: "POST",
-        cache: "no-store",
-      });
+      const tokens = await sharedRefresh(refreshTokens);
 
-      if (!refreshRes.ok) {
-        const out = NextResponse.json(
-          { detail: "Session expired" },
+      if (!tokens?.access) {
+        // Stale mirrored access token, not a dead session — leave the cookies
+        // alone and let the client refresh through the Supabase SDK and retry.
+        return NextResponse.json(
+          { detail: "Session expired", code: "TOKEN_EXPIRED" },
           { status: 401 }
         );
-        out.cookies.set("access", "", { path: "/", maxAge: 0 });
-        out.cookies.set("refresh", "", { path: "/", maxAge: 0 });
-        return out;
       }
 
-      // ✅ get fresh access from updated cookies
-      const updatedStore = await cookies();
-      access = updatedStore.get("access")?.value ?? null;
-
-      if (!access) {
-        const out = NextResponse.json(
-          { detail: "Session expired" },
-          { status: 401 }
-        );
-        out.cookies.set("access", "", { path: "/", maxAge: 0 });
-        out.cookies.set("refresh", "", { path: "/", maxAge: 0 });
-        return out;
-      }
+      access = tokens.access;
 
       // retry request
       res = await fetch(target, {

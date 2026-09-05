@@ -1,3 +1,5 @@
+import { authedFetch } from "@/src/lib/api/authedFetch";
+
 const SESSION_FLAG = "lifexp:timezone-synced";
 
 /**
@@ -19,7 +21,7 @@ export function syncTimezoneInBackground(): void {
 
   window.sessionStorage.setItem(SESSION_FLAG, "1");
 
-  fetch("/api/onboarding/timezone", {
+  authedFetch("/api/onboarding/timezone", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ timezone }),

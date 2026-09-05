@@ -18,7 +18,7 @@ export async function getAuthToken(request: Request): Promise<string | null> {
 
   const cookieStore = await cookies();
 
-  // Supabase session cookie — set by /api/auth/login/supabase
+  // Supabase session cookie — mirrored from the browser SDK by /api/auth/set-session
   const sbToken = cookieStore.get("sb-access-token")?.value;
   if (sbToken) return sbToken;
 

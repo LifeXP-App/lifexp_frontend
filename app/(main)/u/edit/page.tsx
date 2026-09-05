@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/src/context/AuthContext";
+import { authedFetch } from "@/src/lib/api/authedFetch";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -445,9 +446,8 @@ function CropModal({ imageUrl, onCancel, onSave }: CropModalProps) {
 export default function EditProfilePage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const router = useRouter();
-  const { me, session, loading: authLoading, refreshMe } = useAuth();
+  const { me, loading: authLoading, refreshMe } = useAuth();
   const queryClient = useQueryClient();
-  const sessionRef = useRef(session);
 
   /* ---------------- STATE ---------------- */
 
@@ -483,10 +483,6 @@ export default function EditProfilePage() {
 
   /* ---------------- LOAD PROFILE ---------------- */
 
-  useEffect(() => {
-    sessionRef.current = session;
-  }, [session]);
-
   // Cached via React Query (own key — /api/users/[id] returns a differently
   // shaped payload than the /u/[username] page's ["profile-users", ...]
   // entry, so it can't share that cache) so re-entering edit shows the
@@ -494,10 +490,7 @@ export default function EditProfilePage() {
   const { data: profileData, isLoading: loading } = useQuery({
     queryKey: ["edit-profile", username],
     queryFn: async () => {
-      const res = await fetch(`/api/users/${userId}`, {
-        headers: sessionRef.current?.access_token
-          ? { Authorization: `Bearer ${sessionRef.current.access_token}` }
-          : undefined,
+      const res = await authedFetch(`/api/users/${userId}`, {
         cache: "no-store",
       });
 
@@ -646,11 +639,8 @@ export default function EditProfilePage() {
     }
 
     try {
-      const res = await fetch(`/api/users/${me.id}`, {
+      const res = await authedFetch(`/api/users/${me.id}`, {
         method: "PATCH",
-        headers: session?.access_token
-          ? { Authorization: `Bearer ${session.access_token}` }
-          : undefined,
         body: formData,
       });
 

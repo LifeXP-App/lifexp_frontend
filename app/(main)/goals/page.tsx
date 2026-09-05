@@ -3,6 +3,7 @@
 import GoalStatusMenu from "@/src/components/goals/GoalStatusMenu";
 import StatusChangeConfirmationModal from "@/src/components/goals/StatusChangeConfirmationModal";
 import { useAuth } from "@/src/context/AuthContext";
+import { authedFetch } from "@/src/lib/api/authedFetch";
 import { useMasteryAccent } from "@/src/lib/hooks/useMasteryAccent";
 import { useToast, useConfirm } from "@/src/context/ToastContext";
 import { usePopup } from "@/src/context/PopupContext";
@@ -539,11 +540,12 @@ export default function GoalsPage() {
     queryKey: ["goals"],
     queryFn: async () => {
       // No client-sent Authorization header — /api/goals reads the httpOnly
-      // auth cookie itself (and refreshes it if stale). Gating/authing off
-      // the browser Supabase SDK's session was unreliable on mobile, where
-      // that client-side session can lag or fail to hydrate even though the
-      // cookie is perfectly valid, leaving this query permanently disabled.
-      const res = await fetch(`/api/goals`, { cache: "no-store" });
+      // auth cookie itself. Gating/authing off the browser Supabase SDK's
+      // session was unreliable on mobile, where that client-side session can
+      // lag or fail to hydrate even though the cookie is perfectly valid,
+      // leaving this query permanently disabled. authedFetch still refreshes
+      // through the SDK and retries once if the cookie itself has gone stale.
+      const res = await authedFetch(`/api/goals`, { cache: "no-store" });
 
       if (!res.ok) throw new Error("Failed to fetch goals");
 
@@ -581,7 +583,7 @@ export default function GoalsPage() {
       // Proxied through /api/goals/info/[username] (httpOnly-cookie auth,
       // same reasoning as the goals list query above) instead of calling
       // Django directly with the browser SDK's session token.
-      const res = await fetch(`/api/goals/info/${username}`, {
+      const res = await authedFetch(`/api/goals/info/${username}`, {
         cache: "no-store",
       });
 
@@ -628,7 +630,7 @@ export default function GoalsPage() {
     setIsModalOpen(false);
 
     try {
-      const res = await fetch("/api/goals", {
+      const res = await authedFetch("/api/goals", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -866,7 +868,7 @@ export default function GoalsPage() {
         prev.filter(g => g.uid !== goalUid),
       );
 
-      const res = await fetch(`/api/goals/${goalUid}`, {
+      const res = await authedFetch(`/api/goals/${goalUid}`, {
         method: "DELETE",
       });
 

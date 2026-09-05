@@ -51,8 +51,6 @@ export async function GET(req: Request) {
           { detail: "SESSION_EXPIRED" },
           { status: 401 }
         );
-        out.cookies.set("sb-access-token", "", { path: "/", maxAge: 0 });
-        out.cookies.set("sb-refresh-token", "", { path: "/", maxAge: 0 });
         return out;
       }
 

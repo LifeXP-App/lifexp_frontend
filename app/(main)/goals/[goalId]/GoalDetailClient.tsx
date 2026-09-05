@@ -1,4 +1,5 @@
 "use client";
+import { authedFetch } from "@/src/lib/api/authedFetch";
 
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -14,7 +15,6 @@ import SessionInfoPopup from "@/src/components/goals/SessionInfoPopup";
 import SharePopup from "@/src/components/SharePopup";
 import { useAuth } from "@/src/context/AuthContext";
 import { useToast, useConfirm } from "@/src/context/ToastContext";
-import { supabase } from "@/src/lib/supabase";
 import { useGoal } from "@/src/lib/hooks/useGoals";
 import { GoalsService, Session } from "@/src/lib/services/goals";
 import { ActivityType } from "@/src/lib/types/activityMeta";
@@ -343,12 +343,10 @@ export default function GoalDetailClient() {
         },
       });
       // 3. Register the session with Django and save the authoritative rates back to Convex
-      const { data: { session: supaSession } } = await supabase.auth.getSession();
-      const djangoRes = await fetch("/api/sessions", {
+      const djangoRes = await authedFetch("/api/sessions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(supaSession?.access_token ? { Authorization: `Bearer ${supaSession.access_token}` } : {}),
         },
         body: JSON.stringify({
           session_id: convexId,
@@ -459,7 +457,7 @@ export default function GoalDetailClient() {
     setIsNewActivityModalOpen(false);
 
     try {
-      const response = await fetch("/api/activities", {
+      const response = await authedFetch("/api/activities", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: query, ai_generated: true }),
@@ -603,7 +601,7 @@ export default function GoalDetailClient() {
 
     let res: Response;
     try {
-      res = await fetch(`/api/goals/${goalId}/complete/`, {
+      res = await authedFetch(`/api/goals/${goalId}/complete/`, {
         method: "POST",
         body: formData,
         credentials: "same-origin",

@@ -4,6 +4,7 @@ import { LiveAvatar } from "@/src/components/LiveAvatar";
 import { BellSlashIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "@/src/context/AuthContext";
 import { useQuery } from "@tanstack/react-query";
+import { authedFetch } from "@/src/lib/api/authedFetch";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -33,7 +34,7 @@ type InteractionResponse = {
 };
 
 export function NudgesLikesSection() {
-  const { session } = useAuth();
+  const { me } = useAuth();
 
   // Cached via React Query (and persisted to localStorage by the app-wide
   // persister in providers.tsx) so re-entering/reloading the goals page
@@ -42,10 +43,7 @@ export function NudgesLikesSection() {
   const { data: interactions = [], isLoading: loading } = useQuery<Interactions[]>({
     queryKey: ["goals", "recent-interactions"],
     queryFn: async () => {
-      const res = await fetch("/api/goals/interactions/recent", {
-        headers: session?.access_token
-          ? { Authorization: `Bearer ${session.access_token}` }
-          : undefined,
+      const res = await authedFetch("/api/goals/interactions/recent", {
         cache: "no-store",
       });
 
@@ -86,7 +84,7 @@ export function NudgesLikesSection() {
         } satisfies Interactions;
       });
     },
-    enabled: !!session?.access_token,
+    enabled: !!me,
     staleTime: 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });

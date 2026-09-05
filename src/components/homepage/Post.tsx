@@ -1,4 +1,5 @@
 "use client";
+import { authedFetch } from "@/src/lib/api/authedFetch";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -217,7 +218,7 @@ function PostComponent({ post }: { post: PostType }) {
         10000,
       );
 
-      const res = await fetch(`/api/goals/${post.id}/like`, {
+      const res = await authedFetch(`/api/goals/${post.id}/like`, {
         method: "POST",
         cache: "no-store",
         signal: abortControllerRef.current.signal,

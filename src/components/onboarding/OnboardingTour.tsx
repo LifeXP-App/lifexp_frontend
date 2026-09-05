@@ -9,6 +9,7 @@ import { usePathname, useRouter } from "next/navigation";
 import posthog from "posthog-js";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/src/context/AuthContext";
+import { authedFetch } from "@/src/lib/api/authedFetch";
 import { ACTIVITY_META, type ActivityType } from "@/src/lib/types/activityMeta";
 
 const TOUR_VERSION = "v2";
@@ -371,7 +372,7 @@ export function OnboardingTour() {
     window.localStorage.setItem(getCompletionKey(userId), "complete");
 
     const saveServerCompletion = async () => {
-      const response = await fetch("/api/users/settings", {
+      const response = await authedFetch("/api/users/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ onboarding_complete: true }),
@@ -379,7 +380,7 @@ export function OnboardingTour() {
 
       if (response.ok) return;
 
-      await fetch("/api/users/settings", {
+      await authedFetch("/api/users/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ intro_complete: true }),
@@ -450,7 +451,7 @@ export function OnboardingTour() {
 
     const checkServerCompletion = async () => {
       try {
-        const response = await fetch("/api/users/settings", {
+        const response = await authedFetch("/api/users/settings", {
           method: "GET",
           cache: "no-store",
         });

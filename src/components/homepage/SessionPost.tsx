@@ -1,4 +1,5 @@
 "use client";
+import { authedFetch } from "@/src/lib/api/authedFetch";
 
 import { CommentSection } from "@/src/components/homepage/CommentSection";
 import { LiveAvatar } from "@/src/components/LiveAvatar";
@@ -6,7 +7,6 @@ import SessionInfoPopup from "@/src/components/goals/SessionInfoPopup";
 import { useAuth } from "@/src/context/AuthContext";
 import { useToast } from "@/src/context/ToastContext";
 import { getResponseError } from "@/src/lib/api/responseError";
-import { supabase } from "@/src/lib/supabase";
 import {
   ChatBubbleOvalLeftIcon,
   EllipsisVerticalIcon,
@@ -179,17 +179,9 @@ function SessionPostComponent({ session }: { session: ApiSessionPost }) {
     setNudgeCount(Math.max(0, previousCount + (nextNudged ? 1 : -1)));
     setNudging(true);
     try {
-      const {
-        data: { session: supaSession },
-      } = await supabase.auth.getSession();
-      const res = await fetch(`/api/sessions/${session.id}/nudge`, {
+      const res = await authedFetch(`/api/sessions/${session.id}/nudge`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(supaSession?.access_token
-            ? { Authorization: `Bearer ${supaSession.access_token}` }
-            : {}),
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ is_nudged: nextNudged }),
       });
       if (!res.ok) {

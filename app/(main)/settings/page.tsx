@@ -8,6 +8,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/src/context/AuthContext";
 import { useToast } from "@/src/context/ToastContext";
 import { supabase } from "@/src/lib/supabase";
+import { authedFetch } from "@/src/lib/api/authedFetch";
 
 const DeleteAccountModal = dynamic(
   () => import("@/src/components/settings/DeleteAccountModal"),
@@ -92,11 +93,12 @@ export default function SettingsPage() {
     queryKey: ["settings"],
     queryFn: async () => {
       // No client-sent Authorization header — /api/users/settings reads the
-      // httpOnly auth cookie itself (and refreshes it if stale). Gating on
-      // the browser Supabase SDK's session was unreliable on mobile, where
-      // that client-side session can lag or fail to hydrate even though the
-      // cookie is perfectly valid — this is why Settings never loaded there.
-      const res = await fetch("/api/users/settings", {
+      // httpOnly auth cookie itself. Gating on the browser Supabase SDK's
+      // session was unreliable on mobile, where that client-side session can
+      // lag or fail to hydrate even though the cookie is perfectly valid —
+      // this is why Settings never loaded there. authedFetch still refreshes
+      // through the SDK and retries once if the cookie itself has gone stale.
+      const res = await authedFetch("/api/users/settings", {
         method: "GET",
         cache: "no-store",
       });
@@ -161,7 +163,7 @@ export default function SettingsPage() {
     setDeleteError(null);
 
     try {
-      const res = await fetch("/api/auth/account", { method: "DELETE" });
+      const res = await authedFetch("/api/auth/account", { method: "DELETE" });
 
       if (res.status !== 204) {
         const data = await res.json().catch(() => null);
@@ -205,7 +207,7 @@ export default function SettingsPage() {
 
       const backendPayload = formToBackend(payload);
 
-      const res = await fetch("/api/users/settings", {
+      const res = await authedFetch("/api/users/settings", {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",

@@ -23,12 +23,12 @@ export async function serverAuthFetch(url: string, init?: RequestInit) {
     cache: "no-store",
   });
 
-  // 2) if expired -> refresh once (deduplicated) -> retry.
+  // 2) if expired -> ask for a refresh -> retry.
   //
-  // refreshTokens() reads sb-refresh-token, refreshes against Supabase, and
-  // writes the rotated sb-access-token / sb-refresh-token cookies. Earlier this
-  // fetched a relative "/api/auth/refresh" (which never resolves server-side)
-  // and then read a nonexistent "access" cookie, so the retry never fired.
+  // refreshTokens() is intentionally a no-op: the browser SDK is the only owner
+  // of the refresh token (see src/lib/auth/refreshTokens.ts). So this returns
+  // the 401 unchanged and the caller's client-side fetch helper refreshes,
+  // re-syncs the cookies and retries.
   if (res.status === 401) {
     const tokens = await sharedRefresh(refreshTokens);
     if (!tokens?.access) {
