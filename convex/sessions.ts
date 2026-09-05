@@ -139,6 +139,14 @@ export const startSession = mutation({
       locale: v.optional(v.string()),
     })
   ),
+
+  // Set at creation so the document never has a window where it reads as
+  // "timer" before a separate setClockType call flips it to "stopwatch" --
+  // that window let a fresh stopwatch session briefly run the timer-mode
+  // phase-end/heartbeat logic (audible chimes, then landing paused a few
+  // seconds in) before catching up. Optional/defaults to "timer" so existing
+  // callers that don't pass it keep the old behavior.
+  clockType: v.optional(v.union(v.literal("timer"), v.literal("stopwatch"))),
 },
   handler: async (ctx, args) => {
     // Check no existing active session for this user
@@ -203,7 +211,7 @@ const sessionId = await ctx.db.insert("sessions", {
   sessionMode: "focus",
   focusPhaseStartSeconds: 0,
   focusAdjustSeconds: 0,
-  clockType: "timer",
+  clockType: args.clockType ?? "timer",
 
   rateSegments: [
     {

@@ -239,7 +239,6 @@ export default function GoalDetailClient() {
   const startSessionMutation = useMutation(api.sessions.startSession);
   const updateInitialRatesMutation = useMutation(api.sessions.updateInitialRates);
   const deleteConvexSessionMutation = useMutation(api.sessions.deleteSession);
-  const setClockTypeMutation = useMutation(api.sessions.setClockType);
 
   const { goal, sessions: rawSessions, loading, error, refetch } = useGoal(goalId);
 
@@ -336,6 +335,7 @@ export default function GoalDetailClient() {
         activityId,
         rates,
         activityName,
+        clockType,
         deviceContext: {
           platform: "web",
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -402,15 +402,6 @@ export default function GoalDetailClient() {
         }
       }
 
-      // startSession always creates the session as clockType "timer" —
-      // apply the stopwatch choice from the timer-mode popup before the
-      // timer page's first render of the clock.
-      if (clockType === "stopwatch") {
-        await setClockTypeMutation({ sessionId: convexId, clockType: "stopwatch" }).catch(
-          (err) => console.error("Failed to apply stopwatch mode to new session:", err),
-        );
-      }
-
       // `duration` is read once by the session page on mount (see
       // FOCUS_SECONDS/focusSeconds there) — it's not persisted to Convex.
       router.push(`/goals/${goalId}/session/${convexId}?duration=${durationSeconds}`);
@@ -423,7 +414,7 @@ export default function GoalDetailClient() {
         toast.error("Failed to start session. Please try again.");
       }
     }
-  }, [me, startSessionMutation, setClockTypeMutation, updateInitialRatesMutation, goalId, goal?.id, goal?.title, router]);
+  }, [me, startSessionMutation, updateInitialRatesMutation, goalId, goal?.id, goal?.title, router]);
 
   const handleStartSession = useCallback(async () => {
     if (!goal?.last_activity?.uid) return;

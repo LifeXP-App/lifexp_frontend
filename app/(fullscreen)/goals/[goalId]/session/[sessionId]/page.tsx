@@ -763,6 +763,16 @@ export default function SessionTimer({ params }: SessionTimerProps) {
     }
     const rates = normalizeRates(parsedRates);
 
+    // Passed straight into startSession so the document is created with the
+    // right clockType from its very first write. A separate follow-up
+    // setClockType call left a real window where the session read as
+    // "timer" (its default) before catching up to "stopwatch" -- long
+    // enough for this page's own reactive subscription to fire timer-mode
+    // phase logic (audible chimes) and leave the session paused a few
+    // seconds in, requiring a manual press-play to continue.
+    const requestedClockType =
+      searchParams.get("clockType") === "stopwatch" ? "stopwatch" : "timer";
+
     Promise.resolve()
       .then(async () => {
         const id = await startMutation({
@@ -775,23 +785,13 @@ export default function SessionTimer({ params }: SessionTimerProps) {
           activityId: activityIdStr,
           activity_uid: activityIdStr,
           rates,
+          clockType: requestedClockType,
           deviceContext: {
             platform: "web",
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             locale: navigator.language,
           },
         });
-
-        // startSession always creates the session as clockType "timer" —
-        // apply the stopwatch choice from the timer-mode popup right away if
-        // that's what was picked, before the page's first render of the
-        // clock. No optimistic update needed here (unlike the mid-session
-        // toggle below): nothing has rendered this session's clock yet.
-        if (searchParams.get("clockType") === "stopwatch") {
-          await setClockTypeMutation({ sessionId: id, clockType: "stopwatch" }).catch(
-            (err) => console.error("Failed to apply stopwatch mode to new session:", err),
-          );
-        }
 
         // startSession already creates the session as "live" — a brand-new
         // session autostarts focus immediately rather than landing paused,
@@ -858,7 +858,6 @@ export default function SessionTimer({ params }: SessionTimerProps) {
     isEmptySession,
     searchParams,
     startMutation,
-    setClockTypeMutation,
     updateInitialRatesMutation,
     router,
   ]);
