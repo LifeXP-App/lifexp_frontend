@@ -373,9 +373,18 @@ function SessionPostComponent({ session }: { session: ApiSessionPost }) {
           <div className="flex flex-col justify-around   w-full min-w-0">
             
             <p className="text-lg font-semibold ">
-              {session.name
-                ? `${session.name} ${goal?.title ? `(${goal.title.slice(0, 30)})` : ""}`
-                : `Session ${session.session_number} ${goal?.title ?? ""}`}
+              {session.name ? (
+                <>
+                  {session.name}
+                  {goal?.title && (
+                    <span className="text-gray-500 dark:text-[var(--muted)] font-normal">
+                      {" "}({goal.title.slice(0, 30)})
+                    </span>
+                  )}
+                </>
+              ) : (
+                goal?.title || "Free Session"
+              )}
             </p>
             <p
               className="text-md font-bold"
