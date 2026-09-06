@@ -9,6 +9,7 @@ import { useToast } from "@/src/context/ToastContext";
 import { getResponseError } from "@/src/lib/api/responseError";
 import {
   ChatBubbleOvalLeftIcon,
+  ChevronDoubleUpIcon,
   EllipsisVerticalIcon,
 } from "@heroicons/react/24/solid";
 import { useQueryClient } from "@tanstack/react-query";
@@ -352,9 +353,9 @@ function SessionPostComponent({ session }: { session: ApiSessionPost }) {
           <div className="shrink-0">
             {session.completion_picture ? (
               <Image
-                width={96}
-                height={96}
-                className="w-24 h-24 object-cover rounded-lg cursor-pointer"
+                width={80}
+                height={80}
+                className="w-20 h-20 object-cover rounded-lg cursor-pointer"
                 src={session.completion_picture.replace(
                   "/upload/",
                   "/upload/f_auto,q_auto,w_150,c_fill/",
@@ -362,26 +363,27 @@ function SessionPostComponent({ session }: { session: ApiSessionPost }) {
                 alt="Completion"
               />
             ) : (
-              <div className="w-24 h-24 bg-gray-100 dark:bg-dark-3/50 flex items-center justify-center rounded-lg cursor-pointer">
+              <div style={{ backgroundColor: `rgba(var(--aspect-${activity.type.toLowerCase()}-rgb), 0.15)` }} className="w-20 h-20 bg-gray-100 dark:bg-dark-3/50 flex items-center justify-center rounded-lg cursor-pointer">
                 <span className="text-4xl">{activity.emoji}</span>
               </div>
             )}
           </div>
 
           {/* Middle info */}
-          <div className="flex flex-col justify-between gap-1  w-full min-w-0">
+          <div className="flex flex-col justify-around   w-full min-w-0">
+            
+            <p className="text-lg font-semibold ">
+              {session.name
+                ? `${session.name} ${goal?.title ? `(${goal.title.slice(0, 30)})` : ""}`
+                : `Session ${session.session_number} ${goal?.title ?? ""}`}
+            </p>
             <p
-              className="text-lg font-bold"
+              className="text-md font-bold"
               style={{ color: `var(--aspect-${activity.type.toLowerCase()})` }}
             >
               {activity.name}
             </p>
 
-            <p className="text-sm font-semibold text-gray-500 dark:text-[var(--muted)]">
-              {session.name
-                ? `${session.name} ${goal?.title ? `(${goal.title.slice(0, 30)})` : ""}`
-                : `Session ${session.session_number} ${goal?.title ?? ""}`}
-            </p>
 
             <p className="text-sm text-gray-500 dark:text-[var(--muted)]">
               {session.xp_total} XP • {formatSessionTime(session.started_at)}
@@ -390,7 +392,7 @@ function SessionPostComponent({ session }: { session: ApiSessionPost }) {
 
           {/* Right: XP + duration */}
           <div className="flex flex-col items-end justify-center gap-1.5 shrink-0">
-            <p className="text-sm md:text-xl font-bold text-black dark:text-[#dfdfe0] whitespace-nowrap mr-2">
+            <p className="text-sm md:text-2xl font-bold text-black dark:text-white whitespace-nowrap mr-2">
               {session.duration}
             </p>
           </div>
@@ -411,14 +413,14 @@ function SessionPostComponent({ session }: { session: ApiSessionPost }) {
               hasNudged
                 ? {
                     color: `var(--aspect-${activity.type.toLowerCase()})`,
-                    backgroundColor: `rgba(var(--aspect-${activity.type.toLowerCase()}-rgb), 0.15)`,
-                    borderColor: `rgba(var(--aspect-${activity.type.toLowerCase()}-rgb), 0.35)`,
+                    backgroundColor: `rgba(var(--aspect-${activity.type.toLowerCase()}-rgb), 0.05)`,
+                    borderColor: `rgba(var(--aspect-${activity.type.toLowerCase()}-rgb), 0.80)`,
                   }
                 : undefined
             }
           >
-            <span className="text-base leading-none">👋</span>
-            <span>{nudgeCount}</span>
+            <ChevronDoubleUpIcon className="w-5 h-5" />
+            <span className="text-[16px]">{nudgeCount}</span>
           </button>
 
           <div
