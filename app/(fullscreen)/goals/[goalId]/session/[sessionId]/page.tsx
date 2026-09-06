@@ -897,6 +897,21 @@ export default function SessionTimer({ params }: SessionTimerProps) {
         (now - session.startedAt) / 1000 - pausedMs / 1000,
       );
 
+      // TEMP DEBUG — remove once the stopwatch-reset-to-0:00-after-break bug
+      // is confirmed fixed. Logs only while the computed value looks wrong
+      // (near 0 despite real elapsed time), to avoid spamming every tick.
+      if (session.clockType === "stopwatch" && focusedSeconds < 2 && now - session.startedAt > 10000) {
+        console.warn("[stopwatch-debug] focusedSeconds looks wrong", {
+          focusedSeconds,
+          now,
+          startedAt: session.startedAt,
+          rawElapsedMs: now - session.startedAt,
+          pausedMs,
+          pauseIntervals: session.pauseIntervals,
+          status: session.status,
+        });
+      }
+
       // Mirror Convex's calculateXP
       const breakdown: XpRates = { physique: 0, energy: 0, logic: 0, creativity: 0, social: 0 };
       for (let i = 0; i < session.rateSegments.length; i++) {
@@ -1381,6 +1396,17 @@ useEffect(() => {
       // must explicitly press play again to actually resume ticking.
       await returnFromAfkMutation({ sessionId, toStatus: "paused" });
     } else if (isPaused) {
+      // TEMP DEBUG — remove once the stopwatch-reset-to-0:00-after-break bug
+      // is confirmed fixed.
+      if (clockType === "stopwatch" && session) {
+        console.warn("[stopwatch-debug] resume clicked", {
+          now: Date.now(),
+          startedAt: session.startedAt,
+          pauseIntervals: session.pauseIntervals,
+          focusedDurationSeconds: session.focusedDurationSeconds,
+          status: session.status,
+        });
+      }
       await resumeMutation({ sessionId });
       posthog.capture("session_resumed", { session_id: sessionId, goal_id: goalId });
       // isOnBreak flips false once Convex updates, which also clears
@@ -1398,6 +1424,7 @@ useEffect(() => {
     pauseMutation,
     returnFromAfkMutation,
     resumeMutation,
+    session,
   ]);
 
   // A logged session changes the goal's XP/session totals, the user's own
@@ -1573,6 +1600,17 @@ useEffect(() => {
   const handleSkipBreak = useCallback(async () => {
     if (!sessionId || isSkippingBreak) return;
     setIsSkippingBreak(true);
+    // TEMP DEBUG — remove once the stopwatch-reset-to-0:00-after-break bug
+    // is confirmed fixed.
+    if (clockType === "stopwatch" && session) {
+      console.warn("[stopwatch-debug] skip-break (stopwatch resume) clicked", {
+        now: Date.now(),
+        startedAt: session.startedAt,
+        pauseIntervals: session.pauseIntervals,
+        focusedDurationSeconds: session.focusedDurationSeconds,
+        status: session.status,
+      });
+    }
     try {
       await resumeMutation({ sessionId });
       // isOnBreak flips false once Convex updates, flipping the phase back
@@ -1587,7 +1625,7 @@ useEffect(() => {
       setIsSkippingBreak(false);
     }
     setIsBreakRunning(false);
-  }, [sessionId, isSkippingBreak, resumeMutation, clockType]);
+  }, [sessionId, isSkippingBreak, resumeMutation, clockType, session]);
 
   const handleToggleBreak = useCallback(() => {
     setIsBreakRunning((prev) => !prev);
