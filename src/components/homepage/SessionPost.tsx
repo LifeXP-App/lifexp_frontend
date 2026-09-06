@@ -363,7 +363,7 @@ function SessionPostComponent({ session }: { session: ApiSessionPost }) {
                 alt="Completion"
               />
             ) : (
-              <div style={{ backgroundColor: `rgba(var(--aspect-${activity.type.toLowerCase()}-rgb), 0.15)` }} className="w-20 h-20 bg-gray-100 dark:bg-dark-3/50 flex items-center justify-center rounded-lg cursor-pointer">
+              <div style={{ backgroundColor: `rgba(var(--aspect-${activity.type.toLowerCase()}-rgb), 0.1)` }} className="w-20 h-20 bg-gray-100 dark:bg-dark-3/50 flex items-center justify-center rounded-lg cursor-pointer">
                 <span className="text-4xl">{activity.emoji}</span>
               </div>
             )}
