@@ -377,8 +377,8 @@ function SessionPostComponent({ session }: { session: ApiSessionPost }) {
                 <>
                   {session.name}
                   {goal?.title && (
-                    <span className="text-gray-500 dark:text-[var(--muted)] font-normal">
-                      {" "}({goal.title.slice(0, 30)})
+                    <span className="text-gray-500 dark:text-[var(--muted)] opacity-80 font-normal">
+                      {" "}• {goal.title.slice(0, 30)}
                     </span>
                   )}
                 </>
@@ -386,15 +386,16 @@ function SessionPostComponent({ session }: { session: ApiSessionPost }) {
                 goal?.title || "Free Session"
               )}
             </p>
+
             <p
-              className="text-md font-bold"
+              className="text-[15px] font-bold"
               style={{ color: `var(--aspect-${activity.type.toLowerCase()})` }}
             >
               {activity.name}
             </p>
 
 
-            <p className="text-sm text-gray-500 dark:text-[var(--muted)]">
+            <p className="text-sm mt-1 text-gray-500 dark:text-[var(--muted)]">
               {session.xp_total} XP • {formatSessionTime(session.started_at)}
             </p>
           </div>
