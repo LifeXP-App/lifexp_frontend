@@ -1067,6 +1067,15 @@ export default function SessionTimer({ params }: SessionTimerProps) {
 
 useEffect(() => {
   if (!isOwn) return;
+  // This "phase hit zero" check only makes sense for a DESCENDING timer
+  // countdown. Stopwatch mode's phaseSecondsLeft is an ASCENDING elapsed
+  // counter that legitimately reads 0 right when a session starts (and
+  // briefly again after any pause/resume) -- treating that as "phase
+  // ended" auto-paused brand-new stopwatch sessions into a bogus "break"
+  // a few seconds in, with the break chime firing on entry. Stopwatch has
+  // no fixed-length phase to auto-end; its focus<->break transition is
+  // entirely manual, via the play/pause button (see handleToggle).
+  if (clockType === "stopwatch") return;
   if (phaseSecondsLeft > 0) return;
   // Only the live->break edge is driven from focusSecondsLeft; guard against
   // re-firing while already paused/transitioning (isRunning flips false as
