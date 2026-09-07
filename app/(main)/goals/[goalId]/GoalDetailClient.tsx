@@ -934,12 +934,6 @@ export default function GoalDetailClient() {
 
   const maxAspectXp = Math.max(...Object.values(aspectXp), 1);
 
-  // Highest-XP aspect, used to color the completion picture card's XP badge.
-  const dominantAspect = (Object.keys(aspectXp) as (keyof typeof aspectXp)[]).reduce(
-    (best, key) => (aspectXp[key] > aspectXp[best] ? key : best),
-    "logic" as keyof typeof aspectXp,
-  );
-
   interface XPDistribution {
   physique: number;
   energy: number;
@@ -1369,13 +1363,13 @@ export default function GoalDetailClient() {
           {goalCompleted ? (
             <>
               {goal.completion_picture && (
-                <div
-                  onClick={handleCompletionPictureClick}
-                  className={`rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-[#151618] overflow-hidden flex flex-col mb-4 ${
-                    isOwner ? "cursor-pointer active:opacity-90" : ""
-                  }`}
-                >
-                  <div className="relative h-36 w-full shrink-0">
+                <div className="relative mb-8 rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-[#151618] flex flex-col">
+                  <div
+                    onClick={handleCompletionPictureClick}
+                    className={`relative h-36 w-full shrink-0 rounded-t-2xl overflow-hidden ${
+                      isOwner ? "cursor-pointer active:opacity-90" : ""
+                    }`}
+                  >
                     <Image
                       src={goal.completion_picture}
                       alt="Cover"
@@ -1384,24 +1378,16 @@ export default function GoalDetailClient() {
                       className="object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-b from-black/80 to-transparent" />
-                    <div className="absolute top-3 right-3">
-                      <span
-                        className="rounded-full px-3 py-1 text-xs font-bold text-white border border-white/20 backdrop-blur-sm"
-                        style={{ background: aspectColors[dominantAspect] }}
-                      >
-                        +{totalXp} XP
-                      </span>
-                    </div>
-                    <div className="absolute -bottom-5 left-4">
-                      <span className="text-2xl drop-shadow bg-white border rounded-xl w-12 h-12 flex justify-center items-center aspect-square border-gray-200">
-                        {goal.emoji || "🎯"}
-                      </span>
-                    </div>
                     {uploadingCompletionPicture && (
                       <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                         <span className="text-white text-xs font-semibold">Uploading…</span>
                       </div>
                     )}
+                  </div>
+                  <div className="absolute -bottom-6 left-4">
+                    <span className="text-2xl drop-shadow bg-white border rounded-xl w-12 h-12 flex justify-center items-center aspect-square border-gray-200">
+                      {goal.emoji || "🎯"}
+                    </span>
                   </div>
                 </div>
               )}
@@ -1529,13 +1515,13 @@ export default function GoalDetailClient() {
             {goalCompleted ? (
               <>
                 {goal.completion_picture && (
-                  <div
-                    onClick={handleCompletionPictureClick}
-                    className={`rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-[#151618] overflow-hidden flex flex-col mb-4 ${
-                      isOwner ? "cursor-pointer active:opacity-90" : ""
-                    }`}
-                  >
-                    <div className="relative h-36 w-full shrink-0">
+                  <div className="relative mb-8 rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-[#151618] flex flex-col">
+                    <div
+                      onClick={handleCompletionPictureClick}
+                      className={`relative h-48 w-full shrink-0 rounded-t-2xl overflow-hidden ${
+                        isOwner ? "cursor-pointer active:opacity-90" : ""
+                      }`}
+                    >
                       <Image
                         src={goal.completion_picture}
                         alt="Cover"
@@ -1544,24 +1530,16 @@ export default function GoalDetailClient() {
                         className="object-cover"
                       />
                       <div className="absolute inset-0 bg-gradient-to-b from-black/80 to-transparent" />
-                      <div className="absolute top-3 right-3">
-                        <span
-                          className="rounded-full px-3 py-1 text-xs font-bold text-white border border-white/20 backdrop-blur-sm"
-                          style={{ background: aspectColors[dominantAspect] }}
-                        >
-                          +{totalXp} XP
-                        </span>
-                      </div>
-                      <div className="absolute -bottom-5 left-4">
-                        <span className="text-2xl drop-shadow bg-white border rounded-xl w-12 h-12 flex justify-center items-center aspect-square border-gray-200">
-                          {goal.emoji || "🎯"}
-                        </span>
-                      </div>
                       {uploadingCompletionPicture && (
                         <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                           <span className="text-white text-xs font-semibold">Uploading…</span>
                         </div>
                       )}
+                    </div>
+                    <div className="absolute -bottom-6 left-4">
+                      <span className="text-2xl drop-shadow bg-white border rounded-xl w-12 h-12 flex justify-center items-center aspect-square border-gray-200">
+                        {goal.emoji || "🎯"}
+                      </span>
                     </div>
                   </div>
                 )}
