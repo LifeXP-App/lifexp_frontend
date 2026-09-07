@@ -626,6 +626,63 @@ export default function GoalDetailClient() {
     router.push("/");
     router.refresh();
   };
+
+  // ── Completion picture edit (already-completed goal only) ──
+  const completionPictureInputRef = React.useRef<HTMLInputElement>(null);
+  const [uploadingCompletionPicture, setUploadingCompletionPicture] = useState(false);
+
+  const handleCompletionPictureClick = () => {
+    if (!isOwner || uploadingCompletionPicture) return;
+    completionPictureInputRef.current?.click();
+  };
+
+  const handleCompletionPictureChange = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Only images are allowed.");
+      return;
+    }
+    if (file.size > SANITY_CAP_BYTES) {
+      toast.error("That image is too large. Please pick a smaller file.");
+      return;
+    }
+
+    setUploadingCompletionPicture(true);
+    try {
+      const uploadFile = await compressImageForUpload(file);
+      const formData = new FormData();
+      formData.append("completion_picture", uploadFile);
+
+      const res = await authedFetch(`/api/goals/${goalId}/completion-image`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || err.detail || "Failed to update completion picture.");
+      }
+
+      // Upload happens async (Celery), so the new URL isn't back yet — the
+      // goal cache refetch below is what eventually shows it once it lands.
+      toast.success("Completion picture updated.");
+      queryClient.invalidateQueries({ queryKey: ["goal", goalId] });
+      invalidateRelatedCaches();
+    } catch (err) {
+      console.error("Failed to update completion picture:", err);
+      toast.error(
+        err instanceof Error ? err.message : "Failed to update completion picture.",
+      );
+    } finally {
+      setUploadingCompletionPicture(false);
+    }
+  };
+
   const handleDeleteGoal = async () => {
     const ok = await confirm({
       title: "Delete goal",
@@ -877,6 +934,12 @@ export default function GoalDetailClient() {
 
   const maxAspectXp = Math.max(...Object.values(aspectXp), 1);
 
+  // Highest-XP aspect, used to color the completion picture card's XP badge.
+  const dominantAspect = (Object.keys(aspectXp) as (keyof typeof aspectXp)[]).reduce(
+    (best, key) => (aspectXp[key] > aspectXp[best] ? key : best),
+    "logic" as keyof typeof aspectXp,
+  );
+
   interface XPDistribution {
   physique: number;
   energy: number;
@@ -1014,6 +1077,14 @@ export default function GoalDetailClient() {
           initialName={editingSession?.name || ""}
           initialCompletionPicture={editingSession?.completion_picture ?? null}
           onSaved={handleSessionEdited}
+        />
+
+        <input
+          ref={completionPictureInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleCompletionPictureChange}
         />
 
         <CompleteGoalPopup
@@ -1295,64 +1366,137 @@ export default function GoalDetailClient() {
             </div>
           )}
 
-          <h2 className="text-xl font-bold my-4 text-foreground dark:text-[var(--foreground)]">
-            Today
-          </h2>
-          <div className="space-y-3">
-            {todaySessions.map((session) => (
-              <SessionItem
-                completion_picture={session.completion_picture}
-                key={session.id}
-                sessionNumber={sessionNumberMap[session.id] || 0}
-                name={session.name}
-                activity={session.activity?.name || "Activity"}
-                xpEarned={session.xp_total}
-                dateTime={formatDate(session.started_at)}
-                duration={formatDuration(
-                  session.focused_duration_seconds ?? session.total_duration_seconds,
-                )}
-                emoji={session.activity?.emoji}
-                onClick={() => handleOpenSessionPopup(session)}
-                onDelete={() => setRowDeleteSession(session)}
-                onEdit={() => handleOpenEditSession(session)}
-                isOwner={isOwner}
-                color={aspectColors[session?.activity?.type ?? "muted"] || "#9ca3af"}
-              />
-            ))}
-            {todaySessions.length === 0 && (
-              <p className="text-sm text-gray-500">No sessions today</p>
-            )}
-          </div>
+          {goalCompleted ? (
+            <>
+              {goal.completion_picture && (
+                <div
+                  onClick={handleCompletionPictureClick}
+                  className={`rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-[#151618] overflow-hidden flex flex-col mb-4 ${
+                    isOwner ? "cursor-pointer active:opacity-90" : ""
+                  }`}
+                >
+                  <div className="relative h-36 w-full shrink-0">
+                    <Image
+                      src={goal.completion_picture}
+                      alt="Cover"
+                      fill
+                      sizes="100vw"
+                      className="object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/80 to-transparent" />
+                    <div className="absolute top-3 right-3">
+                      <span
+                        className="rounded-full px-3 py-1 text-xs font-bold text-white border border-white/20 backdrop-blur-sm"
+                        style={{ background: aspectColors[dominantAspect] }}
+                      >
+                        +{totalXp} XP
+                      </span>
+                    </div>
+                    <div className="absolute -bottom-5 left-4">
+                      <span className="text-2xl drop-shadow bg-white border rounded-xl w-12 h-12 flex justify-center items-center aspect-square border-gray-200">
+                        {goal.emoji || "🎯"}
+                      </span>
+                    </div>
+                    {uploadingCompletionPicture && (
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                        <span className="text-white text-xs font-semibold">Uploading…</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
-          {/* Sessions - Earlier */}
-          <h2 className="text-xl font-bold my-4 text-foreground dark:text-[var(--foreground)]">
-            History
-          </h2>
-          <div className="space-y-3">
-            {otherSessions.map((session) => (
-              <SessionItem
-                key={session.id}
-                completion_picture={session.completion_picture}
-                sessionNumber={sessionNumberMap[session.id] || 0}
-                name={session.name}
-                activity={session.activity?.name || "Activity"}
-                xpEarned={session.xp_total}
-                dateTime={formatDate(session.started_at)}
-                duration={formatDuration(
-                  session.focused_duration_seconds ?? session.total_duration_seconds,
+              <h2 className="text-xl font-bold my-4 text-foreground dark:text-[var(--foreground)]">
+                Sessions
+              </h2>
+              <div className="space-y-3">
+                {sessions.map((session) => (
+                  <SessionItem
+                    completion_picture={session.completion_picture}
+                    key={session.id}
+                    sessionNumber={sessionNumberMap[session.id] || 0}
+                    name={session.name}
+                    activity={session.activity?.name || "Activity"}
+                    xpEarned={session.xp_total}
+                    dateTime={formatDate(session.started_at)}
+                    duration={formatDuration(
+                      session.focused_duration_seconds ?? session.total_duration_seconds,
+                    )}
+                    emoji={session.activity?.emoji}
+                    onClick={() => handleOpenSessionPopup(session)}
+                    onDelete={() => setRowDeleteSession(session)}
+                    onEdit={() => handleOpenEditSession(session)}
+                    isOwner={isOwner}
+                    color={aspectColors[session?.activity?.type ?? "muted"] || "#9ca3af"}
+                  />
+                ))}
+                {sessions.length === 0 && (
+                  <p className="text-sm text-gray-500">No sessions</p>
                 )}
-                emoji={session.activity?.emoji}
-                onClick={() => handleOpenSessionPopup(session)}
-                onDelete={() => setRowDeleteSession(session)}
-                onEdit={() => handleOpenEditSession(session)}
-                isOwner={isOwner}
-                color={aspectColors[session?.activity?.type ?? "muted"] || "#9ca3af"}
-              />
-            ))}
-            {otherSessions.length === 0 && (
-              <p className="text-sm text-gray-500">No past sessions</p>
-            )}
-          </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <h2 className="text-xl font-bold my-4 text-foreground dark:text-[var(--foreground)]">
+                Today
+              </h2>
+              <div className="space-y-3">
+                {todaySessions.map((session) => (
+                  <SessionItem
+                    completion_picture={session.completion_picture}
+                    key={session.id}
+                    sessionNumber={sessionNumberMap[session.id] || 0}
+                    name={session.name}
+                    activity={session.activity?.name || "Activity"}
+                    xpEarned={session.xp_total}
+                    dateTime={formatDate(session.started_at)}
+                    duration={formatDuration(
+                      session.focused_duration_seconds ?? session.total_duration_seconds,
+                    )}
+                    emoji={session.activity?.emoji}
+                    onClick={() => handleOpenSessionPopup(session)}
+                    onDelete={() => setRowDeleteSession(session)}
+                    onEdit={() => handleOpenEditSession(session)}
+                    isOwner={isOwner}
+                    color={aspectColors[session?.activity?.type ?? "muted"] || "#9ca3af"}
+                  />
+                ))}
+                {todaySessions.length === 0 && (
+                  <p className="text-sm text-gray-500">No sessions today</p>
+                )}
+              </div>
+
+              {/* Sessions - Earlier */}
+              <h2 className="text-xl font-bold my-4 text-foreground dark:text-[var(--foreground)]">
+                History
+              </h2>
+              <div className="space-y-3">
+                {otherSessions.map((session) => (
+                  <SessionItem
+                    key={session.id}
+                    completion_picture={session.completion_picture}
+                    sessionNumber={sessionNumberMap[session.id] || 0}
+                    name={session.name}
+                    activity={session.activity?.name || "Activity"}
+                    xpEarned={session.xp_total}
+                    dateTime={formatDate(session.started_at)}
+                    duration={formatDuration(
+                      session.focused_duration_seconds ?? session.total_duration_seconds,
+                    )}
+                    emoji={session.activity?.emoji}
+                    onClick={() => handleOpenSessionPopup(session)}
+                    onDelete={() => setRowDeleteSession(session)}
+                    onEdit={() => handleOpenEditSession(session)}
+                    isOwner={isOwner}
+                    color={aspectColors[session?.activity?.type ?? "muted"] || "#9ca3af"}
+                  />
+                ))}
+                {otherSessions.length === 0 && (
+                  <p className="text-sm text-gray-500">No past sessions</p>
+                )}
+              </div>
+            </>
+          )}
         </div>
 
         {/* Desktop Layout - Two Column */}
@@ -1382,66 +1526,138 @@ export default function GoalDetailClient() {
               </div>
             )}
 
-            {/* Sessions - Today */}
-            <h2 className="text-xl font-bold my-4 text-foreground dark:text-[var(--foreground)]">
-              Today
-            </h2>
-            <div className="space-y-3">
-              {todaySessions.map((session) => (
-                <SessionItem
-                  completion_picture={session.completion_picture}
-                  key={session.id}
+            {goalCompleted ? (
+              <>
+                {goal.completion_picture && (
+                  <div
+                    onClick={handleCompletionPictureClick}
+                    className={`rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-[#151618] overflow-hidden flex flex-col mb-4 ${
+                      isOwner ? "cursor-pointer active:opacity-90" : ""
+                    }`}
+                  >
+                    <div className="relative h-36 w-full shrink-0">
+                      <Image
+                        src={goal.completion_picture}
+                        alt="Cover"
+                        fill
+                        sizes="100vw"
+                        className="object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-b from-black/80 to-transparent" />
+                      <div className="absolute top-3 right-3">
+                        <span
+                          className="rounded-full px-3 py-1 text-xs font-bold text-white border border-white/20 backdrop-blur-sm"
+                          style={{ background: aspectColors[dominantAspect] }}
+                        >
+                          +{totalXp} XP
+                        </span>
+                      </div>
+                      <div className="absolute -bottom-5 left-4">
+                        <span className="text-2xl drop-shadow bg-white border rounded-xl w-12 h-12 flex justify-center items-center aspect-square border-gray-200">
+                          {goal.emoji || "🎯"}
+                        </span>
+                      </div>
+                      {uploadingCompletionPicture && (
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                          <span className="text-white text-xs font-semibold">Uploading…</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
-                  sessionNumber={sessionNumberMap[session.id] || 0}
-                  name={session.name}
-                  activity={session.activity?.name || "Activity"}
-                  xpEarned={session.xp_total}
-                  dateTime={formatDate(session.started_at)}
-                  duration={formatDuration(
-                    session.focused_duration_seconds ?? session.total_duration_seconds,
+                <h2 className="text-xl font-bold my-4 text-foreground dark:text-[var(--foreground)]">
+                  Sessions
+                </h2>
+                <div className="space-y-3">
+                  {sessions.map((session) => (
+                    <SessionItem
+                      completion_picture={session.completion_picture}
+                      key={session.id}
+                      sessionNumber={sessionNumberMap[session.id] || 0}
+                      name={session.name}
+                      activity={session.activity?.name || "Activity"}
+                      xpEarned={session.xp_total}
+                      dateTime={formatDate(session.started_at)}
+                      duration={formatDuration(
+                        session.focused_duration_seconds ?? session.total_duration_seconds,
+                      )}
+                      emoji={session.activity?.emoji}
+                      onClick={() => handleOpenSessionPopup(session)}
+                      onDelete={() => setRowDeleteSession(session)}
+                      onEdit={() => handleOpenEditSession(session)}
+                      isOwner={isOwner}
+                      color={aspectColors[session?.activity?.type ?? "muted"] || "#9ca3af"}
+                    />
+                  ))}
+                  {sessions.length === 0 && (
+                    <p className="text-sm text-gray-500">No sessions</p>
                   )}
-                  emoji={session.activity?.emoji}
-                  onClick={() => handleOpenSessionPopup(session)}
-                onDelete={() => setRowDeleteSession(session)}
-                onEdit={() => handleOpenEditSession(session)}
-                isOwner={isOwner}
-                  color={aspectColors[session?.activity?.type ?? "muted"] || "#9ca3af"}
-                />
-              ))}
-              {todaySessions.length === 0 && (
-                <p className="text-sm text-gray-500">No sessions today</p>
-              )}
-            </div>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Sessions - Today */}
+                <h2 className="text-xl font-bold my-4 text-foreground dark:text-[var(--foreground)]">
+                  Today
+                </h2>
+                <div className="space-y-3">
+                  {todaySessions.map((session) => (
+                    <SessionItem
+                      completion_picture={session.completion_picture}
+                      key={session.id}
+                      sessionNumber={sessionNumberMap[session.id] || 0}
+                      name={session.name}
+                      activity={session.activity?.name || "Activity"}
+                      xpEarned={session.xp_total}
+                      dateTime={formatDate(session.started_at)}
+                      duration={formatDuration(
+                        session.focused_duration_seconds ?? session.total_duration_seconds,
+                      )}
+                      emoji={session.activity?.emoji}
+                      onClick={() => handleOpenSessionPopup(session)}
+                      onDelete={() => setRowDeleteSession(session)}
+                      onEdit={() => handleOpenEditSession(session)}
+                      isOwner={isOwner}
+                      color={aspectColors[session?.activity?.type ?? "muted"] || "#9ca3af"}
+                    />
+                  ))}
+                  {todaySessions.length === 0 && (
+                    <p className="text-sm text-gray-500">No sessions today</p>
+                  )}
+                </div>
 
-            {/* Sessions - History */}
-            <h2 className="text-xl font-bold my-4 text-foreground dark:text-[var(--foreground)]">
-              History
-            </h2>
-            <div className="space-y-3">
-              {otherSessions.map((session) => (
-                <SessionItem
-                  completion_picture={session.completion_picture}
-                  key={session.id}
-                  sessionNumber={sessionNumberMap[session.id] || 0}
-                  name={session.name}
-                  activity={session.activity?.name || "Activity"}
-                  xpEarned={session.xp_total}
-                  dateTime={formatDate(session.started_at)}
-                  duration={formatDuration(
-                    session.focused_duration_seconds ?? session.total_duration_seconds,
+                {/* Sessions - History */}
+                <h2 className="text-xl font-bold my-4 text-foreground dark:text-[var(--foreground)]">
+                  History
+                </h2>
+                <div className="space-y-3">
+                  {otherSessions.map((session) => (
+                    <SessionItem
+                      completion_picture={session.completion_picture}
+                      key={session.id}
+                      sessionNumber={sessionNumberMap[session.id] || 0}
+                      name={session.name}
+                      activity={session.activity?.name || "Activity"}
+                      xpEarned={session.xp_total}
+                      dateTime={formatDate(session.started_at)}
+                      duration={formatDuration(
+                        session.focused_duration_seconds ?? session.total_duration_seconds,
+                      )}
+                      emoji={session.activity?.emoji}
+                      onClick={() => handleOpenSessionPopup(session)}
+                      onDelete={() => setRowDeleteSession(session)}
+                      onEdit={() => handleOpenEditSession(session)}
+                      isOwner={isOwner}
+                      color={aspectColors[session?.activity?.type ?? "muted"] || "#9ca3af"}
+                    />
+                  ))}
+                  {otherSessions.length === 0 && (
+                    <p className="text-sm text-gray-500">No past sessions</p>
                   )}
-                  emoji={session.activity?.emoji}
-                  onClick={() => handleOpenSessionPopup(session)}
-                onDelete={() => setRowDeleteSession(session)}
-                onEdit={() => handleOpenEditSession(session)}
-                isOwner={isOwner}
-                  color={aspectColors[session?.activity?.type ?? "muted"] || "#9ca3af"}
-                />
-              ))}
-              {otherSessions.length === 0 && (
-                <p className="text-sm text-gray-500">No past sessions</p>
-              )}
-            </div>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Right Sidebar - Desktop Only */}

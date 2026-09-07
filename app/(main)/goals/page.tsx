@@ -19,6 +19,26 @@ import React, { useEffect, useState } from "react";
 import { FaBrain, FaHammer } from "react-icons/fa";
 import type { ClockType } from "@/src/components/goals/PickTimerModePopup";
 import { hexToRgba } from "@/src/components/UserAccent";
+import { toRoman } from "@/src/lib/utils/toRoman";
+
+// Darkens a hex color by a fraction (0-1) toward black. Mirrors
+// RightSidebarInfo.tsx's own copy (not shared/exported there) — used to keep
+// this page's sidebar visually identical to the homepage's.
+function darkenHex(hex: string, amount: number) {
+  const cleaned = hex.replace("#", "");
+  const full =
+    cleaned.length === 3
+      ? cleaned
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      : cleaned;
+  const intVal = parseInt(full, 16);
+  const r = Math.round(((intVal >> 16) & 255) * (1 - amount));
+  const g = Math.round(((intVal >> 8) & 255) * (1 - amount));
+  const b = Math.round((intVal & 255) * (1 - amount));
+  return `rgb(${r}, ${g}, ${b})`;
+}
 
 const NewActivityModal = dynamic(
   () => import("@/src/components/goals/NewActivityModel"),
@@ -63,6 +83,7 @@ type UserGoalsInfo = {
   fullname: string;
   profile_picture: string;
   mastery: string;
+  masteryLevel?: number;
   masteryColor: string;
   masteryTextColor: string;
   lifelevel: number;
@@ -1388,6 +1409,10 @@ export default function GoalsPage() {
 function RightSidebar({ user }: { user: UserGoalsInfo }) {
   const { openMasteryPopup } = usePopup();
   const isMastery = user.mastery !== "Rookie";
+  const masteryLevelLabel =
+    isMastery && user.masteryLevel && user.masteryLevel > 0
+      ? `${user.mastery} ${toRoman(user.masteryLevel)}`
+      : user.mastery;
   return (
     <aside className="w-[400px] hidden md:block">
       {/* PROFILE CARD */}
@@ -1433,7 +1458,7 @@ function RightSidebar({ user }: { user: UserGoalsInfo }) {
               onClick={openMasteryPopup}
               style={{ color: user.masteryTextColor }}
             >
-              {user.mastery}
+              {masteryLevelLabel}
             </button>
             <span className="w-4" />
           </span>
@@ -1445,6 +1470,35 @@ function RightSidebar({ user }: { user: UserGoalsInfo }) {
           <Stat label="Ongoing" value={user.ongoing} />
           <Stat label="Planned" value={user.planned} />
           <Stat label="Completed" value={user.completed} />
+        </div>
+
+        {/* XP BAR */}
+        <div
+          title={`${user.totalXp} / ${user.nextLevelXp} XP`}
+          className="w-full relative rounded-full cursor-pointer h-6 my-4 ml-1 overflow-hidden"
+          style={{
+            backgroundColor: isMastery
+              ? hexToRgba(user.masteryTextColor, 0.15)
+              : "rgba(0,0,0,0.5)",
+          }}
+        >
+          <div
+            className="h-6"
+            style={
+              isMastery
+                ? {
+                    width: `${user.progressPercent}%`,
+                    backgroundColor: darkenHex(user.masteryTextColor, 0.35),
+                  }
+                : {
+                    width: `${user.progressPercent}%`,
+                    background: `linear-gradient(to right, ${user.masteryTextColor}60 0%, ${user.masteryTextColor} 100%)`,
+                  }
+            }
+          />
+          <p className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-white">
+            Level {user.lifelevel} ({user.totalXp} XP)
+          </p>
         </div>
 
         {/* XP + STREAK */}

@@ -9,6 +9,7 @@ export interface Goal {
   emoji: string;
   description: string | null;
   finish_by: string | null;
+  completion_picture: string | null;
 
   username: string | null;
   is_owner?: boolean;
@@ -235,6 +236,13 @@ function normalizeGoal(item: unknown): Goal | null {
           : null,
 
     finish_by: typeof goal.finish_by === "string" ? goal.finish_by : null,
+
+    completion_picture:
+      typeof goal.completion_picture_url === "string"
+        ? goal.completion_picture_url
+        : typeof goal.completion_picture === "string"
+          ? goal.completion_picture
+          : null,
 
     username:
       typeof goal.user_username === "string"
