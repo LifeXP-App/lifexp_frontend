@@ -170,6 +170,13 @@ function GoalCard({
   const isCompleted = goal.status === "completed";
   const isMobile = useIsMobileViewport();
   const accent = useMasteryAccent();
+  const { me } = useAuth();
+  const isMastery = !!me?.masteryTitle && me.masteryTitle !== "Rookie";
+
+  // Completed-goal XP pill: the viewer's own mastery color once they have a
+  // real mastery (not the goal's aspect), plain rookie blue otherwise.
+  const xpPillColor = isMastery ? accent.primary : "var(--rookie-primary)";
+
   const displayTitle =
     isMobile && goal.title.length > GOAL_TITLE_MOBILE_MAX_CHARS
       ? `${goal.title.slice(0, GOAL_TITLE_MOBILE_MAX_CHARS)}..`
@@ -193,7 +200,7 @@ function GoalCard({
                   {isCompleted && typeof goal.xpReward === "number" && (
                     <span
                       style={{
-                        backgroundColor: "var(--rookie-primary)",
+                        backgroundColor: xpPillColor,
                       }}
                       className="rounded-full px-3 py-1 text-xs font-semibold text-white"
                     >
@@ -367,11 +374,13 @@ function GoalsSectionSkeleton({ count = 2 }: { count?: number }) {
 // - today, completed: full-opacity aspect-color bg, no border
 // - past, completed: low-opacity aspect-color bg with a full-opacity aspect-color border
 // - past, no session: muted, no border
+const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
 function WeekProgressBars({ weekProgress }: { weekProgress: WeekProgress }) {
   const { today, progress } = weekProgress;
 
   return (
-    <div className="flex py-3 flex-col gap-1.5 shrink-0 self-stretch justify-between ">
+    <div className="flex cursor-pointer py-3 flex-col gap-1.5 shrink-0 self-stretch justify-between ">
       {progress.map((value, dayIndex) => {
         const isFuture = dayIndex > today;
         const isToday = dayIndex === today;
@@ -384,20 +393,27 @@ function WeekProgressBars({ weekProgress }: { weekProgress: WeekProgress }) {
         let style: React.CSSProperties | undefined;
 
         if (isFuture) {
-          className += " border bg-gray-50 dark:bg-dark-1 border-gray-300 dark:border-[var(--border)]";
+          className += "cursor-pointer border bg-gray-50 dark:bg-dark-1 border-gray-300 dark:border-[var(--border)]";
         } else if (isToday && !hasValue) {
-          className += " border animate-pulse dark:animate-none bg-white dark:bg-dark-2 border-gray-300 dark:border-gray-500/50";
+          className += "cursor-pointer  border animate-pulse dark:animate-none bg-white dark:bg-dark-2 border-gray-300 dark:border-gray-500/50";
         } else if (isToday && hasValue) {
           style = { backgroundColor: aspectColor };
 
         } else if (hasValue) {
-          className += " ";
+          className += "cursor-pointer  ";
           style = { backgroundColor: `rgba(${aspectColorRgb}, 0.6)`, borderColor:  `rgba(${aspectColorRgb}, 0.5)` };
         } else {
-          className += " bg-gray-300 dark:bg-dark-3";
+          className += "cursor-pointer  bg-gray-300 dark:bg-dark-3";
         }
 
-        return <div key={dayIndex} className={className} style={style} />;
+        return (
+          <div
+            key={dayIndex}
+            className={className}
+            style={style}
+            title={WEEKDAY_LABELS[dayIndex]}
+          />
+        );
       })}
     </div>
   );
@@ -1443,7 +1459,7 @@ function RightSidebar({ user }: { user: UserGoalsInfo }) {
                 className={
                   isMastery ? "w-4 h-4" : "w-4 h-4 text-gray-400 dark:text-[var(--muted)]"
                 }
-                style={isMastery ? { color: user.masteryTextColor, opacity: 0.5 } : undefined}
+                style={isMastery ? { color: user.masteryColor, opacity: 0.5 } : undefined}
               >
                 <path
                   fillRule="evenodd"
@@ -1456,7 +1472,7 @@ function RightSidebar({ user }: { user: UserGoalsInfo }) {
             <button
               className="text-sm font-bold"
               onClick={openMasteryPopup}
-              style={{ color: user.masteryTextColor }}
+              style={{ color: user.masteryColor }}
             >
               {masteryLevelLabel}
             </button>
@@ -1478,7 +1494,7 @@ function RightSidebar({ user }: { user: UserGoalsInfo }) {
           className="w-full relative rounded-full cursor-pointer h-6 my-4 ml-1 overflow-hidden"
           style={{
             backgroundColor: isMastery
-              ? hexToRgba(user.masteryTextColor, 0.15)
+              ? hexToRgba(user.masteryColor, 0.15)
               : "rgba(0,0,0,0.5)",
           }}
         >
@@ -1488,11 +1504,11 @@ function RightSidebar({ user }: { user: UserGoalsInfo }) {
               isMastery
                 ? {
                     width: `${user.progressPercent}%`,
-                    backgroundColor: darkenHex(user.masteryTextColor, 0.35),
+                    backgroundColor: darkenHex(user.masteryColor, 0.35),
                   }
                 : {
                     width: `${user.progressPercent}%`,
-                    background: `linear-gradient(to right, ${user.masteryTextColor}60 0%, ${user.masteryTextColor} 100%)`,
+                    background: `linear-gradient(to right, ${user.masteryColor}60 0%, ${user.masteryColor} 100%)`,
                   }
             }
           />
@@ -1509,17 +1525,17 @@ function RightSidebar({ user }: { user: UserGoalsInfo }) {
                 ? "w-full flex flex-col rounded-md items-center justify-between p-4"
                 : "bg-gray-100 dark:bg-dark-3 w-full flex flex-col rounded-md items-center justify-between p-4"
             }
-            style={isMastery ? { backgroundColor: hexToRgba(user.masteryTextColor, 0.12) } : undefined}
+            style={isMastery ? { backgroundColor: hexToRgba(user.masteryColor, 0.12) } : undefined}
           >
             <p
               className="text-lg font-bold"
-              style={{ color: user.masteryTextColor }}
+              style={{ color: user.masteryColor }}
             >
               {user.totalXp} XP
             </p>
             <p
               className={isMastery ? "text-xs" : "text-xs text-gray-500 dark:text-[var(--muted)]"}
-              style={isMastery ? { color: user.masteryTextColor, opacity: 0.5 } : undefined}
+              style={isMastery ? { color: user.masteryColor, opacity: 0.5 } : undefined}
             >
               Overall ranked <b>#{user.rank}</b>
             </p>

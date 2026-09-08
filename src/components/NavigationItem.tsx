@@ -63,20 +63,20 @@ export function NavigationItem({
       style={
         isActive
           ? {
-              backgroundColor: hexToRgba(accentColor, 0.25),
+              backgroundColor: hexToRgba(accentColor, 0.15),
               color: accentColor,
             }
           : undefined
       }
     >
       <span
-        className={isActive ? "" : "text-gray-600 dark:text-[var(--muted)]"}
+        className={isActive ? "" : "text-gray-600 dark:text-white dark:opacity-80"}
       >
         <IconComponent className="w-6 h-6 shrink-0" />
       </span>
       <span
         className={`text-md font-medium ${
-          isActive ? "" : "text-gray-600  dark:text-[var(--muted)]"
+          isActive ? "" : "text-gray-600  dark:text-white dark:opacity-80"
         }`}
       >
         {label}
