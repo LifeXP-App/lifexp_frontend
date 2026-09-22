@@ -362,33 +362,71 @@ export const enterAfk = mutation({
   },
 });
 
+// Pause intervals the SERVER opened because the client went quiet -- an
+// OS-suspended Dart isolate, a locked screen, a hidden tab. None of them is
+// the user deciding to stop, so a resume that can prove the session was still
+// meant to be running may reclaim them as focused time. Deliberately excludes
+// "user_initiated" and "break_started": those are real pauses and must never
+// be credited, however the caller asks.
+const RECLAIMABLE_PAUSE_REASONS = new Set(["heartbeat_timeout", "window_hidden"]);
+
 export const returnFromAfk = mutation({
   args: {
     sessionId: v.id("sessions"),
     toStatus: v.union(v.literal("live"), v.literal("paused")),
+    // Set only by a client that watched this session go into the background
+    // while still live and focused (see _liveFocusBeforeBackground in
+    // lifexp_flutter's session_timer_screen.dart). Without that proof the
+    // timeout stands as pause time, which is what a cold start must do -- it
+    // has no way to tell a phone that slept mid-focus from one whose owner
+    // walked away an hour ago.
+    countInactiveAsFocused: v.optional(v.boolean()),
   },
+  // Returns whether this call actually took the session out of afk, so a
+  // client can stop retrying instead of inferring it from an empty response.
   handler: async (ctx, args) => {
     const session = await ctx.db.get(args.sessionId);
     if (!session) throw new Error("Session not found");
-    if (session.status !== "afk") return;
+    if (session.status !== "afk") return false;
 
     const now = Date.now();
     const intervals = [...session.pauseIntervals];
-    const lastInterval = intervals[intervals.length - 1];
+    const lastIndex = intervals.length - 1;
+    const lastInterval = lastIndex >= 0 ? intervals[lastIndex] : undefined;
 
     if (args.toStatus === "live" && lastInterval && lastInterval.resumedAt === undefined) {
-      intervals[intervals.length - 1] = {
+      // Closing the interval at its own pausedAt keeps the audit trail while
+      // contributing zero pause time -- that is what makes the dead air count
+      // as focus, since recalculate derives everything from these intervals.
+      // Closing it at `now` (the only previous behaviour) is what booked the
+      // whole timeout as a pause and made a warm resume look like the
+      // stopwatch had jumped backwards by however long the phone slept.
+      const reclaimable =
+        args.countInactiveAsFocused === true &&
+        RECLAIMABLE_PAUSE_REASONS.has(lastInterval.reason ?? "");
+
+      intervals[lastIndex] = {
         ...lastInterval,
-        resumedAt: now,
+        resumedAt: reclaimable ? lastInterval.pausedAt : now,
       };
     }
+
+    // This mutation used to patch status and intervals WITHOUT recalculating,
+    // so focusedDurationSeconds/xpTotal stayed frozen at whatever the cron
+    // last wrote until some later pause or completion happened to fix them.
+    // Every other path that edits pauseIntervals recalculates (pauseSession,
+    // resumeSession, enterAfk, cleanupStaleSessions) and this one must too,
+    // or reclaimed time never reaches Django or the leaderboards.
+    const updates = recalculate({ ...session, pauseIntervals: intervals }, now);
 
     await ctx.db.patch(args.sessionId, {
       status: args.toStatus,
       lastResumedAt: args.toStatus === "live" ? now : session.lastResumedAt,
       lastHeartbeatAt: now,
       pauseIntervals: intervals,
+      ...updates,
     });
+    return true;
   },
 });
 
