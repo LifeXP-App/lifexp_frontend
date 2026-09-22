@@ -5,8 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { authedFetch } from "@/src/lib/api/authedFetch";
 import { useMasteryAccent } from "@/src/lib/hooks/useMasteryAccent";
 import { BottomNav } from "./BottomNav";
-import { Navigation } from "./Navigation";
-import { SidebarHeader } from "./SidebarHeader";
+import { TabletSideNav } from "./TabletSideNav";
 
 // On someone's profile page, the active "Profile" sidebar item themes by
 // THAT profile's mastery, not the logged-in viewer's own — everywhere else
@@ -41,16 +40,11 @@ export function Sidebar() {
 
   return (
     <>
-      {/* Desktop sidebar — unchanged. Mobile now gets BottomNav instead of a
-          hamburger-triggered drawer (no header bar, no logo/heading, no
-          hamburger icon on any page). */}
-      <aside
-        aria-label="Main navigation"
-        className="hidden md:static md:z-auto md:visible md:flex md:h-[100dvh] md:w-64 md:shrink-0 md:translate-x-0 md:flex-col md:border-r md:border-gray-200 md:bg-white md:px-4 md:py-2 md:shadow-none dark:md:border-[var(--border)] dark:md:bg-dark-2"
-      >
-        <SidebarHeader />
-        <Navigation accentColor={accent.primary} />
-      </aside>
+      {/* >=768px: floating pill side nav, matching the Flutter app's
+          tablet-landscape design (icon-only, vertically centered, accented
+          by the user's own mastery color). Mobile gets BottomNav instead of
+          a hamburger-triggered drawer. */}
+      <TabletSideNav accentColor={accent.primary} />
 
       <BottomNav />
     </>

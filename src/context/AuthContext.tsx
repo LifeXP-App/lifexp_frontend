@@ -50,6 +50,7 @@ type AuthContextType = {
     } | null;
   }>;
   signInWithGoogle: () => Promise<{ error?: { message?: string } | null }>;
+  signInWithApple: () => Promise<{ error?: { message?: string } | null }>;
   requestPasswordReset: (email: string) => Promise<{ error?: { message?: string } | null; message?: string }>;
 };
 
@@ -216,6 +217,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   /**
+   * Sign in with Apple OAuth
+   */
+  const signInWithApple = useCallback(async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'apple',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+
+    if (!error) {
+      posthog.capture("user_signed_in_with_apple", { method: "apple" });
+    }
+
+    return { error };
+  }, []);
+
+  /**
    * Request a Supabase password-reset email via the Django backend.
    * Public endpoint (like signUp) - called directly against Django rather
    * than through a Next proxy since there's no session to attach.
@@ -351,6 +370,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signIn,
       signUp,
       signInWithGoogle,
+      signInWithApple,
       requestPasswordReset,
     }),
     [
@@ -364,6 +384,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signIn,
       signUp,
       signInWithGoogle,
+      signInWithApple,
       requestPasswordReset,
     ],
   );

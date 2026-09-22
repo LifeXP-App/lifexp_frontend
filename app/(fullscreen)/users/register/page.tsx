@@ -7,6 +7,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/src/context/AuthContext";
 import { useToast } from "@/src/context/ToastContext";
 import { useSearchParams } from "next/navigation";
+import { useIsApplePlatform } from "@/src/lib/hooks/useIsApplePlatform";
 
 type FieldName = "displayname" | "username" | "email" | "password1" | "password2";
 
@@ -198,7 +199,8 @@ async function onSubmit(e: React.FormEvent) {
 }
 
 const searchParams = useSearchParams();
-  const { signIn, signInWithGoogle } = useAuth();
+  const { signIn, signInWithGoogle, signInWithApple } = useAuth();
+  const isApplePlatform = useIsApplePlatform();
   // Present when we arrived from /users/login while trying to finish a
   // Discord link (see /link-discord). Carried through to the post-signup
   // and "Already have an account?" login links so the user lands back on
@@ -235,7 +237,28 @@ const [loading, setLoading] = useState(false);
     }
   }
 
-  
+  async function handleAppleSignIn() {
+    setError(null);
+    setLoading(true);
+
+    try {
+      const { error: appleError } = await signInWithApple();
+
+      if (appleError) {
+        setError(appleError.message || "Apple sign-in failed");
+        setLoading(false);
+        return;
+      }
+
+      // Redirect handled by Supabase OAuth flow
+    } catch (err) {
+      console.error("APPLE SIGN-IN ERROR:", err);
+      setError(err instanceof Error ? err.message : String(err));
+      setLoading(false);
+    }
+  }
+
+
   return (
     <div className="relative min-h-screen bg-black text-white">
       {/* Background GIF */}
@@ -417,7 +440,20 @@ const [loading, setLoading] = useState(false);
               Sign in with Google
             </button>
 
-
+            {/* Apple Sign-In Button — iOS/macOS only */}
+            {isApplePlatform && (
+              <button
+                type="button"
+                onClick={handleAppleSignIn}
+                disabled={loading}
+                className="flex w-full items-center cursor-pointer justify-center gap-3 rounded-lg border border-gray-700 bg-transparent py-3 font-semibold transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M16.365 1.43c0 1.14-.462 2.13-1.222 2.87-.834.815-2.087 1.446-3.16 1.36-.14-1.09.462-2.24 1.196-2.94.813-.79 2.19-1.38 3.186-1.29zM20.09 16.9c-.5 1.15-1.09 2.26-1.95 3.31-.99 1.2-2.03 2.4-3.61 2.43-1.53.03-2.02-.9-3.77-.9-1.75 0-2.29.87-3.74.93-1.52.06-2.68-1.29-3.68-2.48-2.01-2.42-3.55-6.83-1.48-9.82.99-1.44 2.66-2.35 4.44-2.38 1.48-.03 2.87.99 3.77.99.9 0 2.58-1.22 4.35-1.04.74.03 2.82.3 4.15 2.25-.11.07-2.48 1.44-2.46 4.3.02 3.42 3 4.56 3.03 4.57-.03.09-.47 1.61-.02 3.84z" />
+                </svg>
+                Sign up with Apple
+              </button>
+            )}
 
             <button
               type="submit"
