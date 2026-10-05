@@ -1,5 +1,6 @@
 "use client";
 
+import StreakProtection from "@/src/components/settings/StreakProtection";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -261,6 +262,8 @@ export default function SettingsPage() {
         <h2 className="text-2xl font-medium text-left text-black dark:text-[var(--foreground)] mb-6">
           Settings
         </h2>
+
+        <StreakProtection />
 
         {/* Account type */}
         <div className="flex justify-between w-full mb-4">
