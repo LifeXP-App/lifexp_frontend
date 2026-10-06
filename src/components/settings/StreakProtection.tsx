@@ -6,7 +6,11 @@ import { Snowflake, Palmtree, RotateCcw } from "lucide-react";
 import { useAuth } from "@/src/context/AuthContext";
 import { authedFetch } from "@/src/lib/api/authedFetch";
 
-type StreakStatus = {
+export type StreakStatus = {
+  streak_best: number;
+  flame: { name: string; days: number };
+  flame_levels: { name: string; days: number; unlocked: boolean }[];
+  comeback: { active: boolean; progress: number; target: number; completed: number };
   streak_count: number;
   streak_freezes: number;
   streak_freeze_progress: number;
@@ -19,7 +23,7 @@ type StreakStatus = {
   can_restore: boolean;
 };
 
-async function streakRequest(method = "GET", vacation?: boolean): Promise<StreakStatus> {
+export async function streakRequest(method = "GET", vacation?: boolean): Promise<StreakStatus> {
   const response = await authedFetch(method === "POST" ? "/api/streak/restore" : "/api/streak", {
     method,
     headers: { "Content-Type": "application/json" },
@@ -48,13 +52,14 @@ export default function StreakProtection() {
   async function update(method: "PATCH" | "POST", vacation?: boolean) {
     if (busy) return;
     if (method === "POST" && !window.confirm(
-      `Use one token to restore your lost ${data?.streak_before_break}-day streak? Your current progress will be kept.`,
+      `Use one token to restore your latest broken ${data?.streak_before_break}-day streak, not your personal best? Your current progress will be kept.`,
     )) return;
     setBusy(true);
     setMessage(null);
     try {
       const status = await streakRequest(method, vacation);
       queryClient.setQueryData(key, status);
+      void queryClient.invalidateQueries({ queryKey: ["streak-timeline", me?.id] });
       setMessage(method === "POST" ? "Your streak has been restored." :
         status.vacation_mode ? "Vacation mode is on. Your streak is paused." : "Vacation mode is off. Today is protected.");
       void queryClient.invalidateQueries({ queryKey: ["user-profile-widget", me?.username] });
@@ -99,15 +104,16 @@ export default function StreakProtection() {
               {data.vacation_mode ? "On" : "Off"}
             </button>
           </div>
-          <div>
+          {data.streak_restore_tokens > 0 && <div>
             <h3 className="flex items-center gap-2 font-medium"><RotateCcw size={18} aria-hidden="true" />{data.streak_restore_tokens} restoration {data.streak_restore_tokens === 1 ? "token" : "tokens"}</h3>
-            <p className="mt-1 text-sm opacity-70">Developer-issued tokens restore a lost streak and keep the progress you’ve earned since. Tokens are separate from your two freezes.</p>
-            {data.streak_before_break > 0 && <p className="mt-2 text-sm">Lost streak: {data.streak_before_break} days</p>}
+            <p className="mt-1 text-sm opacity-70">A token restores your latest broken streak, not your personal best of {data.streak_best} days. Your current progress is kept. Tokens are separate from your two freezes.</p>
+            {data.streak_before_break > 0 && <p className="mt-2 text-sm">Latest broken streak: {data.streak_before_break} days</p>}
+            {data.streak_before_break === 0 && <p className="mt-2 text-sm opacity-70">There’s no broken streak to restore yet. Your token will stay available.</p>}
             <button type="button" disabled={busy || !data.can_restore} onClick={() => void update("POST")}
               className="mt-3 rounded-md bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-40 dark:bg-white dark:text-black">
               {busy ? "Updating…" : "Use a token to restore streak"}
             </button>
-          </div>
+          </div>}
         </div>
       ) : null}
       {message && <p role="status" className="mt-4 text-sm">{message}</p>}

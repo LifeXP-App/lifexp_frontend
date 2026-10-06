@@ -1,6 +1,5 @@
 "use client";
 
-import StreakProtection from "@/src/components/settings/StreakProtection";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -263,7 +262,7 @@ export default function SettingsPage() {
           Settings
         </h2>
 
-        <StreakProtection />
+        <Link href="/streaks" className="mb-8 block rounded-lg border border-gray-200 p-5 dark:border-[var(--border)]"><span className="font-semibold">Streaks →</span><span className="mt-1 block text-sm opacity-70">Your flame, quests, timeline, freezes, and vacation mode.</span></Link>
 
         {/* Account type */}
         <div className="flex justify-between w-full mb-4">
