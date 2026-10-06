@@ -104,7 +104,7 @@ export function DiscoverUsers({ suggestedUsers }: DiscoverUsersProps) {
   return (
     <>
       {/* DISCOVER USERS */}
-      <div className="bg-white p-6 rounded-xl border-2 border-gray-200 dark:bg-dark-2 dark:border-[var(--border)]">
+      <div className="bg-white p-6 rounded-xl border border-gray-200 dark:bg-dark-2 dark:border-[var(--border)]">
         <p className="text-md  font-semibold mb-4 dark:text-[var(--foreground)]">
           Discover players
         </p>

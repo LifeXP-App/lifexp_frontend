@@ -256,7 +256,7 @@ function SessionPostComponent({ session }: { session: ApiSessionPost }) {
   return (
     <div
       id="post-card"
-      className="mb-6 md:p-6 md:rounded-xl md:border-2 md:bg-white md:border-gray-200 md:dark:bg-dark-2 md:dark:border-[var(--border)]"
+      className="mb-6 md:p-6 md:rounded-xl md:border md:bg-white md:border-gray-200 md:dark:bg-dark-2 md:dark:border-[var(--border)]"
     >
       {showComments && (
         <CommentSection

@@ -35,7 +35,7 @@ export function RightSidebarNotifications({
   return (
     <>
       {/* NOTIFICATIONS */}
-      <div className="bg-white w-full p-6 mb-4 rounded-xl border-2 border-gray-200 dark:bg-dark-2 dark:border-[var(--border)]">
+      <div className="bg-white w-full p-6 mb-4 rounded-xl border border-gray-200 dark:bg-dark-2 dark:border-[var(--border)]">
         <div className="flex justify-between items-center mb-6">
           <p className="text-md  font-semibold dark:text-[var(--foreground)]">Notifications</p>
           {unreadCount > 0 && (

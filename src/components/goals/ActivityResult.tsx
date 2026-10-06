@@ -1,5 +1,5 @@
 import React from "react";
-import { CheckBadgeIcon, PlayIcon, SparklesIcon } from "@heroicons/react/24/solid";
+import { CheckBadgeIcon, PlayIcon, LinkIcon, SparklesIcon } from "@heroicons/react/24/solid";
 import { ACTIVITY_META, ActivityType } from "@/src/lib/types/activityMeta";
 
 const VERIFIED_TITLE =
@@ -28,12 +28,17 @@ interface ActivitySelectButtonProps {
   activity: Activity;
   onSelect: (activity: Activity) => void;
   isSelected?: boolean;
+  /** Habit picker rows show a link/chain icon ("track this") instead of
+   * the play icon used when picking an activity to immediately start a
+   * session with. */
+  selectIcon?: "play" | "link";
 }
 
 function ActivitySelectButton({
   activity,
   onSelect,
   isSelected = false,
+  selectIcon = "play",
 }: ActivitySelectButtonProps) {
   const meta = ACTIVITY_META[activity.type];
 
@@ -101,10 +106,17 @@ function ActivitySelectButton({
                       border: `1px solid rgba(${meta.cssColorVarRgb}, 0.2)`,
                     }}
                   >
-                    <PlayIcon
-                      className="w-3.5 h-3.5"
-                      style={{ color: meta.cssColorVar }}
-                    />
+                    {selectIcon === "link" ? (
+                      <LinkIcon
+                        className="w-3.5 h-3.5"
+                        style={{ color: meta.cssColorVar }}
+                      />
+                    ) : (
+                      <PlayIcon
+                        className="w-3.5 h-3.5"
+                        style={{ color: meta.cssColorVar }}
+                      />
+                    )}
                   </div>
                 </button>
   );

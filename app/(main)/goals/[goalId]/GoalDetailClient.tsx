@@ -765,7 +765,7 @@ export default function GoalDetailClient() {
     >
       {/* Header Skeleton */}
       <div
-        className="bg-white dark:bg-dark-2 sticky top-0 z-10 border-b px-6 py-4"
+        className="bg-white dark:bg-dark-2 sticky top-3 z-10 mx-3 md:mx-6 mb-4 rounded-2xl border shadow-sm px-6 py-4"
         style={{ borderColor: "var(--border)" }}
       >
         <div className="flex items-center justify-between">
@@ -1108,7 +1108,7 @@ export default function GoalDetailClient() {
 
         {/* Header */}
         <div
-          className="bg-white dark:bg-dark-2 sticky top-0 z-10 border-b"
+          className="bg-white dark:bg-dark-2 sticky top-3 z-10 mx-3 md:mx-6 mb-4 rounded-2xl border shadow-sm"
           style={{ borderColor: "var(--border)" }}
         >
           <div className="flex items-center justify-between px-6 py-4">

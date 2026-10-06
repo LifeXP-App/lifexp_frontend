@@ -80,6 +80,11 @@
 body {
   background: var(--background);
   color: var(--foreground);
+  /* dnd-kit's DragOverlay portals into body, outside any page's own
+     overflow-hidden -- its ghost (translated to the pointer, plus any
+     scale/rotate) can transiently sit past the viewport edge mid-drag,
+     which otherwise puts a horizontal scrollbar on the whole page. */
+  overflow-x: hidden;
 }
 
 .bg-rookie {

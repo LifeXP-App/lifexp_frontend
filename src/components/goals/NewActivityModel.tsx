@@ -8,6 +8,7 @@ import {
   ArrowsPointingInIcon,
   ArrowsPointingOutIcon,
 } from "@heroicons/react/24/outline";
+import { LinkIcon } from "@heroicons/react/24/solid";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -55,6 +56,15 @@ interface ActivitiesPayload {
   };
 }
 
+interface HabitCandidate {
+  id: number;
+  uid: string;
+  name: string;
+  activity_type: ActivityType;
+  emoji: string;
+  session_count: number;
+}
+
 interface NewActivityModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -63,7 +73,24 @@ interface NewActivityModalProps {
   onGenerateNew?: (query: string) => void;
   /** Goal uid to scope the default activity list to, when the picker is opened for a specific goal. */
   goalUid?: string | null;
+  /**
+   * Swaps the default list's source from /api/v1/activities/ to the
+   * habit-candidates endpoint (the player's own top activities not yet
+   * tracked as a habit). That list is small and unpaginated, so in this
+   * mode: no infinite scroll, no aspect-type pills, no AI/custom-create
+   * flow, and the search box filters the already-fetched list client-side
+   * instead of hitting /api/v1/search/activities/.
+   */
+  candidatesMode?: boolean;
 }
+
+const mapCandidate = (candidate: HabitCandidate): Activity => ({
+  id: candidate.uid,
+  uid: candidate.uid,
+  name: candidate.name,
+  type: candidate.activity_type,
+  emoji: candidate.emoji,
+});
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
 // Maximized view shows a denser 6-col grid — load more per page (and per
@@ -123,6 +150,7 @@ export default function NewActivityModal({
   onClose,
   onSelectActivity,
   goalUid,
+  candidatesMode = false,
 }: NewActivityModalProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
@@ -154,8 +182,20 @@ export default function NewActivityModal({
   ];
 
   const { data: defaultFirstPage, isFetching: defaultListFetching } = useQuery({
-    queryKey: defaultListKey,
+    queryKey: candidatesMode ? ["habits", "candidates", "picker"] : defaultListKey,
     queryFn: async () => {
+      if (candidatesMode) {
+        const res = await fetch(`/api/habits/candidates?limit=20`, {
+          cache: "no-store",
+        });
+        const data = await res.json();
+        const candidates = (Array.isArray(data.results) ? data.results : []) as HabitCandidate[];
+        return {
+          activities: candidates.map(mapCandidate),
+          pagination: { totalPages: 1, hasMore: false },
+        };
+      }
+
       const params = new URLSearchParams({ page: "1" });
       if (goalUid) params.set("goal", goalUid);
       if (activeType !== "all") params.set("type", activeType);
@@ -309,6 +349,21 @@ export default function NewActivityModal({
 
   const searchActivities = useCallback(
     async (query: string, pageNumber: number) => {
+      // Habit candidates are a small, already-fetched list -- filter in
+      // memory by name instead of calling /api/v1/search/activities/, which
+      // doesn't know about this player-scoped, non-habit-yet candidate set.
+      if (candidatesMode) {
+        const normalized = query.trim().toLowerCase();
+        const matches = (defaultFirstPage?.activities ?? []).filter((activity) =>
+          activity.name.toLowerCase().includes(normalized),
+        );
+        setSearchResults(matches);
+        setPage(1);
+        setHasMore(false);
+        setLoading(false);
+        return;
+      }
+
       const requestId = requestIdRef.current + 1;
       requestIdRef.current = requestId;
       loadingRef.current = true;
@@ -353,7 +408,7 @@ export default function NewActivityModal({
         }
       }
     },
-    [activeType, isMaximized],
+    [activeType, isMaximized, candidatesMode, defaultFirstPage],
   );
 
   // Clear the highlighted selection whenever the modal closes or the query
@@ -408,7 +463,7 @@ export default function NewActivityModal({
   }, [activeType, isMaximized]);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || candidatesMode) return;
 
     const query = searchQuery.trim();
     if (!query) {
@@ -422,7 +477,7 @@ export default function NewActivityModal({
     }, 3000);
 
     return () => window.clearTimeout(timeout);
-  }, [searchQuery, isOpen]);
+  }, [searchQuery, isOpen, candidatesMode]);
 
   // Infinite scroll
   useEffect(() => {
@@ -486,21 +541,23 @@ export default function NewActivityModal({
             style={{ borderColor: "var(--border)" }}
           >
             <h2 className="text-xl font-bold text-foreground dark:text-[var(--foreground)]">
-              Pick Activity
+              {candidatesMode ? "Pick a Habit" : "Pick Activity"}
             </h2>
-            <button
-              type="button"
-              onClick={() => setIsMaximized((prev) => !prev)}
-              aria-label={isMaximized ? "Minimize" : "Maximize"}
-              title={isMaximized ? "Minimize" : "Maximize"}
-              className="hidden md:block p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:text-[var(--muted)] dark:hover:text-[var(--foreground)] hover:bg-gray-100 dark:hover:bg-[var(--dark-1)] transition-colors cursor-pointer"
-            >
-              {isMaximized ? (
-                <ArrowsPointingInIcon className="w-5 h-5" />
-              ) : (
-                <ArrowsPointingOutIcon className="w-5 h-5" />
-              )}
-            </button>
+            {!candidatesMode && (
+              <button
+                type="button"
+                onClick={() => setIsMaximized((prev) => !prev)}
+                aria-label={isMaximized ? "Minimize" : "Maximize"}
+                title={isMaximized ? "Minimize" : "Maximize"}
+                className="hidden md:block p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:text-[var(--muted)] dark:hover:text-[var(--foreground)] hover:bg-gray-100 dark:hover:bg-[var(--dark-1)] transition-colors cursor-pointer"
+              >
+                {isMaximized ? (
+                  <ArrowsPointingInIcon className="w-5 h-5" />
+                ) : (
+                  <ArrowsPointingOutIcon className="w-5 h-5" />
+                )}
+              </button>
+            )}
           </div>
 
           {/* Search */}
@@ -595,6 +652,7 @@ export default function NewActivityModal({
                       activity={activity}
                       onSelect={setSelectedActivity}
                       isSelected={selectedActivity?.id === activity.id}
+                      selectIcon={candidatesMode ? "link" : "play"}
                     />
                   ),
                 )}
@@ -717,10 +775,11 @@ export default function NewActivityModal({
             <button
               onClick={() => selectedActivity && onSelectActivity(selectedActivity)}
               disabled={!selectedActivity}
-              className="py-3 px-4 rounded-xl font-medium active:opacity-80 text-white transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex items-center justify-center gap-1.5 py-3 px-4 rounded-xl font-medium active:opacity-80 text-white transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               style={{ backgroundColor: "var(--rookie-primary)" }}
             >
-              Start Activity
+              {candidatesMode && <LinkIcon className="w-4 h-4" />}
+              {candidatesMode ? "Track Habit" : "Start Activity"}
             </button>
           </div>
         </div>

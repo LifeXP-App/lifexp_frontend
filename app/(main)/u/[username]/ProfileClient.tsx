@@ -646,31 +646,31 @@ export default function ProfileClient({ params }: PageProps) {
 
           {/* Mobile chart skeleton */}
           <div className="xl:hidden my-4 flex justify-center w-full animate-pulse">
-            <div className="w-full bg-white dark:bg-dark-2 rounded-xl border-2 border-gray-200 dark:border-[var(--border)] p-6">
+            <div className="w-full bg-white dark:bg-dark-2 rounded-xl border border-gray-200 dark:border-[var(--border)] p-6">
               <div className="mx-auto w-full max-w-[280px] h-72 rounded-xl bg-gray-200 dark:bg-dark-3" />
             </div>
           </div>
 
           {/* STREAK / LEVEL / XP skeleton cards */}
           <div className="my-4 flex flex-col sm:flex-row justify-between text-sm gap-4 animate-pulse">
-            <div className="bg-white dark:bg-dark-2 border-2 rounded-xl border-gray-200 dark:border-gray-900 w-full p-4">
+            <div className="bg-white dark:bg-dark-2 border rounded-xl border-gray-200 dark:border-gray-900 w-full p-4">
               <div className="h-3 w-24 rounded bg-gray-200 dark:bg-dark-3 mb-3" />
               <div className="h-5 w-16 rounded bg-gray-200 dark:bg-dark-3" />
             </div>
 
-            <div className="bg-white dark:bg-dark-2 border-2 rounded-xl border-gray-200 dark:border-gray-900 w-full p-4">
+            <div className="bg-white dark:bg-dark-2 border rounded-xl border-gray-200 dark:border-gray-900 w-full p-4">
               <div className="h-4 w-28 rounded bg-gray-200 dark:bg-dark-3 mb-3" />
               <div className="h-3 w-40 rounded bg-gray-200 dark:bg-dark-3" />
             </div>
 
-            <div className="bg-gray-200 dark:bg-dark-2 border-2 rounded-xl border-gray-200 dark:border-gray-900 w-full p-4 animate-pulse">
+            <div className="bg-gray-200 dark:bg-dark-2 border rounded-xl border-gray-200 dark:border-gray-900 w-full p-4 animate-pulse">
               <div className="h-5 w-28 rounded bg-gray-300 dark:bg-dark-3 mb-3" />
               <div className="h-3 w-44 rounded bg-gray-300 dark:bg-dark-3" />
             </div>
           </div>
 
           {/* Weekly XP chart skeleton */}
-          <div className="p-4 sm:p-6 my-4 bg-white dark:bg-dark-2 dark:border-gray-900 border-2 border-gray-200 rounded-2xl w-full animate-pulse">
+          <div className="p-4 sm:p-6 my-4 bg-white dark:bg-dark-2 dark:border-gray-900 border border-gray-200 rounded-2xl w-full animate-pulse">
             <div className="flex justify-between items-center mb-4">
               <span className="flex gap-3 items-center">
                 <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-dark-3" />
@@ -683,7 +683,7 @@ export default function ProfileClient({ params }: PageProps) {
 
           {/* Top Activities + Recent Sessions skeleton */}
           <div className="flex flex-col md:flex-row gap-4 animate-pulse">
-            <div className="p-4 sm:p-6 my-2 bg-white border-2 border-gray-200 dark:bg-dark-2 dark:border-gray-900 rounded-2xl w-full">
+            <div className="p-4 sm:p-6 my-2 bg-white border border-gray-200 dark:bg-dark-2 dark:border-gray-900 rounded-2xl w-full">
               <div className="h-4 w-32 rounded bg-gray-200 dark:bg-dark-3 mb-6" />
               {[1, 2, 3, 4, 5].map((i) => (
                 <div key={i} className="flex items-center justify-between mb-5">
@@ -697,7 +697,7 @@ export default function ProfileClient({ params }: PageProps) {
               ))}
             </div>
 
-            <div className="p-4 sm:p-6 my-2 bg-white border-2 border-gray-200 dark:bg-dark-2 dark:border-gray-900 rounded-2xl w-full">
+            <div className="p-4 sm:p-6 my-2 bg-white border border-gray-200 dark:bg-dark-2 dark:border-gray-900 rounded-2xl w-full">
               <div className="h-4 w-36 rounded bg-gray-200 dark:bg-dark-3 mb-6" />
               {[1, 2, 3, 4, 5].map((i) => (
                 <div key={i} className="p-3 rounded-lg mb-2">
@@ -1143,10 +1143,9 @@ export default function ProfileClient({ params }: PageProps) {
                 <button
                   onClick={handleUnfollow}
                   disabled={isFollowingLoading}
-                  className={`flex-1 min-w-0 sm:flex-none font-medium py-2 rounded-lg text-center sm:w-48 text-white ${
+                  className={`flex-1 min-w-0 sm:flex-none font-medium py-2 rounded-lg text-center sm:w-48 text-white bg-black dark:bg-[var(--dark-3)] ${
                     isFollowingLoading ? "opacity-50 cursor-wait" : "cursor-pointer"
                   }`}
-                  style={{ backgroundColor: accent.primary }}
                 >
                   {isFollowingLoading ? "Loading..." : "Unfollow"}
                 </button>
@@ -1211,7 +1210,7 @@ export default function ProfileClient({ params }: PageProps) {
           <>
             {/* Mobile Chart - Comparison Mode */}
             {!isXlViewport && <div className="my-4 flex justify-center w-full">
-              <div className="w-full bg-white dark:bg-dark-2 rounded-xl border-2 border-gray-200 dark:border-[var(--border)] p-6">
+              <div className="w-full bg-white dark:bg-dark-2 rounded-xl border border-gray-200 dark:border-[var(--border)] p-6">
                 <div className="mx-auto w-full max-w-[280px] h-72">
                   <RadarChart
                     data={radarData}
@@ -1228,7 +1227,7 @@ export default function ProfileClient({ params }: PageProps) {
             {/* STREAK, LIFE LEVEL, XP CARDS */}
             <div className="my-4 flex flex-col sm:flex-row justify-between text-sm gap-4">
               {/* Streak count */}
-              <div className="bg-white dark:bg-dark-2 border-2 rounded-xl border-gray-200 dark:border-[var(--border)] w-full flex flex-col rounded-md items-center justify-between p-4">
+              <div className="bg-white dark:bg-dark-2 border rounded-xl border-gray-200 dark:border-[var(--border)] w-full flex flex-col rounded-md items-center justify-between p-4">
                           
                           <p className="text-sm dark:text-[var(--muted)]">Streak Count</p>
               
@@ -1249,7 +1248,7 @@ export default function ProfileClient({ params }: PageProps) {
                         </div>
 
               {/* life level */}
-              <div className="bg-white dark:bg-dark-2 border-2 rounded-xl border-gray-200 dark:border-[var(--border)] w-full flex flex-col rounded-md items-center justify-between p-4">
+              <div className="bg-white dark:bg-dark-2 border rounded-xl border-gray-200 dark:border-[var(--border)] w-full flex flex-col rounded-md items-center justify-between p-4">
                 <span className="flex items-center justify-center gap-1">
                   <p className="text-gray-600 dark:text-[var(--foreground)] text-base sm:text-lg font-bold">
                     Life Level {profileUser.lifeLevel}
@@ -1334,7 +1333,7 @@ export default function ProfileClient({ params }: PageProps) {
 
             {/* WEEKLY XP CHART */}
             {weeklyXPLoading ? (
-              <div className="p-4 sm:p-6 my-4 bg-white dark:bg-dark-2 dark:border-[var(--border)] border-2 border-gray-200 rounded-2xl w-full animate-pulse">
+              <div className="p-4 sm:p-6 my-4 bg-white dark:bg-dark-2 dark:border-[var(--border)] border border-gray-200 rounded-2xl w-full animate-pulse">
                 <div className="flex justify-between items-center mb-4">
                   <span className="flex gap-3 items-center">
                     <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-dark-3" />
@@ -1344,7 +1343,7 @@ export default function ProfileClient({ params }: PageProps) {
                 <div className="relative h-48 sm:h-64 rounded-xl bg-gray-200 dark:bg-dark-3" />
               </div>
             ) : (
-              <div className="p-4 sm:p-6 my-4 bg-white dark:bg-dark-2 dark:border-[var(--border)] border-2 border-gray-200 rounded-2xl w-full animate-content-in">
+              <div className="p-4 sm:p-6 my-4 bg-white dark:bg-dark-2 dark:border-[var(--border)] border border-gray-200 rounded-2xl w-full animate-content-in">
               <div className="flex justify-between items-center mb-4">
                 <span className="flex gap-3 items-center">
                   {profileUser.avatar ? (
@@ -1389,7 +1388,7 @@ export default function ProfileClient({ params }: PageProps) {
 
             {/* TOP ACTIVITIES & RECENT SESSIONS */}
             <div className="flex flex-col md:flex-row gap-4">
-              <div className="p-4 sm:p-6 my-2 bg-white border-2 border-gray-200 dark:bg-dark-2 dark:border-[var(--border)] rounded-2xl w-full">
+              <div className="p-4 sm:p-6 my-2 bg-white border border-gray-200 dark:bg-dark-2 dark:border-[var(--border)] rounded-2xl w-full">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-lg font-bold dark:text-[var(--foreground)]">
                     Top Activities
@@ -1446,7 +1445,7 @@ export default function ProfileClient({ params }: PageProps) {
               </div>
 
               {/* Recent Sessions */}
-              <div className="p-4 sm:p-6 my-2 bg-white border-2 border-gray-200 dark:bg-dark-2 dark:border-[var(--border)] rounded-2xl w-full">
+              <div className="p-4 sm:p-6 my-2 bg-white border border-gray-200 dark:bg-dark-2 dark:border-[var(--border)] rounded-2xl w-full">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-lg font-bold dark:text-[var(--foreground)]">
                     Recent Sessions

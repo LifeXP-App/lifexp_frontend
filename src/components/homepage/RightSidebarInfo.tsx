@@ -160,7 +160,7 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
   return (
     <aside className="w-full hidden md:block ">
       {/* PROFILE CARD */}
-      <div className="bg-white p-6 mb-4 rounded-xl border-2 border-gray-200 dark:bg-dark-2 dark:border-[var(--border)]">
+      <div className="bg-white p-6 mb-4 rounded-xl border border-gray-200 dark:bg-dark-2 dark:border-[var(--border)]">
         <div className="text-center flex flex-col items-center">
           <Link
             href={`/u/${user.username}`}
@@ -283,7 +283,7 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
       </div>
       {/* TODAY */}
       {todayGoals.length > 0 && (
-        <div className="bg-white p-6 mb-4 rounded-xl border-2 border-gray-200 dark:bg-dark-2 dark:border-[var(--border)]">
+        <div className="bg-white p-6 mb-4 rounded-xl border border-gray-200 dark:bg-dark-2 dark:border-[var(--border)]">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base font-semibold">Today</h3>
             <span className="text-sm font-medium text-gray-400 dark:text-[var(--muted)]">
@@ -359,7 +359,7 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
 
       {/* <div
         id="next-level-tab"
-        className="bg-white p-6 mb-4 rounded-xl border-2 border-gray-200 dark:bg-dark-2 dark:border-[var(--border)]"
+        className="bg-white p-6 mb-4 rounded-xl border border-gray-200 dark:bg-dark-2 dark:border-[var(--border)]"
       >
         {user.mastery != "Rookie" ? (
           <>

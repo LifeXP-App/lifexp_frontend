@@ -3,6 +3,8 @@
 import { LEADERBOARD_ENABLED } from "@/src/lib/constants/featureFlags";
 import { useAuth } from "../context/AuthContext";
 import { NavigationItem } from "./NavigationItem";
+import { getGoalsNavPreference } from "@/src/lib/hooks/useGoalsNavPreference";
+import { useEffect, useState } from "react";
 
 interface NavigationProps {
   accentColor?: string;
@@ -16,6 +18,13 @@ export function Navigation({ accentColor, onNavigate }: NavigationProps) {
   // Supabase user_metadata at registration so we never route to `/u/undefined`
   // during the brief window before `me` resolves.
   const username = me?.username ?? supabaseUser?.user_metadata?.username;
+
+  // See TabletSideNav for why this starts at /goals and switches post-mount.
+  const [goalsHref, setGoalsHref] = useState("/goals");
+  useEffect(() => {
+    /* eslint-disable-next-line react-hooks/set-state-in-effect */
+    setGoalsHref(`/${getGoalsNavPreference()}`);
+  }, []);
 
   const leaderboardNavItem = {
     label: "Leaderboard",
@@ -37,8 +46,8 @@ export function Navigation({ accentColor, onNavigate }: NavigationProps) {
     { label: "Search", href: "/search", active: ["/search"], icon: "search" },
     {
       label: "Goals",
-      href: "/goals",
-      active: ["/goals", "/a"],
+      href: goalsHref,
+      active: ["/goals", "/habits", "/a"],
       icon: "squares",
     },
 

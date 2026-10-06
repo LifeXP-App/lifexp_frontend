@@ -21,6 +21,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import { getGoalsNavPreference } from "@/src/lib/hooks/useGoalsNavPreference";
 
 type TabletNavItem = {
   label: string;
@@ -43,6 +44,15 @@ export function TabletSideNav({ accentColor = "#4168e2" }: { accentColor?: strin
   const { me, supabaseUser } = useAuth();
   const username = me?.username ?? supabaseUser?.user_metadata?.username;
 
+  // Defaults to /goals on the server/first paint, then switches to whichever
+  // of /goals or /habits the user last visited once we can read localStorage
+  // — avoids a hydration mismatch since the preference is per-browser only.
+  const [goalsHref, setGoalsHref] = useState("/goals");
+  useEffect(() => {
+    /* eslint-disable-next-line react-hooks/set-state-in-effect */
+    setGoalsHref(`/${getGoalsNavPreference()}`);
+  }, [pathname]);
+
   const NAV_ITEMS: TabletNavItem[] = [
     { label: "Feed", href: "/", active: ["/"], SolidIcon: HomeIcon, OutlineIcon: HomeIconOutline },
     {
@@ -54,8 +64,8 @@ export function TabletSideNav({ accentColor = "#4168e2" }: { accentColor?: strin
     },
     {
       label: "Goals",
-      href: "/goals",
-      active: ["/goals", "/a"],
+      href: goalsHref,
+      active: ["/goals", "/habits", "/a"],
       SolidIcon: SquaresPlusIcon,
       OutlineIcon: SquaresPlusIconOutline,
     },
