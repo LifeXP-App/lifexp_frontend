@@ -9,7 +9,9 @@ import {
 } from "@heroicons/react/24/solid";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import { getGoalsNavPreference } from "@/src/lib/hooks/useGoalsNavPreference";
 
 type BottomNavItem = {
   label: string;
@@ -25,10 +27,17 @@ export function BottomNav() {
   const { me, supabaseUser } = useAuth();
   const username = me?.username ?? supabaseUser?.user_metadata?.username;
 
+  // See TabletSideNav for why this starts at /goals and switches post-mount.
+  const [goalsHref, setGoalsHref] = useState("/goals");
+  useEffect(() => {
+    /* eslint-disable-next-line react-hooks/set-state-in-effect */
+    setGoalsHref(`/${getGoalsNavPreference()}`);
+  }, [pathname]);
+
   const NAV_ITEMS: BottomNavItem[] = [
     { label: "Feed", href: "/", active: ["/"], Icon: HomeIcon },
     { label: "Search", href: "/search", active: ["/search"], Icon: MagnifyingGlassIcon },
-    { label: "Goals", href: "/goals", active: ["/goals", "/a"], Icon: SquaresPlusIcon },
+    { label: "Goals", href: goalsHref, active: ["/goals", "/habits", "/a"], Icon: SquaresPlusIcon },
     {
       label: "Notifications",
       href: "/notifications",

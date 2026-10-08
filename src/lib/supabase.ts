@@ -79,6 +79,19 @@ export async function signInWithGoogle() {
 }
 
 /**
+ * Sign in with Apple OAuth
+ */
+export async function signInWithApple() {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'apple',
+    options: {
+      redirectTo: `${window.location.origin}/auth/callback`,
+    },
+  })
+  return { data, error }
+}
+
+/**
  * Sign out the current user
  */
 export async function signOut() {

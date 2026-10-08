@@ -153,12 +153,12 @@ async function syncSessionToDjango(
     focused_duration_seconds: Math.floor(stats.focusedDurationSeconds),
     // Django stores xp_* as integers; the Convex breakdown is fractional
     // (rate × seconds), so round before sending.
-    xp_total: Math.round(stats.xpTotal),
-    xp_physique: Math.round(stats.xpBreakdown.physique),
-    xp_energy: Math.round(stats.xpBreakdown.energy),
-    xp_logic: Math.round(stats.xpBreakdown.logic),
-    xp_creativity: Math.round(stats.xpBreakdown.creativity),
-    xp_social: Math.round(stats.xpBreakdown.social),
+    xp_total: Math.max(0, Math.round(stats.xpTotal)),
+    xp_physique: Math.max(0, Math.round(stats.xpBreakdown.physique)),
+    xp_energy: Math.max(0, Math.round(stats.xpBreakdown.energy)),
+    xp_logic: Math.max(0, Math.round(stats.xpBreakdown.logic)),
+    xp_creativity: Math.max(0, Math.round(stats.xpBreakdown.creativity)),
+    xp_social: Math.max(0, Math.round(stats.xpBreakdown.social)),
     completed_reason: completedReason,
     device_platform: "web",
   });

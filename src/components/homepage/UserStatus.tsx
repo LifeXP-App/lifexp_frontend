@@ -21,6 +21,11 @@ export type UserStatusProps = {
       emoji: string;
       type: ActivityType;
     } | null;
+    live_activity?: {
+      name?: string;
+      emoji?: string;
+      type?: string;
+    } | null;
   };
 };
 
@@ -28,8 +33,14 @@ export type UserStatusProps = {
 
 export function UserStatus({ player }: UserStatusProps) {
   const activity = player.last_activity;
-  const activityText = activity ? `${activity.emoji} ${activity.name}` : "🌙 Idling";
-  const activityColor = activity ? ACTIVITY_META[activity.type].cssColorVar : undefined;
+  const liveActivity = player.live_activity;
+  const activityText = liveActivity
+    ? `${liveActivity.emoji ?? "✦"} ${liveActivity.name ?? "In session"}`
+    : activity ? `${activity.emoji} ${activity.name}` : "🌙 Idling";
+  const activityType = liveActivity ? liveActivity.type : activity?.type;
+  const activityColor = activityType && activityType in ACTIVITY_META
+    ? ACTIVITY_META[activityType as ActivityType].cssColorVar
+    : undefined;
 
   return (
     <Link href={`/u/${player.username}`}>

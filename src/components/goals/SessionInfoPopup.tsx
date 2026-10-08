@@ -90,6 +90,7 @@ const SessionInfoPopup: React.FC<SessionInfoPopupProps> = ({
   const [isAnimating, setIsAnimating] = useState(true);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [sessionName, setSessionName] = useState(name || "");
+  const [isImageExpanded, setIsImageExpanded] = useState(false);
   const toast = useToast();
 
   useEffect(() => {
@@ -98,6 +99,10 @@ const SessionInfoPopup: React.FC<SessionInfoPopupProps> = ({
     setIsAnimating(true);
     const t = setTimeout(() => setIsAnimating(false), 350);
     return () => clearTimeout(t);
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) setIsImageExpanded(false);
   }, [isOpen]);
 
   useEffect(() => {
@@ -264,19 +269,19 @@ const SessionInfoPopup: React.FC<SessionInfoPopupProps> = ({
           {/* Cover Image (smaller) */}
           {coverImageUrl && (
           <div className="px-6 pb-5">
-            
+
               <Image
                 src={coverImageUrl}
                 alt="Session cover"
                 width={1200}
                 height={600}
-           
-              className="w-full h-[180px] rounded-2xl object-cover"
+                onClick={() => setIsImageExpanded(true)}
+              className="w-full h-[180px] rounded-2xl object-cover cursor-pointer"
               style={{
                 animation: isAnimating ? "slideUp 0.25s ease-out 0.08s both" : "none",
               }}
             />
-            
+
           </div>
            )}
 
@@ -414,6 +419,32 @@ const SessionInfoPopup: React.FC<SessionInfoPopupProps> = ({
         onConfirm={() => onDelete?.()}
         xpEarned={xpEarned ?? 0}
       />
+
+      {isImageExpanded && coverImageUrl && (
+        <div
+          className="fixed inset-0 z-60 flex items-center justify-center bg-black/80"
+          onClick={() => setIsImageExpanded(false)}
+        >
+          <button
+            type="button"
+            onClick={() => setIsImageExpanded(false)}
+            aria-label="Close"
+            className="absolute top-6 right-6 text-white text-4xl leading-none cursor-pointer hover:opacity-70 transition-opacity z-10"
+          >
+            ×
+          </button>
+          {/* Raw <img>: the lightbox needs to size itself off the image's
+              own intrinsic aspect ratio (max-h-[90vh]/object-contain) rather
+              than a fixed width/height next/image requires upfront. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={coverImageUrl}
+            alt="Session cover"
+            className="max-h-[90vh] max-w-[90vw] object-contain rounded-xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </>
   );
 };

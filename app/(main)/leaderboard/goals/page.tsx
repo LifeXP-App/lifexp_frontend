@@ -91,7 +91,7 @@ export default function MasteryLeaderboardIndex() {
 
       {/* Profile Widget (Desktop) */}
       <aside className="w-[450px] p-6 overflow-auto hidden md:block h-screen">
-        <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-[var(--border)]">
+        <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border border-gray-200 dark:border-[var(--border)]">
           <div className="text-center flex flex-col items-center">
             <Link href={`/u/${currentUser.username}`}>
               <LiveAvatar username={currentUser.username}>

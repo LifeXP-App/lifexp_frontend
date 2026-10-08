@@ -419,7 +419,7 @@ export default function SettingsPage() {
             right rail (hidden md:block below) aren't reachable on mobile
             otherwise, so surface the same items here with identical styling. */}
         <div className="md:hidden mt-6 flex flex-col gap-4">
-          <div className="bg-white dark:bg-dark-2 p-6 rounded-xl border-2 border-gray-200 dark:border-[var(--border)] flex flex-col gap-4">
+          <div className="bg-white dark:bg-dark-2 p-6 rounded-xl border border-gray-200 dark:border-[var(--border)] flex flex-col gap-4">
             <button
               onClick={handleChangePassword}
               disabled={changePasswordStatus === "sending" || !me?.email}
@@ -450,7 +450,7 @@ export default function SettingsPage() {
             </button>
           </div>
 
-          <div className="bg-white dark:bg-dark-2 p-6 rounded-xl border-2 border-gray-200 dark:border-[var(--border)] flex flex-col gap-4">
+          <div className="bg-white dark:bg-dark-2 p-6 rounded-xl border border-gray-200 dark:border-[var(--border)] flex flex-col gap-4">
             <a target="__blank" href="https://www.gamilife.com/privacy-policy" className="cursor-pointer active:opacity-80 text-l font-semibold text-left text-gray-800 dark:text-[var(--foreground)] hover:text-gray-600 dark:hover:text-[var(--muted)]">
               Privacy Policy
             </a>
@@ -485,7 +485,7 @@ export default function SettingsPage() {
 
       {/* Desktop right panel */}
       <aside className="w-[420px] p-6 hidden md:block overflow-y-auto">
-        <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-[var(--border)] flex flex-col gap-4">
+        <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border border-gray-200 dark:border-[var(--border)] flex flex-col gap-4">
           <h2 className="text-xl font-medium text-left text-black dark:text-[var(--foreground)] mb-2">
             Account
           </h2>
@@ -527,7 +527,7 @@ export default function SettingsPage() {
           </button>
         </div>
 
-        <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border-2 border-gray-200 dark:border-[var(--border)] flex flex-col gap-4">
+        <div className="bg-white dark:bg-dark-2 p-6 mb-4 rounded-xl border border-gray-200 dark:border-[var(--border)] flex flex-col gap-4">
 
           <a target="__blank" href="https://www.gamilife.com/privacy-policy" className="cursor-pointer active:opacity-80 text-l font-semibold text-left text-gray-800 dark:text-[var(--foreground)] hover:text-gray-600 dark:hover:text-[var(--muted)]">
             Privacy Policy

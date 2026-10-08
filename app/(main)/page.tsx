@@ -859,6 +859,18 @@ const { data: discoverUsers = [], isLoading: discoverLoading } = useQuery({
                         streak_active: friend.streak_active,
                         profile_picture: friend.profile_picture,
                         last_activity: friend.last_activity,
+                        live_activity: (() => {
+                          const session = allLiveSessions.find(
+                            (session) =>
+                              session.userId === String(friend.id) ||
+                              session.username === friend.username
+                          );
+                          return session ? {
+                            name: session.activityName,
+                            emoji: session.activityEmoji,
+                            type: session.activityType,
+                          } : null;
+                        })(),
                       }}
                     />
                   ))}

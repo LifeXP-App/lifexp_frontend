@@ -108,7 +108,7 @@ export default function NotificationsPage() {
           Notifications
         </h1>
 
-        <div className="bg-white dark:bg-dark-2 rounded-xl border-2 border-gray-200 dark:border-[var(--border)] overflow-hidden">
+        <div className="bg-white dark:bg-dark-2 rounded-xl border border-gray-200 dark:border-[var(--border)] overflow-hidden">
           {isLoading ? (
             <div className="flex flex-col gap-6 md:gap-4 p-6 animate-pulse">
               {[1, 2, 3, 4].map((i) => (

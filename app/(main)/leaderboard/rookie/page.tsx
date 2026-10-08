@@ -120,7 +120,7 @@ const LeaderboardRow = memo(function LeaderboardRow({
 
 function LeaderboardRowSkeleton() {
   return (
-    <div className="flex justify-between items-center w-full px-5 py-4 rounded-xl bg-white dark:bg-dark-2 border-2 border-gray-200 dark:border-[var(--border)] animate-pulse">
+    <div className="flex justify-between items-center w-full px-5 py-4 rounded-xl bg-white dark:bg-dark-2 border border-gray-200 dark:border-[var(--border)] animate-pulse">
       <div className="flex items-center gap-4">
         {/* rank */}
         <div className="w-5 flex justify-center">
@@ -152,7 +152,7 @@ function RightSidebarInfoSkeleton() {
   return (
     <aside className="w-full hidden md:block">
       {/* PROFILE CARD */}
-      <div className="bg-white p-6 mb-4 rounded-xl border-2 border-gray-200 dark:bg-dark-2 dark:border-[var(--border)] animate-pulse">
+      <div className="bg-white p-6 mb-4 rounded-xl border border-gray-200 dark:bg-dark-2 dark:border-[var(--border)] animate-pulse">
         <div className="text-center flex flex-col items-center">
           {/* avatar */}
           <div className="h-24 w-24 aspect-square p-[1.5px] rounded-full bg-gray-200 dark:bg-[var(--dark-2)] mb-3" />
