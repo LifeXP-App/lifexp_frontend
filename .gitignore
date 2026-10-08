@@ -54,3 +54,5 @@ docs/mobile-optimization.md
 docs/changelog.md
 .claude
 context-claude
+.codex
+AGENTS.md
