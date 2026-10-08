@@ -357,8 +357,12 @@ export default function HabitsPage() {
     const { active, over } = event;
     if (!over) return;
 
-    const habit = active.data.current?.habit as Habit | undefined;
-    if (!habit) return;
+    const draggedHabit = active.data.current?.habit as Habit | undefined;
+    if (!draggedHabit) return;
+    // Re-read from the live cache rather than trusting the habit captured
+    // at drag-start -- it can be stale if another update landed mid-drag,
+    // which would otherwise skip a PATCH that's actually still needed.
+    const habit = habits.find((h) => h.id === draggedHabit.id) ?? draggedHabit;
 
     const targetContainerId = String(over.id);
     const sourceContainerId = containerIdForHabit(habit);
@@ -420,6 +424,11 @@ export default function HabitsPage() {
         });
         if (!res.ok) throw new Error("Failed to update freeze state");
       }
+      // Re-sync with the server after a real change -- the optimistic
+      // write above is just for instant visual feedback; this is what
+      // guarantees the UI can't drift from the backend's actual state.
+      queryClient.invalidateQueries({ queryKey: ["habits"] });
+      queryClient.invalidateQueries({ queryKey: ["habits", "categories"] });
     } catch {
       queryClient.setQueryData(["habits"], prevHabits);
       queryClient.setQueryData(["habits", "categories"], prevCategories);
@@ -557,29 +566,35 @@ export default function HabitsPage() {
                   <HabitCardSkeleton key={i} />
                 ))}
               </div>
-            ) : sortedHabits.length === 0 ? (
-              <div className="mt-12 flex flex-col items-center justify-center text-center py-16 px-6">
-                <div className="w-16 h-16 rounded-full bg-gray-200 dark:bg-dark-3 flex items-center justify-center mb-4">
-                  <ArrowPathRoundedSquareIcon className="w-8 h-8 text-gray-500 dark:text-[var(--muted)]" />
-                </div>
-                <h3 className="text-lg font-bold text-black dark:text-[var(--foreground)] mb-1">
-                  No habits tracked yet
-                </h3>
-                <p className="text-sm text-gray-500 dark:text-[var(--muted)] max-w-xs">
-                  Mark an activity as a habit from its page to start tracking it here.
-                </p>
-              </div>
             ) : (
-              <DroppableContainer id={MAIN_CONTAINER_ID} className="mt-6 space-y-3 rounded-2xl">
-                {sortedHabits.map((habit) => (
-                  <DraggableHabit key={habit.id} habit={habit}>
-                    <HabitCard
-                      habit={habit}
-                      onStart={() => handleStartHabitSession(habit)}
-                      onEdit={() => setEditingHabit(habit)}
-                    />
-                  </DraggableHabit>
-                ))}
+              // Always a droppable zone, even with zero uncategorized habits
+              // showing -- otherwise dragging a habit here from a category
+              // or Frozen has nowhere valid to land (over === null) and the
+              // drop silently no-ops instead of moving it.
+              <DroppableContainer id={MAIN_CONTAINER_ID} className="mt-6 space-y-3 rounded-2xl min-h-24">
+                {sortedHabits.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center text-center py-16 px-6">
+                    <div className="w-16 h-16 rounded-full bg-gray-200 dark:bg-dark-3 flex items-center justify-center mb-4">
+                      <ArrowPathRoundedSquareIcon className="w-8 h-8 text-gray-500 dark:text-[var(--muted)]" />
+                    </div>
+                    <h3 className="text-lg font-bold text-black dark:text-[var(--foreground)] mb-1">
+                      No habits tracked yet
+                    </h3>
+                    <p className="text-sm text-gray-500 dark:text-[var(--muted)] max-w-xs">
+                      Mark an activity as a habit from its page to start tracking it here.
+                    </p>
+                  </div>
+                ) : (
+                  sortedHabits.map((habit) => (
+                    <DraggableHabit key={habit.id} habit={habit}>
+                      <HabitCard
+                        habit={habit}
+                        onStart={() => handleStartHabitSession(habit)}
+                        onEdit={() => setEditingHabit(habit)}
+                      />
+                    </DraggableHabit>
+                  ))
+                )}
               </DroppableContainer>
             )}
 
