@@ -65,6 +65,11 @@ interface HabitCandidate {
   session_count: number;
 }
 
+interface HabitCandidatesPayload {
+  results?: HabitCandidate[];
+  tracked_activity_uids?: string[];
+}
+
 interface NewActivityModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -74,12 +79,15 @@ interface NewActivityModalProps {
   /** Goal uid to scope the default activity list to, when the picker is opened for a specific goal. */
   goalUid?: string | null;
   /**
-   * Swaps the default list's source from /api/v1/activities/ to the
-   * habit-candidates endpoint (the player's own top activities not yet
-   * tracked as a habit). That list is small and unpaginated, so in this
-   * mode: no infinite scroll, no aspect-type pills, no AI/custom-create
-   * flow, and the search box filters the already-fetched list client-side
-   * instead of hitting /api/v1/search/activities/.
+   * Swaps the default (unsearched) list's source from /api/v1/activities/
+   * to the habit-candidates endpoint (the player's own top activities not
+   * yet tracked as a habit, small and unpaginated — no infinite scroll, no
+   * aspect-type pills, no AI/custom-create flow in this mode). Searching,
+   * though, still hits the real global /api/v1/search/activities/ endpoint
+   * (any activity, not just this player's top few) — the only
+   * candidates-specific thing applied on top is a local filter dropping
+   * anything in tracked_activity_uids, since global search has no concept
+   * of "already one of my habits".
    */
   candidatesMode?: boolean;
 }
@@ -188,11 +196,12 @@ export default function NewActivityModal({
         const res = await fetch(`/api/habits/candidates?limit=20`, {
           cache: "no-store",
         });
-        const data = await res.json();
-        const candidates = (Array.isArray(data.results) ? data.results : []) as HabitCandidate[];
+        const data = (await res.json()) as HabitCandidatesPayload;
+        const candidates = Array.isArray(data.results) ? data.results : [];
         return {
           activities: candidates.map(mapCandidate),
           pagination: { totalPages: 1, hasMore: false },
+          trackedActivityUids: new Set(data.tracked_activity_uids ?? []),
         };
       }
 
@@ -349,21 +358,6 @@ export default function NewActivityModal({
 
   const searchActivities = useCallback(
     async (query: string, pageNumber: number) => {
-      // Habit candidates are a small, already-fetched list -- filter in
-      // memory by name instead of calling /api/v1/search/activities/, which
-      // doesn't know about this player-scoped, non-habit-yet candidate set.
-      if (candidatesMode) {
-        const normalized = query.trim().toLowerCase();
-        const matches = (defaultFirstPage?.activities ?? []).filter((activity) =>
-          activity.name.toLowerCase().includes(normalized),
-        );
-        setSearchResults(matches);
-        setPage(1);
-        setHasMore(false);
-        setLoading(false);
-        return;
-      }
-
       const requestId = requestIdRef.current + 1;
       requestIdRef.current = requestId;
       loadingRef.current = true;
@@ -374,8 +368,12 @@ export default function NewActivityModal({
           q: query,
           page: String(pageNumber),
         });
-        if (activeType !== "all") params.set("type", activeType);
-        if (isMaximized) params.set("limit", String(MAXIMIZED_PAGE_SIZE));
+        // candidatesMode never shows the aspect-type pills or the maximized
+        // layout, so neither param applies there.
+        if (!candidatesMode) {
+          if (activeType !== "all") params.set("type", activeType);
+          if (isMaximized) params.set("limit", String(MAXIMIZED_PAGE_SIZE));
+        }
         const res = await fetch(
           `${baseUrl}/api/v1/search/activities/?${params.toString()}`,
         );
@@ -389,7 +387,16 @@ export default function NewActivityModal({
         const pagination = getPaginationFromPayload(data, pageNumber);
 
         if (requestId === requestIdRef.current) {
-          const mapped = results.map(mapActivity);
+          let mapped = results.map(mapActivity);
+          // Global search has no notion of "already one of my habits" --
+          // the one candidates-specific thing applied on top of the real
+          // search results, dropping anything the player already tracks.
+          if (candidatesMode) {
+            const tracked = defaultFirstPage?.trackedActivityUids;
+            if (tracked) {
+              mapped = mapped.filter((activity) => !activity.uid || !tracked.has(activity.uid));
+            }
+          }
           setSearchResults((prev) =>
             pageNumber === 1 ? mapped : [...(prev ?? []), ...mapped],
           );
