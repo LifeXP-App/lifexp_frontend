@@ -25,7 +25,7 @@ import { ACTIVITY_META, ActivityType } from "@/src/lib/types/activityMeta";
 import type { ClockType } from "@/src/components/goals/PickTimerModePopup";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -46,6 +46,9 @@ const NewActivityModal = dynamic(
 );
 const PickTimerModePopup = dynamic(
   () => import("@/src/components/goals/PickTimerModePopup"),
+);
+const StrengthInfoPopup = dynamic(
+  () => import("@/src/components/habits/StrengthInfoPopup"),
 );
 const EditHabitModal = dynamic(
   () => import("@/src/components/goals/EditHabitModal"),
@@ -69,6 +72,7 @@ type WeekProgress = {
 };
 
 type StrengthOutlook = {
+  streak_weeks: number;
   days_this_week: number;
   week_ends_on: string;
   at_risk: boolean;
@@ -112,6 +116,10 @@ type HabitCategory = {
 // Frozen habits are drawn entirely in cyan (strength bars, day bars, chevron).
 const FROZEN_COLOR = "#06b6d4";
 const FROZEN_BG = "rgba(6, 182, 212, 0.07)";
+
+// Lets any strength meter open the strength info popup without threading a
+// callback through every card component.
+const StrengthInfoContext = createContext<(habit: Habit) => void>(() => {});
 
 // How long a card's background takes to fade when a habit is frozen/unfrozen.
 const FREEZE_FADE_MS = 4000;
@@ -174,11 +182,17 @@ function strengthStatus(
   if (!o || habit.is_frozen) return null;
   const days = (n: number) => `${n} more day${n === 1 ? "" : "s"}`;
   if (o.at_risk && o.drops_to) {
-    const text =
-      o.days_to_hold !== null
-        ? `Do it ${days(o.days_to_hold)} by Saturday to stay ${STRENGTH_TIER_LABEL[habit.strength_tier]}`
-        : `Will drop to ${STRENGTH_TIER_LABEL[o.drops_to]} on Sunday`;
-    return { kind: "risk", text };
+    // Only warn on the last two days of the week (the week ends on Saturday);
+    // earlier than that there's still plenty of time, so stay quiet.
+    const [y, m, d] = o.week_ends_on.split("-").map(Number);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const daysLeft = Math.round((new Date(y, m - 1, d).getTime() - today.getTime()) / 86400000);
+    if (daysLeft > 1) return null;
+    return {
+      kind: "risk",
+      text: `You might drop to ${STRENGTH_TIER_LABEL[o.drops_to]} when the week ends.`,
+    };
   }
   if (o.next_tier && o.days_to_upgrade !== null) {
     return {
@@ -244,6 +258,7 @@ export default function HabitsPage() {
   const [freezingHabitId, setFreezingHabitId] = useState<number | null>(null);
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
   const [draggingHabit, setDraggingHabit] = useState<Habit | null>(null);
+  const [strengthInfoHabit, setStrengthInfoHabit] = useState<Habit | null>(null);
   // habit id -> was it frozen *before* the latest freeze toggle; present
   // only for FREEZE_FADE_MS so the re-mounted card can fade its background.
   const [fadeFrom, setFadeFrom] = useState<Record<number, boolean>>({});
@@ -658,6 +673,7 @@ export default function HabitsPage() {
   };
 
   return (
+    <StrengthInfoContext.Provider value={setStrengthInfoHabit}>
     <DndContext
       sensors={sensors}
       // Vertical auto-scroll only: dragging toward the right sidebar must
@@ -843,6 +859,19 @@ export default function HabitsPage() {
         candidatesMode
       />
 
+      {strengthInfoHabit && (
+        <StrengthInfoPopup
+          isOpen
+          onClose={() => setStrengthInfoHabit(null)}
+          accentColor={
+            strengthInfoHabit.is_frozen
+              ? FROZEN_COLOR
+              : ACTIVITY_META[strengthInfoHabit.activity_type].cssColorVar
+          }
+          currentTier={strengthInfoHabit.strength_tier}
+        />
+      )}
+
       {/* Edit Habit Modal */}
       <EditHabitModal
         isOpen={editingHabit !== null}
@@ -861,6 +890,7 @@ export default function HabitsPage() {
       {draggingHabit ? <DragGhost habit={draggingHabit} /> : null}
     </DragOverlay>
     </DndContext>
+    </StrengthInfoContext.Provider>
   );
 }
 
@@ -986,6 +1016,7 @@ function HabitCard({
 }) {
   const aspectColor = ACTIVITY_META[habit.activity_type].cssColorVar;
   const settled = useSettled(fadeFromFrozen === true);
+  const openStrengthInfo = useContext(StrengthInfoContext);
 
   return (
     <div className="relative w-full rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-dark-2 p-4 flex items-center gap-4">
@@ -1004,6 +1035,7 @@ function HabitCard({
         accentColor={aspectColor}
         size="lg"
         title={strengthTooltip(habit)}
+        onClick={() => openStrengthInfo(habit)}
       />
 
       <div className="min-w-0 flex-1 flex flex-col gap-2">
@@ -1103,12 +1135,14 @@ function HabitStrengthBars({
   size = "sm",
   title,
   frozen = false,
+  onClick,
 }: {
   tier: StrengthTier;
   accentColor: string;
   size?: "xs" | "sm" | "lg";
   title?: string;
   frozen?: boolean;
+  onClick?: () => void;
 }) {
   const filled = STRENGTH_TIER_BARS[tier];
   // Taller, wider bars than the original spec geometry -- bar height now
@@ -1124,8 +1158,16 @@ function HabitStrengthBars({
 
   return (
     <div
-      className="flex flex-col items-center gap-0.5 shrink-0"
+      className={`flex flex-col items-center gap-0.5 shrink-0 ${onClick ? "cursor-pointer" : ""}`}
       title={title ?? STRENGTH_TIER_LABEL[tier]}
+      onClick={
+        onClick
+          ? (e) => {
+              e.stopPropagation();
+              onClick();
+            }
+          : undefined
+      }
     >
       <svg
         width={dims.width}
@@ -1297,6 +1339,7 @@ function CompactHabitRow({
   // Background/border fade from the card's previous look (frozen or not) to
   // its current one right after a freeze toggle.
   const settled = useSettled(fadeFromFrozen !== undefined);
+  const openStrengthInfo = useContext(StrengthInfoContext);
   const looksFrozen = fadeFromFrozen === undefined || settled ? habit.is_frozen : fadeFromFrozen;
 
   return (
@@ -1318,6 +1361,7 @@ function CompactHabitRow({
           frozen={habit.is_frozen}
           size="xs"
           title={strengthTooltip(habit)}
+          onClick={() => openStrengthInfo(habit)}
         />
       </div>
       <div className="min-w-0 flex-1 self-center text-left flex items-center gap-1.5">

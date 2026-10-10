@@ -18,6 +18,9 @@ import { useEffect, useRef, useState } from "react";
 const PickTimerModePopup = dynamic(
   () => import("@/src/components/goals/PickTimerModePopup"),
 );
+const StrengthInfoPopup = dynamic(
+  () => import("@/src/components/habits/StrengthInfoPopup"),
+);
 const EditHabitModal = dynamic(
   () => import("@/src/components/goals/EditHabitModal"),
 );
@@ -47,6 +50,7 @@ type Habit = {
   last_session_at: string | null;
   strength_score: number;
   strength_tier: StrengthTier;
+  strength_outlook: { streak_weeks: number } | null;
   qualifying_days: number[];
   weeks_observed: number;
   next_predicted_occurrence: string | null;
@@ -186,6 +190,7 @@ export default function HabitDetailPage() {
   const { loading: authLoading } = useAuth();
 
   const [pendingStart, setPendingStart] = useState(false);
+  const [isStrengthInfoOpen, setIsStrengthInfoOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -447,7 +452,7 @@ export default function HabitDetailPage() {
         <div className="space-y-4">
           <div className="flex gap-4 items-stretch">
             <div className="flex-1 min-w-0">
-              <SignalCard habit={habit} aspectColor={aspectColor!} />
+              <SignalCard habit={habit} aspectColor={aspectColor!} onClick={() => setIsStrengthInfoOpen(true)} />
             </div>
             <div className="flex-2 min-w-0">
               <NextDateCard habit={habit} aspectColor={aspectColor!} />
@@ -505,7 +510,7 @@ export default function HabitDetailPage() {
           <div className="sticky top-24 space-y-4">
             <div className="flex gap-4 items-stretch">
               <div className="flex-1 min-w-0">
-                <SignalCard habit={habit} aspectColor={aspectColor!} />
+                <SignalCard habit={habit} aspectColor={aspectColor!} onClick={() => setIsStrengthInfoOpen(true)} />
               </div>
               <div className="flex-2 min-w-0">
                 <NextDateCard habit={habit} aspectColor={aspectColor!} />
@@ -524,6 +529,15 @@ export default function HabitDetailPage() {
           onBack={() => setPendingStart(false)}
           onClose={() => setPendingStart(false)}
           onStart={handleStartWithMode}
+        />
+      )}
+
+      {isStrengthInfoOpen && (
+        <StrengthInfoPopup
+          isOpen
+          onClose={() => setIsStrengthInfoOpen(false)}
+          accentColor={aspectColor!}
+          currentTier={habit.strength_tier}
         />
       )}
 
@@ -735,10 +749,20 @@ function ContributionGraph({
 
 // Strength-signal card — just the 3-bar meter, standalone. Sits beside
 // NextDateCard at a 1:2 width ratio.
-function SignalCard({ habit, aspectColor }: { habit: Habit; aspectColor: string }) {
+function SignalCard({
+  habit,
+  aspectColor,
+  onClick,
+}: {
+  habit: Habit;
+  aspectColor: string;
+  onClick: () => void;
+}) {
   return (
-    <div className="h-full rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-dark-2 p-6 flex flex-col">
-     
+    <div
+      className="h-full rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-dark-2 p-6 flex flex-col cursor-pointer"
+      onClick={onClick}
+    >
       <div className="flex-1 flex items-center justify-center">
         <HabitStrengthBars
           tier={habit.strength_tier}
