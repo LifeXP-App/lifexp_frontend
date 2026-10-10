@@ -19,7 +19,7 @@ import {
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/solid";
 import { ChevronRightIcon } from "@heroicons/react/24/outline";
-import { Droplet } from "lucide-react";
+import { Droplet, Leaf } from "lucide-react";
 import { FaSnowflake } from "react-icons/fa";
 import { ACTIVITY_META, ActivityType } from "@/src/lib/types/activityMeta";
 import type { ClockType } from "@/src/components/goals/PickTimerModePopup";
@@ -189,15 +189,22 @@ function strengthStatus(
   return null;
 }
 
-// Yellow warning triangle shown next to a habit's name when it will drop a
-// tier at the weekly rollover; hovering reveals the message in a bubble.
-function RiskBadge({ habit, small = false }: { habit: Habit; small?: boolean }) {
+// Icon shown next to a habit's name for what this week still decides:
+// a yellow warning triangle when it will drop a tier at the weekly rollover,
+// a green leaf when one more day would level it up. Hovering reveals the
+// message in a bubble.
+function StrengthBadge({ habit, small = false }: { habit: Habit; small?: boolean }) {
   const status = strengthStatus(habit);
-  if (status?.kind !== "risk") return null;
+  if (!status) return null;
+  const iconClass = small ? "w-4 h-4" : "w-5 h-5";
   return (
-    <span className="group relative shrink-0 inline-flex items-center cursor-default" aria-label={status.text}>
-      <ExclamationTriangleIcon className={`${small ? "w-4 h-4" : "w-5 h-5"} text-amber-500 cursor-pointer `} />
-      <span className="cursor-pointer absolute left-0 bottom-full z-30 mt-1 hidden w-max max-w-[220px] rounded-lg bg-dark-1 px-2.5 py-1.5 text-xs font-medium text-white shadow-lg group-hover:block dark:bg-dark-1">
+    <span className="group relative shrink-0 inline-flex items-center cursor-pointer" aria-label={status.text}>
+      {status.kind === "risk" ? (
+        <ExclamationTriangleIcon className={`${iconClass} text-amber-500`} />
+      ) : (
+        <Leaf className={`${small ? "w-3 h-3" : "w-4 h-4"} text-emerald-500`} fill="currentColor" />
+      )}
+      <span className="pointer-events-none absolute left-0 top-full z-30 mt-1 hidden w-max max-w-[220px] rounded-lg border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-dark-1 px-2.5 py-1.5 text-xs font-medium text-black dark:text-[var(--foreground)] shadow-lg group-hover:block">
         {status.text}
       </span>
     </span>
@@ -653,6 +660,9 @@ export default function HabitsPage() {
   return (
     <DndContext
       sensors={sensors}
+      // Vertical auto-scroll only: dragging toward the right sidebar must
+      // not drag the layout sideways (threshold 0 disables the x edge zone).
+      autoScroll={{ threshold: { x: 0, y: 0.2 } }}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
@@ -737,7 +747,7 @@ export default function HabitsPage() {
               // showing -- otherwise dragging a habit here from a category
               // or Frozen has nowhere valid to land (over === null) and the
               // drop silently no-ops instead of moving it.
-              <DroppableContainer id={MAIN_CONTAINER_ID} className="mt-6 space-y-3 rounded-2xl min-h-24">
+              <DroppableContainer id={MAIN_CONTAINER_ID} className="mt-6 space-y-3 rounded-2xl min-h-[75vh]">
                 {sortedHabits.length === 0 ? (
                   <div className="flex flex-col items-center justify-center text-center py-16 px-6">
                     <div className="w-16 h-16 rounded-full bg-gray-200 dark:bg-dark-3 flex items-center justify-center mb-4">
@@ -782,7 +792,6 @@ export default function HabitsPage() {
                     key={category.id}
                     category={category}
                     onAddHabit={() => handleOpenNewHabit(category.id)}
-                    onEditHabit={setEditingHabit}
                     fadeFrom={fadeFrom}
                     onRenameCategory={(name) => handleRenameCategory(category.id, name)}
                     onDelete={() => handleDeleteCategory(category)}
@@ -792,7 +801,6 @@ export default function HabitsPage() {
                   habits={frozenHabits}
                   freezingHabitId={freezingHabitId}
                   onUnfreeze={handleToggleFreeze}
-                  onEditHabit={setEditingHabit}
                   fadeFrom={fadeFrom}
                 />
               </>
@@ -927,22 +935,38 @@ function DraggableHabit({
   habit: Habit;
   children: React.ReactNode;
 }) {
+  const router = useRouter();
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `habit-${habit.id}`,
     data: { habit },
   });
+  // A drag ends with a click event on the same element; remember that this
+  // press turned into a drag so it doesn't also navigate.
+  const draggedRef = useRef(false);
+  useEffect(() => {
+    if (isDragging) draggedRef.current = true;
+  }, [isDragging]);
 
   return (
     <div
       ref={setNodeRef}
       {...listeners}
       {...attributes}
+      onPointerDownCapture={() => {
+        draggedRef.current = false;
+      }}
+      onClick={(e) => {
+        if (draggedRef.current) return;
+        // Buttons/links inside the card keep their own behavior.
+        if ((e.target as HTMLElement).closest("button, a, input")) return;
+        router.push(`/habits/${habit.activity_uid}`);
+      }}
       style={{
         transform: transform ? CSS.Translate.toString(transform) : undefined,
         opacity: isDragging ? 0.35 : 1,
         touchAction: "none",
       }}
-      className="cursor-grab active:cursor-grabbing transition-[opacity,transform] duration-150"
+      className="cursor-pointer active:cursor-grabbing transition-[opacity,transform] duration-150"
     >
       {children}
     </div>
@@ -987,18 +1011,9 @@ function HabitCard({
           <p className="text-lg font-semibold text-black dark:text-[var(--foreground)] truncate">
             {habit.display_name}
           </p>
-          <RiskBadge habit={habit} />
+          <StrengthBadge habit={habit} />
         </div>
         <DayProgressRow habit={habit} />
-        {(() => {
-          const status = strengthStatus(habit);
-          if (status?.kind !== "upgrade") return null;
-          return (
-            <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
-              {status.text}
-            </p>
-          );
-        })()}
       </div>
 
       <div className="shrink-0 flex items-center gap-2">
@@ -1180,14 +1195,12 @@ function HabitCardSkeleton() {
 function HabitCategoryCard({
   category,
   onAddHabit,
-  onEditHabit,
   fadeFrom,
   onRenameCategory,
   onDelete,
 }: {
   category: HabitCategory;
   onAddHabit: () => void;
-  onEditHabit: (habit: Habit) => void;
   fadeFrom: Record<number, boolean>;
   onRenameCategory: (name: string) => void;
   onDelete: () => void;
@@ -1249,7 +1262,6 @@ function HabitCategoryCard({
               <CompactHabitRow
                 habit={habit}
                 fadeFromFrozen={fadeFrom[habit.id]}
-                onEdit={() => onEditHabit(habit)}
               />
             </DraggableHabit>
           ))}
@@ -1274,12 +1286,10 @@ function HabitCategoryCard({
 function CompactHabitRow({
   habit,
   fadeFromFrozen,
-  onEdit,
   trailing,
 }: {
   habit: Habit;
   fadeFromFrozen?: boolean;
-  onEdit: () => void;
   trailing?: React.ReactNode;
 }) {
   const color = habit.is_frozen ? FROZEN_COLOR : ACTIVITY_META[habit.activity_type].cssColorVar;
@@ -1310,16 +1320,12 @@ function CompactHabitRow({
           title={strengthTooltip(habit)}
         />
       </div>
-      <button
-        type="button"
-        onClick={onEdit}
-        className="min-w-0 flex-1 self-center text-left cursor-pointer flex items-center gap-1.5"
-      >
+      <div className="min-w-0 flex-1 self-center text-left flex items-center gap-1.5">
         <p className="min-w-0 text-sm font-semibold text-black dark:text-[var(--foreground)] truncate">
           {habit.display_name}
         </p>
-        <RiskBadge habit={habit} small />
-      </button>
+        <StrengthBadge habit={habit} small />
+      </div>
       {trailing}
       {!habit.is_frozen && (
       <div className="flex items-stretch gap-0.5 shrink-0">
@@ -1374,13 +1380,11 @@ function FrozenHabitsCard({
   habits,
   freezingHabitId,
   onUnfreeze,
-  onEditHabit,
   fadeFrom,
 }: {
   habits: Habit[];
   freezingHabitId: number | null;
   onUnfreeze: (habit: Habit) => void;
-  onEditHabit: (habit: Habit) => void;
   fadeFrom: Record<number, boolean>;
 }) {
   return (
@@ -1404,7 +1408,6 @@ function FrozenHabitsCard({
                 <CompactHabitRow
                   habit={habit}
                   fadeFromFrozen={fadeFrom[habit.id]}
-                  onEdit={() => onEditHabit(habit)}
                   trailing={
                     <button
                       type="button"

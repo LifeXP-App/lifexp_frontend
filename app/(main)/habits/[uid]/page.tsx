@@ -29,6 +29,9 @@ type WeekProgress = {
   progress: boolean[];
 };
 
+// One freeze: inclusive local dates ("YYYY-MM-DD"); end null = still frozen.
+type FrozenRange = { start: string; end: string | null };
+
 type Habit = {
   id: number;
   activity_uid: string;
@@ -39,6 +42,7 @@ type Habit = {
   display_name: string;
   is_active: boolean;
   is_frozen: boolean;
+  frozen_ranges: FrozenRange[];
   created_at: string;
   last_session_at: string | null;
   strength_score: number;
@@ -56,6 +60,42 @@ const DAILY_XP_FOR_FULL_OPACITY = 250;
 
 // Frozen habits get a cyan theme everywhere (matches the habits list).
 const FROZEN_COLOR = "#06b6d4";
+// "YYYY-MM-DD" from local date parts.
+function localDateKey(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+// Mirrors the backend's Habit.record_freeze / record_unfreeze so the graph
+// can update optimistically before the server responds.
+function applyFreezeToRanges(ranges: FrozenRange[], nowFrozen: boolean): FrozenRange[] {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayKey = localDateKey(today);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayKey = localDateKey(yesterday);
+
+  const next = ranges.map((r) => ({ ...r }));
+  const last = next[next.length - 1];
+  if (nowFrozen) {
+    if (last && last.end === null) return next;
+    if (last && last.end === yesterdayKey) {
+      last.end = null;
+      return next;
+    }
+    return [...next, { start: todayKey, end: null }];
+  }
+  if (last && last.end === null) {
+    // Frozen and unfrozen on the same day: no full day was frozen.
+    if (last.start > yesterdayKey) return next.slice(0, -1);
+    last.end = yesterdayKey;
+  }
+  return next;
+}
+
 // How long accent colors take to fade when the habit is frozen/unfrozen.
 const FREEZE_FADE_MS = 4000;
 
@@ -255,7 +295,11 @@ export default function HabitDetailPage() {
     if (wasFrozen) playCrack();
     else playHiss();
 
-    queryClient.setQueryData<Habit>(queryKey, { ...habit, is_frozen: !wasFrozen });
+    queryClient.setQueryData<Habit>(queryKey, {
+      ...habit,
+      is_frozen: !wasFrozen,
+      frozen_ranges: applyFreezeToRanges(habit.frozen_ranges ?? [], !wasFrozen),
+    });
     setIsFreezing(true);
     try {
       const res = await authedFetch(`/api/habits/${habit.id}/freeze`, {
@@ -394,7 +438,11 @@ export default function HabitDetailPage() {
           </button>
         </div>
 
-        <ContributionGraph dailyStats={habit.daily_stats} aspectColor={realAspectColor!} />
+        <ContributionGraph
+            dailyStats={habit.daily_stats}
+            aspectColor={realAspectColor!}
+            frozenRanges={habit.frozen_ranges}
+          />
 
         <div className="space-y-4">
           <div className="flex gap-4 items-stretch">
@@ -445,7 +493,11 @@ export default function HabitDetailPage() {
             </button>
           </div>
 
-          <ContributionGraph dailyStats={habit.daily_stats} aspectColor={realAspectColor!} />
+          <ContributionGraph
+            dailyStats={habit.daily_stats}
+            aspectColor={realAspectColor!}
+            frozenRanges={habit.frozen_ranges}
+          />
         </div>
 
         {/* Right Sidebar - Desktop Only */}
@@ -531,11 +583,16 @@ const CARD_PADDING_PX = 32; // p-4 on both sides
 function ContributionGraph({
   dailyStats,
   aspectColor,
+  frozenRanges,
 }: {
   dailyStats: Record<string, { xp: number; seconds: number }> | undefined;
   aspectColor: string;
+  frozenRanges: FrozenRange[] | undefined;
 }) {
   const statsByDate = dailyStats ?? {};
+  const ranges = frozenRanges ?? [];
+  const isFrozenOn = (key: string) =>
+    ranges.some((r) => key >= r.start && (r.end === null || key <= r.end));
 
   // Fit as many weeks as the card's actual width allows (capped at
   // MAX_WINDOW_DAYS/7 weeks) instead of always rendering a fixed 250-day
@@ -646,15 +703,24 @@ function ContributionGraph({
                   return <div key={dayIndex} className="w-5 h-5" />;
                 }
                 const opacity = opacityForXp(day.xp);
+                // A day with real XP always shows its aspect color; a frozen
+                // day with none is a dull cyan instead of an empty cell.
+                const frozenDay = opacity === 0 && isFrozenOn(toLocalDateKey(day.date));
                 return (
                   <div
                     key={dayIndex}
-                    title={`${day.date.toLocaleDateString()} — ${day.xp} XP — ${formatTimeSpent(day.seconds)}`}
+                    title={
+                      frozenDay
+                        ? `${day.date.toLocaleDateString()} — Frozen`
+                        : `${day.date.toLocaleDateString()} — ${day.xp} XP — ${formatTimeSpent(day.seconds)}`
+                    }
                     className="w-5 h-5 rounded-sm border border-gray-200 dark:border-[var(--border)] cursor-pointer transition-transform hover:scale-110"
                     style={
                       opacity > 0
                         ? { backgroundColor: aspectColor, opacity, borderColor: aspectColor }
-                        : undefined
+                        : frozenDay
+                          ? { backgroundColor: "rgba(6, 182, 212, 0.25)", borderColor: "rgba(6, 182, 212, 0.4)" }
+                          : undefined
                     }
                   />
                 );
