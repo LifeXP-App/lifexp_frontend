@@ -3,6 +3,7 @@
 import { useMasteryAccent } from "@/src/lib/hooks/useMasteryAccent";
 import { useAuth } from "@/src/context/AuthContext";
 import { useToast, useConfirm } from "@/src/context/ToastContext";
+import { playCrack, playHiss } from "@/src/lib/utils/freezeSounds";
 import { authedFetch } from "@/src/lib/api/authedFetch";
 import { setGoalsNavPreference } from "@/src/lib/hooks/useGoalsNavPreference";
 import {
@@ -14,15 +15,17 @@ import {
   PlayIcon,
   BeakerIcon,
   FolderPlusIcon,
-  ChevronRightIcon,
   TrashIcon,
+  ExclamationTriangleIcon,
 } from "@heroicons/react/24/solid";
+import { ChevronRightIcon } from "@heroicons/react/24/outline";
+import { Droplet } from "lucide-react";
 import { FaSnowflake } from "react-icons/fa";
 import { ACTIVITY_META, ActivityType } from "@/src/lib/types/activityMeta";
 import type { ClockType } from "@/src/components/goals/PickTimerModePopup";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -108,6 +111,29 @@ type HabitCategory = {
 
 // Frozen habits are drawn entirely in cyan (strength bars, day bars, chevron).
 const FROZEN_COLOR = "#06b6d4";
+const FROZEN_BG = "rgba(6, 182, 212, 0.07)";
+
+// How long a card's background takes to fade when a habit is frozen/unfrozen.
+const FREEZE_FADE_MS = 4000;
+
+// false on the first paint when `active`, then flips to true one frame
+// later -- lets a freshly-mounted card start from its previous look and
+// CSS-transition to its new one.
+function useSettled(active: boolean) {
+  const [settled, setSettled] = useState(!active);
+  useEffect(() => {
+    if (!active) return;
+    let inner = 0;
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => setSettled(true));
+    });
+    return () => {
+      cancelAnimationFrame(outer);
+      cancelAnimationFrame(inner);
+    };
+  }, [active]);
+  return settled;
+}
 
 const WEEKDAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
 
@@ -163,6 +189,21 @@ function strengthStatus(
   return null;
 }
 
+// Yellow warning triangle shown next to a habit's name when it will drop a
+// tier at the weekly rollover; hovering reveals the message in a bubble.
+function RiskBadge({ habit, small = false }: { habit: Habit; small?: boolean }) {
+  const status = strengthStatus(habit);
+  if (status?.kind !== "risk") return null;
+  return (
+    <span className="group relative shrink-0 inline-flex items-center cursor-default" aria-label={status.text}>
+      <ExclamationTriangleIcon className={`${small ? "w-4 h-4" : "w-5 h-5"} text-amber-500 cursor-pointer `} />
+      <span className="cursor-pointer absolute left-0 bottom-full z-30 mt-1 hidden w-max max-w-[220px] rounded-lg bg-dark-1 px-2.5 py-1.5 text-xs font-medium text-white shadow-lg group-hover:block dark:bg-dark-1">
+        {status.text}
+      </span>
+    </span>
+  );
+}
+
 function strengthTooltip(habit: Habit): string {
   const status = strengthStatus(habit);
   const label = STRENGTH_TIER_LABEL[habit.strength_tier];
@@ -196,6 +237,25 @@ export default function HabitsPage() {
   const [freezingHabitId, setFreezingHabitId] = useState<number | null>(null);
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
   const [draggingHabit, setDraggingHabit] = useState<Habit | null>(null);
+  // habit id -> was it frozen *before* the latest freeze toggle; present
+  // only for FREEZE_FADE_MS so the re-mounted card can fade its background.
+  const [fadeFrom, setFadeFrom] = useState<Record<number, boolean>>({});
+  const fadeTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
+
+  const markFreezeFade = (habitId: number, wasFrozen: boolean) => {
+    // Freezing hisses; thawing a frozen habit cracks.
+    if (wasFrozen) playCrack();
+    else playHiss();
+    setFadeFrom((prev) => ({ ...prev, [habitId]: wasFrozen }));
+    clearTimeout(fadeTimers.current[habitId]);
+    fadeTimers.current[habitId] = setTimeout(() => {
+      setFadeFrom((prev) => {
+        const next = { ...prev };
+        delete next[habitId];
+        return next;
+      });
+    }, FREEZE_FADE_MS + 500);
+  };
 
   // Small drag-activation distance so a plain click (Start/Edit/Play
   // buttons, the category name input) still registers as a click instead
@@ -334,7 +394,22 @@ export default function HabitsPage() {
     }
   };
 
+  // Optimistic: flips is_frozen in both caches right away (the habit moves
+  // between the Frozen card and its home list instantly), rolls back if the
+  // request fails, and re-syncs with the server once it settles.
   const handleToggleFreeze = async (habit: Habit) => {
+    if (freezingHabitId === habit.id) return;
+    const nextFrozen = !habit.is_frozen;
+    const prevHabits = habits;
+    const prevCategories = categories;
+    markFreezeFade(habit.id, habit.is_frozen);
+    const flip = (h: Habit): Habit => (h.id === habit.id ? { ...h, is_frozen: nextFrozen } : h);
+
+    queryClient.setQueryData<Habit[]>(["habits"], (prev = []) => prev.map(flip));
+    queryClient.setQueryData<HabitCategory[]>(["habits", "categories"], (prev = []) =>
+      prev.map((c) => ({ ...c, habits: c.habits.map(flip) })),
+    );
+
     setFreezingHabitId(habit.id);
     try {
       const res = await authedFetch(`/api/habits/${habit.id}/freeze`, {
@@ -342,8 +417,10 @@ export default function HabitsPage() {
       });
       if (!res.ok) throw new Error("Failed to update freeze state");
       queryClient.invalidateQueries({ queryKey: ["habits"] });
-      toast.success(habit.is_frozen ? "Habit unfrozen." : "Habit frozen.");
+      queryClient.invalidateQueries({ queryKey: ["habits", "categories"] });
     } catch {
+      queryClient.setQueryData(["habits"], prevHabits);
+      queryClient.setQueryData(["habits", "categories"], prevCategories);
       toast.error("Failed to update freeze state. Please try again.");
     } finally {
       setFreezingHabitId(null);
@@ -469,6 +546,7 @@ export default function HabitsPage() {
 
     const prevHabits = habits;
     const prevCategories = categories;
+    if (nextIsFrozen !== habit.is_frozen) markFreezeFade(habit.id, habit.is_frozen);
 
     const applyHabitChange = (h: Habit): Habit => ({
       ...h,
@@ -677,6 +755,7 @@ export default function HabitsPage() {
                     <DraggableHabit key={habit.id} habit={habit}>
                       <HabitCard
                         habit={habit}
+                        fadeFromFrozen={fadeFrom[habit.id]}
                         onStart={() => handleStartHabitSession(habit)}
                         onEdit={() => setEditingHabit(habit)}
                       />
@@ -704,6 +783,7 @@ export default function HabitsPage() {
                     category={category}
                     onAddHabit={() => handleOpenNewHabit(category.id)}
                     onEditHabit={setEditingHabit}
+                    fadeFrom={fadeFrom}
                     onRenameCategory={(name) => handleRenameCategory(category.id, name)}
                     onDelete={() => handleDeleteCategory(category)}
                   />
@@ -713,6 +793,7 @@ export default function HabitsPage() {
                   freezingHabitId={freezingHabitId}
                   onUnfreeze={handleToggleFreeze}
                   onEditHabit={setEditingHabit}
+                  fadeFrom={fadeFrom}
                 />
               </>
             )}
@@ -779,13 +860,26 @@ export default function HabitsPage() {
 // rendered in a portal by DragOverlay so it's never clipped by the
 // scrolling main column or the sidebar, and always on top.
 function DragGhost({ habit }: { habit: Habit }) {
-  const aspectColor = ACTIVITY_META[habit.activity_type].cssColorVar;
+  const color = habit.is_frozen ? FROZEN_COLOR : ACTIVITY_META[habit.activity_type].cssColorVar;
   return (
     <div
-      className="flex items-center gap-2 rounded-xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-dark-2 px-3 py-2.5 shadow-2xl"
-      style={{ transform: "rotate(-2deg) scale(1.03)", cursor: "grabbing" }}
+      className={`flex items-center gap-2 rounded-xl bg-white dark:bg-dark-2 px-3 py-2.5 shadow-2xl ${
+        habit.is_frozen ? "border border-transparent" : "border border-gray-200 dark:border-[var(--border)]"
+      }`}
+      // Frozen tint is layered over the opaque card bg so the floating ghost
+      // never turns see-through.
+      style={{
+        transform: "rotate(-2deg) scale(1.03)",
+        cursor: "grabbing",
+        backgroundImage: habit.is_frozen ? `linear-gradient(${FROZEN_BG}, ${FROZEN_BG})` : undefined,
+      }}
     >
-      <HabitStrengthBars tier={habit.strength_tier} accentColor={aspectColor} size="sm" />
+      <HabitStrengthBars
+        tier={habit.strength_tier}
+        accentColor={color}
+        frozen={habit.is_frozen}
+        size="sm"
+      />
       <p className="text-sm font-semibold text-black dark:text-[var(--foreground)] truncate max-w-[220px]">
         {habit.display_name}
       </p>
@@ -857,17 +951,30 @@ function DraggableHabit({
 
 function HabitCard({
   habit,
+  fadeFromFrozen,
   onStart,
   onEdit,
 }: {
   habit: Habit;
+  fadeFromFrozen?: boolean;
   onStart: () => void;
   onEdit: () => void;
 }) {
   const aspectColor = ACTIVITY_META[habit.activity_type].cssColorVar;
+  const settled = useSettled(fadeFromFrozen === true);
 
   return (
-    <div className="w-full rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-dark-2 p-4 flex items-center gap-4">
+    <div className="relative w-full rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-dark-2 p-4 flex items-center gap-4">
+      {fadeFromFrozen === true && (
+        <div
+          className="pointer-events-none absolute inset-0 rounded-2xl"
+          style={{
+            backgroundColor: FROZEN_BG,
+            opacity: settled ? 0 : 1,
+            transition: `opacity ${FREEZE_FADE_MS}ms ease`,
+          }}
+        />
+      )}
       <HabitStrengthBars
         tier={habit.strength_tier}
         accentColor={aspectColor}
@@ -876,21 +983,18 @@ function HabitCard({
       />
 
       <div className="min-w-0 flex-1 flex flex-col gap-2">
-        <p className="text-lg font-semibold text-black dark:text-[var(--foreground)] truncate">
-          {habit.display_name}
-        </p>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <p className="text-lg font-semibold text-black dark:text-[var(--foreground)] truncate">
+            {habit.display_name}
+          </p>
+          <RiskBadge habit={habit} />
+        </div>
         <DayProgressRow habit={habit} />
         {(() => {
           const status = strengthStatus(habit);
-          if (!status) return null;
+          if (status?.kind !== "upgrade") return null;
           return (
-            <p
-              className={`text-xs font-medium ${
-                status.kind === "risk"
-                  ? "text-amber-600 dark:text-amber-400"
-                  : "text-emerald-600 dark:text-emerald-400"
-              }`}
-            >
+            <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
               {status.text}
             </p>
           );
@@ -983,11 +1087,13 @@ function HabitStrengthBars({
   accentColor,
   size = "sm",
   title,
+  frozen = false,
 }: {
   tier: StrengthTier;
   accentColor: string;
   size?: "xs" | "sm" | "lg";
   title?: string;
+  frozen?: boolean;
 }) {
   const filled = STRENGTH_TIER_BARS[tier];
   // Taller, wider bars than the original spec geometry -- bar height now
@@ -999,7 +1105,7 @@ function HabitStrengthBars({
     { height: 45, y: 10 },
   ];
   const dims =
-    size === "lg" ? { width: 64, height: 62 } : size === "xs" ? { width: 22, height: 22 } : { width: 40, height: 40 };
+    size === "lg" ? { width: 64, height: 62 } : size === "xs" ? { width: 32, height: 32 } : { width: 40, height: 40 };
 
   return (
     <div
@@ -1021,12 +1127,15 @@ function HabitStrengthBars({
             width="10"
             height={bar.height}
             rx="2.5"
-            fill={index < filled ? accentColor : "transparent"}
+            fill={index < filled || frozen ? accentColor : "transparent"}
+            fillOpacity={index < filled || !frozen ? undefined : 0.2}
             className={
-              index < filled
+              index < filled || frozen
                 ? undefined
                 : "stroke-gray-500 dark:stroke-gray-500 opacity-50"
             }
+            stroke={index < filled || !frozen ? undefined : accentColor}
+            strokeOpacity={index < filled || !frozen ? undefined : 0.4}
             strokeWidth={index < filled ? 0 : 1.5}
           />
         ))}
@@ -1072,12 +1181,14 @@ function HabitCategoryCard({
   category,
   onAddHabit,
   onEditHabit,
+  fadeFrom,
   onRenameCategory,
   onDelete,
 }: {
   category: HabitCategory;
   onAddHabit: () => void;
   onEditHabit: (habit: Habit) => void;
+  fadeFrom: Record<number, boolean>;
   onRenameCategory: (name: string) => void;
   onDelete: () => void;
 }) {
@@ -1135,7 +1246,11 @@ function HabitCategoryCard({
           .filter((habit) => !habit.is_frozen)
           .map((habit) => (
             <DraggableHabit key={habit.id} habit={habit}>
-              <CompactHabitRow habit={habit} onEdit={() => onEditHabit(habit)} />
+              <CompactHabitRow
+                habit={habit}
+                fadeFromFrozen={fadeFrom[habit.id]}
+                onEdit={() => onEditHabit(habit)}
+              />
             </DraggableHabit>
           ))}
 
@@ -1158,22 +1273,39 @@ function HabitCategoryCard({
 // Frozen rows swap the aspect color for cyan everywhere.
 function CompactHabitRow({
   habit,
+  fadeFromFrozen,
   onEdit,
   trailing,
 }: {
   habit: Habit;
+  fadeFromFrozen?: boolean;
   onEdit: () => void;
   trailing?: React.ReactNode;
 }) {
   const color = habit.is_frozen ? FROZEN_COLOR : ACTIVITY_META[habit.activity_type].cssColorVar;
   const { today = -1, progress = [] } = habit.week_progress ?? {};
+  // Background/border fade from the card's previous look (frozen or not) to
+  // its current one right after a freeze toggle.
+  const settled = useSettled(fadeFromFrozen !== undefined);
+  const looksFrozen = fadeFromFrozen === undefined || settled ? habit.is_frozen : fadeFromFrozen;
 
   return (
-    <div className="flex items-stretch gap-2 rounded-xl border border-gray-200 dark:border-[var(--border)] p-2.5">
+    <div
+      className={`flex items-stretch gap-2 rounded-xl border px-3 py-4 ${
+        looksFrozen
+          ? "border-transparent dark:border-transparent"
+          : "border-gray-200 dark:border-[var(--border)]"
+      }`}
+      style={{
+        backgroundColor: looksFrozen ? FROZEN_BG : "rgba(6, 182, 212, 0)",
+        transition: `background-color ${FREEZE_FADE_MS}ms ease, border-color ${FREEZE_FADE_MS}ms ease`,
+      }}
+    >
       <div className="flex items-center">
         <HabitStrengthBars
           tier={habit.strength_tier}
           accentColor={color}
+          frozen={habit.is_frozen}
           size="xs"
           title={strengthTooltip(habit)}
         />
@@ -1181,13 +1313,15 @@ function CompactHabitRow({
       <button
         type="button"
         onClick={onEdit}
-        className="min-w-0 flex-1 self-center text-left cursor-pointer"
+        className="min-w-0 flex-1 self-center text-left cursor-pointer flex items-center gap-1.5"
       >
-        <p className="text-sm font-semibold text-black dark:text-[var(--foreground)] truncate">
+        <p className="min-w-0 text-sm font-semibold text-black dark:text-[var(--foreground)] truncate">
           {habit.display_name}
         </p>
+        <RiskBadge habit={habit} small />
       </button>
       {trailing}
+      {!habit.is_frozen && (
       <div className="flex items-stretch gap-0.5 shrink-0">
         {WEEKDAY_LABELS.map((label, index) => {
           const isFuture = index > today;
@@ -1207,13 +1341,14 @@ function CompactHabitRow({
           );
         })}
       </div>
+      )}
       <Link
         href={`/habits/${habit.activity_uid}`}
         aria-label={`View ${habit.display_name}`}
-        style={habit.is_frozen ? { color: FROZEN_COLOR } : undefined}
-        className="shrink-0 self-center h-8 w-6 flex items-center justify-center cursor-pointer rounded-lg text-gray-500 dark:text-[var(--muted)] hover:opacity-80 transition"
+        style={{ backgroundColor: color }}
+        className="shrink-0 self-center h-6 w-6 flex items-center justify-center cursor-pointer rounded-md text-white hover:opacity-90 transition"
       >
-        <ChevronRightIcon className="w-5 h-5" />
+        <ChevronRightIcon className="w-3.5 h-3.5" strokeWidth={3.5} />
       </Link>
     </div>
   );
@@ -1240,11 +1375,13 @@ function FrozenHabitsCard({
   freezingHabitId,
   onUnfreeze,
   onEditHabit,
+  fadeFrom,
 }: {
   habits: Habit[];
   freezingHabitId: number | null;
   onUnfreeze: (habit: Habit) => void;
   onEditHabit: (habit: Habit) => void;
+  fadeFrom: Record<number, boolean>;
 }) {
   return (
     <div className="rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-dark-2 p-4">
@@ -1266,14 +1403,16 @@ function FrozenHabitsCard({
               <DraggableHabit key={habit.id} habit={habit}>
                 <CompactHabitRow
                   habit={habit}
+                  fadeFromFrozen={fadeFrom[habit.id]}
                   onEdit={() => onEditHabit(habit)}
                   trailing={
                     <button
                       type="button"
                       onClick={() => onUnfreeze(habit)}
                       disabled={freezingHabitId === habit.id}
-                      className="shrink-0 self-center text-xs font-semibold text-sky-600 dark:text-sky-400 hover:underline cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="shrink-0 self-center flex items-center gap-1 rounded-lg bg-cyan-500/20 px-2.5 py-1.5 text-xs font-semibold text-cyan-600 dark:text-cyan-400 hover:bg-cyan-500/30 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
+                      <Droplet className="w-3.5 h-3.5" />
                       {freezingHabitId === habit.id ? "..." : "Unfreeze"}
                     </button>
                   }

@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/src/context/AuthContext";
 import { useToast, useConfirm } from "@/src/context/ToastContext";
+import { playCrack, playHiss } from "@/src/lib/utils/freezeSounds";
 import { authedFetch } from "@/src/lib/api/authedFetch";
 import { GoalsRightSidebar } from "@/src/components/goals/GoalsRightSidebar";
 import { ACTIVITY_META, ActivityType } from "@/src/lib/types/activityMeta";
@@ -52,6 +53,74 @@ type Habit = {
 // Opacity scales linearly with XP and caps at 1 once a day hits this much --
 // 25xp -> 10%, 125xp -> 50%, 250xp -> 100%, matching the ratios exactly.
 const DAILY_XP_FOR_FULL_OPACITY = 250;
+
+// Frozen habits get a cyan theme everywhere (matches the habits list).
+const FROZEN_COLOR = "#06b6d4";
+// How long accent colors take to fade when the habit is frozen/unfrozen.
+const FREEZE_FADE_MS = 4000;
+
+// Freeze/Unfreeze button: secondary (gray) while the habit is active,
+// primary (cyan fill, set via inline style) when frozen.
+// The cyan fill is a separate overlay (see FreezeButtonFill) so it can fade
+// in/out over the gray base instead of snapping.
+const freezeButtonClass = () =>
+  "relative overflow-hidden flex items-center justify-center gap-2 py-3 rounded-2xl text-md bg-gray-700 dark:bg-dark-3 font-medium text-white text-base transition-all active:opacity-80 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
+
+function FreezeButtonFill({ frozen }: { frozen: boolean }) {
+  return (
+    <span
+      aria-hidden
+      className="absolute inset-0"
+      style={{
+        backgroundColor: FROZEN_COLOR,
+        opacity: frozen ? 1 : 0,
+        transition: `opacity ${FREEZE_FADE_MS}ms ease`,
+      }}
+    />
+  );
+}
+
+// false on first paint when `active`, true one frame later -- lets a newly
+// mounted element start from one look and CSS-transition to its real one.
+function useSettled(active: boolean) {
+  const [settled, setSettled] = useState(!active);
+  useEffect(() => {
+    if (!active) return;
+    let inner = 0;
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => setSettled(true));
+    });
+    return () => {
+      cancelAnimationFrame(outer);
+      cancelAnimationFrame(inner);
+    };
+  }, [active]);
+  return settled;
+}
+
+// Text/icon that fades from muted gray to `color` over FREEZE_FADE_MS when it
+// mounts with `animate` (used when a freeze toggle swaps the Next-day tile).
+function FadeInColor({
+  color,
+  animate,
+  className,
+  children,
+}: {
+  color: string;
+  animate: boolean;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const settled = useSettled(animate);
+  return (
+    <span
+      className={className}
+      style={{ color: settled ? color : "var(--muted)", transition: `color ${FREEZE_FADE_MS}ms ease` }}
+    >
+      {children}
+    </span>
+  );
+}
 
 const STRENGTH_TIER_LABEL: Record<StrengthTier, string> = {
   dormant: "Dormant",
@@ -110,7 +179,10 @@ export default function HabitDetailPage() {
   });
 
   const showSkeleton = habitLoading && !habit;
-  const aspectColor = habit ? ACTIVITY_META[habit.activity_type].cssColorVar : undefined;
+  const isFrozen = !!habit?.is_frozen;
+  // Accent color for the whole page: cyan while frozen, else the aspect color.
+  const realAspectColor = habit ? ACTIVITY_META[habit.activity_type].cssColorVar : undefined;
+  const aspectColor = isFrozen ? FROZEN_COLOR : realAspectColor;
 
   const formatDate = (dateString: string) =>
     new Date(dateString).toLocaleDateString(undefined, {
@@ -172,18 +244,29 @@ export default function HabitDetailPage() {
     router.push(`/goals/none/session/new?activity=${habit.activity_uid}${modeParam}`);
   };
 
+  // Optimistic: flips is_frozen in the cache immediately (so the 4s color
+  // fade and sound start on click), rolls back if the request fails.
   const handleToggleFreeze = async () => {
-    if (!habit) return;
+    if (!habit || isFreezing) return;
+    const queryKey = ["habits", "byActivityUid", uid];
+    const wasFrozen = habit.is_frozen;
+    const previous = habit;
+
+    if (wasFrozen) playCrack();
+    else playHiss();
+
+    queryClient.setQueryData<Habit>(queryKey, { ...habit, is_frozen: !wasFrozen });
     setIsFreezing(true);
     try {
       const res = await authedFetch(`/api/habits/${habit.id}/freeze`, {
-        method: habit.is_frozen ? "DELETE" : "POST",
+        method: wasFrozen ? "DELETE" : "POST",
       });
       if (!res.ok) throw new Error("Failed to update freeze state");
-      queryClient.invalidateQueries({ queryKey: ["habits", "byActivityUid", uid] });
+      queryClient.invalidateQueries({ queryKey });
       queryClient.invalidateQueries({ queryKey: ["habits"] });
-      toast.success(habit.is_frozen ? "Habit unfrozen." : "Habit frozen.");
+      toast.success(wasFrozen ? "Habit unfrozen." : "Habit frozen.");
     } catch {
+      queryClient.setQueryData(queryKey, previous);
       toast.error("Failed to update freeze state. Please try again.");
     } finally {
       setIsFreezing(false);
@@ -228,9 +311,10 @@ export default function HabitDetailPage() {
             </svg>
           </Link>
 
-          <h1 className="text-xl font-bold flex-1 ml-2 text-foreground dark:text-[var(--foreground)] truncate">
+          <h1 className="text-xl font-bold ml-2 text-foreground dark:text-[var(--foreground)] truncate">
             {habit.display_name}
           </h1>
+          <div className="flex-1" />
 
           <div ref={moreMenuRef} className="relative">
             <button
@@ -279,19 +363,22 @@ export default function HabitDetailPage() {
       {/* Mobile Layout - Single Scroll */}
       <div className="block lg:hidden px-4 py-4">
         <div className="grid grid-cols-3 gap-3 mb-6">
+          {!isFrozen && (
+            <button
+              className="col-span-3 sm:col-span-1 py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80 cursor-pointer"
+              style={{ backgroundColor: aspectColor }}
+              onClick={() => setPendingStart(true)}
+            >
+              Start {habit.activity_name}
+            </button>
+          )}
           <button
-            className="col-span-3 sm:col-span-1 py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80 cursor-pointer"
-            style={{ backgroundColor: aspectColor }}
-            onClick={() => setPendingStart(true)}
-          >
-            Start {habit.activity_name}
-          </button>
-          <button
-            className="flex items-center justify-center gap-2 py-3 rounded-2xl text-md bg-gray-700 dark:bg-dark-3 font-medium text-white text-base transition-all active:opacity-80 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`${freezeButtonClass()} ${isFrozen ? "col-span-2" : ""}`}
             onClick={handleToggleFreeze}
             disabled={isFreezing}
           >
-            <span className="flex items-center gap-2 opacity-80">
+            <FreezeButtonFill frozen={isFrozen} />
+            <span className={`relative flex items-center gap-2 ${isFrozen ? "" : "opacity-80"}`}>
               <FaSnowflake className="w-4 h-4" />
               {habit.is_frozen ? "Unfreeze Habit" : "Freeze Habit"}
             </span>
@@ -307,7 +394,7 @@ export default function HabitDetailPage() {
           </button>
         </div>
 
-        <ContributionGraph dailyStats={habit.daily_stats} aspectColor={aspectColor!} />
+        <ContributionGraph dailyStats={habit.daily_stats} aspectColor={realAspectColor!} />
 
         <div className="space-y-4">
           <div className="flex gap-4 items-stretch">
@@ -327,19 +414,22 @@ export default function HabitDetailPage() {
         {/* Left Column */}
         <div className="flex-1 min-w-0">
           <div className="grid grid-cols-3 gap-3 mb-8">
+            {!isFrozen && (
+              <button
+                className="py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80 cursor-pointer"
+                style={{ backgroundColor: aspectColor }}
+                onClick={() => setPendingStart(true)}
+              >
+                Start {habit.activity_name}
+              </button>
+            )}
             <button
-              className="py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80 cursor-pointer"
-              style={{ backgroundColor: aspectColor }}
-              onClick={() => setPendingStart(true)}
-            >
-              Start {habit.activity_name}
-            </button>
-            <button
-              className="flex items-center justify-center gap-2 py-3 rounded-2xl text-md bg-gray-700 dark:bg-dark-3 font-medium text-white text-base transition-all active:opacity-80 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`${freezeButtonClass()} ${isFrozen ? "col-span-2" : ""}`}
               onClick={handleToggleFreeze}
               disabled={isFreezing}
             >
-              <span className="flex items-center gap-2 opacity-80">
+              <FreezeButtonFill frozen={isFrozen} />
+              <span className={`relative flex items-center gap-2 ${isFrozen ? "" : "opacity-80"}`}>
                 <FaSnowflake className="w-4 h-4" />
                 {habit.is_frozen ? "Unfreeze Habit" : "Freeze Habit"}
               </span>
@@ -355,7 +445,7 @@ export default function HabitDetailPage() {
             </button>
           </div>
 
-          <ContributionGraph dailyStats={habit.daily_stats} aspectColor={aspectColor!} />
+          <ContributionGraph dailyStats={habit.daily_stats} aspectColor={realAspectColor!} />
         </div>
 
         {/* Right Sidebar - Desktop Only */}
@@ -584,7 +674,11 @@ function SignalCard({ habit, aspectColor }: { habit: Habit; aspectColor: string 
     <div className="h-full rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-dark-2 p-6 flex flex-col">
      
       <div className="flex-1 flex items-center justify-center">
-        <HabitStrengthBars tier={habit.strength_tier} accentColor={aspectColor} />
+        <HabitStrengthBars
+          tier={habit.strength_tier}
+          accentColor={aspectColor}
+          frozen={habit.is_frozen}
+        />
       </div>
     </div>
   );
@@ -626,6 +720,44 @@ function resolveNextDate(habit: Habit): { date: Date; isFallback: boolean } {
 // fallback instead of leaving the card looking broken.
 function NextDateCard({ habit, aspectColor }: { habit: Habit; aspectColor: string }) {
   const { date, isFallback } = resolveNextDate(habit);
+  // Only animate the tile's colors for swaps after the page has loaded, not
+  // on first render.
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setReady(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  // Frozen habits have no upcoming day -- same calendar tile, but "Frozen"
+  // in the month strip and a cyan snowflake where the date would be.
+  if (habit.is_frozen) {
+    return (
+      <div className="h-full rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-dark-2 p-6 flex flex-col">
+        <div className="flex-1 flex items-center gap-5">
+          <div className="shrink-0 w-20 rounded-xl border border-gray-200 dark:border-[var(--border)] overflow-hidden">
+            <div className="bg-gray-100 dark:bg-dark-3 text-center">
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-[var(--muted)]">
+                Frozen
+              </span>
+            </div>
+            <div className="py-3 flex items-center justify-center">
+              <FadeInColor color={aspectColor} animate={ready}>
+                <FaSnowflake className="w-8 h-8" />
+              </FadeInColor>
+            </div>
+          </div>
+          <div>
+            <p className="text-lg font-bold text-foreground dark:text-[var(--foreground)]">
+              Habit frozen
+            </p>
+            <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>
+              Unfreeze this habit to see its next suggested day.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-dark-2 p-6 flex flex-col">
@@ -638,9 +770,9 @@ function NextDateCard({ habit, aspectColor }: { habit: Habit; aspectColor: strin
             </span>
           </div>
           <div className="py-3 text-center">
-            <span className="text-3xl font-extrabold leading-none" style={{ color: aspectColor }}>
+            <FadeInColor color={aspectColor} animate={ready} className="text-3xl font-extrabold leading-none">
               {date.getDate()}
-            </span>
+            </FadeInColor>
           </div>
         </div>
         <div>
@@ -699,9 +831,11 @@ function HabitStatsCard({
 function HabitStrengthBars({
   tier,
   accentColor,
+  frozen = false,
 }: {
   tier: StrengthTier;
   accentColor: string;
+  frozen?: boolean;
 }) {
   const filled = STRENGTH_TIER_BARS[tier];
   const bars = [
@@ -727,13 +861,16 @@ function HabitStrengthBars({
             width="10"
             height={bar.height}
             rx="2.5"
-            fill={index < filled ? accentColor : "transparent"}
-            className={
-              index < filled
-                ? undefined
-                : "stroke-gray-500 dark:stroke-gray-500 opacity-50"
-            }
             strokeWidth={index < filled ? 0 : 1.5}
+            // Everything goes through style (not attributes/classes) so the
+            // aspect-color <-> cyan swap transitions smoothly.
+            style={{
+              fill: accentColor,
+              fillOpacity: index < filled ? 1 : frozen ? 0.2 : 0,
+              stroke: index < filled || frozen ? accentColor : "#6b7280",
+              strokeOpacity: index < filled ? 1 : frozen ? 0.4 : 0.5,
+              transition: `fill ${FREEZE_FADE_MS}ms, fill-opacity ${FREEZE_FADE_MS}ms, stroke ${FREEZE_FADE_MS}ms, stroke-opacity ${FREEZE_FADE_MS}ms`,
+            }}
           />
         ))}
       </svg>
