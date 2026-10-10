@@ -14,6 +14,8 @@ import {
   PlayIcon,
   BeakerIcon,
   FolderPlusIcon,
+  ChevronRightIcon,
+  TrashIcon,
 } from "@heroicons/react/24/solid";
 import { FaSnowflake } from "react-icons/fa";
 import { ACTIVITY_META, ActivityType } from "@/src/lib/types/activityMeta";
@@ -63,6 +65,16 @@ type WeekProgress = {
   progress: boolean[];
 };
 
+type StrengthOutlook = {
+  days_this_week: number;
+  week_ends_on: string;
+  at_risk: boolean;
+  drops_to: StrengthTier | null;
+  days_to_hold: number | null;
+  next_tier: StrengthTier | null;
+  days_to_upgrade: number | null;
+};
+
 type Habit = {
   id: number;
   activity_uid: string;
@@ -79,6 +91,7 @@ type Habit = {
   last_session_at: string | null;
   strength_score: number;
   strength_tier: StrengthTier;
+  strength_outlook: StrengthOutlook | null;
   qualifying_days: number[];
   weeks_observed: number;
   next_predicted_occurrence: string | null;
@@ -93,11 +106,14 @@ type HabitCategory = {
   habits: Habit[];
 };
 
+// Frozen habits are drawn entirely in cyan (strength bars, day bars, chevron).
+const FROZEN_COLOR = "#06b6d4";
+
 const WEEKDAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
 
 const STRENGTH_TIER_LABEL: Record<StrengthTier, string> = {
   dormant: "Dormant",
-  light: "Light",
+  light: "Weak",
   steady: "Steady",
   strong: "Strong",
 };
@@ -121,6 +137,37 @@ const MAX_HABIT_CATEGORIES = 3;
 const MAIN_CONTAINER_ID = "main";
 const FROZEN_CONTAINER_ID = "frozen";
 const categoryContainerId = (categoryId: number) => `category-${categoryId}`;
+
+// Plain-language read of what this week still decides for a habit's
+// strength. `risk` = will drop at the Saturday rollover unless the player
+// shows up; `upgrade` = showing up again this week levels it up.
+function strengthStatus(
+  habit: Habit,
+): { kind: "risk" | "upgrade"; text: string } | null {
+  const o = habit.strength_outlook;
+  if (!o || habit.is_frozen) return null;
+  const days = (n: number) => `${n} more day${n === 1 ? "" : "s"}`;
+  if (o.at_risk && o.drops_to) {
+    const text =
+      o.days_to_hold !== null
+        ? `Do it ${days(o.days_to_hold)} by Saturday to stay ${STRENGTH_TIER_LABEL[habit.strength_tier]}`
+        : `Will drop to ${STRENGTH_TIER_LABEL[o.drops_to]} on Sunday`;
+    return { kind: "risk", text };
+  }
+  if (o.next_tier && o.days_to_upgrade !== null) {
+    return {
+      kind: "upgrade",
+      text: `${days(o.days_to_upgrade)} this week → ${STRENGTH_TIER_LABEL[o.next_tier]}`,
+    };
+  }
+  return null;
+}
+
+function strengthTooltip(habit: Habit): string {
+  const status = strengthStatus(habit);
+  const label = STRENGTH_TIER_LABEL[habit.strength_tier];
+  return status ? `${label} — ${status.text}` : label;
+}
 
 function containerIdForHabit(habit: Habit): string {
   if (habit.is_frozen) return FROZEN_CONTAINER_ID;
@@ -188,7 +235,14 @@ export default function HabitsPage() {
   });
 
   const showHabitsSkeleton = habitsLoading && habits.length === 0;
-  const frozenHabits = habits.filter((h) => h.is_frozen);
+  // /api/habits only returns uncategorized habits; categorized ones come
+  // nested under their category. Merge both so frozen habits show up in the
+  // Frozen card regardless of which category they belong to.
+  const allHabits = [
+    ...habits,
+    ...categories.flatMap((c) => c.habits).filter((ch) => !habits.some((h) => h.id === ch.id)),
+  ];
+  const frozenHabits = allHabits.filter((h) => h.is_frozen);
 
   // Soonest next_predicted_occurrence first; habits with no prediction yet
   // (not enough history -- see main.habits.MIN_WEEKS_FOR_PREDICTION) sort
@@ -339,6 +393,40 @@ export default function HabitsPage() {
     }
   };
 
+  // Optimistically detaches the category's habits into the main list and
+  // drops the category, so the habits reappear in the main section without
+  // a reload; rolls back if the backend refuses.
+  const handleDeleteCategory = async (category: HabitCategory) => {
+    const prevHabits = habits;
+    const prevCategories = categories;
+    const moved = category.habits.map((h) => ({
+      ...h,
+      category_id: null,
+      category_name: null,
+    }));
+
+    queryClient.setQueryData<Habit[]>(["habits"], (prev = []) => [
+      ...prev,
+      ...moved.filter((m) => !prev.some((h) => h.id === m.id)),
+    ]);
+    queryClient.setQueryData<HabitCategory[]>(["habits", "categories"], (prev = []) =>
+      prev.filter((c) => c.id !== category.id),
+    );
+
+    try {
+      const res = await authedFetch(`/api/habits/categories/${category.id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete category");
+      queryClient.invalidateQueries({ queryKey: ["habits"] });
+      queryClient.invalidateQueries({ queryKey: ["habits", "categories"] });
+    } catch {
+      queryClient.setQueryData(["habits"], prevHabits);
+      queryClient.setQueryData(["habits", "categories"], prevCategories);
+      toast.error("Failed to delete category. Please try again.");
+    }
+  };
+
   const handleDragStart = (event: DragStartEvent) => {
     const habit = event.active.data.current?.habit as Habit | undefined;
     if (habit) setDraggingHabit(habit);
@@ -362,7 +450,7 @@ export default function HabitsPage() {
     // Re-read from the live cache rather than trusting the habit captured
     // at drag-start -- it can be stale if another update landed mid-drag,
     // which would otherwise skip a PATCH that's actually still needed.
-    const habit = habits.find((h) => h.id === draggedHabit.id) ?? draggedHabit;
+    const habit = allHabits.find((h) => h.id === draggedHabit.id) ?? draggedHabit;
 
     const targetContainerId = String(over.id);
     const sourceContainerId = containerIdForHabit(habit);
@@ -615,15 +703,16 @@ export default function HabitsPage() {
                     key={category.id}
                     category={category}
                     onAddHabit={() => handleOpenNewHabit(category.id)}
-                    onStartHabit={handleStartHabitSession}
                     onEditHabit={setEditingHabit}
                     onRenameCategory={(name) => handleRenameCategory(category.id, name)}
+                    onDelete={() => handleDeleteCategory(category)}
                   />
                 ))}
                 <FrozenHabitsCard
                   habits={frozenHabits}
                   freezingHabitId={freezingHabitId}
                   onUnfreeze={handleToggleFreeze}
+                  onEditHabit={setEditingHabit}
                 />
               </>
             )}
@@ -779,13 +868,33 @@ function HabitCard({
 
   return (
     <div className="w-full rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-dark-2 p-4 flex items-center gap-4">
-      <HabitStrengthBars tier={habit.strength_tier} accentColor={aspectColor} size="lg" />
+      <HabitStrengthBars
+        tier={habit.strength_tier}
+        accentColor={aspectColor}
+        size="lg"
+        title={strengthTooltip(habit)}
+      />
 
       <div className="min-w-0 flex-1 flex flex-col gap-2">
         <p className="text-lg font-semibold text-black dark:text-[var(--foreground)] truncate">
           {habit.display_name}
         </p>
         <DayProgressRow habit={habit} />
+        {(() => {
+          const status = strengthStatus(habit);
+          if (!status) return null;
+          return (
+            <p
+              className={`text-xs font-medium ${
+                status.kind === "risk"
+                  ? "text-amber-600 dark:text-amber-400"
+                  : "text-emerald-600 dark:text-emerald-400"
+              }`}
+            >
+              {status.text}
+            </p>
+          );
+        })()}
       </div>
 
       <div className="shrink-0 flex items-center gap-2">
@@ -873,10 +982,12 @@ function HabitStrengthBars({
   tier,
   accentColor,
   size = "sm",
+  title,
 }: {
   tier: StrengthTier;
   accentColor: string;
   size?: "xs" | "sm" | "lg";
+  title?: string;
 }) {
   const filled = STRENGTH_TIER_BARS[tier];
   // Taller, wider bars than the original spec geometry -- bar height now
@@ -891,7 +1002,10 @@ function HabitStrengthBars({
     size === "lg" ? { width: 64, height: 62 } : size === "xs" ? { width: 22, height: 22 } : { width: 40, height: 40 };
 
   return (
-    <div className="flex flex-col items-center gap-0.5 shrink-0">
+    <div
+      className="flex flex-col items-center gap-0.5 shrink-0"
+      title={title ?? STRENGTH_TIER_LABEL[tier]}
+    >
       <svg
         width={dims.width}
         height={dims.height}
@@ -957,15 +1071,15 @@ function HabitCardSkeleton() {
 function HabitCategoryCard({
   category,
   onAddHabit,
-  onStartHabit,
   onEditHabit,
   onRenameCategory,
+  onDelete,
 }: {
   category: HabitCategory;
   onAddHabit: () => void;
-  onStartHabit: (habit: Habit) => void;
   onEditHabit: (habit: Habit) => void;
   onRenameCategory: (name: string) => void;
+  onDelete: () => void;
 }) {
   // Local draft so the user's in-progress typing is never clobbered by a
   // parent re-render (e.g. another category's rename landing) -- only
@@ -991,6 +1105,7 @@ function HabitCategoryCard({
 
   return (
     <div className="rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-dark-2 p-4">
+      <div className="flex items-center gap-2 mb-3">
       <input
         type="text"
         value={nameDraft}
@@ -1000,44 +1115,29 @@ function HabitCategoryCard({
           if (e.key === "Enter") e.currentTarget.blur();
         }}
         style={{ "--tw-ring-color": accent.primary } as React.CSSProperties}
-        className="w-full text-lg font-medium mb-3 text-black dark:text-white bg-transparent outline-none focus:ring-2 rounded-md px-1 -mx-1"
+        className="min-w-0 flex-1 text-lg font-medium text-black dark:text-white bg-transparent outline-none focus:ring-2 rounded-md px-1 -mx-1"
       />
+      {!category.is_default && (
+        <button
+          type="button"
+          onClick={onDelete}
+          aria-label={`Delete ${category.name}`}
+          title="Delete category"
+          className="shrink-0 p-1 cursor-pointer text-gray-400 dark:text-[var(--muted)] hover:text-red-500 transition"
+        >
+          <TrashIcon className="w-4 h-4" />
+        </button>
+      )}
+      </div>
 
       <DroppableContainer id={categoryContainerId(category.id)} className="space-y-2 rounded-xl min-h-12">
-        {category.habits.map((habit) => {
-          const aspectColor = ACTIVITY_META[habit.activity_type].cssColorVar;
-          return (
+        {category.habits
+          .filter((habit) => !habit.is_frozen)
+          .map((habit) => (
             <DraggableHabit key={habit.id} habit={habit}>
-              <div className="flex items-center gap-2 rounded-xl border border-gray-200 dark:border-[var(--border)] p-2.5">
-                <HabitStrengthBars tier={habit.strength_tier} accentColor={aspectColor} size="xs" />
-                <button
-                  type="button"
-                  onClick={() => onEditHabit(habit)}
-                  className="min-w-0 flex-1 text-left cursor-pointer"
-                >
-                  <p className="text-sm font-semibold text-black dark:text-[var(--foreground)] truncate">
-                    {habit.display_name}
-                  </p>
-                  {habit.is_frozen && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-gray-400 dark:text-[var(--muted)] mt-0.5">
-                      <FaSnowflake className="w-2.5 h-2.5" />
-                      Frozen
-                    </span>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onStartHabit(habit)}
-                  aria-label={`Start ${habit.activity_name}`}
-                  style={{ backgroundColor: aspectColor }}
-                  className="shrink-0 h-8 w-8 flex items-center justify-center cursor-pointer rounded-lg text-white hover:opacity-90 transition"
-                >
-                  <PlayIcon className="w-3.5 h-3.5" />
-                </button>
-              </div>
+              <CompactHabitRow habit={habit} onEdit={() => onEditHabit(habit)} />
             </DraggableHabit>
-          );
-        })}
+          ))}
 
         <button
           type="button"
@@ -1048,6 +1148,73 @@ function HabitCategoryCard({
           Add Habit
         </button>
       </DroppableContainer>
+    </div>
+  );
+}
+
+// Compact sidebar row shared by category cards and the Frozen card:
+// strength meter, name, 7 thin textless day bars (same done/missed/future
+// styling as DayProgressRow) and a chevron to the habit detail page.
+// Frozen rows swap the aspect color for cyan everywhere.
+function CompactHabitRow({
+  habit,
+  onEdit,
+  trailing,
+}: {
+  habit: Habit;
+  onEdit: () => void;
+  trailing?: React.ReactNode;
+}) {
+  const color = habit.is_frozen ? FROZEN_COLOR : ACTIVITY_META[habit.activity_type].cssColorVar;
+  const { today = -1, progress = [] } = habit.week_progress ?? {};
+
+  return (
+    <div className="flex items-stretch gap-2 rounded-xl border border-gray-200 dark:border-[var(--border)] p-2.5">
+      <div className="flex items-center">
+        <HabitStrengthBars
+          tier={habit.strength_tier}
+          accentColor={color}
+          size="xs"
+          title={strengthTooltip(habit)}
+        />
+      </div>
+      <button
+        type="button"
+        onClick={onEdit}
+        className="min-w-0 flex-1 self-center text-left cursor-pointer"
+      >
+        <p className="text-sm font-semibold text-black dark:text-[var(--foreground)] truncate">
+          {habit.display_name}
+        </p>
+      </button>
+      {trailing}
+      <div className="flex items-stretch gap-0.5 shrink-0">
+        {WEEKDAY_LABELS.map((label, index) => {
+          const isFuture = index > today;
+          const isDone = !!progress[index] && !isFuture;
+          return (
+            <span
+              key={index}
+              className={`w-1.5 rounded-full border ${
+                isDone
+                  ? ""
+                  : isFuture
+                    ? "border-gray-200 dark:border-[var(--border)]"
+                    : "border-gray-200 dark:border-[var(--border)] opacity-50"
+              }`}
+              style={isDone ? { backgroundColor: color, borderColor: color } : undefined}
+            />
+          );
+        })}
+      </div>
+      <Link
+        href={`/habits/${habit.activity_uid}`}
+        aria-label={`View ${habit.display_name}`}
+        style={habit.is_frozen ? { color: FROZEN_COLOR } : undefined}
+        className="shrink-0 self-center h-8 w-6 flex items-center justify-center cursor-pointer rounded-lg text-gray-500 dark:text-[var(--muted)] hover:opacity-80 transition"
+      >
+        <ChevronRightIcon className="w-5 h-5" />
+      </Link>
     </div>
   );
 }
@@ -1072,10 +1239,12 @@ function FrozenHabitsCard({
   habits,
   freezingHabitId,
   onUnfreeze,
+  onEditHabit,
 }: {
   habits: Habit[];
   freezingHabitId: number | null;
   onUnfreeze: (habit: Habit) => void;
+  onEditHabit: (habit: Habit) => void;
 }) {
   return (
     <div className="rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-dark-2 p-4">
@@ -1095,21 +1264,20 @@ function FrozenHabitsCard({
           <div className="space-y-2">
             {habits.map((habit) => (
               <DraggableHabit key={habit.id} habit={habit}>
-                <div className="flex items-center gap-2 rounded-xl border border-gray-200 dark:border-[var(--border)] p-2.5">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-black dark:text-[var(--foreground)] truncate">
-                      {habit.display_name}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => onUnfreeze(habit)}
-                    disabled={freezingHabitId === habit.id}
-                    className="shrink-0 text-xs font-semibold text-sky-600 dark:text-sky-400 hover:underline cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {freezingHabitId === habit.id ? "..." : "Unfreeze"}
-                  </button>
-                </div>
+                <CompactHabitRow
+                  habit={habit}
+                  onEdit={() => onEditHabit(habit)}
+                  trailing={
+                    <button
+                      type="button"
+                      onClick={() => onUnfreeze(habit)}
+                      disabled={freezingHabitId === habit.id}
+                      className="shrink-0 self-center text-xs font-semibold text-sky-600 dark:text-sky-400 hover:underline cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {freezingHabitId === habit.id ? "..." : "Unfreeze"}
+                    </button>
+                  }
+                />
               </DraggableHabit>
             ))}
           </div>

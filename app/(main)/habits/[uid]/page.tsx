@@ -55,7 +55,7 @@ const DAILY_XP_FOR_FULL_OPACITY = 250;
 
 const STRENGTH_TIER_LABEL: Record<StrengthTier, string> = {
   dormant: "Dormant",
-  light: "Light",
+  light: "Weak",
   steady: "Steady",
   strong: "Strong",
 };
