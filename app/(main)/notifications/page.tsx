@@ -1,8 +1,10 @@
 "use client";
 
 import Image from "next/image";
+import { Snowflake } from "lucide-react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { readNotification } from "@/src/lib/api/readNotification";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { LiveAvatar } from "@/src/components/LiveAvatar";
 import { useAuth } from "@/src/context/AuthContext";
 import { authedFetch } from "@/src/lib/api/authedFetch";
@@ -26,6 +28,7 @@ type NotificationDisplay = {
   date: string;
   href: string;
   rounded?: boolean;
+  notificationType?: string;
   isRead: boolean;
 };
 
@@ -55,10 +58,12 @@ function getTimeAgo(dateString: string): string {
 }
 
 export default function NotificationsPage() {
+  const queryClient = useQueryClient();
   const { me, loading: authLoading } = useAuth();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["notifications", "full"],
+    queryKey: ["notifications", "full", me?.id],
+    refetchInterval: 30_000,
     queryFn: async () => {
       const res = await authedFetch("/api/notifications?unread=false&limit=50", {
         method: "GET",
@@ -84,6 +89,7 @@ export default function NotificationsPage() {
         date: getTimeAgo(n.created_at),
         href: n.link || "/",
         rounded: n.notification_type === "follow",
+          notificationType: n.notification_type,
         isRead: n.is_read,
       }));
 
@@ -134,11 +140,16 @@ export default function NotificationsPage() {
                 <li key={n.id}>
                   <Link
                     href={n.href}
+                    onClick={() => { void readNotification(n.id).then((ok) => {
+                      if (ok) void queryClient.invalidateQueries({ queryKey: ["notifications"] });
+                    }); }}
                     className={`flex items-center gap-4 px-5 py-4 transition-colors hover:bg-gray-50 dark:hover:bg-dark-3 ${
                       n.isRead ? "" : "bg-blue-50/60 dark:bg-blue-500/5"
                     }`}
                   >
-                    <LiveAvatar username={n.rounded ? n.sender : undefined}>
+                    {n.notificationType === "streak_freeze" ? (
+                      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-600 dark:bg-sky-950 dark:text-sky-300"><Snowflake aria-label="Streak freeze used" /></span>
+                    ) : <LiveAvatar username={n.rounded ? n.sender : undefined}>
                       <Image
                         src={n.image || "/default_pfp.png"}
                         width={48}
@@ -148,9 +159,9 @@ export default function NotificationsPage() {
                           n.rounded ? "rounded-full" : "rounded-md"
                         }`}
                       />
-                    </LiveAvatar>
+                    </LiveAvatar>}
                     <div className="flex-1 min-w-0 flex flex-col">
-                      <p className="text-sm text-gray-900 dark:text-[var(--foreground)] truncate">
+                      <p className="text-sm text-gray-900 dark:text-[var(--foreground)]">
                         <span className="font-bold">{n.sender}</span>{" "}
                         <span className="font-medium">{n.text}</span>
                       </p>

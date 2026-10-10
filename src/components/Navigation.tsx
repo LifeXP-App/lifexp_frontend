@@ -43,6 +43,7 @@ export function Navigation({ accentColor, onNavigate }: NavigationProps) {
 
   const NAV_ITEMS = [
     { label: "Feed", href: "/", active: ["/"], icon: "home" },
+    { label: "Streaks", href: "/streaks", active: ["/streaks"], icon: "fire" },
     { label: "Search", href: "/search", active: ["/search"], icon: "search" },
     {
       label: "Goals",

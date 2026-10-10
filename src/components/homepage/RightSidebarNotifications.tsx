@@ -1,7 +1,10 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
+import { Snowflake } from "lucide-react";
 import Link from "next/link";
+import { readNotification } from "@/src/lib/api/readNotification";
 import { LiveAvatar } from "@/src/components/LiveAvatar";
 
 type Notification = {
@@ -12,6 +15,7 @@ type Notification = {
   date: string;
   href: string;
   rounded?: boolean;
+  notificationType?: string;
 };
 
 type SuggestedUser = {
@@ -32,6 +36,7 @@ export function RightSidebarNotifications({
   unreadCount,
 
 }: RightSidebarNotificationsProps) {
+  const queryClient = useQueryClient();
   return (
     <>
       {/* NOTIFICATIONS */}
@@ -63,10 +68,15 @@ export function RightSidebarNotifications({
               </div>
             ) : (
               notifications.map((n) => (
-                <Link key={n.id} href={n.href}>
+                <Link key={n.id} href={n.href}
+                    onClick={() => { void readNotification(n.id).then((ok) => {
+                      if (ok) void queryClient.invalidateQueries({ queryKey: ["notifications"] });
+                    }); }}>
                   <li>
                     <div className="flex gap-4">
-                      <LiveAvatar username={n.rounded ? n.sender : undefined}>
+                      {n.notificationType === "streak_freeze" ? (
+                      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-600 dark:bg-sky-950 dark:text-sky-300"><Snowflake aria-label="Streak freeze used" /></span>
+                    ) : <LiveAvatar username={n.rounded ? n.sender : undefined}>
                         <Image
                           src={n.image || "/default_pfp.png"}
                           width={48}
@@ -76,7 +86,7 @@ export function RightSidebarNotifications({
                             n.rounded ? "rounded-full" : "rounded-md"
                           }`}
                         />
-                      </LiveAvatar>
+                      </LiveAvatar>}
                       <div className="flex flex-col">
                         <p className="text-md font-medium text-gray-900 dark:text-[var(--foreground)]">
                           <span className="font-bold">{n.sender}</span>{" "}

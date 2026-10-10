@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  FireIcon,
   Cog6ToothIcon,
   MagnifyingGlassIcon,
   TrophyIcon,
@@ -18,6 +19,7 @@ import { hexToRgba } from "./UserAccent";
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   home: HomeIcon,
+  fire: FireIcon,
   squares: SquaresPlusIcon,
   search: MagnifyingGlassIcon,
 

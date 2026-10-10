@@ -472,10 +472,12 @@ export default function Home() {
     date: string;
     href: string;
     rounded?: boolean;
+  notificationType?: string;
   };
 
   const { data: notificationsResult, isLoading: notificationsLoading } = useQuery({
-    queryKey: ["notifications"],
+    queryKey: ["notifications", me?.id],
+    refetchInterval: 30_000,
     queryFn: async () => {
       try {
         const res = await authedFetch("/api/notifications", {
@@ -505,11 +507,12 @@ export default function Home() {
           date: getTimeAgo(n.created_at),
           href: n.link || "/",
           rounded: n.notification_type === "follow",
+          notificationType: n.notification_type,
         }));
 
         return {
           notifications: mapped as NotificationDisplay[],
-          unreadCount: list.filter((n: ApiNotification) => !n.is_read).length,
+          unreadCount: raw.unread_count ?? list.filter((n: ApiNotification) => !n.is_read).length,
         };
       } catch (err) {
         console.error("Failed to fetch notifications:", err);
