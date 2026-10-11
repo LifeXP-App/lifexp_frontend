@@ -1,17 +1,16 @@
 "use client";
 
-import type { ActivityType } from "@/src/lib/types/activityMeta";
+import { ACTIVITY_META, type ActivityType } from "@/src/lib/types/activityMeta";
 import { FireIcon, InformationCircleIcon } from "@heroicons/react/24/solid";
 import { LiveAvatar } from "@/src/components/LiveAvatar";
 import { usePopup } from "@/src/context/PopupContext";
 import { useQuery } from "@tanstack/react-query";
 import { authedFetch } from "@/src/lib/api/authedFetch";
-import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import type { ClockType } from "@/src/components/goals/PickTimerModePopup";
+import StrengthBars from "@/src/components/habits/StrengthBars";
+import type { StrengthTier } from "@/src/components/habits/StrengthInfoPopup";
+import { to12Hour } from "@/src/lib/utils/habitTime";
 import { hexToRgba } from "@/src/components/UserAccent";
 import { toRoman } from "@/src/lib/utils/toRoman";
 
@@ -34,27 +33,27 @@ function darkenHex(hex: string, amount: number) {
   return `rgb(${r}, ${g}, ${b})`;
 }
 
-const NewActivityModal = dynamic(
-  () => import("@/src/components/goals/NewActivityModel"),
-);
-const PickTimerModePopup = dynamic(
-  () => import("@/src/components/goals/PickTimerModePopup"),
-);
-
-// Mirrors NewActivityModal's own Activity shape — kept local since this file
-// only needs it to build the session-start URL, not the modal's full picker state.
-type PickedActivity = {
-  id: string;
-  uid?: string;
-  type?: ActivityType;
-  xp_distribution?: Record<string, number>;
+// Just the habit fields this card reads (the habits API returns more).
+type SidebarHabit = {
+  id: number;
+  activity_uid: string;
+  activity_type: ActivityType;
+  display_name: string;
+  is_frozen: boolean;
+  strength_tier: StrengthTier;
+  today: boolean;
+  today_time: string | null;
+  week_progress?: { today: number; progress: boolean[] };
 };
 
-type TodayGoal = {
-  uid: string;
-  emoji: string | null;
-  title: string | null;
-  completed: boolean;
+const isDoneToday = (h: SidebarHabit) => {
+  const { today = -1, progress = [] } = h.week_progress ?? {};
+  return today >= 0 && !!progress[today];
+};
+
+const formatTime = (time: string | null) => {
+  const { hour12, minute, pm } = to12Hour(time ?? "12:00");
+  return `${hour12}:${String(minute).padStart(2, "0")} ${pm ? "PM" : "AM"}`;
 };
 
 type RightSidebarInfoProps = {
@@ -82,76 +81,46 @@ type RightSidebarInfoProps = {
 
 export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
   const { openMasteryPopup } = usePopup();
-  const router = useRouter();
 
-  const { data: todayGoals = [] } = useQuery({
-    queryKey: ["today-goals", user.username],
+  // Same query keys as the habits page, so both share one cache. The habits
+  // list only holds uncategorized habits; categorized ones come nested.
+  const { data: uncategorized = [] } = useQuery({
+    queryKey: ["habits"],
     queryFn: async () => {
-      const res = await authedFetch("/api/goals/today", { cache: "no-store" });
-      if (!res.ok) return [] as TodayGoal[];
-      return (await res.json()) as TodayGoal[];
+      const res = await authedFetch("/api/habits", { cache: "no-store" });
+      if (!res.ok) return [] as SidebarHabit[];
+      const data = await res.json();
+      return (Array.isArray(data.results) ? data.results : []) as SidebarHabit[];
+    },
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
+  const { data: categories = [] } = useQuery({
+    queryKey: ["habits", "categories"],
+    queryFn: async () => {
+      const res = await authedFetch("/api/habits/categories", { cache: "no-store" });
+      if (!res.ok) return [] as { habits: SidebarHabit[] }[];
+      const data = await res.json();
+      return (Array.isArray(data) ? data : []) as { habits: SidebarHabit[] }[];
     },
     staleTime: 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
 
-  const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
-  const [activityPickerGoalUid, setActivityPickerGoalUid] = useState<string | null>(null);
-  const [pendingActivity, setPendingActivity] = useState<PickedActivity | null>(null);
-
-  const handleOpenActivityPicker = (goalUid: string) => {
-    setActivityPickerGoalUid(goalUid);
-    setIsActivityModalOpen(true);
-  };
-
-  const handleSelectActivity = (activity: PickedActivity) => {
-    // Hand off to the timer-mode popup before actually starting anything —
-    // the activity modal stays hidden (not closed) so "Back" can reopen it.
-    setIsActivityModalOpen(false);
-    if (!activityPickerGoalUid) return;
-    setPendingActivity(activity);
-  };
-
-  const handleBackToActivityPicker = () => {
-    setPendingActivity(null);
-    setIsActivityModalOpen(true);
-  };
-
-  const handleStartWithMode = (clockType: ClockType, durationSeconds: number) => {
-    const activity = pendingActivity;
-    if (!activity || !activityPickerGoalUid) return;
-    setPendingActivity(null);
-
-    // Django's session register resolves activities by uid, so never send
-    // the integer pk — a pk-only reference 400s the register.
-    const activityRef = activity.uid ?? activity.id;
-
-    const dist = activity.xp_distribution ?? {};
-    const SECONDS_PER_HOUR = 3600;
-    const aspects = ["physique", "energy", "logic", "creativity", "social"] as const;
-    const totalXp = aspects.reduce((s, k) => s + (dist[k] ?? 0), 0);
-    const rates =
-      totalXp > 0
-        ? aspects.reduce((acc, k) => {
-            acc[k] = Math.round(((dist[k] ?? 0) / SECONDS_PER_HOUR) * 10000) / 10000;
-            return acc;
-          }, {} as Record<string, number>)
-        : {};
-    const ratesParam =
-      Object.keys(rates).length > 0
-        ? `&rates=${encodeURIComponent(JSON.stringify(rates))}`
-        : "";
-    const modeParam = `&clockType=${clockType}${clockType === "timer" ? `&duration=${durationSeconds}` : ""}`;
-
-    router.push(`/goals/${activityPickerGoalUid}/session/new?activity=${activityRef}${ratesParam}${modeParam}`);
-  };
-
-  const handleGenerateNewActivity = (query: string) => {
-    setIsActivityModalOpen(false);
-    if (activityPickerGoalUid) {
-      router.push(`/goals/${activityPickerGoalUid}?q=${encodeURIComponent(query)}`);
-    }
-  };
+  // Habits scheduled for today, in time order; finished ones sink to the end.
+  const todayHabits = [
+    ...uncategorized,
+    ...categories
+      .flatMap((c) => c.habits)
+      .filter((ch) => !uncategorized.some((h) => h.id === ch.id)),
+  ]
+    .filter((h) => h.today && !h.is_frozen)
+    .sort(
+      (a, b) =>
+        Number(isDoneToday(a)) - Number(isDoneToday(b)) ||
+        (a.today_time ?? "12:00").localeCompare(b.today_time ?? "12:00") ||
+        a.id - b.id,
+    );
 
   const isMastery = user.mastery !== "Rookie";
   const masteryLevelLabel =
@@ -284,80 +253,36 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
         </div>
       </div>
       {/* TODAY */}
-      {todayGoals.length > 0 && (
+      {todayHabits.length > 0 && (
         <div className="bg-white p-6 mb-4 rounded-xl border border-gray-200 dark:bg-dark-2 dark:border-[var(--border)]">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base font-semibold">Today</h3>
             <span className="text-sm font-medium text-gray-400 dark:text-[var(--muted)]">
-              {todayGoals.filter((g) => !g.completed).length} Left
+              {todayHabits.filter((h) => !isDoneToday(h)).length} Left
             </span>
           </div>
 
           <div className="flex flex-col gap-2">
-            {todayGoals.map((goal) =>
-              goal.completed ? (
-                <Link
-                  key={goal.uid}
-                  href={`/goals/${goal.uid}`}
-                  className="flex items-center gap-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-dark-3 rounded-md p-3 opacity-50"
-                >
-                  <span className="text-2xl shrink-0">{goal.emoji || "🎯"}</span>
-                  <p className="text-sm font-medium truncate flex-1">
-                    {goal.title || "Untitled goal"}
-                  </p>
-                  <span
-                    className="h-5 w-5 shrink-0 rounded-full flex items-center justify-center"
-                    style={{ backgroundColor: "var(--rookie-primary)" }}
-                  >
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="white"
-                      strokeWidth={3}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="h-3 w-3"
-                    >
-                      <path d="M20 6 9 17l-5-5" />
-                    </svg>
-                  </span>
-                </Link>
-              ) : (
-                <button
-                  key={goal.uid}
-                  type="button"
-                  onClick={() => handleOpenActivityPicker(goal.uid)}
-                  className="flex items-center gap-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-dark-3/50  rounded-md p-3 text-left w-full"
-                >
-                  <span className="text-2xl shrink-0">{goal.emoji || "🎯"}</span>
-                  <p className="text-sm font-medium truncate flex-1">
-                    {goal.title || "Untitled goal"}
-                  </p>
-                  <span className="h-5 w-5 shrink-0 rounded-full border-2 border-gray-300 dark:border-dark-3" />
-                </button>
-              ),
-            )}
+            {todayHabits.map((habit) => (
+              <Link
+                key={habit.id}
+                href={`/habits/${habit.activity_uid}`}
+                className={`flex items-center gap-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-dark-3 rounded-md p-3 ${
+                  isDoneToday(habit) ? "opacity-50" : ""
+                }`}
+              >
+                <StrengthBars
+                  tier={habit.strength_tier}
+                  color={ACTIVITY_META[habit.activity_type].cssColorVar}
+                />
+                <p className="text-sm font-medium truncate flex-1">{habit.display_name}</p>
+                <span className="shrink-0 text-sm font-semibold text-gray-500 dark:text-[var(--muted)]">
+                  {formatTime(habit.today_time)}
+                </span>
+              </Link>
+            ))}
           </div>
         </div>
-      )}
-
-      <NewActivityModal
-        isOpen={isActivityModalOpen}
-        onClose={() => setIsActivityModalOpen(false)}
-        onSelectActivity={handleSelectActivity}
-        onGenerateNew={handleGenerateNewActivity}
-        goalUid={activityPickerGoalUid}
-      />
-
-      {pendingActivity && (
-        <PickTimerModePopup
-          isOpen
-          activityUid={pendingActivity.uid ?? pendingActivity.id}
-          activityType={pendingActivity.type}
-          onBack={handleBackToActivityPicker}
-          onClose={() => setPendingActivity(null)}
-          onStart={handleStartWithMode}
-        />
       )}
 
       {/* <div
