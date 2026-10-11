@@ -18,6 +18,9 @@ import { useEffect, useRef, useState } from "react";
 const PickTimerModePopup = dynamic(
   () => import("@/src/components/goals/PickTimerModePopup"),
 );
+const GoalPickerPopup = dynamic(
+  () => import("@/src/components/goals/GoalPickerPopup"),
+);
 const StrengthInfoPopup = dynamic(
   () => import("@/src/components/habits/StrengthInfoPopup"),
 );
@@ -190,6 +193,9 @@ export default function HabitDetailPage() {
   const { loading: authLoading } = useAuth();
 
   const [pendingStart, setPendingStart] = useState(false);
+  // Starting asks for a goal (or a free session) before the timer-mode popup.
+  const [isGoalPickOpen, setIsGoalPickOpen] = useState(false);
+  const [goalRef, setGoalRef] = useState("none");
   const [isStrengthInfoOpen, setIsStrengthInfoOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -286,7 +292,7 @@ export default function HabitDetailPage() {
     if (!habit) return;
     setPendingStart(false);
     const modeParam = `&clockType=${clockType}${clockType === "timer" ? `&duration=${durationSeconds}` : ""}`;
-    router.push(`/goals/none/session/new?activity=${habit.activity_uid}${modeParam}`);
+    router.push(`/goals/${goalRef}/session/new?activity=${habit.activity_uid}${modeParam}`);
   };
 
   // Optimistic: flips is_frozen in the cache immediately (so the 4s color
@@ -416,7 +422,7 @@ export default function HabitDetailPage() {
             <button
               className="col-span-3 sm:col-span-1 py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80 cursor-pointer"
               style={{ backgroundColor: aspectColor }}
-              onClick={() => setPendingStart(true)}
+              onClick={() => setIsGoalPickOpen(true)}
             >
               Start {habit.activity_name}
             </button>
@@ -471,7 +477,7 @@ export default function HabitDetailPage() {
               <button
                 className="py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80 cursor-pointer"
                 style={{ backgroundColor: aspectColor }}
-                onClick={() => setPendingStart(true)}
+                onClick={() => setIsGoalPickOpen(true)}
               >
                 Start {habit.activity_name}
               </button>
@@ -521,12 +527,35 @@ export default function HabitDetailPage() {
         </div>
       </div>
 
+      {isGoalPickOpen && (
+        <GoalPickerPopup
+          isOpen
+          onClose={() => setIsGoalPickOpen(false)}
+          activityName={habit.activity_name}
+          accentColor={realAspectColor!}
+          onSelectGoal={(goal) => {
+            setGoalRef(goal.uid);
+            setIsGoalPickOpen(false);
+            setPendingStart(true);
+          }}
+          onStartFree={() => {
+            setGoalRef("none");
+            setIsGoalPickOpen(false);
+            setPendingStart(true);
+          }}
+        />
+      )}
+
       {pendingStart && (
         <PickTimerModePopup
           isOpen
           activityUid={habit.activity_uid}
           activityName={habit.activity_name}
-          onBack={() => setPendingStart(false)}
+          activityType={habit.activity_type}
+          onBack={() => {
+            setPendingStart(false);
+            setIsGoalPickOpen(true);
+          }}
           onClose={() => setPendingStart(false)}
           onStart={handleStartWithMode}
         />

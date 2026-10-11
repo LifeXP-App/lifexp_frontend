@@ -1495,6 +1495,7 @@ export default function ActivityClient({
           isOpen
           activityUid={pendingActivity.id}
           activityName={pendingActivity.name}
+          activityType={pendingActivity.type}
           onBack={handleBackToActivityPicker}
           onClose={() => setPendingActivity(null)}
           onStart={handleStartWithMode}

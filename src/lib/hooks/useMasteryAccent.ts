@@ -20,3 +20,15 @@ export function useMasteryAccent(overrideMasteryTitle?: string) {
 
   return useMemo(() => getAccentColors(title), [title]);
 }
+
+/**
+ * The color to use for primary buttons/pills: the user's mastery color once
+ * they have a mastery title (anything other than Rookie), otherwise the
+ * default rookie blue as a CSS variable reference.
+ */
+export function useMasteryPrimaryColor() {
+  const { me } = useAuth();
+  const accent = useMasteryAccent();
+  const isMastery = !!me?.masteryTitle && me.masteryTitle !== "Rookie";
+  return isMastery ? accent.primary : "var(--rookie-primary)";
+}

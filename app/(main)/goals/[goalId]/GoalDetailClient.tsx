@@ -16,6 +16,7 @@ import SharePopup from "@/src/components/SharePopup";
 import { useAuth } from "@/src/context/AuthContext";
 import { useToast, useConfirm } from "@/src/context/ToastContext";
 import { useGoal } from "@/src/lib/hooks/useGoals";
+import { useMasteryPrimaryColor } from "@/src/lib/hooks/useMasteryAccent";
 import { GoalsService, Session } from "@/src/lib/services/goals";
 import { ActivityType } from "@/src/lib/types/activityMeta";
 import { compressImageForUpload, SANITY_CAP_BYTES } from "@/src/lib/utils/compressImage";
@@ -165,7 +166,7 @@ const SessionItem = React.memo(function SessionItem({
       {/* Right side: duration + menu */}
       <div className="flex items-center gap-3">
         <div className="text-right">
-          <div className="font-semibold text-lg text-foreground dark:text-[var(--foreground)]">
+          <div className="font-semibold text-2xl text-foreground dark:text-[var(--foreground)]">
             {duration}
           </div>
         </div>
@@ -233,6 +234,7 @@ export default function GoalDetailClient() {
   const feedOwner = searchParams.get("owner");
 
   const { me } = useAuth();
+  const primaryColor = useMasteryPrimaryColor();
   const toast = useToast();
   const confirm = useConfirm();
   const queryClient = useQueryClient();
@@ -1004,7 +1006,7 @@ export default function GoalDetailClient() {
           onClose={() => setShowShare(false)}
           url={goalUrl}
           heading="Share Goal"
-          accentColor="var(--rookie-primary)"
+          accentColor={primaryColor}
         />
 
         <SessionInfoPopup
@@ -1106,9 +1108,14 @@ export default function GoalDetailClient() {
           }}
         />
 
-        {/* Header */}
+        {/* Header: the sticky wrapper has a solid page background (including the
+            strip above and beside the card), so scrolling content is cut off
+            cleanly at its edge instead of showing behind/around the card. */}
         <div
-          className="bg-white dark:bg-dark-2 sticky top-3 z-10 mx-3 md:mx-6 mb-4 rounded-2xl border shadow-sm"
+          className="sticky top-0 z-10 px-3 md:px-6 pt-3 pb-4 bg-gray-100 dark:bg-dark-1"
+        >
+        <div
+          className="bg-white dark:bg-dark-2 rounded-2xl border shadow-sm"
           style={{ borderColor: "var(--border)" }}
         >
           <div className="flex items-center justify-between px-6 py-4">
@@ -1203,6 +1210,7 @@ export default function GoalDetailClient() {
             </div>
           </div>
         </div>
+        </div>
 
         {/* Mobile Layout - Single Scroll */}
         <div className="block lg:hidden px-4 py-4">
@@ -1213,7 +1221,7 @@ export default function GoalDetailClient() {
                 <button
                   className="py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80  cursor-pointer"
                   style={{
-                    backgroundColor: "var(--rookie-primary)",
+                    backgroundColor: primaryColor,
                   }}
                   onClick={handleStartSession}
                 >
@@ -1224,7 +1232,7 @@ export default function GoalDetailClient() {
               <button
                 className={`py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80 cursor-pointer ${!goal.last_activity ? 'col-span-2' : ''}`}
                 style={{
-                  backgroundColor: goal.last_activity ? "#4a4a4a" : "var(--rookie-primary)",
+                  backgroundColor: goal.last_activity ? "#4a4a4a" : primaryColor,
                 }}
                 onClick={() => handleOpenNewActivity()}
               >
@@ -1273,39 +1281,7 @@ export default function GoalDetailClient() {
               </span>
             </div>
 
-            <div
-              className="h-px"
-              style={{ backgroundColor: "var(--border)" }}
-            />
 
-            <div className="flex items-center justify-between">
-              <span className="text-sm" style={{ color: "var(--muted)" }}>
-                Likes
-              </span>
-<div className="flex items-center gap-1">
-
-  <div className="flex -space-x-2">
-    {goal.top_likes?.slice(0, 3).map((user) => (
-      <a key={user.username} href={`/u/${user.username}`}>
-        <Image
-          src={user.profile_picture ?? "/default_pfp.png"}
-          alt={user.username}
-          width={28}
-          height={28}
-          className="w-7 h-7 rounded-full border-2 border-white object-cover"
-        />
-      </a>
-    ))}
-  </div>
-
-  {goal.likes_count && goal.likes_count > 3 && (
-    <span className="text-sm text-gray-500">
-      +{goal.likes_count - 3}
-    </span>
-  )}
-</div>
-
-            </div>
           </div>
 
           {/* Aspect Chips */}
@@ -1351,7 +1327,7 @@ export default function GoalDetailClient() {
               <button
                 className="w-full py-3 rounded-2xl font-medium text-white text-md transition-all active:scale-95 cursor-pointer"
                 style={{
-                  backgroundColor: "var(--rookie-primary)",
+                  backgroundColor: primaryColor,
                 }}
                 onClick={handleOpenCompleteGoal}
               >
@@ -1495,7 +1471,7 @@ export default function GoalDetailClient() {
                 <button
                   className="py-3 rounded-2xl text-md font-medium text-white text-base transition-all active:opacity-80  cursor-pointer"
                   style={{
-                    backgroundColor: "var(--rookie-primary)",
+                    backgroundColor: primaryColor,
                   }}
                   onClick={handleStartSession}
                 >
@@ -1641,7 +1617,7 @@ export default function GoalDetailClient() {
           {/* Right Sidebar - Desktop Only */}
           <div style={{ width: "450px" }} className="flex-shrink-0">
             <div
-              className="sticky top-24 space-y-6 bg-white dark:bg-dark-2 rounded-2xl p-6 border"
+              className="sticky top-28 space-y-6 bg-white dark:bg-dark-2 rounded-2xl p-6 border"
               style={{ borderColor: "var(--border)" }}
             >
               <div className="w-full h-[220px]">
@@ -1752,41 +1728,7 @@ export default function GoalDetailClient() {
                   </span>
                 </div>
 
-                <div
-                  className="h-px"
-                  style={{ backgroundColor: "var(--border)" }}
-                />
 
-                {/* Likes */}
-                <div className="flex items-center justify-between">
-                  <span className="text-sm" style={{ color: "var(--muted)" }}>
-                    Likes
-                  </span>
-<div className="flex items-center gap-1">
-
-  <div className="flex -space-x-2">
-    {goal.top_likes?.slice(0, 3).map((user) => (
-      <a key={user.username} href={`/u/${user.username}`}>
-        <Image
-          src={user.profile_picture ?? "/default_pfp.png"}
-          alt={user.username}
-          width={28}
-          height={28}
-          className="w-7 h-7 rounded-full border-2 border-white object-cover"
-        />
-      </a>
-    ))}
-  </div>
-
-  {goal.likes_count && goal.likes_count > 3 && (
-    <span className="text-sm text-gray-500">
-      +{goal.likes_count - 3}
-    </span>
-  )}
-
-</div>
-
-</div>
               </div>
 
               {/* Complete Goal Button */}
@@ -1794,7 +1736,7 @@ export default function GoalDetailClient() {
                 <button
                   className="w-full py-3 rounded-2xl font-medium text-white text-md transition-all active:scale-95 cursor-pointer"
                   style={{
-                    backgroundColor: "var(--rookie-primary)",
+                    backgroundColor: primaryColor,
                   }}
                   onClick={handleOpenCompleteGoal}
                 >
@@ -1828,6 +1770,7 @@ export default function GoalDetailClient() {
           isOpen
           activityUid={pendingActivity.uid ?? pendingActivity.id}
           activityName={pendingActivity.name}
+          activityType={pendingActivity.type}
           onBack={handleBackToActivityPicker}
           onClose={() => setPendingActivity(null)}
           onStart={handleStartWithMode}

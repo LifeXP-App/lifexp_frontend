@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/outline";
 import { playTick } from "@/src/lib/utils/habitSounds";
 import { from12Hour, stepHours, to12Hour } from "@/src/lib/utils/habitTime";
 
@@ -17,8 +16,8 @@ interface TodayTimeControlProps {
 // doesn't spin through the whole day.
 const WHEEL_STEP_PX = 40;
 
-// Clock for a Today habit: up/down chevrons step the hour (arrows, scroll
-// wheel over the time, each with a tick), double-click the time to type it.
+// Clock for a Today habit: scroll the wheel over the time to step the hour
+// (with a tick), double-click the time to type it.
 // Typing follows the timer popup's behavior: a 4 digit HHMM shift register,
 // each digit pushes the others left, Backspace shifts back. "a"/"p" set AM/PM.
 export default function TodayTimeControl({ value, onChange }: TodayTimeControlProps) {
@@ -32,16 +31,6 @@ export default function TodayTimeControl({ value, onChange }: TodayTimeControlPr
   useEffect(() => {
     latest.current = { value, onChange, editing };
   });
-
-  const canGoLater = stepHours(value, 1) !== null;
-  const canGoEarlier = stepHours(value, -1) !== null;
-
-  const step = (hours: number) => {
-    const next = stepHours(value, hours);
-    if (!next) return;
-    playTick();
-    onChange(next);
-  };
 
   // React's onWheel is passive, so preventDefault (to stop the page from
   // scrolling while you scrub the hour) needs a native non-passive listener.
@@ -114,16 +103,6 @@ export default function TodayTimeControl({ value, onChange }: TodayTimeControlPr
       data-no-card-click
       className="flex flex-col items-center shrink-0 select-none mr-5 cursor-pointer"
     >
-      <button
-        type="button"
-        onClick={() => step(1)}
-        disabled={!canGoLater}
-        aria-label="Later by an hour"
-        className="cursor-pointer text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-[var(--foreground)] disabled:opacity-20 disabled:cursor-not-allowed disabled:hover:text-gray-400 dark:disabled:hover:text-gray-500 transition-colors"
-      >
-        <ChevronUpIcon className="w-3.5 h-3.5" strokeWidth={3} />
-      </button>
-
       <div className="flex items-center gap-1">
         <input
           type="text"
@@ -145,16 +124,6 @@ export default function TodayTimeControl({ value, onChange }: TodayTimeControlPr
           <span>M</span>
         </div>
       </div>
-
-      <button
-        type="button"
-        onClick={() => step(-1)}
-        disabled={!canGoEarlier}
-        aria-label="Earlier by an hour"
-        className="cursor-pointer text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-[var(--foreground)] disabled:opacity-20 disabled:cursor-not-allowed disabled:hover:text-gray-400 dark:disabled:hover:text-gray-500 transition-colors"
-      >
-        <ChevronDownIcon className="w-3.5 h-3.5" strokeWidth={3} />
-      </button>
     </div>
   );
 }

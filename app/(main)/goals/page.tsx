@@ -1,6 +1,7 @@
 "use client";
 
 import GoalStatusMenu from "@/src/components/goals/GoalStatusMenu";
+import CompletedGoalTimeline from "@/src/components/goals/CompletedGoalTimeline";
 import StatusChangeConfirmationModal from "@/src/components/goals/StatusChangeConfirmationModal";
 import { useAuth } from "@/src/context/AuthContext";
 import { authedFetch } from "@/src/lib/api/authedFetch";
@@ -78,6 +79,9 @@ type GoalPost = {
   xp_distribution?: Record<AspectKey, number>;
   // Present on ongoing goals only.
   week_progress?: WeekProgress;
+  completion_picture_url?: string | null;
+  completion_date?: string | null;
+  updated_at?: string;
 };
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
@@ -1081,31 +1085,23 @@ export default function GoalsPage() {
                   <GoalsSectionSkeleton count={2} />
                 </>
               ) : (
-                <div className="space-y-4 animate-content-in">
-                  {completedGoals.map((goal) => (
-                    <GoalCard
-                      key={goal.id}
-                      goal={{
-                        id: goal.uid,
-                        emoji: goal.emoji || "🎯",
-                        title: goal.title,
-                        description: getGoalDescription(goal),
-                        status: "completed",
-                        xpReward: goal.total_xp,
-                        timeSummary: goal.duration_display
-                          ? goal.duration_display
-                          : undefined,
-                        aspectXP: goal.xp_distribution,
-                      }}
-                      showAchievementCta={{
-                        label: "View Achievement",
-                        onClick: () => router.push(`/goals/${goal.uid}`),
-                      }}
-                      onStatusChange={handleStatusChangeRequest}
-                      onEdit={handleOpenEditGoal}
-                      onDelete={handleDeleteGoalRequest}
-                    />
-                  ))}
+                <div className="animate-content-in mt-9">
+                  <CompletedGoalTimeline
+                    goals={completedGoals.map((goal) => ({
+                      uid: goal.uid,
+                      emoji: goal.emoji || "🎯",
+                      title: goal.title,
+                      description: getGoalDescription(goal),
+                      totalXp: goal.total_xp,
+                      timeSpent: goal.duration_display ?? undefined,
+                      picture: goal.completion_picture_url,
+                      completedAt: goal.completion_date ?? goal.updated_at,
+                    }))}
+                    onOpen={(uid) => router.push(`/goals/${uid}`)}
+                    onStatusChange={handleStatusChangeRequest}
+                    onEdit={handleOpenEditGoal}
+                    onDelete={handleDeleteGoalRequest}
+                  />
                 </div>
               )}
             </div>
@@ -1240,6 +1236,7 @@ export default function GoalsPage() {
           isOpen
           activityUid={pendingActivity.uid ?? pendingActivity.id}
           activityName={pendingActivity.name}
+          activityType={pendingActivity.type}
           onBack={handleBackToActivityPicker}
           onClose={() => setPendingActivity(null)}
           onStart={handleStartWithMode}

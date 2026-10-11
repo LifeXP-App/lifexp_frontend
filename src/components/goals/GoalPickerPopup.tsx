@@ -150,7 +150,7 @@ export default function GoalPickerPopup({
               >
                 <div
                   className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-xl"
-                  style={{ backgroundColor: `${accentColor}26` }}
+                  style={{ backgroundColor: `color-mix(in srgb, ${accentColor} 15%, transparent)` }}
                 >
                   {goal.emoji || "🎯"}
                 </div>
@@ -168,7 +168,9 @@ export default function GoalPickerPopup({
                   className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
                   style={{
                     backgroundColor:
-                      launchingId === goal.id ? `${accentColor}80` : accentColor,
+                      launchingId === goal.id
+                        ? `color-mix(in srgb, ${accentColor} 50%, transparent)`
+                        : accentColor,
                   }}
                 >
                   {launchingId === goal.id ? (

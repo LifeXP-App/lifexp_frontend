@@ -1,6 +1,9 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { XMarkIcon } from "@heroicons/react/24/outline";
+import { CameraIcon } from "@heroicons/react/24/solid";
+import { useMasteryPrimaryColor } from "@/src/lib/hooks/useMasteryAccent";
 
 interface CompleteGoalPopupProps {
   isOpen: boolean;
@@ -36,6 +39,7 @@ export default function CompleteGoalPopup({
   const [isPosting, setIsPosting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const primaryColor = useMasteryPrimaryColor();
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -53,51 +57,62 @@ export default function CompleteGoalPopup({
 
   if (!isOpen) return null;
 
+  const pickImage = (file: File | undefined) => {
+    if (!file) return;
+    setImagePreview(URL.createObjectURL(file));
+    setImageFile(file);
+  };
+
+  const fieldClass =
+    "w-full px-4 py-3 rounded-2xl bg-white dark:bg-dark-2 text-foreground dark:text-[var(--foreground)] placeholder-gray-400 outline-none border border-gray-200 dark:border-[var(--border)] focus:border-[var(--accent)] transition-colors";
+
   return (
     <div
-      className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4 animate-backdrop-in"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg bg-gray-100 dark:bg-dark-2 rounded-3xl shadow-2xl overflow-hidden border"
-        style={{ borderColor: "var(--border)" }}
+        className="w-full max-w-lg max-h-[92vh] flex flex-col bg-gray-100 dark:bg-dark-1 rounded-3xl shadow-2xl overflow-hidden border border-gray-200 dark:border-[var(--border)] animate-dialog-in"
+        style={{ "--accent": primaryColor } as React.CSSProperties}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div
-          className="flex items-center bg-white dark:bg-[var(--dark-1)] justify-between px-6 pt-4 pb-4 border-b"
+          className="flex items-center bg-white dark:bg-[var(--dark-2)] justify-between px-6 pt-5 pb-4 border-b"
           style={{ borderColor: "var(--border)" }}
         >
-          <h2 className="text-xl font-bold text-foreground dark:text-[var(--foreground)]">
-            New Achievement
-          </h2>
+          <div>
+            <h2 className="text-xl font-bold text-foreground dark:text-[var(--foreground)] leading-tight">
+              New Achievement
+            </h2>
+            <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>
+              Share what you accomplished with this goal
+            </p>
+          </div>
 
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 flex items-center justify-center rounded-full cursor-pointer active:opacity-70 transition-all"
+            className="w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-full bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 cursor-pointer transition-all"
             aria-label="Close"
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M18 6L6 18M6 6l12 12"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+            <XMarkIcon className="w-5 h-5" strokeWidth={2.5} />
           </button>
         </div>
 
         {/* Content */}
-        <div className="px-6 py-4 space-y-4">
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-3">
+            <StatBox label="Time spent" value={timeSpent} />
+            <StatBox label="XP gained" value={xpGained.toLocaleString()} />
+            <StatBox label="Sessions" value={sessionsCount.toString()} />
+          </div>
+
           {/* Achievement Image Picker */}
-          <div className="px-0">
+          <div>
             <div
-              onClick={() => {
-                fileInputRef.current?.click();
-              }}
+              onClick={() => fileInputRef.current?.click()}
               onDragOver={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -105,42 +120,35 @@ export default function CompleteGoalPopup({
               onDrop={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                const file = e.dataTransfer.files?.[0];
-                if (!file) return;
-                const url = URL.createObjectURL(file);
-                setImagePreview(url);
-                setImageFile(file);
+                pickImage(e.dataTransfer.files?.[0]);
               }}
-              style={{ borderColor: "var(--border)" }}
-              className="relative w-full h-[220px] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer overflow-hidden bg-white dark:bg-dark-3 transition-all hover:scale-[1.01] active:scale-[0.99]"
+              className="group relative w-full h-[160px] rounded-2xl border-2 border-dashed border-gray-300 dark:border-[var(--border)] hover:border-[var(--accent)] flex flex-col items-center justify-center cursor-pointer overflow-hidden bg-white dark:bg-dark-2 transition-colors"
             >
               {imagePreview ? (
                 <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={imagePreview} alt="preview" className="w-full h-full object-cover" />
 
                   <button
+                    type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       setImagePreview(null);
                       setImageFile(null);
                       if (fileInputRef.current) fileInputRef.current.value = "";
                     }}
+                    aria-label="Remove image"
                     className="absolute cursor-pointer top-3 right-3 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition"
                   >
-                    ✕
+                    <XMarkIcon className="w-4 h-4" strokeWidth={2.5} />
                   </button>
                 </>
               ) : (
                 <>
-                  <div className="text-5xl mb-3">📸</div>
-
-                  <p className="font-semibold text-lg mb-1 text-foreground dark:text-[var(--foreground)]">Upload an achievement image</p>
-
-                  <p className="text-sm mb-4 text-center px-6 text-gray-500 dark:text-[var(--muted)]">Drag & drop your image here or upload a snapshot.</p>
-
-                  <div className="px-4 py-2 rounded-xl text-sm font-medium bg-gray-200 dark:bg-dark-2 text-foreground dark:text-[var(--foreground)]">Browse Image</div>
-
-                  <p className="text-xs mt-3 text-gray-500 dark:text-[var(--muted)]">PNG or JPG</p>
+                  <CameraIcon className="w-7 h-7 mb-2 text-gray-400 dark:text-[var(--muted)]" />
+                  <p className="text-sm font-medium text-gray-500 dark:text-[var(--muted)]">
+                    Add an image
+                  </p>
                 </>
               )}
             </div>
@@ -150,13 +158,7 @@ export default function CompleteGoalPopup({
               type="file"
               accept="image/*"
               className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                const url = URL.createObjectURL(file);
-                setImagePreview(url);
-                setImageFile(file);
-              }}
+              onChange={(e) => pickImage(e.target.files?.[0])}
             />
           </div>
 
@@ -169,8 +171,7 @@ export default function CompleteGoalPopup({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Enter a title..."
-              className="w-full px-4 py-3 rounded-2xl bg-white dark:bg-dark-3 text-foreground dark:text-[var(--foreground)] placeholder-gray-400 outline-none border"
-              style={{ borderColor: "var(--border)" }}
+              className={fieldClass}
             />
           </div>
 
@@ -184,43 +185,8 @@ export default function CompleteGoalPopup({
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Write something about this achievement..."
               rows={4}
-              className="w-full px-4 py-3 rounded-2xl bg-white dark:bg-dark-3 text-foreground dark:text-[var(--foreground)] placeholder-gray-400 outline-none border resize-none"
-              style={{ borderColor: "var(--border)" }}
+              className={`${fieldClass} resize-none`}
             />
-          </div>
-
-          {/* Finish By */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold" style={{ color: "var(--muted)" }}>Finish by</p>
-              <p className="text-xs text-gray-500 dark:text-[var(--muted)]">optional</p>
-            </div>
-            <input
-              type="date"
-              value={finishBy || ""}
-              onChange={(e) => setFinishBy(e.target.value)}
-              className="w-full px-4 py-3 rounded-2xl bg-white dark:bg-dark-3 text-foreground dark:text-[var(--foreground)] placeholder-gray-400 outline-none border"
-              style={{ borderColor: "var(--border)" }}
-            />
-          </div>
-
-          {/* Stats */}
-          <div
-            className="relative grid grid-cols-3 gap-3 p-2 rounded-2xl border bg-white dark:bg-dark-3"
-            style={{ borderColor: "var(--border)" }}
-          >
-            <div
-              className="absolute top-3 bottom-3 left-1/3 w-px"
-              style={{ backgroundColor: "var(--border)" }}
-            />
-            <div
-              className="absolute top-3 bottom-3 left-2/3 w-px"
-              style={{ backgroundColor: "var(--border)" }}
-            />
-
-            <StatBox label="Time spent" value={timeSpent} />
-            <StatBox label="XP gained" value={xpGained.toString()} />
-            <StatBox label="Sessions" value={sessionsCount.toString()} />
           </div>
 
           {/* Inline error */}
@@ -235,7 +201,7 @@ export default function CompleteGoalPopup({
         </div>
 
         {/* Post Button */}
-        <div className="flex items-center bg-white dark:bg-[var(--dark-1)] justify-between px-5 pt-5 pb-4 border-t border-gray-200 dark:border-[var(--border)]">
+        <div className="flex items-center bg-white dark:bg-[var(--dark-2)] justify-between px-5 py-4 border-t border-gray-200 dark:border-[var(--border)]">
           <button
             type="button"
             disabled={isPosting}
@@ -256,7 +222,7 @@ export default function CompleteGoalPopup({
               }
             }}
             className="w-full py-3 rounded-2xl font-semibold text-white transition-all active:opacity-80 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
-            style={{ backgroundColor: "var(--rookie-primary)" }}
+            style={{ backgroundColor: primaryColor }}
           >
             {isPosting ? "Posting Achievement..." : "Post Achievement"}
           </button>
@@ -268,9 +234,11 @@ export default function CompleteGoalPopup({
 
 function StatBox({ label, value }: { label: string; value: string }) {
   return (
-    <div className="text-center">
-      <div className="text-lg font-bold text-foreground dark:text-[var(--foreground)]">{value}</div>
-      <div className="text-xs mt-1" style={{ color: "var(--muted)" }}>
+    <div className="flex flex-col items-center text-center gap-1 px-2 py-4 rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-dark-2">
+      <div className="text-lg font-bold leading-tight text-foreground dark:text-[var(--foreground)]">
+        {value}
+      </div>
+      <div className="text-xs" style={{ color: "var(--muted)" }}>
         {label}
       </div>
     </div>

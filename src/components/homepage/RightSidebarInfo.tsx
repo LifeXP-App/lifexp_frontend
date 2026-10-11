@@ -1,5 +1,6 @@
 "use client";
 
+import type { ActivityType } from "@/src/lib/types/activityMeta";
 import { FireIcon, InformationCircleIcon } from "@heroicons/react/24/solid";
 import { LiveAvatar } from "@/src/components/LiveAvatar";
 import { usePopup } from "@/src/context/PopupContext";
@@ -45,6 +46,7 @@ const PickTimerModePopup = dynamic(
 type PickedActivity = {
   id: string;
   uid?: string;
+  type?: ActivityType;
   xp_distribution?: Record<string, number>;
 };
 
@@ -351,6 +353,7 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
         <PickTimerModePopup
           isOpen
           activityUid={pendingActivity.uid ?? pendingActivity.id}
+          activityType={pendingActivity.type}
           onBack={handleBackToActivityPicker}
           onClose={() => setPendingActivity(null)}
           onStart={handleStartWithMode}

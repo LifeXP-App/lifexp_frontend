@@ -58,6 +58,9 @@ const NewActivityModal = dynamic(
 const PickTimerModePopup = dynamic(
   () => import("@/src/components/goals/PickTimerModePopup"),
 );
+const GoalPickerPopup = dynamic(
+  () => import("@/src/components/goals/GoalPickerPopup"),
+);
 const StrengthInfoPopup = dynamic(
   () => import("@/src/components/habits/StrengthInfoPopup"),
 );
@@ -276,6 +279,14 @@ export default function HabitsPage() {
 
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
   const [pendingActivity, setPendingActivity] = useState<Activity | null>(null);
+  // Playing a habit asks which goal to log the session under (or none), then
+  // goes on to the timer-mode popup. `pendingGoalRef` is the goal uid, or
+  // "none" for a free session.
+  const [goalPickHabit, setGoalPickHabit] = useState<Habit | null>(null);
+  const [pendingGoalRef, setPendingGoalRef] = useState("none");
+  const [timerBackTo, setTimerBackTo] = useState<"activity-picker" | "goal-picker">(
+    "activity-picker",
+  );
   const [isNewHabitModalOpen, setIsNewHabitModalOpen] = useState(false);
   const [addingToCategoryId, setAddingToCategoryId] = useState<number | null>(null);
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
@@ -888,20 +899,36 @@ export default function HabitsPage() {
 
   const handleSelectActivity = (activity: Activity) => {
     setIsActivityModalOpen(false);
+    setPendingGoalRef("none");
+    setTimerBackTo("activity-picker");
     setPendingActivity(activity);
   };
 
-  // Habit cards already know their activity — skip the picker and go
-  // straight to the timer-mode popup, same as selecting it there would.
+  // Habit cards already know their activity -- skip the activity picker and
+  // ask for a goal (or a free session) first.
   const handleStartHabitSession = (habit: Habit) => {
+    setGoalPickHabit(habit);
+  };
+
+  const continueToTimerMode = (habit: Habit, goalRef: string) => {
+    setPendingGoalRef(goalRef);
+    setTimerBackTo("goal-picker");
+    setGoalPickHabit(null);
     setPendingActivity({
       id: habit.activity_uid,
       uid: habit.activity_uid,
       name: habit.activity_name,
+      type: habit.activity_type,
     });
   };
 
   const handleBackToActivityPicker = () => {
+    if (timerBackTo === "goal-picker") {
+      const habit = allHabits.find((h) => h.activity_uid === pendingActivity?.uid);
+      setPendingActivity(null);
+      if (habit) setGoalPickHabit(habit);
+      return;
+    }
     setPendingActivity(null);
     setIsActivityModalOpen(true);
   };
@@ -915,7 +942,7 @@ export default function HabitsPage() {
     const ratesParam = buildRatesParam(activity);
     const modeParam = `&clockType=${clockType}${clockType === "timer" ? `&duration=${durationSeconds}` : ""}`;
 
-    router.push(`/goals/none/session/new?activity=${activityRef}${ratesParam}${modeParam}`);
+    router.push(`/goals/${pendingGoalRef}/session/new?activity=${activityRef}${ratesParam}${modeParam}`);
   };
 
   return (
@@ -1155,6 +1182,17 @@ export default function HabitsPage() {
         onSelectActivity={handleSelectActivity}
       />
 
+      {goalPickHabit && (
+        <GoalPickerPopup
+          isOpen
+          onClose={() => setGoalPickHabit(null)}
+          activityName={goalPickHabit.activity_name}
+          accentColor={ACTIVITY_META[goalPickHabit.activity_type].cssColorVar}
+          onSelectGoal={(goal) => continueToTimerMode(goalPickHabit, goal.uid)}
+          onStartFree={() => continueToTimerMode(goalPickHabit, "none")}
+        />
+      )}
+
       {/* Pick Timer Mode Popup — conditionally mounted so its internal
           Timer/Stopwatch selection always starts fresh on each open */}
       {pendingActivity && (
@@ -1162,6 +1200,7 @@ export default function HabitsPage() {
           isOpen
           activityUid={pendingActivity.uid ?? pendingActivity.id}
           activityName={pendingActivity.name}
+          activityType={pendingActivity.type}
           onBack={handleBackToActivityPicker}
           onClose={() => setPendingActivity(null)}
           onStart={handleStartWithMode}
@@ -1505,8 +1544,8 @@ function HabitCard({
             onStart();
           }}
           aria-label={variant === "unplanned" ? "Add to today" : "Start session"}
-          style={{ backgroundColor: aspectColor }}
-          className="h-10 w-10 flex items-center justify-center cursor-pointer rounded-xl text-white hover:opacity-90 transition"
+          // Play and + are both muted grays, like secondary actions.
+          className="h-10 w-10 flex items-center justify-center cursor-pointer rounded-xl transition bg-gray-500/15 text-gray-500 dark:text-gray-400 hover:bg-gray-500/25"
         >
           {variant === "unplanned" ? <PlusIcon className="w-5 h-5" /> : <PlayIcon className="w-5 h-5" />}
         </button>
@@ -1538,14 +1577,17 @@ function DayProgressRow({ habit }: { habit: Habit }) {
             title={label}
             className={
               isDone && !isFuture
-                ? "flex h-6 w-6 items-center justify-center rounded-md border text-[11px] font-semibold text-white"
+                ? "flex h-6 w-6 items-center justify-center rounded-md border border-transparent text-[11px] font-semibold"
                 : isFuture
                   ? "flex h-6 w-6 items-center justify-center rounded-md border border-gray-200 dark:border-[var(--border)] text-[11px] font-semibold text-gray-400 dark:text-[var(--muted)]"
                   : "flex h-6 w-6 items-center justify-center rounded-md border border-gray-200 dark:border-[var(--border)] text-[11px] font-semibold text-gray-300 dark:text-[var(--muted)] opacity-50"
             }
             style={
               isDone && !isFuture
-                ? { backgroundColor: meta.cssColorVar, borderColor: meta.cssColorVar }
+                ? {
+                    backgroundColor: `color-mix(in srgb, ${meta.cssColorVar} 20%, transparent)`,
+                    color: meta.cssColorVar,
+                  }
                 : undefined
             }
           >
@@ -1845,9 +1887,9 @@ function CompactHabitRow({
           href={`/habits/${habit.activity_uid}`}
           aria-label={`View ${habit.display_name}`}
           style={{ backgroundColor: color }}
-          className="shrink-0 self-center h-6 w-6 flex items-center justify-center cursor-pointer rounded-md text-white hover:opacity-90 transition"
+          className="shrink-0 self-center h-8 w-8 flex items-center justify-center cursor-pointer rounded-lg text-white hover:opacity-90 transition"
         >
-          <ChevronRightIcon className="w-3.5 h-3.5" strokeWidth={3.5} />
+          <ChevronRightIcon className="w-4 h-4" strokeWidth={3.5} />
         </Link>
       )}
       {action === "add" && (
@@ -1855,8 +1897,7 @@ function CompactHabitRow({
           type="button"
           onClick={onAdd}
           aria-label={`Add ${habit.display_name} to today`}
-          style={{ backgroundColor: color }}
-          className="shrink-0 self-center h-6 w-6 flex items-center justify-center cursor-pointer rounded-md text-white hover:opacity-90 transition"
+          className="shrink-0 self-center h-6 w-6 flex items-center justify-center cursor-pointer rounded-md transition bg-gray-500/15 text-gray-500 dark:text-gray-400 hover:bg-gray-500/25"
         >
           <PlusOutlineIcon className="w-3.5 h-3.5" strokeWidth={3.5} />
         </button>
@@ -1929,10 +1970,11 @@ function FrozenHabitsCard({
                       type="button"
                       onClick={() => onUnfreeze(habit)}
                       disabled={freezingHabitId === habit.id}
-                      className="shrink-0 self-center flex items-center gap-1 rounded-lg bg-cyan-500/20 px-2.5 py-1.5 text-xs font-semibold text-cyan-600 dark:text-cyan-400 hover:bg-cyan-500/30 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      aria-label={`Unfreeze ${habit.display_name}`}
+                      title="Unfreeze"
+                      className="shrink-0 self-center h-8 w-8 flex items-center justify-center rounded-lg bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-500/30 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <Droplet className="w-3.5 h-3.5" />
-                      {freezingHabitId === habit.id ? "..." : "Unfreeze"}
+                      <Droplet className="w-4 h-4" />
                     </button>
                   }
                 />

@@ -3,6 +3,7 @@
    =========================== */
 import { useState } from "react";
 import { CalendarDaysIcon } from "@heroicons/react/24/outline";
+import { useMasteryPrimaryColor } from "@/src/lib/hooks/useMasteryAccent";
 
 
 interface NewGoalModalProps {
@@ -32,6 +33,7 @@ export default function NewGoalModal({
   onSubmit,
   initialGoal, 
 }: NewGoalModalProps) {
+  const primaryColor = useMasteryPrimaryColor();
   const [title, setTitle] = useState(initialGoal?.title ?? "");
   const [description, setDescription] = useState(initialGoal?.description ?? "");
 
@@ -243,7 +245,7 @@ export default function NewGoalModal({
                     : "bg-gray-300 dark:bg-[var(--dark-3)] opacity-50 cursor-not-allowed"
                 }
               `}
-              style={{background:"var(--rookie-primary)"}}
+              style={{ background: primaryColor }}
             >
               {}{isEdit ? "Save Changes" : "Create Goal"}
             </button>

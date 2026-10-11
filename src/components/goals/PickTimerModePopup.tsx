@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ClockIcon, PlayCircleIcon } from "@heroicons/react/24/outline";
+import { ACTIVITY_META, type ActivityType } from "@/src/lib/types/activityMeta";
 
 export type ClockType = "timer" | "stopwatch";
 
@@ -78,6 +79,8 @@ export interface PickTimerModePopupProps {
   isOpen: boolean;
   activityUid?: string;
   activityName?: string;
+  // Colors the popup with this aspect; falls back to the default rookie blue.
+  activityType?: ActivityType;
   onBack: () => void;
   onClose: () => void;
   onStart: (clockType: ClockType, durationSeconds: number) => void;
@@ -87,6 +90,7 @@ export default function PickTimerModePopup({
   isOpen,
   activityUid,
   activityName,
+  activityType,
   onBack,
   onClose,
   onStart,
@@ -101,6 +105,10 @@ export default function PickTimerModePopup({
   const [digits, setDigits] = useState(remembered?.digits ?? DEFAULT_DIGITS);
 
   if (!isOpen) return null;
+
+  const meta = activityType ? ACTIVITY_META[activityType] : undefined;
+  const color = meta?.cssColorVar ?? "var(--rookie-primary)";
+  const colorRgb = meta?.cssColorVarRgb ?? "var(--rookie-primary-rgb)";
 
   const totalSeconds = digitsToSeconds(digits);
   const isDurationValid = totalSeconds > 0 && totalSeconds <= MAX_FOCUS_SECONDS;
@@ -164,18 +172,18 @@ export default function PickTimerModePopup({
             }`}
             style={{
               backgroundColor:
-                clockType === "timer" ? "rgba(var(--rookie-primary-rgb), 0.15)" : undefined,
+                clockType === "timer" ? `rgba(${colorRgb}, 0.15)` : undefined,
               borderColor:
-                clockType === "timer" ? "rgba(var(--rookie-primary-rgb), 0.4)" : "var(--border)",
+                clockType === "timer" ? `rgba(${colorRgb}, 0.4)` : "var(--border)",
             }}
           >
             <ClockIcon
               className={`w-10 h-10 ${clockType === "timer" ? "" : "text-gray-400 dark:text-[var(--muted)]"}`}
-              style={clockType === "timer" ? { color: "var(--rookie-primary)" } : undefined}
+              style={clockType === "timer" ? { color } : undefined}
             />
             <span
               className={`font-bold text-sm ${clockType === "timer" ? "" : "text-gray-500 dark:text-[var(--muted)]"}`}
-              style={clockType === "timer" ? { color: "var(--rookie-primary)" } : undefined}
+              style={clockType === "timer" ? { color } : undefined}
             >
               Timer
             </span>
@@ -194,7 +202,7 @@ export default function PickTimerModePopup({
               }`}
               style={
                 clockType === "timer"
-                  ? { borderColor: "rgba(var(--rookie-primary-rgb), 0.4)", color: "var(--rookie-primary)" }
+                  ? { borderColor: `rgba(${colorRgb}, 0.4)`, color }
                   : { borderColor: "var(--border)" }
               }
             />
@@ -209,18 +217,18 @@ export default function PickTimerModePopup({
             }`}
             style={{
               backgroundColor:
-                clockType === "stopwatch" ? "rgba(var(--rookie-primary-rgb), 0.15)" : undefined,
+                clockType === "stopwatch" ? `rgba(${colorRgb}, 0.15)` : undefined,
               borderColor:
-                clockType === "stopwatch" ? "rgba(var(--rookie-primary-rgb), 0.4)" : "var(--border)",
+                clockType === "stopwatch" ? `rgba(${colorRgb}, 0.4)` : "var(--border)",
             }}
           >
             <PlayCircleIcon
               className={`w-10 h-10 ${clockType === "stopwatch" ? "" : "text-gray-400 dark:text-[var(--muted)]"}`}
-              style={clockType === "stopwatch" ? { color: "var(--rookie-primary)" } : undefined}
+              style={clockType === "stopwatch" ? { color } : undefined}
             />
             <span
               className={`font-bold text-sm ${clockType === "stopwatch" ? "" : "text-gray-500 dark:text-[var(--muted)]"}`}
-              style={clockType === "stopwatch" ? { color: "var(--rookie-primary)" } : undefined}
+              style={clockType === "stopwatch" ? { color } : undefined}
             >
               Stopwatch
             </span>
@@ -228,7 +236,7 @@ export default function PickTimerModePopup({
                 clockType === "stopwatch" ? "" : "cursor-default text-gray-400 dark:text-[var(--muted)]"
               }`} style={
                 clockType === "stopwatch"
-                  ? { borderColor: "rgba(var(--rookie-primary-rgb), 0.4)", color: "var(--rookie-primary)" }
+                  ? { borderColor: `rgba(${colorRgb}, 0.4)`, color }
                   : { borderColor: "var(--border)" }
               }>
                 ∞
@@ -254,7 +262,7 @@ export default function PickTimerModePopup({
             onClick={handleStart}
             disabled={clockType === "timer" && !isDurationValid}
             className="py-3 px-4 rounded-xl font-medium active:opacity-80 text-white transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-            style={{ backgroundColor: "var(--rookie-primary)" }}
+            style={{ backgroundColor: color }}
           >
             Start Activity
           </button>

@@ -1,3 +1,4 @@
+import { useMasteryPrimaryColor } from "@/src/lib/hooks/useMasteryAccent";
 import ActivitySelectButton, {
   ActivityGridCard,
   AiSuggestionButton,
@@ -161,6 +162,7 @@ export default function NewActivityModal({
   candidatesMode = false,
 }: NewActivityModalProps) {
   const router = useRouter();
+  const primaryColor = useMasteryPrimaryColor();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [isMaximized, setIsMaximized] = useState(false);
@@ -607,7 +609,7 @@ export default function NewActivityModal({
                       ? "text-white"
                       : "bg-gray-200 dark:bg-[var(--dark-2)] text-gray-700 dark:text-[var(--muted)] hover:bg-gray-300 dark:hover:bg-[var(--dark-3)]"
                   }`}
-                  style={activeType === "all" ? { backgroundColor: "var(--rookie-primary)" } : undefined}
+                  style={activeType === "all" ? { backgroundColor: primaryColor } : undefined}
                 >
                   All
                 </button>
@@ -624,7 +626,7 @@ export default function NewActivityModal({
                           ? "text-white"
                           : "bg-gray-200 dark:bg-[var(--dark-2)] text-gray-700 dark:text-[var(--muted)] hover:bg-gray-300 dark:hover:bg-[var(--dark-3)]"
                       }`}
-                      style={isActive ? { backgroundColor: "var(--rookie-primary)" } : undefined}
+                      style={isActive ? { backgroundColor: primaryColor } : undefined}
                     >
                       {meta.label}
                     </button>
@@ -783,7 +785,7 @@ export default function NewActivityModal({
               onClick={() => selectedActivity && onSelectActivity(selectedActivity)}
               disabled={!selectedActivity}
               className="flex items-center justify-center gap-1.5 py-3 px-4 rounded-xl font-medium active:opacity-80 text-white transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-              style={{ backgroundColor: "var(--rookie-primary)" }}
+              style={{ backgroundColor: primaryColor }}
             >
               {candidatesMode && <LinkIcon className="w-4 h-4" />}
               {candidatesMode ? "Track Habit" : "Start Activity"}
