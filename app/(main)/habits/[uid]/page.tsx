@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/src/context/AuthContext";
 import { useToast, useConfirm } from "@/src/context/ToastContext";
-import { playCrack, playHiss } from "@/src/lib/utils/freezeSounds";
+import { playCrack, playHiss } from "@/src/lib/utils/habitSounds";
 import { authedFetch } from "@/src/lib/api/authedFetch";
 import { GoalsRightSidebar } from "@/src/components/goals/GoalsRightSidebar";
 import { ACTIVITY_META, ActivityType } from "@/src/lib/types/activityMeta";

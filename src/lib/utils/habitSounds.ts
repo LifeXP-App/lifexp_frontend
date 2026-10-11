@@ -99,3 +99,31 @@ export function playCrack() {
     // Audio is a nicety; never let it break the freeze interaction.
   }
 }
+
+// Small mechanical "tick" for stepping the Today time by an hour: a very
+// short, bright noise click.
+export function playTick() {
+  try {
+    const ctx = getContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const length = Math.floor(ctx.sampleRate * 0.012);
+    const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < length; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp((-7 * i) / length);
+    }
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    const bandpass = ctx.createBiquadFilter();
+    bandpass.type = "bandpass";
+    bandpass.frequency.value = 3200;
+    bandpass.Q.value = 1.5;
+    const gain = ctx.createGain();
+    gain.gain.value = 0.35;
+    source.connect(bandpass).connect(gain).connect(ctx.destination);
+    source.start(now);
+  } catch {
+    // Audio is a nicety; never let it break the time control.
+  }
+}

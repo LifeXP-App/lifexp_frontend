@@ -3,7 +3,14 @@
 import { useMasteryAccent } from "@/src/lib/hooks/useMasteryAccent";
 import { useAuth } from "@/src/context/AuthContext";
 import { useToast, useConfirm } from "@/src/context/ToastContext";
-import { playCrack, playHiss } from "@/src/lib/utils/freezeSounds";
+import { playCrack, playHiss } from "@/src/lib/utils/habitSounds";
+import TodayTimeControl from "@/src/components/habits/TodayTimeControl";
+import {
+  DEFAULT_TODAY_TIME,
+  defaultTimeForIndex,
+  timeToMinutes,
+  to12Hour,
+} from "@/src/lib/utils/habitTime";
 import { authedFetch } from "@/src/lib/api/authedFetch";
 import { setGoalsNavPreference } from "@/src/lib/hooks/useGoalsNavPreference";
 import {
@@ -11,21 +18,25 @@ import {
   ArrowPathRoundedSquareIcon,
   PlusIcon,
   PencilSquareIcon,
-  CalendarDaysIcon,
   PlayIcon,
+  CheckIcon,
   BeakerIcon,
   FolderPlusIcon,
   TrashIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/solid";
-import { ChevronRightIcon } from "@heroicons/react/24/outline";
+import {
+  ChevronDownIcon,
+  ChevronRightIcon,
+  PlusIcon as PlusOutlineIcon,
+} from "@heroicons/react/24/outline";
 import { Droplet, Leaf } from "lucide-react";
 import { FaSnowflake } from "react-icons/fa";
 import { ACTIVITY_META, ActivityType } from "@/src/lib/types/activityMeta";
 import type { ClockType } from "@/src/components/goals/PickTimerModePopup";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -37,9 +48,9 @@ import {
   useDroppable,
   useDraggable,
   type DragEndEvent,
+  type DragMoveEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { CSS } from "@dnd-kit/utilities";
 
 const NewActivityModal = dynamic(
   () => import("@/src/components/goals/NewActivityModel"),
@@ -90,6 +101,8 @@ type Habit = {
   activity_emoji: string;
   category_id: number | null;
   category_name: string | null;
+  today: boolean;
+  today_time: string | null;
   custom_name: string | null;
   display_name: string;
   is_active: boolean;
@@ -166,9 +179,12 @@ const STRENGTH_TIER_BARS: Record<StrengthTier, number> = {
 // -- including the default "Entertainment" category.
 const MAX_HABIT_CATEGORIES = 3;
 
-// Drop container ids. "main" = uncategorized list, "frozen" = the Frozen
-// Habits card, "category-<id>" = a specific HabitCategoryCard.
-const MAIN_CONTAINER_ID = "main";
+// Drop container ids. "today"/"unplanned" = the main-area sections (Done is
+// deliberately not a container: nothing is dropped into or dragged out of
+// it), "frozen" = the Frozen Habits card, "category-<id>" = a specific
+// HabitCategoryCard.
+const TODAY_CONTAINER_ID = "today";
+const UNPLANNED_CONTAINER_ID = "unplanned";
 const FROZEN_CONTAINER_ID = "frozen";
 const categoryContainerId = (categoryId: number) => `category-${categoryId}`;
 
@@ -231,11 +247,21 @@ function strengthTooltip(habit: Habit): string {
   return status ? `${label} — ${status.text}` : label;
 }
 
-function containerIdForHabit(habit: Habit): string {
-  if (habit.is_frozen) return FROZEN_CONTAINER_ID;
-  if (habit.category_id) return categoryContainerId(habit.category_id);
-  return MAIN_CONTAINER_ID;
+// A session was completed on this habit today (player-local day).
+function isDoneToday(habit: Habit): boolean {
+  const { today = -1, progress = [] } = habit.week_progress ?? {};
+  return today >= 0 && !!progress[today];
 }
+
+type HabitChanges = {
+  category_id?: number | null;
+  today?: boolean;
+  today_time?: string;
+  frozen?: boolean;
+};
+type TodayDropPreview = { index: number; height: number; time: string };
+const SORT_SETTLE_MS = 1000;
+type SectionKey = "today" | "done" | "unplanned";
 
 export default function HabitsPage() {
   const router = useRouter();
@@ -258,7 +284,20 @@ export default function HabitsPage() {
   const [freezingHabitId, setFreezingHabitId] = useState<number | null>(null);
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
   const [draggingHabit, setDraggingHabit] = useState<Habit | null>(null);
+  // Live "you'd drop it here" gap inside the Today list while dragging over it.
+  const [todayDropPreview, setTodayDropPreview] = useState<TodayDropPreview | null>(null);
+  const todayDropPreviewRef = useRef<TodayDropPreview | null>(null);
+  // While a habit's time is being stepped (arrows/scroll), the Today list
+  // keeps sorting by its time from before the stepping started, and only
+  // re-sorts SORT_SETTLE_MS after the last step.
+  const [sortHoldTimes, setSortHoldTimes] = useState<Record<number, string>>({});
+  const sortHoldTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
   const [strengthInfoHabit, setStrengthInfoHabit] = useState<Habit | null>(null);
+  const [collapsedSections, setCollapsedSections] = useState<Record<SectionKey, boolean>>({
+    today: false,
+    done: false,
+    unplanned: false,
+  });
   // habit id -> was it frozen *before* the latest freeze toggle; present
   // only for FREEZE_FADE_MS so the re-mounted card can fade its background.
   const [fadeFrom, setFadeFrom] = useState<Record<number, boolean>>({});
@@ -328,17 +367,73 @@ export default function HabitsPage() {
 
   // Soonest next_predicted_occurrence first; habits with no prediction yet
   // (not enough history -- see main.habits.MIN_WEEKS_FOR_PREDICTION) sort
-  // to the end rather than being treated as "furthest away". Main list is
-  // uncategorized + unfrozen only -- a frozen or categorized habit lives in
-  // its own card in the sidebar instead (see containerIdForHabit).
-  const sortedHabits = [...habits]
-    .filter((h) => !h.is_frozen && !h.category_id)
-    .sort((a, b) => {
-      if (!a.next_predicted_occurrence && !b.next_predicted_occurrence) return 0;
-      if (!a.next_predicted_occurrence) return 1;
-      if (!b.next_predicted_occurrence) return -1;
-      return a.next_predicted_occurrence.localeCompare(b.next_predicted_occurrence);
-    });
+  // to the end rather than being treated as "furthest away".
+  const byNextOccurrence = (a: Habit, b: Habit) => {
+    if (!a.next_predicted_occurrence && !b.next_predicted_occurrence) return 0;
+    if (!a.next_predicted_occurrence) return 1;
+    if (!b.next_predicted_occurrence) return -1;
+    return a.next_predicted_occurrence.localeCompare(b.next_predicted_occurrence);
+  };
+
+  // Main-area sections. Frozen habits only ever live in the Frozen card.
+  // - Today: scheduled for today and not done yet (categorized ones too, a
+  //   habit's category copy stays in its category card).
+  // - Done: uncategorized habits done today. A categorized habit that's done
+  //   is shown dimmed inside its own category instead.
+  // - Unplanned: uncategorized, not scheduled, not done.
+  // So a habit only ever appears twice when it's categorized AND scheduled.
+  const activeHabits = allHabits.filter((h) => !h.is_frozen);
+  // The Today list is ordered by its scheduled time, always.
+  const todayHabits = activeHabits
+    .filter((h) => h.today && !isDoneToday(h))
+    .sort(
+      (a, b) =>
+        timeToMinutes(sortHoldTimes[a.id] ?? a.today_time) -
+          timeToMinutes(sortHoldTimes[b.id] ?? b.today_time) || a.id - b.id,
+    );
+  const doneHabits = activeHabits
+    .filter((h) => !h.category_id && isDoneToday(h))
+    .sort(byNextOccurrence);
+  const unplannedHabits = activeHabits
+    .filter((h) => !h.category_id && !h.today && !isDoneToday(h))
+    .sort(byNextOccurrence);
+
+  // Animate Today cards sliding to their new slot when the order changes
+  // (FLIP: remember each card's top, then after the re-order start it at the
+  // old spot and transition to the new one). Skipped around drags, where the
+  // layout shifts for the drop gap instead.
+  const todayOrderKey = todayHabits.map((h) => h.id).join(",");
+  const todayTops = useRef<Map<string, number>>(new Map());
+  const lastTodayOrderKey = useRef("");
+  const wasDragging = useRef(false);
+  useLayoutEffect(() => {
+    const els = Array.from(document.querySelectorAll<HTMLElement>("[data-today-item]"));
+    const tops = new Map<string, number>();
+    for (const el of els) {
+      const parentTop = el.parentElement?.getBoundingClientRect().top ?? 0;
+      tops.set(el.dataset.todayItem!, el.getBoundingClientRect().top - parentTop);
+    }
+    const dragging = !!draggingHabit || !!todayDropPreview;
+    if (todayOrderKey !== lastTodayOrderKey.current && !dragging && !wasDragging.current) {
+      for (const el of els) {
+        const id = el.dataset.todayItem!;
+        const before = todayTops.current.get(id);
+        const after = tops.get(id)!;
+        if (before === undefined || Math.abs(before - after) < 1) continue;
+        el.style.transition = "none";
+        el.style.transform = `translateY(${before - after}px)`;
+        el.getBoundingClientRect(); // commit the starting position
+        el.style.transition = "transform 350ms ease";
+        el.style.transform = "";
+      }
+    }
+    todayTops.current = tops;
+    lastTodayOrderKey.current = todayOrderKey;
+    wasDragging.current = dragging;
+  });
+
+  const toggleSection = (key: SectionKey) =>
+    setCollapsedSections((prev) => ({ ...prev, [key]: !prev[key] }));
 
   const handleOpenEmptySessionModal = () => {
     setIsActivityModalOpen(true);
@@ -531,84 +626,122 @@ export default function HabitsPage() {
     if (habit) setDraggingHabit(habit);
   };
 
+  const updateTodayDropPreview = (next: TodayDropPreview | null) => {
+    todayDropPreviewRef.current = next;
+    setTodayDropPreview((prev) =>
+      prev === next ||
+      (prev && next && prev.index === next.index && prev.height === next.height && prev.time === next.time)
+        ? prev
+        : next,
+    );
+  };
+
+  // Where in the Today list the dragged card currently sits, by comparing
+  // its center with the centers of the other Today cards. The placeholder is
+  // not a card, so it can't feed back into this (no jitter at the gap).
+  const handleDragMove = (event: DragMoveEvent) => {
+    const dragged = event.active.data.current?.habit as Habit | undefined;
+    if (!dragged || String(event.over?.id) !== TODAY_CONTAINER_ID) {
+      if (todayDropPreviewRef.current) updateTodayDropPreview(null);
+      return;
+    }
+    const habit = allHabits.find((h) => h.id === dragged.id) ?? dragged;
+    if (isDoneToday(habit)) {
+      if (todayDropPreviewRef.current) updateTodayDropPreview(null);
+      return;
+    }
+
+    const others = todayHabits.filter((h) => h.id !== habit.id);
+    const items = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-today-item]"),
+    ).filter((el) => el.dataset.todayItem !== String(habit.id));
+    const draggedRect = event.active.rect.current.translated;
+    let index = others.length; // collapsed list / no position info: bottom
+    if (items.length === others.length && items.length > 0 && draggedRect) {
+      const centerY = draggedRect.top + draggedRect.height / 2;
+      index = items.filter((el) => {
+        const r = el.getBoundingClientRect();
+        return r.top + r.height / 2 < centerY;
+      }).length;
+    }
+    updateTodayDropPreview({
+      index,
+      height: items[0]?.offsetHeight || 104,
+      time: defaultTimeForIndex(
+        others.map((h) => h.today_time ?? DEFAULT_TODAY_TIME),
+        index,
+      ),
+    });
+  };
+
   const handleDragCancel = () => {
+    updateTodayDropPreview(null);
     setDraggingHabit(null);
   };
 
-  // Applies the new category/frozen state to both query caches immediately
-  // (so the dragged card visually lands in its new container with no
-  // flicker), then fires whichever backend requests the move actually
-  // requires, and rolls back if either fails.
-  const handleDragEnd = async (event: DragEndEvent) => {
-    setDraggingHabit(null);
-    const { active, over } = event;
-    if (!over) return;
-
-    const draggedHabit = active.data.current?.habit as Habit | undefined;
-    if (!draggedHabit) return;
-    // Re-read from the live cache rather than trusting the habit captured
-    // at drag-start -- it can be stale if another update landed mid-drag,
-    // which would otherwise skip a PATCH that's actually still needed.
-    const habit = allHabits.find((h) => h.id === draggedHabit.id) ?? draggedHabit;
-
-    const targetContainerId = String(over.id);
-    const sourceContainerId = containerIdForHabit(habit);
-    if (targetContainerId === sourceContainerId) return;
-
-    // Dropping on Frozen only toggles is_frozen -- category is untouched
-    // (frozen is a cross-cutting flag, not a container the habit "lives
-    // in"). Dropping on main/a category always unfreezes, since the only
-    // way out of Frozen is dragging to one of those.
-    const nextIsFrozen = targetContainerId === FROZEN_CONTAINER_ID;
-    const nextCategoryId = nextIsFrozen
-      ? habit.category_id
-      : targetContainerId.startsWith("category-")
-        ? Number(targetContainerId.slice("category-".length))
-        : null;
+  // Applies a habit's category/today/frozen change to both query caches
+  // immediately (so the card visually lands in its new place with no
+  // flicker), then fires whichever backend requests the change actually
+  // requires, and rolls back if any fails.
+  const applyHabitUpdate = async (habit: Habit, changes: HabitChanges) => {
+    const nextCategoryId =
+      changes.category_id !== undefined ? changes.category_id : habit.category_id;
+    const nextToday = changes.today ?? habit.today;
+    const nextFrozen = changes.frozen ?? habit.is_frozen;
+    const nextTime = nextToday
+      ? (changes.today_time ?? habit.today_time ?? DEFAULT_TODAY_TIME)
+      : null;
+    const categoryChanged = nextCategoryId !== habit.category_id;
+    const todayChanged = nextToday !== habit.today;
+    const timeChanged = nextTime !== habit.today_time;
+    const frozenChanged = nextFrozen !== habit.is_frozen;
+    if (!categoryChanged && !todayChanged && !timeChanged && !frozenChanged) return;
 
     const prevHabits = habits;
     const prevCategories = categories;
-    if (nextIsFrozen !== habit.is_frozen) markFreezeFade(habit.id, habit.is_frozen);
+    if (frozenChanged) markFreezeFade(habit.id, habit.is_frozen);
 
-    const applyHabitChange = (h: Habit): Habit => ({
-      ...h,
+    const updated: Habit = {
+      ...habit,
       category_id: nextCategoryId,
-      category_name:
-        categories.find((c) => c.id === nextCategoryId)?.name ?? null,
-      is_frozen: nextIsFrozen,
-    });
+      category_name: categories.find((c) => c.id === nextCategoryId)?.name ?? null,
+      today: nextToday,
+      today_time: nextTime,
+      is_frozen: nextFrozen,
+    };
 
-    // Optimistic update: patch the flat habits list, and rebuild each
-    // category's nested `habits` array so the card the habit left/joined
-    // both update without a refetch round-trip.
-    queryClient.setQueryData<Habit[]>(["habits"], (prev = []) =>
-      prev.map((h) => (h.id === habit.id ? applyHabitChange(h) : h)),
-    );
+    // /api/habits only holds uncategorized habits and each category holds
+    // its own, so re-home the habit in whichever list it now belongs to.
+    queryClient.setQueryData<Habit[]>(["habits"], (prev = []) => {
+      const rest = prev.filter((h) => h.id !== habit.id);
+      return nextCategoryId ? rest : [...rest, updated];
+    });
     queryClient.setQueryData<HabitCategory[]>(["habits", "categories"], (prev = []) =>
       prev.map((c) => ({
         ...c,
         habits:
           c.id === nextCategoryId
-            ? [...c.habits.filter((h) => h.id !== habit.id), applyHabitChange(habit)]
+            ? [...c.habits.filter((h) => h.id !== habit.id), updated]
             : c.habits.filter((h) => h.id !== habit.id),
       })),
     );
 
     try {
-      const categoryChanged = nextCategoryId !== habit.category_id;
-      const frozenChanged = nextIsFrozen !== habit.is_frozen;
-
-      if (categoryChanged) {
+      if (categoryChanged || todayChanged || timeChanged) {
         const res = await authedFetch(`/api/habits/${habit.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ category_id: nextCategoryId }),
+          body: JSON.stringify({
+            ...(categoryChanged && { category_id: nextCategoryId }),
+            ...(todayChanged && { today: nextToday }),
+            ...(nextToday && (todayChanged || timeChanged) && { today_time: nextTime }),
+          }),
         });
         if (!res.ok) throw new Error("Failed to move habit");
       }
       if (frozenChanged) {
         const res = await authedFetch(`/api/habits/${habit.id}/freeze`, {
-          method: nextIsFrozen ? "POST" : "DELETE",
+          method: nextFrozen ? "POST" : "DELETE",
         });
         if (!res.ok) throw new Error("Failed to update freeze state");
       }
@@ -620,8 +753,121 @@ export default function HabitsPage() {
     } catch {
       queryClient.setQueryData(["habits"], prevHabits);
       queryClient.setQueryData(["habits", "categories"], prevCategories);
-      toast.error("Failed to move habit. Please try again.");
+      toast.error("Failed to update habit. Please try again.");
     }
+  };
+
+  // The + buttons have no drop position, so they use the default 12:00 PM.
+  const handleAddToToday = (habit: Habit) =>
+    applyHabitUpdate(habit, { today: true, today_time: DEFAULT_TODAY_TIME });
+
+  // Time edits (arrows, scroll wheel, typing) update the cache on every step
+  // so the list re-sorts instantly, but only the final value is sent.
+  const timeSaveTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
+  const releaseSortHold = (habitId: number) => {
+    clearTimeout(sortHoldTimers.current[habitId]);
+    setSortHoldTimes((prev) => {
+      if (prev[habitId] === undefined) return prev;
+      const next = { ...prev };
+      delete next[habitId];
+      return next;
+    });
+  };
+
+  const handleTodayTimeChange = (
+    habit: Habit,
+    time: string,
+    opts?: { immediate?: boolean },
+  ) => {
+    if (opts?.immediate) {
+      releaseSortHold(habit.id);
+    } else {
+      setSortHoldTimes((prev) =>
+        prev[habit.id] !== undefined
+          ? prev
+          : { ...prev, [habit.id]: habit.today_time ?? DEFAULT_TODAY_TIME },
+      );
+      clearTimeout(sortHoldTimers.current[habit.id]);
+      sortHoldTimers.current[habit.id] = setTimeout(
+        () => releaseSortHold(habit.id),
+        SORT_SETTLE_MS,
+      );
+    }
+    const patch = (h: Habit): Habit => (h.id === habit.id ? { ...h, today_time: time } : h);
+    queryClient.setQueryData<Habit[]>(["habits"], (prev = []) => prev.map(patch));
+    queryClient.setQueryData<HabitCategory[]>(["habits", "categories"], (prev = []) =>
+      prev.map((c) => ({ ...c, habits: c.habits.map(patch) })),
+    );
+    clearTimeout(timeSaveTimers.current[habit.id]);
+    timeSaveTimers.current[habit.id] = setTimeout(async () => {
+      try {
+        const res = await authedFetch(`/api/habits/${habit.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ today_time: time }),
+        });
+        if (!res.ok) throw new Error("Failed to save time");
+      } catch {
+        queryClient.invalidateQueries({ queryKey: ["habits"] });
+        queryClient.invalidateQueries({ queryKey: ["habits", "categories"] });
+        toast.error("Failed to save the time. Please try again.");
+      }
+    }, 500);
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const preview = todayDropPreviewRef.current;
+    updateTodayDropPreview(null);
+    setDraggingHabit(null);
+    const { active, over } = event;
+    if (!over) return;
+
+    const draggedHabit = active.data.current?.habit as Habit | undefined;
+    if (!draggedHabit) return;
+    // Re-read from the live cache rather than trusting the habit captured
+    // at drag-start -- it can be stale if another update landed mid-drag,
+    // which would otherwise skip a PATCH that's actually still needed.
+    const habit = allHabits.find((h) => h.id === draggedHabit.id) ?? draggedHabit;
+
+    const target = String(over.id);
+    const doneToday = isDoneToday(habit);
+    let changes: HabitChanges;
+
+    if (target === FROZEN_CONTAINER_ID) {
+      // Frozen is a cross-cutting flag: category and schedule are untouched.
+      changes = { frozen: true };
+    } else if (target === TODAY_CONTAINER_ID) {
+      // A done habit has nothing left to schedule for today.
+      if (doneToday) return;
+      // Category is kept on purpose: it shows in both its category and Today.
+      // The time is the one the live placeholder was showing.
+      changes = {
+        frozen: false,
+        today: true,
+        today_time:
+          preview?.time ??
+          defaultTimeForIndex(
+            todayHabits
+              .filter((h) => h.id !== habit.id)
+              .map((h) => h.today_time ?? DEFAULT_TODAY_TIME),
+            todayHabits.filter((h) => h.id !== habit.id).length,
+          ),
+      };
+    } else if (target === UNPLANNED_CONTAINER_ID) {
+      // It would land in Done (nothing can be dropped there), so refuse.
+      if (doneToday) return;
+      changes = { frozen: false, category_id: null, today: false };
+    } else if (target.startsWith("category-")) {
+      changes = {
+        frozen: false,
+        category_id: Number(target.slice("category-".length)),
+        today: false,
+      };
+    } else {
+      return;
+    }
+
+    await applyHabitUpdate(habit, changes);
   };
 
   const buildRatesParam = (activity: Activity) => {
@@ -680,6 +926,7 @@ export default function HabitsPage() {
       // not drag the layout sideways (threshold 0 disables the x edge zone).
       autoScroll={{ threshold: { x: 0, y: 0.2 } }}
       onDragStart={handleDragStart}
+      onDragMove={handleDragMove}
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
@@ -759,36 +1006,111 @@ export default function HabitsPage() {
                 ))}
               </div>
             ) : (
-              // Always a droppable zone, even with zero uncategorized habits
-              // showing -- otherwise dragging a habit here from a category
-              // or Frozen has nowhere valid to land (over === null) and the
-              // drop silently no-ops instead of moving it.
-              <DroppableContainer id={MAIN_CONTAINER_ID} className="mt-6 space-y-3 rounded-2xl min-h-[75vh]">
-                {sortedHabits.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center text-center py-16 px-6">
-                    <div className="w-16 h-16 rounded-full bg-gray-200 dark:bg-dark-3 flex items-center justify-center mb-4">
-                      <ArrowPathRoundedSquareIcon className="w-8 h-8 text-gray-500 dark:text-[var(--muted)]" />
-                    </div>
-                    <h3 className="text-lg font-bold text-black dark:text-[var(--foreground)] mb-1">
-                      No habits tracked yet
-                    </h3>
-                    <p className="text-sm text-gray-500 dark:text-[var(--muted)] max-w-xs">
-                      Mark an activity as a habit from its page to start tracking it here.
-                    </p>
+              // Each droppable section stays a drop target even when empty --
+              // otherwise dragging a habit here from a category or Frozen has
+              // nowhere valid to land and the drop silently no-ops.
+              allHabits.length === 0 ? (
+                <div className="mt-6 flex flex-col items-center justify-center text-center py-16 px-6">
+                  <div className="w-16 h-16 rounded-full bg-gray-200 dark:bg-dark-3 flex items-center justify-center mb-4">
+                    <ArrowPathRoundedSquareIcon className="w-8 h-8 text-gray-500 dark:text-[var(--muted)]" />
                   </div>
-                ) : (
-                  sortedHabits.map((habit) => (
-                    <DraggableHabit key={habit.id} habit={habit}>
-                      <HabitCard
-                        habit={habit}
-                        fadeFromFrozen={fadeFrom[habit.id]}
-                        onStart={() => handleStartHabitSession(habit)}
-                        onEdit={() => setEditingHabit(habit)}
-                      />
-                    </DraggableHabit>
-                  ))
-                )}
-              </DroppableContainer>
+                  <h3 className="text-lg font-bold text-black dark:text-[var(--foreground)] mb-1">
+                    No habits tracked yet
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-[var(--muted)] max-w-xs">
+                    Mark an activity as a habit from its page to start tracking it here.
+                  </p>
+                </div>
+              ) : (
+                <div className="mt-6 flex flex-col gap-6 min-h-[75vh]">
+                  <HabitSection
+                    title="Today"
+                    count={todayHabits.length}
+                    collapsed={collapsedSections.today}
+                    onToggle={() => toggleSection("today")}
+                    droppableId={TODAY_CONTAINER_ID}
+                  >
+                    {(() => {
+                      // Insert the live drop gap before the Nth "other" card
+                      // (the card being dragged doesn't count as a neighbor).
+                      const nodes: React.ReactNode[] = [];
+                      let othersSeen = 0;
+                      const placeholder = todayDropPreview && (
+                        <TodayDropPlaceholder key="today-drop-placeholder" preview={todayDropPreview} />
+                      );
+                      for (const habit of todayHabits) {
+                        const isDragged = draggingHabit?.id === habit.id;
+                        if (!isDragged) {
+                          if (todayDropPreview && othersSeen === todayDropPreview.index) nodes.push(placeholder);
+                          othersSeen += 1;
+                        }
+                        nodes.push(
+                          <DraggableHabit
+                            key={habit.id}
+                            habit={habit}
+                            scope="today"
+                            collapseWhileDragging
+                          >
+                            <HabitCard
+                              habit={habit}
+                              variant="today"
+                              fadeFromFrozen={fadeFrom[habit.id]}
+                              onStart={() => handleStartHabitSession(habit)}
+                              onEdit={() => setEditingHabit(habit)}
+                              onTimeChange={(time, opts) => handleTodayTimeChange(habit, time, opts)}
+                            />
+                          </DraggableHabit>,
+                        );
+                      }
+                      if (todayDropPreview && todayDropPreview.index >= othersSeen) nodes.push(placeholder);
+                      return nodes;
+                    })()}
+                  </HabitSection>
+
+                  {doneHabits.length > 0 && (
+                    <HabitSection
+                      title="Done"
+                      count={doneHabits.length}
+                      collapsed={collapsedSections.done}
+                      onToggle={() => toggleSection("done")}
+                    >
+                      {doneHabits.map((habit) => (
+                        // Not draggable: nothing moves into or out of Done.
+                        <DraggableHabit key={habit.id} habit={habit} scope="done" disabled>
+                          <HabitCard
+                            habit={habit}
+                            variant="done"
+                            fadeFromFrozen={fadeFrom[habit.id]}
+                            onStart={() => handleStartHabitSession(habit)}
+                            onEdit={() => setEditingHabit(habit)}
+                          />
+                        </DraggableHabit>
+                      ))}
+                    </HabitSection>
+                  )}
+
+                  <HabitSection
+                    title="Unplanned"
+                    count={unplannedHabits.length}
+                    collapsed={collapsedSections.unplanned}
+                    onToggle={() => toggleSection("unplanned")}
+                    droppableId={UNPLANNED_CONTAINER_ID}
+                    className="flex-1"
+                  >
+                    {unplannedHabits.map((habit) => (
+                      <DraggableHabit key={habit.id} habit={habit} scope="unplanned">
+                        <HabitCard
+                          habit={habit}
+                          variant="unplanned"
+                          fadeFromFrozen={fadeFrom[habit.id]}
+                          onStart={() => handleAddToToday(habit)}
+                          onEdit={() => setEditingHabit(habit)}
+                        />
+                      </DraggableHabit>
+                    ))}
+                  </HabitSection>
+                </div>
+              )
             )}
 
             <div className="h-8" />
@@ -809,6 +1131,7 @@ export default function HabitsPage() {
                     category={category}
                     onAddHabit={() => handleOpenNewHabit(category.id)}
                     fadeFrom={fadeFrom}
+                    onAddToToday={handleAddToToday}
                     onRenameCategory={(name) => handleRenameCategory(category.id, name)}
                     onDelete={() => handleDeleteCategory(category)}
                   />
@@ -894,6 +1217,90 @@ export default function HabitsPage() {
   );
 }
 
+// The gap shown in the Today list where a dragged habit would land. Grows
+// open (height transition) so the cards below visibly make room, and shows
+// the time the habit would get.
+function TodayDropPlaceholder({ preview }: { preview: TodayDropPreview }) {
+  const settled = useSettled(true);
+  const { hour12, minute, pm } = to12Hour(preview.time);
+  return (
+    <div
+      aria-hidden
+      className="flex items-center justify-center rounded-2xl border border-dashed border-gray-300 dark:border-[var(--border)] text-sm font-semibold text-gray-500 dark:text-[var(--muted)] overflow-hidden transition-[height] duration-150"
+      style={{ height: settled ? preview.height : 0 }}
+    >
+      {`${String(hour12).padStart(2, "0")}:${String(minute).padStart(2, "0")} ${pm ? "PM" : "AM"}`}
+    </div>
+  );
+}
+
+// Collapsible section header + list, like the sections in Apple Reminders:
+// title, item count, and a chevron that rotates when collapsed. Optionally a
+// drop target (the header counts as part of it, so a collapsed section can
+// still be dropped on).
+function HabitSection({
+  title,
+  count,
+  collapsed,
+  onToggle,
+  droppableId,
+  className,
+  children,
+}: {
+  title: string;
+  count: number;
+  collapsed: boolean;
+  onToggle: () => void;
+  droppableId?: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  // The whole section (header included) is the drop target so a collapsed
+  // section can still be dropped on, but the highlight ring only wraps the
+  // list body, keeping it clear of the heading text.
+  const { setNodeRef, isOver } = useDroppable({
+    id: droppableId ?? "__not-droppable__",
+    disabled: !droppableId,
+  });
+  const accent = useMasteryAccent();
+  const showRing = !!droppableId && isOver;
+
+  return (
+    <div ref={droppableId ? setNodeRef : undefined} className={`flex flex-col ${className ?? ""}`}>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={!collapsed}
+        className="w-full flex items-center gap-2 py-1 cursor-pointer text-left"
+      >
+        <h2 className="text-lg font-semibold text-black dark:text-[var(--foreground)]">{title}</h2>
+        <span className="text-lg font-semibold text-gray-500 dark:text-[var(--muted)]">{count}</span>
+        <ChevronDownIcon
+          className={`ml-auto w-5 h-5 text-gray-500 dark:text-[var(--muted)] transition-transform ${
+            collapsed ? "-rotate-90" : ""
+          }`}
+          strokeWidth={2.5}
+        />
+      </button>
+      {!collapsed && (
+        <div
+          className={`mt-4 flex-1 space-y-3 rounded-2xl transition-colors ${droppableId ? "min-h-16" : ""}`}
+          style={
+            showRing
+              ? {
+                  boxShadow: `0 0 0 2px ${accent.rgba(accent.primary, 0.7)}`,
+                  backgroundColor: accent.rgba(accent.primary, 0.05),
+                }
+              : undefined
+          }
+        >
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // A floating, slightly-scaled/tilted preview of whatever's being dragged —
 // rendered in a portal by DragOverlay so it's never clipped by the
 // scrolling main column or the sidebar, and always on top.
@@ -960,15 +1367,26 @@ function DroppableContainer({
 // right before drag officially starts so the pickup itself feels tactile.
 function DraggableHabit({
   habit,
+  scope,
+  disabled = false,
+  collapseWhileDragging = false,
   children,
 }: {
   habit: Habit;
+  // Folds the original card away while it's being dragged, so the list
+  // closes up around the gap the drop preview is showing.
+  collapseWhileDragging?: boolean;
+  // Which list this copy renders in -- a categorized habit scheduled for
+  // today shows in two lists at once, so ids must be unique per list.
+  scope: "today" | "done" | "unplanned" | "category" | "frozen";
+  disabled?: boolean;
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: `habit-${habit.id}`,
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `habit-${scope}-${habit.id}`,
     data: { habit },
+    disabled,
   });
   // A drag ends with a click event on the same element; remember that this
   // press turned into a drag so it doesn't also navigate.
@@ -980,6 +1398,7 @@ function DraggableHabit({
   return (
     <div
       ref={setNodeRef}
+      data-today-item={scope === "today" ? habit.id : undefined}
       {...listeners}
       {...attributes}
       onPointerDownCapture={() => {
@@ -988,28 +1407,38 @@ function DraggableHabit({
       onClick={(e) => {
         if (draggedRef.current) return;
         // Buttons/links inside the card keep their own behavior.
-        if ((e.target as HTMLElement).closest("button, a, input")) return;
+        if ((e.target as HTMLElement).closest("button, a, input, [data-no-card-click]")) return;
         router.push(`/habits/${habit.activity_uid}`);
       }}
       style={{
-        transform: transform ? CSS.Translate.toString(transform) : undefined,
-        opacity: isDragging ? 0.35 : 1,
+        // The DragOverlay ghost is the only thing that follows the pointer:
+        // the original is hidden (not dimmed, not translated) while dragging.
+        opacity: isDragging ? 0 : 1,
         touchAction: "none",
+        ...(isDragging && collapseWhileDragging
+          ? { height: 0, overflow: "hidden", marginTop: 0 }
+          : null),
       }}
-      className="cursor-pointer active:cursor-grabbing transition-[opacity,transform] duration-150"
+      className={`cursor-pointer ${disabled ? "" : "active:cursor-grabbing"} transition-[opacity,transform] duration-150`}
     >
       {children}
     </div>
   );
 }
 
+// variant: "today" and "done" show a play button to start a session;
+// "unplanned" shows + to schedule the habit for today. Done is dimmed.
 function HabitCard({
   habit,
+  variant,
   fadeFromFrozen,
   onStart,
   onEdit,
+  onTimeChange,
 }: {
   habit: Habit;
+  variant: "today" | "done" | "unplanned";
+  onTimeChange?: (time: string, opts?: { immediate?: boolean }) => void;
   fadeFromFrozen?: boolean;
   onStart: () => void;
   onEdit: () => void;
@@ -1019,7 +1448,11 @@ function HabitCard({
   const openStrengthInfo = useContext(StrengthInfoContext);
 
   return (
-    <div className="relative w-full rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-dark-2 p-4 flex items-center gap-4">
+    <div
+      className={`relative w-full rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-dark-2 p-4 flex items-center gap-4 ${
+        variant === "done" ? "opacity-60" : ""
+      }`}
+    >
       {fadeFromFrozen === true && (
         <div
           className="pointer-events-none absolute inset-0 rounded-2xl"
@@ -1049,21 +1482,21 @@ function HabitCard({
       </div>
 
       <div className="shrink-0 flex items-center gap-2">
-        <button
-          type="button"
-          onClick={onEdit}
-          aria-label="Edit habit name"
-          className="h-10 w-10 flex items-center justify-center cursor-pointer rounded-xl bg-gray-100 dark:bg-dark-3 text-gray-600 dark:text-[var(--muted)] transition hover:bg-gray-200 dark:hover:bg-[var(--dark-2)]"
-        >
-          <PencilSquareIcon className="w-5 h-5" />
-        </button>
-        <Link
-          href={`/habits/${habit.activity_uid}`}
-          aria-label="View habit history"
-          className="h-10 w-10 flex items-center justify-center cursor-pointer rounded-xl bg-gray-100 dark:bg-dark-3 text-gray-600 dark:text-[var(--muted)] transition hover:bg-gray-200 dark:hover:bg-[var(--dark-2)]"
-        >
-          <CalendarDaysIcon className="w-5 h-5" />
-        </Link>
+        {variant === "today" && onTimeChange ? (
+          <TodayTimeControl
+            value={habit.today_time ?? DEFAULT_TODAY_TIME}
+            onChange={onTimeChange}
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={onEdit}
+            aria-label="Edit habit name"
+            className="h-10 w-10 flex items-center justify-center cursor-pointer rounded-xl bg-gray-100 dark:bg-dark-3 text-gray-600 dark:text-[var(--muted)] transition hover:bg-gray-200 dark:hover:bg-[var(--dark-2)]"
+          >
+            <PencilSquareIcon className="w-5 h-5" />
+          </button>
+        )}
         <button
           type="button"
           onClick={(e) => {
@@ -1071,11 +1504,11 @@ function HabitCard({
             e.stopPropagation();
             onStart();
           }}
-          aria-label="Start session"
+          aria-label={variant === "unplanned" ? "Add to today" : "Start session"}
           style={{ backgroundColor: aspectColor }}
           className="h-10 w-10 flex items-center justify-center cursor-pointer rounded-xl text-white hover:opacity-90 transition"
         >
-          <PlayIcon className="w-5 h-5" />
+          {variant === "unplanned" ? <PlusIcon className="w-5 h-5" /> : <PlayIcon className="w-5 h-5" />}
         </button>
       </div>
     </div>
@@ -1238,11 +1671,13 @@ function HabitCategoryCard({
   category,
   onAddHabit,
   fadeFrom,
+  onAddToToday,
   onRenameCategory,
   onDelete,
 }: {
   category: HabitCategory;
   onAddHabit: () => void;
+  onAddToToday: (habit: Habit) => void;
   fadeFrom: Record<number, boolean>;
   onRenameCategory: (name: string) => void;
   onDelete: () => void;
@@ -1297,16 +1732,20 @@ function HabitCategoryCard({
       </div>
 
       <DroppableContainer id={categoryContainerId(category.id)} className="space-y-2 rounded-xl min-h-12">
-        {category.habits
-          .filter((habit) => !habit.is_frozen)
-          .map((habit) => (
-            <DraggableHabit key={habit.id} habit={habit}>
-              <CompactHabitRow
-                habit={habit}
-                fadeFromFrozen={fadeFrom[habit.id]}
-              />
-            </DraggableHabit>
-          ))}
+        {/* Habits done today sink to the bottom, dimmed with a check circle. */}
+        {[
+          ...category.habits.filter((h) => !h.is_frozen && !isDoneToday(h)),
+          ...category.habits.filter((h) => !h.is_frozen && isDoneToday(h)),
+        ].map((habit) => (
+          <DraggableHabit key={habit.id} habit={habit} scope="category">
+            <CompactHabitRow
+              habit={habit}
+              action={isDoneToday(habit) ? "done" : habit.today ? "scheduled" : "add"}
+              onAdd={() => onAddToToday(habit)}
+              fadeFromFrozen={fadeFrom[habit.id]}
+            />
+          </DraggableHabit>
+        ))}
 
         <button
           type="button"
@@ -1325,12 +1764,19 @@ function HabitCategoryCard({
 // strength meter, name, 7 thin textless day bars (same done/missed/future
 // styling as DayProgressRow) and a chevron to the habit detail page.
 // Frozen rows swap the aspect color for cyan everywhere.
+// action: "add" = + button that schedules the habit for today, "scheduled" =
+// already in Today so no button, "done" = dimmed row with a check circle,
+// "chevron" = link to the habit page (Frozen card).
 function CompactHabitRow({
   habit,
+  action,
+  onAdd,
   fadeFromFrozen,
   trailing,
 }: {
   habit: Habit;
+  action: "add" | "scheduled" | "done" | "chevron";
+  onAdd?: () => void;
   fadeFromFrozen?: boolean;
   trailing?: React.ReactNode;
 }) {
@@ -1345,6 +1791,8 @@ function CompactHabitRow({
   return (
     <div
       className={`flex items-stretch gap-2 rounded-xl border px-3 py-4 ${
+        action === "done" ? "opacity-60" : ""
+      } ${
         looksFrozen
           ? "border-transparent dark:border-transparent"
           : "border-gray-200 dark:border-[var(--border)]"
@@ -1392,14 +1840,37 @@ function CompactHabitRow({
         })}
       </div>
       )}
-      <Link
-        href={`/habits/${habit.activity_uid}`}
-        aria-label={`View ${habit.display_name}`}
-        style={{ backgroundColor: color }}
-        className="shrink-0 self-center h-6 w-6 flex items-center justify-center cursor-pointer rounded-md text-white hover:opacity-90 transition"
-      >
-        <ChevronRightIcon className="w-3.5 h-3.5" strokeWidth={3.5} />
-      </Link>
+      {action === "chevron" && (
+        <Link
+          href={`/habits/${habit.activity_uid}`}
+          aria-label={`View ${habit.display_name}`}
+          style={{ backgroundColor: color }}
+          className="shrink-0 self-center h-6 w-6 flex items-center justify-center cursor-pointer rounded-md text-white hover:opacity-90 transition"
+        >
+          <ChevronRightIcon className="w-3.5 h-3.5" strokeWidth={3.5} />
+        </Link>
+      )}
+      {action === "add" && (
+        <button
+          type="button"
+          onClick={onAdd}
+          aria-label={`Add ${habit.display_name} to today`}
+          style={{ backgroundColor: color }}
+          className="shrink-0 self-center h-6 w-6 flex items-center justify-center cursor-pointer rounded-md text-white hover:opacity-90 transition"
+        >
+          <PlusOutlineIcon className="w-3.5 h-3.5" strokeWidth={3.5} />
+        </button>
+      )}
+      {action === "done" && (
+        <span
+          aria-label="Done today"
+          title="Done today"
+          style={{ backgroundColor: color }}
+          className="shrink-0 self-center h-6 w-6 flex items-center justify-center rounded-full text-white"
+        >
+          <CheckIcon className="w-3.5 h-3.5" />
+        </span>
+      )}
     </div>
   );
 }
@@ -1448,9 +1919,10 @@ function FrozenHabitsCard({
         ) : (
           <div className="space-y-2">
             {habits.map((habit) => (
-              <DraggableHabit key={habit.id} habit={habit}>
+              <DraggableHabit key={habit.id} habit={habit} scope="frozen">
                 <CompactHabitRow
                   habit={habit}
+                  action="chevron"
                   fadeFromFrozen={fadeFrom[habit.id]}
                   trailing={
                     <button
