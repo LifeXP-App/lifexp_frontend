@@ -61,7 +61,7 @@ export default function StreakProtection() {
     queryKey: key,
     queryFn: () => streakRequest(),
     enabled: !!me,
-    staleTime: 30_000,
+    staleTime: 0,
     refetchInterval: 30_000,
   });
 
@@ -175,30 +175,28 @@ export default function StreakProtection() {
 
           {/* RESTORE */}
           {data.streak_restore_tokens > 0 && (
-            <div className="pt-4">
-              <div className="flex items-start gap-3">
-                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-500/10 text-violet-400">
-                  <RotateCcw className="h-4 w-4" aria-hidden="true" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <h3 className="text-sm font-semibold">
-                    {data.streak_restore_tokens} restore {data.streak_restore_tokens === 1 ? "token" : "tokens"}
-                  </h3>
-                  <p className="mt-0.5 text-xs text-gray-500 dark:text-[var(--muted)]">
-                    {data.streak_before_break > 0
-                      ? `Bring back your latest broken ${data.streak_before_break}-day streak.`
-                      : "No broken streak to restore. Your token stays available."}
-                  </p>
-                </div>
+            <div className="flex items-center gap-3 pt-4">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-500/10 text-violet-400">
+                <RotateCcw className="h-4 w-4" aria-hidden="true" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-sm font-semibold">
+                  {data.streak_restore_tokens} restore {data.streak_restore_tokens === 1 ? "token" : "tokens"}
+                </h3>
+                <p className="mt-0.5 text-xs text-gray-500 dark:text-[var(--muted)]">
+                  {data.streak_before_break > 0
+                    ? `Bring back your ${data.streak_before_break}-day streak.`
+                    : "No broken streak to restore yet."}
+                </p>
               </div>
               <button
                 type="button"
                 disabled={busy || !data.can_restore}
                 onClick={() => void update("POST")}
-                className="mt-3 w-full cursor-pointer rounded-xl py-2.5 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:brightness-100"
+                className="shrink-0 cursor-pointer rounded-lg px-3.5 py-2 text-xs font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:brightness-100"
                 style={{ backgroundColor: primary }}
               >
-                {busy ? "Updating…" : "Restore streak"}
+                {busy ? "Updating…" : "Restore"}
               </button>
             </div>
           )}

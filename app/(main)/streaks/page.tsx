@@ -8,7 +8,6 @@ import {
   ArrowRight,
   Award,
   ChevronLeft,
-  Flame,
   HeartCrack,
   History,
   Info,
@@ -22,7 +21,8 @@ import { authedFetch } from "@/src/lib/api/authedFetch";
 import { useMasteryAccent } from "@/src/lib/hooks/useMasteryAccent";
 import StreakProtection, { streakRequest, type StreakStatus } from "@/src/components/settings/StreakProtection";
 import StreakRulesPopup from "@/src/components/streaks/StreakRulesPopup";
-import { FREEZE_COLOR, flameColor } from "@/src/components/streaks/flames";
+import { FlameIcon, FlameName } from "@/src/components/streaks/FlameIcon";
+import { FREEZE_COLOR, flameColor, flameForDays } from "@/src/components/streaks/flames";
 
 type Event = { id: number; kind: string; day: string; details: Record<string, string | number | boolean> };
 type Timeline = { events: Event[]; next_cursor: number | null };
@@ -62,7 +62,7 @@ function describe(event: Event): { icon: ReactNode; color: string; title: string
   const plural = (n: unknown, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
   switch (event.kind) {
     case "activity":
-      return { icon: <Flame className="h-4 w-4 fill-current" />, color: "#f97316", title: `Day ${d.count}`, subtitle: "Session completed" };
+      return { icon: <FlameIcon name={flameForDays(Number(d.count))} className="h-4 w-4" />, color: flameColor(flameForDays(Number(d.count))), title: `Day ${d.count}`, subtitle: "Session completed" };
     case "broken":
       return { icon: <HeartCrack className="h-4 w-4" />, color: "#ef4444", title: `${d.count}-day streak ended`, subtitle: "Comeback quest started" };
     case "freeze_used":
@@ -80,7 +80,7 @@ function describe(event: Event): { icon: ReactNode; color: string; title: string
     case "restored":
       return { icon: <RotateCcw className="h-4 w-4" />, color: "#a78bfa", title: "Streak restored", subtitle: `${d.restored_days} days back · ${d.total} days total` };
     case "flame_unlocked":
-      return { icon: <Flame className="h-4 w-4 fill-current" />, color: flameColor(String(d.name)), title: `${d.name} flame unlocked`, subtitle: `Reached ${d.days} days` };
+      return { icon: <FlameIcon name={String(d.name)} className="h-4 w-4" />, color: flameColor(String(d.name)), title: `${d.name} flame unlocked`, subtitle: `Reached ${d.days} days` };
     case "comeback_completed":
       return { icon: <Award className="h-4 w-4" />, color: "#f59e0b", title: "Comeback badge earned", subtitle: `Comeback #${d.number}` };
     default:
@@ -175,7 +175,7 @@ function WeekStrip({ events, flame }: { events: Event[]; flame: string }) {
               } ${isToday && !tint ? "border-dashed border-gray-400 dark:border-gray-500" : ""}`}
               style={tint ? { color: tint, backgroundColor: `${tint}1f`, borderColor: `${tint}55` } : undefined}
             >
-              {lit && <Flame className="h-4 w-4 fill-current" aria-hidden="true" />}
+              {lit && <FlameIcon name={flame} className="h-4 w-4" />}
               {frozen && <Snowflake className="h-4 w-4" aria-hidden="true" />}
               {vacation && <Palmtree className="h-4 w-4" aria-hidden="true" />}
               <span className="sr-only">{state}</span>
@@ -193,6 +193,7 @@ function Hero({
   isMastery,
   masteryTitle,
   accentHex,
+  accentSecondary,
   primary,
 }: {
   data: StreakStatus;
@@ -200,6 +201,7 @@ function Hero({
   isMastery: boolean;
   masteryTitle?: string;
   accentHex: string;
+  accentSecondary: string;
   primary: string;
 }) {
   const color = flameColor(data.flame.name);
@@ -222,21 +224,18 @@ function Hero({
             className={`absolute inset-2 rounded-full blur-2xl ${alive ? "motion-safe:animate-pulse" : ""}`}
             style={{ backgroundColor: alive ? color : "#6b7280", opacity: alive ? 0.35 : 0.12 }}
           />
-          <Flame
-            aria-hidden="true"
-            className="relative h-24 w-24 fill-current sm:h-28 sm:w-28"
-            strokeWidth={1}
-            style={{ color: alive ? color : "#6b7280" }}
-          />
+          <FlameIcon name={data.flame.name} muted={!alive} strokeWidth={1} className="relative h-24 w-24 sm:h-28 sm:w-28" />
         </div>
 
         <div className="min-w-0">
-          <p className="flex flex-wrap items-center gap-2 text-sm font-semibold" style={{ color }}>
-            {data.flame.name} flame
+          <p className="flex flex-wrap items-center gap-2 text-sm font-semibold">
+            <FlameName name={data.flame.name}>{data.flame.name} flame</FlameName>
             {isMastery && masteryTitle && (
               <span
-                className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
-                style={{ color: accentHex, backgroundColor: `${accentHex}1f` }}
+                // Mastery primaries are dark (e.g. Prodigy #713599), so dark mode
+                // uses the title's light secondary shade for legible text.
+                className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--chip)] dark:text-[var(--chip-dark)]"
+                style={{ "--chip": accentHex, "--chip-dark": accentSecondary, backgroundColor: `${accentHex}33` } as CSSProperties}
               >
                 {masteryTitle}
               </span>
@@ -260,7 +259,7 @@ function Hero({
           <div className="mb-1.5 flex items-center justify-between text-xs font-medium">
             <span className={muted}>
               {Math.max(0, next.days - data.streak_count)} more {next.days - data.streak_count === 1 ? "day" : "days"} to{" "}
-              <b style={{ color: flameColor(next.name) }}>{next.name}</b>
+              <FlameName name={next.name} className="font-bold" />
             </span>
             <span className={`tabular-nums ${muted}`}>
               {data.streak_count}/{next.days}
@@ -270,6 +269,11 @@ function Hero({
         </div>
       )}
 
+      {!next && (
+        <p className={`mt-5 text-xs font-medium xl:mt-0 ${muted}`}>
+          All flames unlocked · <FlameName name={data.flame.name} className="font-bold" /> is the highest tier
+        </p>
+      )}
       <div className="mt-5 border-t border-gray-100 pt-4 dark:border-[var(--border)]">
         <WeekStrip events={events} flame={data.flame.name} />
       </div>
@@ -325,7 +329,7 @@ function FlameEvolution({ data, primary, onInfo }: { data: StreakStatus; primary
                     }
                   : undefined}
               >
-                {level.unlocked ? <Flame className="h-5 w-5 fill-current" aria-hidden="true" /> : <Lock className="h-4 w-4" aria-hidden="true" />}
+                {level.unlocked ? <FlameIcon name={level.name} className="h-5 w-5" /> : <Lock className="h-4 w-4" aria-hidden="true" />}
               </span>
               <span className={`mt-2 text-sm font-semibold ${level.unlocked ? "text-black dark:text-[var(--foreground)]" : muted}`}>
                 {level.name}
@@ -429,7 +433,7 @@ function Quests({ data, primary, onInfo }: { data: StreakStatus; primary: string
   );
 }
 
-const TIMELINE_PREVIEW = 5;
+const TIMELINE_PREVIEW = 3;
 
 function StreakTimeline({ timeline }: { timeline: ReturnType<typeof useStreakTimeline> }) {
   const [expanded, setExpanded] = useState(false);
@@ -464,14 +468,14 @@ function StreakTimeline({ timeline }: { timeline: ReturnType<typeof useStreakTim
       ) : events.length === 0 ? (
         <p className={`mt-4 text-sm ${muted}`}>Complete a session and it’ll show up here.</p>
       ) : (
-        <ol className="relative mt-5">
+        <ol className={`relative mt-4 ${expanded ? "max-h-[22rem] overflow-y-auto pr-1" : ""}`}>
           {/* The rail runs behind the markers, from the first to the last one. */}
           {visible.length > 1 && <span aria-hidden="true" className="absolute bottom-3 left-[5px] top-1.5 w-px bg-gray-200 dark:bg-[var(--border)]" />}
           {visible.map((event, i) => {
             const item = describe(event);
             const latest = i === 0;
             return (
-              <li key={event.id} className="relative flex gap-4 pb-6 last:pb-0">
+              <li key={event.id} className="relative flex gap-4 pb-4 last:pb-0">
                 <span
                   aria-hidden="true"
                   className="relative mt-[3px] h-[11px] w-[11px] shrink-0 rounded-full border-2 bg-white dark:bg-dark-2"
@@ -488,10 +492,10 @@ function StreakTimeline({ timeline }: { timeline: ReturnType<typeof useStreakTim
                   >
                     {relativeDay(event.day)}
                   </time>
-                  <p className="mt-1 flex items-center gap-1.5 text-sm">
+                  <p className="mt-0.5 flex items-center gap-1.5 text-sm">
                     <span className="shrink-0" style={{ color: item.color }} aria-hidden="true">{item.icon}</span>
-                    <span className="font-semibold">{item.title}</span>
-                    {item.subtitle && <span className={`truncate ${muted}`}>· {item.subtitle}</span>}
+                    <span className="shrink-0 whitespace-nowrap font-semibold">{item.title}</span>
+                    {item.subtitle && <span className={`min-w-0 truncate ${muted}`}>· {item.subtitle}</span>}
                   </p>
                 </div>
               </li>
@@ -501,7 +505,7 @@ function StreakTimeline({ timeline }: { timeline: ReturnType<typeof useStreakTim
       )}
 
       {(canShowMore || expanded) && events.length > 0 && (
-        <div className="mt-5 flex gap-2">
+        <div className="mt-4 flex gap-2">
           {canShowMore && (
             <button
               type="button"
@@ -562,6 +566,7 @@ function useStreakTimeline(userId: number | undefined) {
       return response.json();
     },
     getNextPageParam: (last) => last.next_cursor ?? undefined,
+    staleTime: 0,
     refetchInterval: 30_000,
   });
 }
@@ -574,7 +579,9 @@ export default function StreaksPage() {
   const primary = isMastery ? accent.primary : "var(--rookie-primary)";
   const [rulesOpen, setRulesOpen] = useState(false);
 
-  const status = useQuery({ queryKey: ["streak", me?.id], queryFn: () => streakRequest(), enabled: !!me, refetchInterval: 30_000 });
+  // staleTime 0: the persisted cache can be from before a session that just
+  // moved the streak, so always refetch when the page opens.
+  const status = useQuery({ queryKey: ["streak", me?.id], queryFn: () => streakRequest(), enabled: !!me, staleTime: 0, refetchInterval: 30_000 });
   const timeline = useStreakTimeline(me?.id);
   const data = status.data;
   const recentEvents = timeline.data?.pages[0]?.events ?? [];
@@ -625,6 +632,7 @@ export default function StreaksPage() {
                 isMastery={isMastery}
                 masteryTitle={me?.masteryTitle}
                 accentHex={accent.primary}
+                accentSecondary={accent.secondary}
                 primary={primary}
               />
               <FlameEvolution data={data} primary={primary} onInfo={() => setRulesOpen(true)} />
