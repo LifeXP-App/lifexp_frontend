@@ -214,21 +214,13 @@ function Hero({
 
   return (
     <section className={`${card} relative overflow-hidden`} style={heroStyle} aria-label="Current streak">
-      {isMastery && masteryTitle && (
-        <span
-          className="absolute right-4 top-4 rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide"
-          style={{ color: accentHex, backgroundColor: `${accentHex}1f` }}
-        >
-          {masteryTitle}
-        </span>
-      )}
-
+      <div className="xl:grid xl:grid-cols-[auto_minmax(0,1fr)] xl:items-center xl:gap-10">
       <div className="flex items-center gap-5 sm:gap-7">
         <div className="relative flex h-28 w-28 shrink-0 items-center justify-center sm:h-32 sm:w-32">
           <div
             aria-hidden="true"
-            className="absolute inset-2 rounded-full blur-2xl motion-safe:animate-pulse"
-            style={{ backgroundColor: color, opacity: alive ? 0.35 : 0.1 }}
+            className={`absolute inset-2 rounded-full blur-2xl ${alive ? "motion-safe:animate-pulse" : ""}`}
+            style={{ backgroundColor: alive ? color : "#6b7280", opacity: alive ? 0.35 : 0.12 }}
           />
           <Flame
             aria-hidden="true"
@@ -239,8 +231,16 @@ function Hero({
         </div>
 
         <div className="min-w-0">
-          <p className="text-sm font-semibold" style={{ color }}>
+          <p className="flex flex-wrap items-center gap-2 text-sm font-semibold" style={{ color }}>
             {data.flame.name} flame
+            {isMastery && masteryTitle && (
+              <span
+                className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                style={{ color: accentHex, backgroundColor: `${accentHex}1f` }}
+              >
+                {masteryTitle}
+              </span>
+            )}
           </p>
           <p className="mt-0.5 flex items-baseline gap-2">
             <span className="text-6xl font-extrabold leading-none tabular-nums text-black dark:text-[var(--foreground)]">
@@ -254,8 +254,9 @@ function Hero({
         </div>
       </div>
 
+      <div className="min-w-0">
       {next && (
-        <div className="mt-5">
+        <div className="mt-5 xl:mt-0">
           <div className="mb-1.5 flex items-center justify-between text-xs font-medium">
             <span className={muted}>
               {Math.max(0, next.days - data.streak_count)} more {next.days - data.streak_count === 1 ? "day" : "days"} to{" "}
@@ -271,6 +272,8 @@ function Hero({
 
       <div className="mt-5 border-t border-gray-100 pt-4 dark:border-[var(--border)]">
         <WeekStrip events={events} flame={data.flame.name} />
+      </div>
+      </div>
       </div>
     </section>
   );
@@ -296,7 +299,7 @@ function FlameEvolution({ data, primary, onInfo }: { data: StreakStatus; primary
         <InfoButton onClick={onInfo} label="How flames work" />
       </div>
 
-      <ol className="mt-5 flex items-start">
+      <ol className="mt-4 flex items-start">
         {levels.map((level, i) => {
           const isCurrent = level.name === data.flame.name;
           const color = flameColor(level.name);
@@ -372,7 +375,7 @@ function QuestCard({
           {value}/{max}
         </span>
       </div>
-      <div className="mt-4">
+      <div className="mt-3">
         <ProgressBar value={value} max={max} color={barColor} label={title} />
       </div>
       {footer && <div className={`mt-3 text-xs ${muted}`}>{footer}</div>}
@@ -463,7 +466,7 @@ function StreakTimeline({ timeline }: { timeline: ReturnType<typeof useStreakTim
       ) : (
         <ol className="relative mt-5">
           {/* The rail runs behind the markers, from the first to the last one. */}
-          <span aria-hidden="true" className="absolute bottom-3 left-[5px] top-1.5 w-px bg-gray-200 dark:bg-[var(--border)]" />
+          {visible.length > 1 && <span aria-hidden="true" className="absolute bottom-3 left-[5px] top-1.5 w-px bg-gray-200 dark:bg-[var(--border)]" />}
           {visible.map((event, i) => {
             const item = describe(event);
             const latest = i === 0;
@@ -582,9 +585,9 @@ export default function StreaksPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-3 py-6 pb-24 text-black md:px-8 dark:text-[var(--foreground)]">
+    <div className="mx-auto w-full max-w-[1400px] px-3 py-5 pb-24 text-black md:px-8 dark:text-[var(--foreground)]">
       {/* Title */}
-      <header className="mb-5 flex items-center gap-2">
+      <header className="mb-4 flex items-center gap-2">
         <button
           type="button"
           onClick={goBack}
@@ -600,20 +603,22 @@ export default function StreaksPage() {
         </div>
       </header>
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-        {status.isPending ? (
-          <>
-            <div className="lg:col-start-1"><HeroSkeleton /></div>
-            <div className={`${card} h-36 animate-pulse lg:col-start-1`} />
-          </>
-        ) : status.isError || !data ? (
-          <div role="alert" className={`${card} text-sm lg:col-start-1`}>
-            <p className={muted}>Couldn’t load your streak.</p>
-            <button className="mt-2 cursor-pointer font-semibold underline" onClick={() => void status.refetch()}>Try again</button>
-          </div>
-        ) : (
-          <>
-            <div className="lg:col-start-1">
+      {/* Two independent columns on desktop; on mobile they stack, so
+          Protection (the page's actions) comes before the timeline. */}
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_400px]">
+        <div className="space-y-4">
+          {status.isPending ? (
+            <>
+              <HeroSkeleton />
+              <div className={`${card} h-36 animate-pulse`} />
+            </>
+          ) : status.isError || !data ? (
+            <div role="alert" className={`${card} text-sm`}>
+              <p className={muted}>Couldn’t load your streak.</p>
+              <button className="mt-2 cursor-pointer font-semibold underline" onClick={() => void status.refetch()}>Try again</button>
+            </div>
+          ) : (
+            <>
               <Hero
                 data={data}
                 events={recentEvents}
@@ -622,25 +627,16 @@ export default function StreaksPage() {
                 accentHex={accent.primary}
                 primary={primary}
               />
-            </div>
-            <div className="lg:col-start-1">
               <FlameEvolution data={data} primary={primary} onInfo={() => setRulesOpen(true)} />
-            </div>
-            <div className="lg:col-start-1">
               <Quests data={data} primary={primary} onInfo={() => setRulesOpen(true)} />
-            </div>
-          </>
-        )}
-
-        {/* Protection sits beside the main column on desktop and above the
-            timeline on mobile, since it holds the page's actions. */}
-        <aside className="lg:sticky lg:top-6 lg:col-start-2 lg:row-span-4 lg:row-start-1 lg:self-start">
-          <StreakProtection />
-        </aside>
-
-        <div className="lg:col-start-1">
-          <StreakTimeline timeline={timeline} />
+            </>
+          )}
         </div>
+
+        <aside className="space-y-4">
+          <StreakProtection />
+          <StreakTimeline timeline={timeline} />
+        </aside>
       </div>
 
       <StreakRulesPopup
