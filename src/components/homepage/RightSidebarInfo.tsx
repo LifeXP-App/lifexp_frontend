@@ -228,7 +228,7 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
             </p>
           </div>
 
-          <div className={`bg-gray-100 dark:bg-dark-3 cursor-pointer w-full flex flex-col rounded-md items-center justify-between p-4 ${
+          <Link href="/streaks" aria-label={`Streak: ${user.streak} days. Open streaks`} className={`bg-gray-100 dark:bg-dark-3 cursor-pointer w-full flex flex-col rounded-md items-center justify-between p-4 transition hover:brightness-110 ${
                   user.streak_active
                     ? "bg-orange-500/10 text-orange-500 "
                     : ""
@@ -249,7 +249,7 @@ export function RightSidebarInfo({ user }: RightSidebarInfoProps) {
               />
               {user.streak}
             </p>
-          </div>
+          </Link>
         </div>
       </div>
       {/* TODAY */}

@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import FireIcon from "@heroicons/react/24/solid/FireIcon";
 import { LiveAvatar } from "@/src/components/LiveAvatar";
@@ -260,7 +261,7 @@ function RightSidebarInfo({ user }: { user: UserGoalsInfo }) {
             </p>
           </div>
 
-          <div className={`bg-gray-100 dark:bg-dark-3 w-full flex flex-col rounded-md items-center justify-between p-4 ${
+          <Link href="/streaks" aria-label={`Streak: ${user.streak} days. Open streaks`} className={`bg-gray-100 dark:bg-dark-3 w-full flex flex-col rounded-md items-center justify-between p-4 transition hover:brightness-110 ${
                   user.streak_active
                     ? "bg-orange-500/10 text-orange-500 "
                     : ""
@@ -281,7 +282,7 @@ function RightSidebarInfo({ user }: { user: UserGoalsInfo }) {
               />
               {user.streak}
             </p>
-          </div>
+          </Link>
         </div>
       </div>
       <NudgesLikesSection />

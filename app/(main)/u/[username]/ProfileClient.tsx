@@ -1227,8 +1227,9 @@ export default function ProfileClient({ params }: PageProps) {
             {/* STREAK, LIFE LEVEL, XP CARDS */}
             <div className="my-4 flex flex-col sm:flex-row justify-between text-sm gap-4">
               {/* Streak count */}
-              <div className="bg-white dark:bg-dark-2 border rounded-xl border-gray-200 dark:border-[var(--border)] w-full flex flex-col rounded-md items-center justify-between p-4">
-                          
+              {(() => {
+                const streakTileClass = "bg-white dark:bg-dark-2 border rounded-xl border-gray-200 dark:border-[var(--border)] w-full flex flex-col rounded-md items-center justify-between p-4";
+                const streakTileBody = (<>
                           <p className="text-sm dark:text-[var(--muted)]">Streak Count</p>
               
                           <p className={`text-lg font-extrabold text-gray-400 dark:text-[var(--muted)] flex gap-1 items-center ${
@@ -1245,7 +1246,13 @@ export default function ProfileClient({ params }: PageProps) {
                             />
                             {profileUser.streak_count}
                           </p>
-                        </div>
+                </>);
+                return me?.username === profileUser.username ? (
+                  <Link href="/streaks" aria-label="Open streaks" className={`${streakTileClass} transition hover:border-orange-500/50`}>{streakTileBody}</Link>
+                ) : (
+                  <div className={streakTileClass}>{streakTileBody}</div>
+                );
+              })()}
 
               {/* life level */}
               <div className="bg-white dark:bg-dark-2 border rounded-xl border-gray-200 dark:border-[var(--border)] w-full flex flex-col rounded-md items-center justify-between p-4">
