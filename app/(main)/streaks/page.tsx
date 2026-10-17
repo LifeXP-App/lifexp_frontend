@@ -426,8 +426,14 @@ function Quests({ data, primary, onInfo }: { data: StreakStatus; primary: string
   );
 }
 
+const TIMELINE_PREVIEW = 5;
+
 function StreakTimeline({ timeline }: { timeline: ReturnType<typeof useStreakTimeline> }) {
+  const [expanded, setExpanded] = useState(false);
   const events = timeline.data?.pages.flatMap((page) => page.events) ?? [];
+  const visible = expanded ? events : events.slice(0, TIMELINE_PREVIEW);
+  const canShowMore = !expanded ? events.length > TIMELINE_PREVIEW || timeline.hasNextPage : timeline.hasNextPage;
+
   return (
     <section className={card} aria-labelledby="timeline-title">
       <h2 id="timeline-title" className="flex items-center gap-2 text-base font-semibold">
@@ -436,11 +442,14 @@ function StreakTimeline({ timeline }: { timeline: ReturnType<typeof useStreakTim
       </h2>
 
       {timeline.isPending ? (
-        <div className="mt-4 space-y-3 animate-pulse" role="status" aria-label="Loading timeline">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-xl bg-gray-200 dark:bg-dark-3" />
-              <div className="h-3 w-1/3 rounded bg-gray-200 dark:bg-dark-3" />
+        <div className="mt-5 space-y-6 animate-pulse" role="status" aria-label="Loading timeline">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex gap-4">
+              <div className="h-3 w-3 rounded-full bg-gray-200 dark:bg-dark-3" />
+              <div className="flex-1 space-y-2">
+                <div className="h-2.5 w-16 rounded bg-gray-200 dark:bg-dark-3" />
+                <div className="h-3 w-1/2 rounded bg-gray-200 dark:bg-dark-3" />
+              </div>
             </div>
           ))}
         </div>
@@ -452,31 +461,35 @@ function StreakTimeline({ timeline }: { timeline: ReturnType<typeof useStreakTim
       ) : events.length === 0 ? (
         <p className={`mt-4 text-sm ${muted}`}>Complete a session and it’ll show up here.</p>
       ) : (
-        <ol className="mt-4">
-          {events.map((event, i) => {
+        <ol className="relative mt-5">
+          {/* The rail runs behind the markers, from the first to the last one. */}
+          <span aria-hidden="true" className="absolute bottom-3 left-[5px] top-1.5 w-px bg-gray-200 dark:bg-[var(--border)]" />
+          {visible.map((event, i) => {
             const item = describe(event);
-            const showDay = i === 0 || events[i - 1].day !== event.day;
-            const isLast = i === events.length - 1;
+            const latest = i === 0;
             return (
-              <li key={event.id} className="relative flex gap-3 pb-4 last:pb-0">
-                {!isLast && <span aria-hidden="true" className="absolute left-[18px] top-10 bottom-0 w-px bg-gray-200 dark:bg-[var(--border)]" />}
+              <li key={event.id} className="relative flex gap-4 pb-6 last:pb-0">
                 <span
-                  className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-                  style={{ color: item.color, backgroundColor: `${item.color}1a` }}
                   aria-hidden="true"
-                >
-                  {item.icon}
-                </span>
-                <div className="flex min-w-0 flex-1 items-start justify-between gap-3 pt-0.5">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold">{item.title}</p>
-                    {item.subtitle && <p className={`text-xs ${muted}`}>{item.subtitle}</p>}
-                  </div>
-                  {showDay && (
-                    <time dateTime={event.day} className={`shrink-0 text-xs font-medium ${muted}`}>
-                      {relativeDay(event.day)}
-                    </time>
-                  )}
+                  className="relative mt-[3px] h-[11px] w-[11px] shrink-0 rounded-full border-2 bg-white dark:bg-dark-2"
+                  style={
+                    latest
+                      ? { borderColor: item.color, boxShadow: `0 0 0 4px ${item.color}26, 0 0 12px ${item.color}80` }
+                      : { borderColor: "#6b7280" }
+                  }
+                />
+                <div className="min-w-0 flex-1">
+                  <time
+                    dateTime={event.day}
+                    className={`block text-[11px] font-semibold uppercase tracking-wider ${muted}`}
+                  >
+                    {relativeDay(event.day)}
+                  </time>
+                  <p className="mt-1 flex items-center gap-1.5 text-sm">
+                    <span className="shrink-0" style={{ color: item.color }} aria-hidden="true">{item.icon}</span>
+                    <span className="font-semibold">{item.title}</span>
+                    {item.subtitle && <span className={`truncate ${muted}`}>· {item.subtitle}</span>}
+                  </p>
                 </div>
               </li>
             );
@@ -484,15 +497,31 @@ function StreakTimeline({ timeline }: { timeline: ReturnType<typeof useStreakTim
         </ol>
       )}
 
-      {timeline.hasNextPage && (
-        <button
-          type="button"
-          disabled={timeline.isFetchingNextPage}
-          className="mt-4 w-full cursor-pointer rounded-xl border border-dashed border-gray-300 py-2.5 text-sm font-semibold text-gray-500 transition hover:border-gray-400 hover:text-gray-700 disabled:opacity-50 dark:border-[var(--border)] dark:text-[var(--muted)] dark:hover:text-[var(--foreground)]"
-          onClick={() => void timeline.fetchNextPage()}
-        >
-          {timeline.isFetchingNextPage ? "Loading…" : "Show older"}
-        </button>
+      {(canShowMore || expanded) && events.length > 0 && (
+        <div className="mt-5 flex gap-2">
+          {canShowMore && (
+            <button
+              type="button"
+              disabled={timeline.isFetchingNextPage}
+              className="flex-1 cursor-pointer rounded-xl border border-dashed border-gray-300 py-2.5 text-sm font-semibold text-gray-500 transition hover:border-gray-400 hover:text-gray-700 disabled:opacity-50 dark:border-[var(--border)] dark:text-[var(--muted)] dark:hover:text-[var(--foreground)]"
+              onClick={() => {
+                if (!expanded) setExpanded(true);
+                else void timeline.fetchNextPage();
+              }}
+            >
+              {timeline.isFetchingNextPage ? "Loading…" : expanded ? "Show older" : "Show more"}
+            </button>
+          )}
+          {expanded && (
+            <button
+              type="button"
+              className="cursor-pointer rounded-xl px-4 py-2.5 text-sm font-semibold text-gray-500 transition hover:bg-gray-100 hover:text-gray-700 dark:text-[var(--muted)] dark:hover:bg-dark-3 dark:hover:text-[var(--foreground)]"
+              onClick={() => setExpanded(false)}
+            >
+              Show less
+            </button>
+          )}
+        </div>
       )}
     </section>
   );
