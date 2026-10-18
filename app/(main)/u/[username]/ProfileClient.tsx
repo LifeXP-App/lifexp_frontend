@@ -18,7 +18,7 @@ import { Cog6ToothIcon, FireIcon, LockClosedIcon, PlusIcon, RocketLaunchIcon } f
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { toggleFollow } from "@/lib/api/users";
 import { authedFetch } from "@/src/lib/api/authedFetch";
@@ -39,11 +39,16 @@ function formatMemberSince(dateString: string) {
   });
 }
 
-import Achievement from "@/src/components/profile/Achievement";
+import { CompletedGoalBadge, OngoingGoalCard, type ProfileGoal } from "@/src/components/profile/GoalCards";
 import DefaultUserProfilePicture from "@/src/components/profile/DefaultUserProfilePicture";
 import FollowersFollowingPopup from "@/src/components/profile/FollowersFollowingPopup";
-import SessionInfoPopup from "@/src/components/goals/SessionInfoPopup";
-import SessionGallery from "@/src/components/profile/SessionGallery";
+import ProfileSessionPopup from "@/src/components/profile/ProfileSessionPopup";
+import SessionTimeline, {
+  SessionTimelineSkeleton,
+  groupSessionsByDay,
+  localDayKey,
+} from "@/src/components/profile/SessionTimeline";
+import WeekSummary from "@/src/components/profile/WeekSummary";
 
 type UserPost = {
   id: number;
@@ -77,6 +82,9 @@ type UserPost = {
   liked_by: boolean;
   created_at: string;
   updated_at: string;
+  completion_date?: string | null;
+  sessions_count?: number | null;
+  last_session_at?: string | null;
 };
 
 export default function ProfileClient({ params }: PageProps) {
@@ -168,25 +176,6 @@ export default function ProfileClient({ params }: PageProps) {
   const handleOpenSessionPopup = (session: Session) => {
     setSelectedSession(session);
     setIsSessionPopupOpen(true);
-  };
-
-  const formatSessionDuration = (seconds?: number | null) => {
-    if (!seconds) return "00:00:00";
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-    return `${h > 0 ? h + ":" : ""}${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
-  };
-
-  const formatSessionDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
   };
 
   // Race condition handling refs
@@ -412,38 +401,32 @@ export default function ProfileClient({ params }: PageProps) {
     gcTime: 15 * 60 * 1000,
   });
 
-  const {
-    data: sessionGalleryPages,
-    isLoading: sessionGalleryLoading,
-    isFetchingNextPage: sessionGalleryLoadingMore,
-    hasNextPage: sessionGalleryHasMore,
-    fetchNextPage: fetchNextSessionGalleryPage,
-  } = useInfiniteQuery({
-    queryKey: ["profile-session-gallery", username],
-    queryFn: async ({ pageParam }) => {
-      const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1`;
-      const response = await fetch(
-        `${apiUrl}/users/${username}/sessions/gallery/?page=${pageParam}`,
-        { method: "GET", headers: { "Content-Type": "application/json" }, cache: "no-store" },
-      );
-      if (!response.ok) return { results: [] as Session[], next: null as string | null };
-      const data = await response.json();
-      return {
-        results: (data.results ?? []) as Session[],
-        next: (data.next ?? null) as string | null,
-      };
-    },
-    initialPageParam: 1,
-    getNextPageParam: (lastPage, allPages) =>
-      lastPage.next ? allPages.length + 1 : undefined,
-    enabled: !!username,
-    staleTime: 3 * 60 * 1000,
-    gcTime: 15 * 60 * 1000,
+  // "This week" on the profile timeline — Monday-start, local midnight, the
+  // same week boundary the full sessions page's heatmap uses.
+  const [weekStart] = useState(() => {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+    return start;
   });
 
-  const sessionGallerySessions = (sessionGalleryPages?.pages ?? []).flatMap(
-    (page) => page.results,
-  );
+  const { data: weekSessions = [], isLoading: weekSessionsLoading } = useQuery({
+    queryKey: ["profile-session-week", username, weekStart.toISOString()],
+    queryFn: async () => {
+      const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1`;
+      const query = new URLSearchParams({ after: weekStart.toISOString(), page_size: "100" });
+      const response = await authedFetch(
+        `${apiUrl}/users/${username}/sessions/gallery/?${query}`,
+        { cache: "no-store" },
+      );
+      if (!response.ok) return [] as Session[];
+      const data = await response.json();
+      return (data.results ?? []) as Session[];
+    },
+    enabled: !!username && !authLoading,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
 
   const handleFollow = async () => {
     if (!profileUser) return;
@@ -897,37 +880,10 @@ export default function ProfileClient({ params }: PageProps) {
         />
       )}
 
-      <SessionInfoPopup
+      <ProfileSessionPopup
+        session={selectedSession}
         isOpen={isSessionPopupOpen}
         onClose={() => setIsSessionPopupOpen(false)}
-        sessionNumber={selectedSession?.session_number ?? 0}
-        dateText={selectedSession ? formatSessionDate(selectedSession.started_at) : ""}
-        totalDuration={
-          selectedSession
-            ? formatSessionDuration(selectedSession.total_duration_seconds)
-            : ""
-        }
-        coverImageUrl={selectedSession?.completion_picture || undefined}
-        xpDistribution={{
-          physique: selectedSession?.xp_physique || 0,
-          energy: selectedSession?.xp_energy || 0,
-          logic: selectedSession?.xp_logic || 0,
-          creativity: selectedSession?.xp_creativity || 0,
-          social: selectedSession?.xp_social || 0,
-        }}
-        focusedDuration={
-          selectedSession
-            ? formatSessionDuration(selectedSession.focused_duration_seconds)
-            : "--"
-        }
-        nudgeCount={0}
-        nudgeAvatars={[]}
-        activity={{
-          uid: selectedSession?.activity?.uid,
-          name: selectedSession?.activity?.name ?? "Activity",
-          emoji: selectedSession?.activity?.emoji ?? "🎯",
-          color: `var(--aspect-${selectedSession?.activity?.type || "muted"})`,
-        }}
       />
 
       <div className="w-full bg-gray-100 dark:bg-dark-1 px-4 py-4 sm:px-6 md:px-8 lg:px-12 xl:px-24">
@@ -1514,10 +1470,10 @@ export default function ProfileClient({ params }: PageProps) {
               </div>
             </div>
 
-            {/* EXPERIENCES */}
-            <div className="max-w-6xl mx-auto px-2 p-2 pb-12 my-4 rounded-sm w-full">
+            {/* GOALS */}
+            <div className="w-full pb-12 my-4">
               <h2 className="text-lg sm:text-xl font-semibold dark:text-[var(--foreground)] mb-6">
-                Achievements
+                Goals
               </h2>
 
               {postsLoading ? (
@@ -1525,16 +1481,14 @@ export default function ProfileClient({ params }: PageProps) {
                   {/* Ongoing skeleton */}
                   <div>
                     <div className="h-4 w-24 rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-4" />
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {[1, 2, 3].map((i) => (
-                        <div key={i} className="rounded-2xl border border-gray-200 dark:border-[var(--border)] p-4 bg-white dark:bg-[#151618]">
-                          <div className="h-4 w-3/4 rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-3" />
-                          <div className="h-3 w-full rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-2" />
-                          <div className="h-3 w-2/3 rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-4" />
-                          <div className="grid grid-cols-5 gap-1.5">
-                            {[1,2,3,4,5].map((j) => (
-                              <div key={j} className="h-8 rounded-lg bg-gray-200 dark:bg-[var(--dark-2)]" />
-                            ))}
+                    <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-3">
+                      {[1, 2].map((i) => (
+                        <div key={i} className="flex h-32 rounded-2xl border border-gray-200 dark:border-[var(--border)] overflow-hidden bg-white dark:bg-[#151618]">
+                          <div className="w-24 sm:w-28 bg-gray-200 dark:bg-[var(--dark-2)]" />
+                          <div className="flex-1 p-4 space-y-3">
+                            <div className="h-4 w-3/4 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
+                            <div className="h-3 w-1/2 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
+                            <div className="h-3 w-2/3 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
                           </div>
                         </div>
                       ))}
@@ -1543,19 +1497,13 @@ export default function ProfileClient({ params }: PageProps) {
                   {/* Completed skeleton */}
                   <div>
                     <div className="h-4 w-28 rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-4" />
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {[1, 2, 3].map((i) => (
-                        <div key={i} className="rounded-2xl overflow-hidden">
-                          <div className="h-36 bg-gray-200 dark:bg-[var(--dark-2)]" />
-                          <div className="p-4 bg-white dark:bg-[#151618] border border-gray-200 dark:border-[var(--border)] border-t-0 rounded-b-2xl">
-                            <div className="h-4 w-3/4 rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-3" />
-                            <div className="h-3 w-full rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-2" />
-                            <div className="grid grid-cols-5 gap-1.5 mt-3">
-                              {[1,2,3,4,5].map((j) => (
-                                <div key={j} className="h-8 rounded-lg bg-gray-200 dark:bg-[var(--dark-2)]" />
-                              ))}
-                            </div>
-                          </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
+                      {[1, 2, 3, 4].map((i) => (
+                        <div key={i} className="h-52 rounded-2xl border border-gray-200 dark:border-[var(--border)] overflow-hidden bg-white dark:bg-[#151618]">
+                          <div className="h-20 bg-gray-200 dark:bg-[var(--dark-2)]" />
+                          <div className="mx-auto -mt-8 h-16 w-16 rounded-full bg-gray-300 dark:bg-[var(--dark-3)]" />
+                          <div className="mx-auto mt-3 h-3 w-2/3 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
+                          <div className="mx-auto mt-2 h-3 w-1/2 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
                         </div>
                       ))}
                     </div>
@@ -1601,26 +1549,22 @@ export default function ProfileClient({ params }: PageProps) {
                     );
                   }
 
-                  const sharedProps = (post: UserPost) => ({
-                    emoji: post.emoji || "🎯",
+                  const toGoal = (post: UserPost): ProfileGoal => ({
+                    uid: post.uid,
                     title: post.title,
+                    emoji: post.emoji,
                     // Goals write user-entered text to `description`; `content`
                     // is a separate, usually-empty field on the same model
                     // (see Goal in main/models.py) — prefer whichever is set.
                     description: post.description || post.content,
-                    xp: post.total_xp,
-                    coverImage:
-                      post.completion_picture_url || post.post_image_url || null,
-                    timeText: getTimeAgo(post.created_at),
-                    accent: { primary: accent.primary, secondary: accent.secondary },
-                    isRookie: profileUser.masteryTitle === "Rookie",
-                    stats: {
-                      physique: post.xp_distribution.physique,
-                      energy: post.xp_distribution.energy,
-                      logic: post.xp_distribution.logic,
-                      creativity: post.xp_distribution.creativity,
-                      social: post.xp_distribution.social,
-                    },
+                    coverImage: post.completion_picture_url || post.post_image_url || null,
+                    totalXp: post.total_xp,
+                    durationDisplay: post.duration_display,
+                    xpDistribution: post.xp_distribution,
+                    sessionsCount: post.sessions_count,
+                    lastSessionAt: post.last_session_at,
+                    createdAt: post.created_at,
+                    completedAt: post.completion_date ?? post.updated_at,
                   });
                   return (
                     <div className="flex flex-col gap-10">
@@ -1629,10 +1573,10 @@ export default function ProfileClient({ params }: PageProps) {
                           <p className="text-sm font-semibold text-gray-500 dark:text-[var(--muted)] uppercase tracking-wide mb-4">
                             Ongoing
                           </p>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                          <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-3">
                             {ongoingPosts.map((post) => (
                               <Link key={post.id} href={`/goals/${post.uid}`}>
-                                <Achievement compact {...sharedProps(post)} />
+                                <OngoingGoalCard goal={toGoal(post)} />
                               </Link>
                             ))}
                           </div>
@@ -1643,10 +1587,10 @@ export default function ProfileClient({ params }: PageProps) {
                           <p className="text-sm font-semibold text-gray-500 dark:text-[var(--muted)] uppercase tracking-wide mb-4">
                             Completed
                           </p>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
                             {otherPosts.map((post) => (
                               <Link key={post.id} href={`/goals/${post.uid}`}>
-                                <Achievement {...sharedProps(post)} />
+                                <CompletedGoalBadge goal={toGoal(post)} />
                               </Link>
                             ))}
                           </div>
@@ -1658,21 +1602,63 @@ export default function ProfileClient({ params }: PageProps) {
               )}
             </div>
 
-            {/* SESSIONS */}
-            <div className="max-w-6xl mx-auto px-2 p-2 pb-12 my-4 rounded-sm w-full">
-              <h2 className="text-lg sm:text-xl font-semibold dark:text-[var(--foreground)] mb-6">
-                Sessions
-              </h2>
-              <SessionGallery
-                sessions={sessionGallerySessions}
-                loading={sessionGalleryLoading}
-                loadingMore={sessionGalleryLoadingMore}
-                hasMore={!!sessionGalleryHasMore}
-                onLoadMore={() => fetchNextSessionGalleryPage()}
-                onSelectSession={handleOpenSessionPopup}
-                getTimeAgo={getTimeAgo}
-              />
-            </div>
+            {/* SESSIONS — this week's timeline + summary panel; full history
+                and heatmap live on /u/<username>/sessions */}
+            {(() => {
+              // Nothing logged since Monday: the timeline falls back to the
+              // latest few sessions so it's never just an empty state.
+              const showingWeek = weekSessions.length > 0;
+              const timelineSessions = showingWeek ? weekSessions : recentSessions;
+              const lastActive = recentSessions[0]?.started_at;
+              return (
+                <div className="w-full pb-12 my-4">
+                  <div className="flex items-baseline justify-between gap-4 mb-4">
+                    <h2 className="text-lg sm:text-xl font-semibold dark:text-[var(--foreground)]">
+                      Sessions
+                    </h2>
+                    <Link
+                      href={`/u/${username}/sessions`}
+                      className="text-sm font-semibold hover:underline"
+                      style={{ color: accent.primary }}
+                    >
+                      See all →
+                    </Link>
+                  </div>
+                  <div className="grid gap-6 p-4 sm:p-6 bg-white border border-gray-200 dark:bg-dark-2 dark:border-[var(--border)] rounded-2xl lg:grid-cols-[minmax(0,1fr)_320px]">
+                    <div className="min-w-0">
+                      {!showingWeek && !weekSessionsLoading && timelineSessions.length > 0 && (
+                        <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-[var(--muted)]">
+                          Latest sessions
+                        </p>
+                      )}
+                      {weekSessionsLoading || (!showingWeek && sessionsLoading) ? (
+                        <SessionTimelineSkeleton />
+                      ) : timelineSessions.length === 0 ? (
+                        <p className="py-6 text-center text-sm text-gray-500 dark:text-[var(--muted)]">
+                          No sessions yet
+                        </p>
+                      ) : (
+                        <SessionTimeline
+                          sessions={timelineSessions}
+                          onSelectSession={handleOpenSessionPopup}
+                          accentColor={accent.primary}
+                          maxDays={4}
+                        />
+                      )}
+                    </div>
+                    <aside className="order-first border-b border-gray-200 pb-6 dark:border-[var(--border)] lg:order-none lg:border-b-0 lg:border-l lg:pb-0 lg:pl-6">
+                      <WeekSummary
+                        days={groupSessionsByDay(weekSessions)}
+                        weekStart={weekStart}
+                        color={accent.primary}
+                        dayHref={(day) => `/u/${username}/sessions?day=${day}`}
+                        lastActiveDay={lastActive ? localDayKey(new Date(lastActive)) : undefined}
+                      />
+                    </aside>
+                  </div>
+                </div>
+              );
+            })()}
           </>
         )}
       </div>
