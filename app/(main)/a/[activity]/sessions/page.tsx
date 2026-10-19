@@ -135,7 +135,6 @@ const SessionItem: React.FC<Session & { onClick?: () => void }> = ({
   dateTime,
   duration,
   thumbnail,
-  emoji,
   onClick,
 }) => {
 
@@ -160,18 +159,10 @@ const SessionItem: React.FC<Session & { onClick?: () => void }> = ({
       >
 
       <div className="w-20 h-20 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden bg-gray-100 dark:bg-dark-3">
-        {emoji ? (
-          <span className="text-3xl">{emoji}</span>
-        ) : thumbnail ? (
+        {thumbnail ? (
           <Image src={thumbnail} alt="Session" width={80} height={80} className="w-full h-full object-cover" />
         ) : (
-          <Image
-            src="https://res.cloudinary.com/dfohn9dcz/image/upload/f_auto,q_auto,w_800,c_fill/v1/posts/user_7/ske_20251115103836"
-            alt="Session thumbnail"
-            width={80}
-            height={80}
-            className="w-full h-full object-cover"
-          />
+          <span className="text-3xl" role="img" aria-label="No image uploaded">?</span>
         )}
       </div>
 

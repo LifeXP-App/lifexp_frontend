@@ -348,7 +348,7 @@ function SessionPostComponent({ session }: { session: ApiSessionPost }) {
           className="flex gap-4 cursor-pointer"
           onClick={() => setIsSessionPopupOpen(true)}
         >
-          {/* 1:1 image or emoji placeholder */}
+          {/* 1:1 image or question-mark placeholder */}
 
           <div className="shrink-0">
             {session.completion_picture ? (
@@ -364,7 +364,7 @@ function SessionPostComponent({ session }: { session: ApiSessionPost }) {
               />
             ) : (
               <div style={{ backgroundColor: `rgba(var(--aspect-${activity.type.toLowerCase()}-rgb), 0.08)` }} className="w-20 h-20 bg-gray-100 dark:bg-dark-3/50 flex items-center justify-center rounded-lg cursor-pointer">
-                <span className="text-4xl">{activity.emoji}</span>
+                <span className="text-4xl" role="img" aria-label="No image uploaded">?</span>
               </div>
             )}
           </div>

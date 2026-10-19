@@ -152,7 +152,7 @@ export default function GoalPickerPopup({
                   className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-xl"
                   style={{ backgroundColor: `color-mix(in srgb, ${accentColor} 15%, transparent)` }}
                 >
-                  {goal.emoji || "🎯"}
+                  ?
                 </div>
 
                 <div className="flex-1 min-w-0">

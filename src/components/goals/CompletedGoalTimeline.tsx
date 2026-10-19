@@ -118,7 +118,7 @@ export default function CompletedGoalTimeline({
                   className="rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-dark-2 cursor-pointer transition hover:shadow-md"
                 >
                   <div className="flex gap-4 p-3">
-                    {/* Picture at a 4:3 thumbnail (or a tinted emoji tile when there isn't one) */}
+                    {/* Picture at a 4:3 thumbnail (or a tinted question-mark tile when there isn't one) */}
                     <div className="relative w-28 sm:w-40 aspect-[4/3] shrink-0 overflow-hidden rounded-xl">
                       {goal.picture ? (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -134,7 +134,7 @@ export default function CompletedGoalTimeline({
                             background: `linear-gradient(135deg, color-mix(in srgb, ${primaryColor} 35%, transparent), color-mix(in srgb, ${primaryColor} 8%, transparent))`,
                           }}
                         >
-                          {goal.emoji}
+                          <span role="img" aria-label="No image uploaded">?</span>
                         </div>
                       )}
                     </div>
@@ -144,7 +144,7 @@ export default function CompletedGoalTimeline({
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
                           <p className="font-semibold text-lg text-black dark:text-[var(--foreground)] truncate">
-                            {goal.emoji} {goal.title}
+                            ? {goal.title}
                           </p>
                         </div>
 

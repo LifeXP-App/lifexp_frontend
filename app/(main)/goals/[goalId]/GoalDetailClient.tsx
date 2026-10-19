@@ -86,7 +86,6 @@ const SessionItem = React.memo(function SessionItem({
   dateTime,
   duration,
   thumbnail,
-  emoji,
   onClick,
   onDelete,
   onEdit,
@@ -124,9 +123,7 @@ const SessionItem = React.memo(function SessionItem({
         )
 
         :
-        emoji ? (
-          <span className="text-3xl">{emoji}</span>
-        ) : thumbnail ? (
+        thumbnail ? (
           <Image
             src={thumbnail}
             alt="Session"
@@ -135,13 +132,7 @@ const SessionItem = React.memo(function SessionItem({
             className="w-full h-full object-cover"
           />
         ) : (
-          <Image
-            src="https://res.cloudinary.com/dfohn9dcz/image/upload/f_auto,q_auto,w_800,c_fill/v1/posts/user_7/ske_20251115103836"
-            alt="Session thumbnail"
-            width={80}
-            height={80}
-            className="w-full h-full object-cover"
-          />
+          <span className="text-3xl" role="img" aria-label="No image uploaded">?</span>
         )}
       </div>
 
@@ -1362,7 +1353,7 @@ export default function GoalDetailClient() {
                   </div>
                   <div className="absolute -bottom-6 left-4">
                     <span className="text-2xl drop-shadow bg-white border rounded-xl w-12 h-12 flex justify-center items-center aspect-square border-gray-200">
-                      {goal.emoji || "🎯"}
+                      ?
                     </span>
                   </div>
                 </div>
@@ -1514,7 +1505,7 @@ export default function GoalDetailClient() {
                     </div>
                     <div className="absolute -bottom-6 left-4">
                       <span className="text-2xl drop-shadow bg-white border rounded-xl w-12 h-12 flex justify-center items-center aspect-square border-gray-200">
-                        {goal.emoji || "🎯"}
+                        ?
                       </span>
                     </div>
                   </div>

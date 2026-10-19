@@ -150,7 +150,7 @@ function SessionGalleryCard({
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
           />
         ) : (
-          <span className="text-5xl">{session.activity?.emoji ?? "🎯"}</span>
+          <span className="text-5xl" role="img" aria-label="No image uploaded">?</span>
         )}
         <SessionTypeBadge type={session.activity?.type} />
       </div>

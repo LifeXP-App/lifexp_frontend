@@ -52,7 +52,6 @@ type AchievementProps = {
 };
 
 export default function Achievement({
-  emoji = "🏆",
   title,
   description,
   xp,
@@ -80,9 +79,9 @@ export default function Achievement({
   if (compact) {
     return (
       <div className="cursor-pointer active:opacity-90 rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-[#151618] overflow-hidden flex flex-col p-4 gap-2">
-        {/* Header row: emoji + title + XP */}
+        {/* Header row: placeholder + title + XP */}
         <div className="flex items-start gap-3">
-          <span className="text-xl shrink-0 mt-0.5">{emoji}</span>
+          <span className="text-xl shrink-0 mt-0.5" role="img" aria-label="No image uploaded">?</span>
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-2">
               <p className="font-semibold text-base text-black dark:text-[var(--foreground)] leading-tight truncate">
@@ -154,11 +153,15 @@ export default function Achievement({
           />
         ) : (
           <div
-            className="h-full w-full"
+            className="h-full w-full flex items-center justify-center text-4xl"
+            role="img"
+            aria-label="No image uploaded"
             style={{
               background: `#333333`,
             }}
-          />
+          >
+            ?
+          </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-b from-black/80 to-transparent" />
         <div className="absolute top-3 right-3">
@@ -171,7 +174,7 @@ export default function Achievement({
         </div>
         <div className="absolute -bottom-5 left-4">
           <span className="text-2xl drop-shadow bg-white border rounded-xl w-12 h-12 flex justify-center items-center aspect-square border-gray-200">
-            {emoji}
+            ?
           </span>
         </div>
       </div>

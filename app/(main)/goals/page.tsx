@@ -153,7 +153,7 @@ function GoalCard({
         {/* Header */}
         <div className="flex items-start justify-between gap-3">
           <div className=" w-full flex items-start gap-3">
-            <div className="text-xl leading-none mt-1">{goal.emoji}</div>
+            <div className="text-xl leading-none mt-1" role="img" aria-label="No image uploaded">?</div>
 
             <div className="w-full">
               <div className="flex w-full items-center justify-between gap-2">

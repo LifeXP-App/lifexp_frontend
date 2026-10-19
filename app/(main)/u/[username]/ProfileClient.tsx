@@ -1115,7 +1115,7 @@ export default function ProfileClient({ params }: PageProps) {
                               color: goalColor,
                             }}
                           >
-                            <p className="text-md">{goal.emoji || "🎯"}</p>
+                            <p className="text-md">?</p>
                             {goal.title}
                           </span>
                         );

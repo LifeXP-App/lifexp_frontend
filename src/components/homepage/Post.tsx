@@ -458,7 +458,7 @@ function PostComponent({ post }: { post: PostType }) {
               />
             ) : (
               <div className="w-24 h-24 shrink-0 cursor-pointer bg-gray-100 dark:bg-[var(--dark-2)] flex items-center justify-center rounded-lg">
-                <span className="text-4xl">{post.session.activity.emoji}</span>
+                <span className="text-4xl" role="img" aria-label="No image uploaded">?</span>
               </div>
             )}
 
