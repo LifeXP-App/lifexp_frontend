@@ -1,5 +1,6 @@
 "use client";
 
+import StreakCount, { streakTileStyle } from "@/src/components/streaks/StreakCount";
 import type { RadarDataPoint } from "@/src/components/RadarChart";
 import { RadarChart, XPChart } from "@/src/components/charts/LazyCharts";
 import getAccentColors, {
@@ -14,7 +15,7 @@ import { usePopup } from "@/src/context/PopupContext";
 import { UserProfile } from "@/src/lib/types";
 import { ACTIVITY_META, ActivityType } from "@/src/lib/types/activityMeta";
 import { toRoman } from "@/src/lib/utils/toRoman";
-import { Cog6ToothIcon, FireIcon, LockClosedIcon, PlusIcon, RocketLaunchIcon } from "@heroicons/react/24/solid";
+import { Cog6ToothIcon, LockClosedIcon, PlusIcon, RocketLaunchIcon } from "@heroicons/react/24/solid";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -1231,26 +1232,15 @@ export default function ProfileClient({ params }: PageProps) {
                 const streakTileClass = "bg-white dark:bg-dark-2 border rounded-xl border-gray-200 dark:border-[var(--border)] w-full flex flex-col rounded-md items-center justify-between p-4";
                 const streakTileBody = (<>
                           <p className="text-sm dark:text-[var(--muted)]">Streak Count</p>
-              
-                          <p className={`text-lg font-extrabold text-gray-400 dark:text-[var(--muted)] flex gap-1 items-center ${
-                                profileUser.streak_active
-                                  ? "text-orange-500 "
-                                  : "text-gray-400 dark:text-[var(--muted)]"
-                              }`}>
-                            <FireIcon
-                              className={`w-6 h-6 inline-block ml-1 ${
-                                profileUser.streak_active
-                                  ? "text-orange-500"
-                                  : "text-gray-400 dark:text-[var(--muted)] "
-                              }`}
-                            />
-                            {profileUser.streak_count}
+
+                          <p className="text-lg font-extrabold flex gap-1 items-center">
+                            <StreakCount count={(profileUser.streak_count ?? 0)} active={!!profileUser.streak_active} />
                           </p>
                 </>);
                 return me?.username === profileUser.username ? (
-                  <Link href="/streaks" aria-label="Open streaks" className={`${streakTileClass} transition hover:border-orange-500/50`}>{streakTileBody}</Link>
+                  <Link href="/streaks" aria-label="Open streaks" className={`${streakTileClass} transition hover:brightness-110`} style={streakTileStyle(profileUser.streak_count ?? 0, !!profileUser.streak_active)}>{streakTileBody}</Link>
                 ) : (
-                  <div className={streakTileClass}>{streakTileBody}</div>
+                  <div className={streakTileClass} style={streakTileStyle(profileUser.streak_count ?? 0, !!profileUser.streak_active)}>{streakTileBody}</div>
                 );
               })()}
 

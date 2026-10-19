@@ -1,6 +1,6 @@
 "use client";
 
-import { FireIcon } from "@heroicons/react/24/solid";
+import StreakCount from "@/src/components/streaks/StreakCount";
 import Image from "next/image";
 import Link from "next/link";
 import { LiveAvatar } from "@/src/components/LiveAvatar";
@@ -70,20 +70,12 @@ export function UserStatus({ player }: UserStatusProps) {
             >
               {activityText} · 
             </p>
-             {player.streak_active ? (
-              <FireIcon className="w-4 h-4 text-orange-500 ml-1 flex-shrink-0" />
-            ) : (
-              <FireIcon className="w-4 h-4 text-gray-400 ml-1 flex-shrink-0" />
-            )}
-            <p
-              className={`font-semibold text-xs truncate flex-shrink-0 ${
-                player.streak_active
-                  ? ""
-                  : "text-gray-400 dark:text-gray-600is"
-              }`}
-            >
-              {player.streak_count}
-            </p>
+            <StreakCount
+              count={player.streak_count}
+              active={!!player.streak_active}
+              iconClassName="h-4 w-4"
+              className="ml-1 flex-shrink-0 text-xs font-semibold"
+            />
            
           </div>
         </div>

@@ -1,9 +1,9 @@
 "use client";
 
+import StreakCount, { streakTileStyle } from "@/src/components/streaks/StreakCount";
 import Image from "next/image";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import FireIcon from "@heroicons/react/24/solid/FireIcon";
 import { LiveAvatar } from "@/src/components/LiveAvatar";
 import { NudgesLikesSection } from "@/src/components/goals/NudgesLikesSection";
 import { usePopup } from "@/src/context/PopupContext";
@@ -261,26 +261,11 @@ function RightSidebarInfo({ user }: { user: UserGoalsInfo }) {
             </p>
           </div>
 
-          <Link href="/streaks" aria-label={`Streak: ${user.streak} days. Open streaks`} className={`bg-gray-100 dark:bg-dark-3 w-full flex flex-col rounded-md items-center justify-between p-4 transition hover:brightness-110 ${
-                  user.streak_active
-                    ? "bg-orange-500/10 text-orange-500 "
-                    : ""
-                }`}>
+          <Link href="/streaks" aria-label={`Streak: ${user.streak} days. Open streaks`} className={`bg-gray-100 dark:bg-dark-3 w-full flex flex-col rounded-md items-center justify-between p-4 transition hover:brightness-110`} style={streakTileStyle(user.streak, !!user.streak_active)}>
             <p className="text-sm dark:text-[var(--muted)]">Streak Count</p>
 
-            <p className={`text-lg font-extrabold text-gray-400 dark:text-[var(--muted)] flex gap-1 items-center ${
-                  user.streak_active
-                    ? "text-orange-500 "
-                    : "text-gray-400 dark:text-[var(--muted)]"
-                }`}>
-              <FireIcon
-                className={`w-6 h-6 inline-block ml-1 ${
-                  user.streak_active
-                    ? "text-orange-500"
-                    : "text-gray-400 dark:text-[var(--muted)] "
-                }`}
-              />
-              {user.streak}
+            <p className="text-lg font-extrabold flex gap-1 items-center">
+              <StreakCount count={user.streak} active={!!user.streak_active} />
             </p>
           </Link>
         </div>

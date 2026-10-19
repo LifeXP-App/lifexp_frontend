@@ -48,17 +48,17 @@ export default function StreakRulesPopup({ isOpen, onClose, freezeEarningDays, f
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-backdrop-in" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex cursor-pointer items-center justify-center bg-black/50 animate-backdrop-in" onClick={onClose}>
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="streak-rules-title"
         style={{ width: "90%", maxWidth: "560px" }}
-        className="max-h-[85vh] overflow-y-auto noscrollbar rounded-2xl border border-gray-200 bg-dark-1 px-6 pb-5 pt-6 shadow-xl animate-dialog-in dark:border-[var(--border)]"
+        className="max-h-[85vh] cursor-auto overflow-y-auto noscrollbar rounded-2xl border border-gray-200 bg-dark-1 px-6 pb-5 pt-6 shadow-xl animate-dialog-in dark:border-[var(--border)]"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 id="streak-rules-title" className="text-xl font-bold text-gray-200">How streaks work</h2>
-        <p className="mt-1 text-sm text-gray-400">Complete at least one session a day to keep your flame alive.</p>
+        <h2 id="streak-rules-title" className="text-xl font-semibold text-gray-200">How streaks work</h2>
+        <p className="mt-1 text-[15px] text-gray-400">Complete at least one session a day to keep your flame alive.</p>
         <ul className="mt-5 space-y-4">
           {rules.map((rule) => (
             <li key={rule.title} className="flex gap-3">
@@ -70,7 +70,7 @@ export default function StreakRulesPopup({ isOpen, onClose, freezeEarningDays, f
               </span>
               <div>
                 <h3 className="font-semibold text-white">{rule.title}</h3>
-                <p className="mt-0.5 text-sm text-gray-400">{rule.text}</p>
+                <p className="mt-0.5 text-[15px] text-gray-400">{rule.text}</p>
               </div>
             </li>
           ))}

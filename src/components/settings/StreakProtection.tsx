@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Snowflake, Palmtree, RotateCcw, ShieldCheck } from "lucide-react";
+import { Snowflake, Palmtree, RotateCcw } from "lucide-react";
 import { useAuth } from "@/src/context/AuthContext";
 import { useConfirm, useToast } from "@/src/context/ToastContext";
 import { authedFetch } from "@/src/lib/api/authedFetch";
@@ -94,63 +94,78 @@ export default function StreakProtection() {
 
   if (isPending) return <StreakProtectionSkeleton />;
 
-  return (
-    <section
-      aria-labelledby="streak-protection-title"
-      className="rounded-2xl border border-gray-200 bg-white p-5 text-black dark:border-[var(--border)] dark:bg-dark-2 dark:text-[var(--foreground)]"
-    >
-      <h2 id="streak-protection-title" className="flex items-center gap-2 text-base font-semibold">
-        <ShieldCheck className="h-4 w-4 text-gray-500 dark:text-[var(--muted)]" aria-hidden="true" />
-        Protection
-      </h2>
+  const cardClass =
+    "rounded-2xl border border-gray-200 bg-white p-5 text-black dark:border-[var(--border)] dark:bg-dark-2 dark:text-[var(--foreground)]";
 
-      {error || !data ? (
+  if (error || !data) {
+    return (
+      <section aria-labelledby="streak-protection-title" className={cardClass}>
+        <h2 id="streak-protection-title" className="text-base font-semibold">Protection</h2>
         <div role="alert" className="mt-4">
-          <p className="text-sm text-gray-500 dark:text-[var(--muted)]">Couldn’t load streak protection.</p>
-          <button type="button" onClick={() => void refetch()} className="mt-2 cursor-pointer text-sm font-semibold underline">Try again</button>
+          <p className="text-[15px] text-gray-500 dark:text-[var(--muted)]">Couldn’t load streak protection.</p>
+          <button type="button" onClick={() => void refetch()} className="mt-2 cursor-pointer text-[15px] font-semibold underline">Try again</button>
         </div>
-      ) : (
-        <div className="mt-4 divide-y divide-gray-100 dark:divide-[var(--border)]">
-          {/* FREEZES */}
-          <div className="pb-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h3 className="text-sm font-semibold">Freezes</h3>
-                <p className="mt-0.5 text-xs text-gray-500 dark:text-[var(--muted)]">Each one covers a missed day.</p>
-              </div>
-              <div className="flex gap-1.5" aria-label={`${data.streak_freezes} of ${data.earned_freeze_cap} freezes available`} role="img">
-                {Array.from({ length: data.earned_freeze_cap }, (_, i) => {
-                  const filled = i < data.streak_freezes;
-                  return (
-                    <span
-                      key={i}
-                      className="flex h-10 w-10 items-center justify-center rounded-xl border transition-colors"
-                      style={filled
-                        ? { color: FREEZE_COLOR, backgroundColor: `${FREEZE_COLOR}1a`, borderColor: `${FREEZE_COLOR}66` }
-                        : { color: "#6b7280", borderColor: "var(--border)", borderStyle: "dashed" }}
-                    >
-                      <Snowflake className="h-5 w-5" aria-hidden="true" strokeWidth={filled ? 2.25 : 1.5} />
-                    </span>
-                  );
-                })}
-              </div>
-            </div>
-            {data.streak_frozen && (
-              <p role="status" className="mt-3 rounded-xl px-3 py-2 text-xs font-medium" style={{ color: FREEZE_COLOR, backgroundColor: `${FREEZE_COLOR}14` }}>
-                A freeze saved your streak. {data.streak_freezes} of {data.earned_freeze_cap} left.
-              </p>
-            )}
-          </div>
+      </section>
+    );
+  }
 
-          {/* VACATION */}
-          <div className="flex items-center justify-between gap-4 py-4">
-            <div className="flex items-start gap-3">
-              <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
-                <Palmtree className="h-4 w-4" aria-hidden="true" />
+  return (
+    <div className="space-y-4">
+      {/* STREAK FREEZE and PERSONAL BEST: two cards side by side */}
+      <div className="grid grid-cols-2 gap-4">
+        <section aria-labelledby="streak-freeze-title" className={`${cardClass} flex flex-col`}>
+          <h2 id="streak-freeze-title" className="text-base font-semibold">Streak Freeze</h2>
+          <p className="mt-0.5 text-[13px] text-gray-500 dark:text-[var(--muted)]">Each one covers a missed day.</p>
+
+          <div
+            className="mt-4 flex flex-1 items-center gap-3"
+            aria-label={`${data.streak_freezes} of ${data.earned_freeze_cap} freezes available`}
+            role="img"
+          >
+            {Array.from({ length: data.earned_freeze_cap }, (_, i) => {
+              const filled = i < data.streak_freezes;
+              return (
+                <span
+                  key={i}
+                  className="flex h-16 w-16 items-center justify-center rounded-2xl border transition-colors"
+                  style={filled
+                    ? { color: FREEZE_COLOR, backgroundColor: `${FREEZE_COLOR}1a`, borderColor: `${FREEZE_COLOR}66` }
+                    : { color: "#6b7280", borderColor: "var(--border)", borderStyle: "dashed" }}
+                >
+                  <Snowflake className="h-8 w-8" aria-hidden="true" strokeWidth={filled ? 2.25 : 1.5} />
+                </span>
+              );
+            })}
+          </div>
+        </section>
+
+        <section aria-labelledby="personal-best-title" className={`${cardClass} flex flex-col`}>
+          <h2 id="personal-best-title" className="text-base font-semibold">Personal Best</h2>
+          <p className="mt-0.5 text-[13px] text-gray-500 dark:text-[var(--muted)]">Your longest streak.</p>
+          <p className="mt-4 flex flex-1 items-center justify-center text-[52px] font-bold leading-none tabular-nums">
+            {data.streak_best}
+          </p>
+        </section>
+      </div>
+
+      {data.streak_frozen && (
+        <p role="status" className="rounded-xl px-4 py-3 text-[13px] font-medium" style={{ color: FREEZE_COLOR, backgroundColor: `${FREEZE_COLOR}14` }}>
+          A freeze saved your streak. {data.streak_freezes} of {data.earned_freeze_cap} left.
+        </p>
+      )}
+
+      {/* VACATION (and restore tokens) */}
+      <section aria-labelledby="vacation-title" className={cardClass}>
+        <h2 id="vacation-title" className="sr-only">Vacation mode</h2>
+        <div className="divide-y divide-gray-100 dark:divide-[var(--border)]">
+          <div className={`flex items-center justify-between gap-4 ${data.streak_restore_tokens > 0 ? "pb-4" : ""}`}>
+            <div className="flex items-center gap-3">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500">
+                <Palmtree className="h-6 w-6 fill-current" strokeWidth={0} aria-hidden="true" />
               </span>
               <div>
-                <h3 className="text-sm font-semibold">Vacation mode</h3>
-                <p id="vacation-description" className="mt-0.5 text-xs text-gray-500 dark:text-[var(--muted)]">
+                <h3 className="text-[15px] font-semibold">Vacation mode</h3>
+                <p id="vacation-description" className="mt-0.5 text-[13px] text-gray-500 dark:text-[var(--muted)]">
                   {data.vacation_mode ? "Your streak is paused until you’re back." : "Pause your streak without spending freezes."}
                 </p>
               </div>
@@ -180,10 +195,10 @@ export default function StreakProtection() {
                 <RotateCcw className="h-4 w-4" aria-hidden="true" />
               </span>
               <div className="min-w-0 flex-1">
-                <h3 className="text-sm font-semibold">
+                <h3 className="text-[15px] font-semibold">
                   {data.streak_restore_tokens} restore {data.streak_restore_tokens === 1 ? "token" : "tokens"}
                 </h3>
-                <p className="mt-0.5 text-xs text-gray-500 dark:text-[var(--muted)]">
+                <p className="mt-0.5 text-[13px] text-gray-500 dark:text-[var(--muted)]">
                   {data.streak_before_break > 0
                     ? `Bring back your ${data.streak_before_break}-day streak.`
                     : "No broken streak to restore yet."}
@@ -193,7 +208,7 @@ export default function StreakProtection() {
                 type="button"
                 disabled={busy || !data.can_restore}
                 onClick={() => void update("POST")}
-                className="shrink-0 cursor-pointer rounded-lg px-3.5 py-2 text-xs font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:brightness-100"
+                className="shrink-0 cursor-pointer rounded-lg px-3.5 py-2 text-[13px] font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:brightness-100"
                 style={{ backgroundColor: primary }}
               >
                 {busy ? "Updating…" : "Restore"}
@@ -201,7 +216,7 @@ export default function StreakProtection() {
             </div>
           )}
         </div>
-      )}
-    </section>
+      </section>
+    </div>
   );
 }
