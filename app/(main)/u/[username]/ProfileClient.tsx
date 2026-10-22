@@ -11,7 +11,7 @@ import { LiveAvatar } from "@/src/components/LiveAvatar";
 import { useAuth } from "@/src/context/AuthContext";
 import { usePopup } from "@/src/context/PopupContext";
 // Mock data removed - using real API data now
-import { UserProfile } from "@/src/lib/types";
+import { useUserProfile } from "@/src/lib/hooks/useUserProfile";
 import { ACTIVITY_META, ActivityType } from "@/src/lib/types/activityMeta";
 import { toRoman } from "@/src/lib/utils/toRoman";
 import { Cog6ToothIcon, FireIcon, LockClosedIcon, PlusIcon, RocketLaunchIcon } from "@heroicons/react/24/solid";
@@ -19,7 +19,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
-import { use, useCallback, useEffect, useRef, useState } from "react";
+import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toggleFollow } from "@/lib/api/users";
 import { authedFetch } from "@/src/lib/api/authedFetch";
 import posthog from "posthog-js";
@@ -94,11 +94,11 @@ export default function ProfileClient({ params }: PageProps) {
   const invalidateFollowCaches = useCallback(
     (targetUsername: string) => {
       queryClient.invalidateQueries({
-        queryKey: ["profile-users", targetUsername, me?.username],
+        queryKey: ["user-profile", targetUsername, me?.username],
       });
       if (me?.username) {
         queryClient.invalidateQueries({
-          queryKey: ["profile-users", me.username, me.username],
+          queryKey: ["user-profile", me.username, me.username],
         });
       }
       queryClient.invalidateQueries({ queryKey: ["discover-users"] });
@@ -194,41 +194,17 @@ export default function ProfileClient({ params }: PageProps) {
   const abortControllerRef = useRef<AbortController | null>(null);
   const isMountedRef = useRef(true);
 
-  const { data: usersData, isLoading: usersQueryLoading } = useQuery({
-    queryKey: ["profile-users", username, me?.username],
-    queryFn: async () => {
-      const [profileResponse, currentResponse] = await Promise.all([
-        authedFetch(`/api/users/profile/${username}`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          cache: "no-store",
-        }),
-        authedFetch(`/api/users/profile/${me?.username}`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          cache: "no-store",
-        }),
-      ]);
-
-      const profileData = profileResponse.ok ? await profileResponse.json() : null;
-      const currentData = currentResponse.ok ? await currentResponse.json() : null;
-
-      return { profileData, currentData };
-    },
-    enabled: !authLoading && !!me?.username,
-    // Profile header + follow counts — optimistic local state handles the
-    // follow/unfollow UI regardless, so this can cache generously.
-    staleTime: 2 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-  });
-
-  const profileUser = (usersData?.profileData as UserProfile | null) ?? null;
-  const currentUser = (usersData?.currentData as UserProfile | null) ?? null;
-  const isLoading = authLoading || usersQueryLoading;
+  const { data: profileUser = null, isLoading: profileLoading } = useUserProfile(
+    username, me?.username, !authLoading,
+  );
+  const { data: currentUser = null, isLoading: currentLoading } = useUserProfile(
+    me?.username, me?.username, !authLoading,
+  );
+  const usersData = useMemo(
+    () => ({ profileData: profileUser, currentData: currentUser }),
+    [profileUser, currentUser],
+  );
+  const isLoading = authLoading || profileLoading || currentLoading;
   const accountCreatedAt =
     profileUser?.joined_date ??
     (profileUser?.username === me?.username

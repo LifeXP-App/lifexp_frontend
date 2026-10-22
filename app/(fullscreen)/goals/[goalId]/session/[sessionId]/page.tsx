@@ -1439,6 +1439,8 @@ useEffect(() => {
     // Partial key match also covers ["goals", "sidebar", username].
     queryClient.invalidateQueries({ queryKey: ["goals"] });
     queryClient.invalidateQueries({ queryKey: ["feed"] });
+    queryClient.invalidateQueries({ queryKey: ["friends-status"] });
+    queryClient.invalidateQueries({ queryKey: ["user-profile"] });
     if (me?.username) {
       queryClient.invalidateQueries({
         queryKey: ["user-profile-widget", me.username],

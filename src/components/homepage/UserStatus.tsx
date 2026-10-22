@@ -6,6 +6,9 @@ import Link from "next/link";
 import { LiveAvatar } from "@/src/components/LiveAvatar";
 import { ACTIVITY_META, type ActivityType } from "@/src/lib/types/activityMeta";
 
+import { useUserProfile } from "@/src/lib/hooks/useUserProfile";
+import { useAuth } from "@/src/context/AuthContext";
+
 /* ---------------- TYPES ---------------- */
 
 export type UserStatusProps = {
@@ -32,6 +35,8 @@ export type UserStatusProps = {
 /* ---------------- COMPONENT ---------------- */
 
 export function UserStatus({ player }: UserStatusProps) {
+  const { me, loading } = useAuth();
+  const { data: profile } = useUserProfile(player.username, me?.username, !loading);
   const activity = player.last_activity;
   const liveActivity = player.live_activity;
   const activityText = liveActivity
@@ -60,7 +65,7 @@ export function UserStatus({ player }: UserStatusProps) {
           <h1 className="text-md font-semibold truncate">{player.fullname}</h1>
 
           <p className="text-xs font-medium text-black/40 dark:text-[var(--foreground)]/40">
-            Life Level {player.lifelevel}
+            Life Level {profile?.lifeLevel ?? "—"}
           </p>
 
           <div className="flex items-center">
