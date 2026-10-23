@@ -60,7 +60,7 @@ export default function ProfileHeader({
         </div>
         <div className="flex flex-col w-full">
           <span className="flex items-center gap-2 mb-1">
-            <p className="text-base font-bold dark:text-[var(--foreground)]">{user.fullname}</p>
+            <p className="text-base font-semibold dark:text-[var(--foreground)]">{user.fullname}</p>
             <p className="text-base font-medium text-gray-500 dark:text-[var(--muted)]">
               @{user.username}
             </p>
@@ -70,7 +70,7 @@ export default function ProfileHeader({
           </span>
           <span className="flex items-center cursor-pointer">
             <p
-              className="text-sm font-bold"
+              className="text-sm font-semibold"
               style={{ color: accent.text }}
             >
               {user.masteryTitle}

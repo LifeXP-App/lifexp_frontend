@@ -79,7 +79,7 @@ export default function Achievement({
 
   if (compact) {
     return (
-      <div className="cursor-pointer active:opacity-90 rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-[#151618] overflow-hidden flex flex-col p-4 gap-2">
+      <div className="cursor-pointer active:opacity-90 rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-dark-2 overflow-hidden flex flex-col p-4 gap-2">
         {/* Header row: emoji + title + XP */}
         <div className="flex items-start gap-3">
           <span className="text-xl shrink-0 mt-0.5">{emoji}</span>
@@ -89,7 +89,7 @@ export default function Achievement({
                 {title}
               </p>
               <span
-                className="shrink-0 rounded-full px-3 py-1 text-xs font-bold text-white"
+                className="shrink-0 rounded-full px-3 py-1 text-xs font-semibold text-white"
                 style={{ background: xpPillBackground }}
               >
                 +{xp} {xpLabel}
@@ -141,7 +141,7 @@ export default function Achievement({
   }
 
   return (
-    <div className="cursor-pointer active:opacity-90 rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-[#151618] overflow-hidden flex flex-col">
+    <div className="cursor-pointer active:opacity-90 rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-dark-2 overflow-hidden flex flex-col">
       {/* Cover */}
       <div className="relative h-36 w-full shrink-0">
         {coverImage ? (
@@ -163,7 +163,7 @@ export default function Achievement({
         <div className="absolute inset-0 bg-gradient-to-b from-black/80 to-transparent" />
         <div className="absolute top-3 right-3">
           <span
-            className="rounded-full px-3 py-1 text-xs font-bold text-white border border-white/20 backdrop-blur-sm"
+            className="rounded-full px-3 py-1 text-xs font-semibold text-white border border-white/20 backdrop-blur-sm"
             style={{ background: xpPillBackground }}
           >
             +{xp} {xpLabel}

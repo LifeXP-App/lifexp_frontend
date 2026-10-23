@@ -132,7 +132,7 @@ export function CompletedGoalBadge({ goal }: { goal: ProfileGoal }) {
   ].filter(Boolean);
 
   return (
-    <div className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white transition-transform hover:-translate-y-0.5 dark:border-[var(--border)] dark:bg-[#151618]">
+    <div className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white transition-transform hover:-translate-y-0.5 dark:border-[var(--border)] dark:bg-dark-2">
       <GoalCover goal={goal} rgb={rgb} className="h-20 shrink-0" />
 
       {shiny && (
@@ -145,7 +145,7 @@ export function CompletedGoalBadge({ goal }: { goal: ProfileGoal }) {
       {/* Medallion: emoji inside a tier-colored ring, overlapping the cover. */}
       <div className="relative -mt-9 flex justify-center">
         <span className="rounded-full p-[3px] shadow-lg" style={{ background: tier.ring }}>
-          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white text-3xl dark:bg-[#151618]">
+          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white text-3xl dark:bg-dark-2">
             {goal.emoji || "🏆"}
           </span>
         </span>
@@ -155,7 +155,7 @@ export function CompletedGoalBadge({ goal }: { goal: ProfileGoal }) {
         <p className="line-clamp-2 text-sm font-semibold leading-snug text-black dark:text-[var(--foreground)]">
           {goal.title}
         </p>
-        <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: tier.text }}>
+        <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: tier.text }}>
           {tier.name} · {goal.totalXp.toLocaleString()} XP
         </p>
         {facts.length > 0 && (
@@ -181,7 +181,7 @@ export function OngoingGoalCard({ goal }: { goal: ProfileGoal }) {
   const description = goal.description || goal.content;
 
   return (
-    <div className="flex h-full overflow-hidden rounded-2xl border border-gray-200 bg-white transition-transform hover:-translate-y-0.5 dark:border-[var(--border)] dark:bg-[#151618]">
+    <div className="flex h-full overflow-hidden rounded-2xl border border-gray-200 bg-white transition-transform hover:-translate-y-0.5 dark:border-[var(--border)] dark:bg-dark-2">
       <div className="relative w-24 shrink-0 sm:w-28">
         <GoalCover goal={goal} rgb={rgb} className="absolute inset-0" />
         <span className="relative flex h-full items-center justify-center text-4xl drop-shadow-md">
@@ -195,7 +195,7 @@ export function OngoingGoalCard({ goal }: { goal: ProfileGoal }) {
             {goal.title}
           </p>
           <span
-            className="shrink-0 rounded-full px-2 py-0.5 text-xs font-bold"
+            className="shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold"
             style={{ backgroundColor: `rgba(${rgb}, 0.15)`, color: `rgb(${rgb})` }}
           >
             {goal.totalXp.toLocaleString()} XP

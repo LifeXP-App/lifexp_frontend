@@ -205,9 +205,11 @@ function formatClock(session: ProfileSession): string {
 function SessionCard({
   sessions,
   onSelectSession,
+  onPage,
 }: {
   sessions: ProfileSession[];
   onSelectSession: (session: ProfileSession) => void;
+  onPage: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const first = sessions[0];
@@ -228,7 +230,13 @@ function SessionCard({
     (repeated ? `${sessions.length} sessions` : formatClock(first));
 
   return (
-    <li className="min-w-0 flex-1 basis-[260px] overflow-hidden rounded-xl border border-gray-200 bg-gray-50 transition-colors hover:border-gray-300 dark:border-[var(--border)] dark:bg-[var(--dark-3)]/40 dark:hover:border-gray-600">
+    <li
+      className={`min-w-0 flex-1 basis-[260px] overflow-hidden rounded-xl border border-gray-200 transition-colors dark:border-[var(--border)] ${
+        onPage
+          ? "bg-white hover:bg-gray-50 dark:bg-dark-2 dark:hover:bg-dark-3"
+          : "bg-gray-50 hover:bg-gray-100 dark:bg-dark-3 dark:hover:bg-[#26262b]"
+      }`}
+    >
       <button
         type="button"
         onClick={() => (repeated ? setOpen((v) => !v) : onSelectSession(first))}
@@ -252,7 +260,7 @@ function SessionCard({
               {name}
             </span>
             {repeated && (
-              <span className="shrink-0 rounded-md bg-gray-200 px-1.5 text-xs font-bold text-gray-600 dark:bg-[var(--dark-3)] dark:text-[var(--muted)]">
+              <span className="shrink-0 rounded-md bg-gray-200 px-1.5 text-xs font-semibold text-gray-600 dark:bg-[var(--dark-3)] dark:text-[var(--muted)]">
                 ×{sessions.length}
               </span>
             )}
@@ -262,10 +270,16 @@ function SessionCard({
           </span>
         </span>
         <span className="flex shrink-0 flex-col items-end tabular-nums">
-          <span className="text-base font-bold text-gray-800 dark:text-[var(--foreground)]">
+          <span
+            className={
+              onPage
+                ? "text-xl font-bold text-gray-800 dark:text-[var(--foreground)]"
+                : "text-base font-semibold text-gray-800 dark:text-[var(--foreground)]"
+            }
+          >
             {formatShortDuration(seconds)}
           </span>
-          {xp > 0 && (
+          {!onPage && xp > 0 && (
             <span
               className="text-xs font-semibold"
               style={{ color: meta?.cssColorVar ?? "var(--muted)" }}
@@ -301,7 +315,7 @@ function SessionCard({
                 <span className="shrink-0 font-semibold tabular-nums text-gray-700 dark:text-[var(--foreground)]">
                   {formatShortDuration(sessionSeconds(session))}
                 </span>
-                {sessionXp(session) > 0 && (
+                {!onPage && sessionXp(session) > 0 && (
                   <span
                     className="w-12 shrink-0 text-right font-semibold"
                     style={{ color: meta?.cssColorVar }}
@@ -333,12 +347,14 @@ function TimelineDay({
   accentColor,
   maxCardsPerDay,
   onSelectSession,
+  onPage,
 }: {
   day: SessionDay;
   latest: boolean;
   accentColor: string;
   maxCardsPerDay: number;
   onSelectSession: (session: ProfileSession) => void;
+  onPage: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const cards = mergeRepeats(day.sessions);
@@ -349,7 +365,9 @@ function TimelineDay({
     <li className="relative flex gap-4 pb-8 last:pb-0">
       <span
         aria-hidden="true"
-        className="relative mt-[5px] h-[11px] w-[11px] shrink-0 rounded-full border-2 bg-white dark:bg-dark-2"
+        className={`relative mt-[5px] h-[11px] w-[11px] shrink-0 rounded-full border-2 ${
+          onPage ? "bg-gray-100 dark:bg-dark-1" : "bg-white dark:bg-dark-2"
+        }`}
         style={
           latest
             ? {
@@ -364,7 +382,7 @@ function TimelineDay({
         <h3 className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
           <time
             dateTime={day.key}
-            className="text-sm font-bold uppercase tracking-wide text-gray-800 dark:text-[var(--foreground)]"
+            className="text-sm font-semibold uppercase tracking-wide text-gray-800 dark:text-[var(--foreground)]"
           >
             {formatDayLabel(day.key)}
           </time>
@@ -380,6 +398,7 @@ function TimelineDay({
               key={group[0].id}
               sessions={group}
               onSelectSession={onSelectSession}
+              onPage={onPage}
             />
           ))}
         </ul>
@@ -413,7 +432,8 @@ export function WeekStrip({
   days: SessionDay[];
   weekStart: Date;
   color: string;
-  dayHref: (dayKey: string) => string;
+  // When omitted the days are plain (non-clickable) rings.
+  dayHref?: (dayKey: string) => string;
 }) {
   const byKey = new Map(days.map((d) => [d.key, d]));
   const todayKey = localDayKey(new Date());
@@ -422,10 +442,11 @@ export function WeekStrip({
     date.setDate(date.getDate() + i);
     return { key: localDayKey(date), date };
   });
-  const maxSeconds = Math.max(
-    1,
-    ...week.map((d) => byKey.get(d.key)?.seconds ?? 0),
-  );
+  // Each day is a small progress ring: the arc is that day's focused time
+  // relative to the busiest day of the week, the letter sits in the middle.
+  const maxSeconds = Math.max(1, ...week.map((d) => byKey.get(d.key)?.seconds ?? 0));
+  const RADIUS = 17;
+  const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
   return (
     <div className="grid grid-cols-7 gap-1.5">
@@ -434,46 +455,66 @@ export function WeekStrip({
         const seconds = day?.seconds ?? 0;
         const future = key > todayKey;
         const isToday = key === todayKey;
-        const fill =
-          seconds > 0
-            ? Math.max(8, Math.round((seconds / maxSeconds) * 100))
-            : 0;
+        const active = seconds > 0;
+        const progress = active ? Math.max(0.08, seconds / maxSeconds) : 0;
+        const letter = date.toLocaleDateString("en-US", { weekday: "narrow" });
+        const label = `${formatDayLabel(key, { relative: false })}: ${
+          day ? summarizeDay(day) : "no sessions"
+        }`;
         const content = (
           <>
+            <svg viewBox="0 0 40 40" className="absolute inset-0 h-full w-full -rotate-90" aria-hidden="true">
+              <circle
+                cx="20"
+                cy="20"
+                r={RADIUS}
+                fill="none"
+                strokeWidth="4"
+                className="stroke-gray-200 dark:stroke-[var(--dark-3)]"
+              />
+              {active && (
+                <circle
+                  cx="20"
+                  cy="20"
+                  r={RADIUS}
+                  fill="none"
+                  strokeWidth="4"
+                  strokeLinecap="round"
+                  stroke={color}
+                  strokeDasharray={CIRCUMFERENCE}
+                  strokeDashoffset={CIRCUMFERENCE * (1 - progress)}
+                  className="transition-[stroke-dashoffset] duration-500 ease-out"
+                />
+              )}
+            </svg>
             <span
-              aria-hidden="true"
-              className="absolute inset-x-0 bottom-0 rounded-b-[inherit] transition-[height]"
-              style={{ height: `${fill}%`, backgroundColor: `${color}33` }}
-            />
-            <span className="relative text-[10px] font-semibold uppercase text-gray-500 dark:text-[var(--muted)]">
-              {date.toLocaleDateString("en-US", { weekday: "narrow" })}
-            </span>
-            <span className="relative text-base font-bold text-gray-800 dark:text-[var(--foreground)]">
-              {date.getDate()}
-            </span>
-            <span
-              className="relative text-[10px] font-semibold tabular-nums"
-              style={{ color: seconds > 0 ? color : undefined }}
+              className={`relative text-sm font-semibold ${
+                active || isToday ? "" : "text-gray-500 dark:text-[var(--muted)]"
+              }`}
+              style={active || isToday ? { color } : undefined}
             >
-              {seconds > 0 ? formatShortDuration(seconds) : future ? "" : "–"}
+              {letter}
             </span>
           </>
         );
-        const className = `relative flex h-20 flex-col items-center justify-end gap-0.5 overflow-hidden rounded-lg border bg-gray-50 pb-1.5 dark:bg-[var(--dark-3)]/40 ${
+        const className = `relative mx-auto flex aspect-square w-full max-w-10 items-center justify-center rounded-full ${
           future ? "opacity-40" : ""
         }`;
-        const style = { borderColor: isToday ? color : "var(--border)" };
-        return future ? (
-          <div key={key} className={className} style={style}>
+        const style = isToday
+          ? { backgroundColor: `color-mix(in srgb, ${color} 12%, transparent)` }
+          : undefined;
+        return future || !dayHref ? (
+          <div key={key} className={className} style={style} title={label}>
             {content}
           </div>
         ) : (
           <Link
             key={key}
             href={dayHref(key)}
-            className={`${className} transition-colors hover:brightness-110`}
+            className={`${className} cursor-pointer transition hover:brightness-110`}
             style={style}
-            aria-label={`${formatDayLabel(key, { relative: false })}: ${day ? summarizeDay(day) : "no sessions"}`}
+            aria-label={label}
+            title={label}
           >
             {content}
           </Link>
@@ -510,12 +551,16 @@ export default function SessionTimeline({
   accentColor,
   maxDays,
   maxCardsPerDay = 4,
+  onPage = false,
 }: {
   sessions: ProfileSession[];
   onSelectSession: (session: ProfileSession) => void;
   accentColor: string;
   maxDays?: number;
   maxCardsPerDay?: number;
+  // True when the timeline sits straight on the page background instead of
+  // inside a card, so its cards and markers use card/page surfaces.
+  onPage?: boolean;
 }) {
   const allDays = groupSessionsByDay(sessions);
   const days = maxDays ? allDays.slice(0, maxDays) : allDays;
@@ -537,6 +582,7 @@ export default function SessionTimeline({
           accentColor={accentColor}
           maxCardsPerDay={maxCardsPerDay}
           onSelectSession={onSelectSession}
+          onPage={onPage}
         />
       ))}
     </ol>
