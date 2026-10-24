@@ -6,4 +6,5 @@
 // instead of once per chart per page.
 export { default as RadarChart } from "@/src/components/RadarChart";
 export { default as XPChart } from "@/src/components/XPChart";
+export { default as ActivityTreemap } from "@/src/components/profile/ActivityTreemap";
 export type { RadarDataPoint } from "@/src/components/RadarChart";

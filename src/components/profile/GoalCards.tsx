@@ -73,14 +73,18 @@ function tierFor(xp: number) {
   return TIERS.find((tier) => xp >= tier.min) ?? TIERS[TIERS.length - 1];
 }
 
+// One segment per aspect, sized by its XP. The biggest aspect is at full
+// opacity, the rest are dimmed; hovering a segment brings it to full opacity
+// and its tooltip names the aspect.
 function AspectBar({ distribution, className = "" }: { distribution: Record<ActivityType, number>; className?: string }) {
-  const { parts, total } = aspectBreakdown(distribution);
+  const { parts, total, top } = aspectBreakdown(distribution);
   if (total === 0) return null;
   return (
     <div className={`flex h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-[var(--dark-3)] ${className}`}>
       {parts.map((p) => (
         <span
           key={p.aspect}
+          className={`transition-opacity duration-150 hover:opacity-100 ${p.aspect === top ? "opacity-100" : "opacity-40"}`}
           style={{ width: `${(p.xp / total) * 100}%`, backgroundColor: ACTIVITY_META[p.aspect].cssColorVar }}
           title={`${ACTIVITY_META[p.aspect].label}: ${p.xp.toLocaleString()} XP`}
         />

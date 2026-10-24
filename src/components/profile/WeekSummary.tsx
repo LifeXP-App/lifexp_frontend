@@ -138,15 +138,6 @@ export default function WeekSummary({
               />
             ))}
           </div>
-          <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
-            {aspectXp.map((a) => (
-              <li key={a.aspect} className="flex items-center gap-1 text-xs text-gray-600 dark:text-[var(--muted)]">
-                <span style={{ color: ACTIVITY_META[a.aspect].cssColorVar }}>{ACTIVITY_META[a.aspect].icon}</span>
-                {ACTIVITY_META[a.aspect].label}
-                <span className="font-semibold tabular-nums text-gray-800 dark:text-[var(--foreground)]">{a.xp}</span>
-              </li>
-            ))}
-          </ul>
         </div>
       )}
 

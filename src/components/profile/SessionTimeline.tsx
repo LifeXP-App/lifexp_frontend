@@ -243,17 +243,22 @@ function SessionCard({
         aria-expanded={repeated ? open : undefined}
         className="flex w-full items-center gap-3 p-3 text-left cursor-pointer"
       >
-        <span
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-2xl"
-          style={{
-            backgroundColor: meta
-              ? `rgba(${meta.cssColorVarRgb}, 0.15)`
-              : "var(--dark-3)",
-          }}
-          aria-hidden="true"
-        >
-          {first.activity?.emoji ?? "🎯"}
-        </span>
+        {/* The session's picture replaces the emoji when it has one. */}
+        {picture ? (
+          <Thumbnail src={picture} alt={name} size={44} />
+        ) : (
+          <span
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-2xl"
+            style={{
+              backgroundColor: meta
+                ? `rgba(${meta.cssColorVarRgb}, 0.15)`
+                : "var(--dark-3)",
+            }}
+            aria-hidden="true"
+          >
+            {first.activity?.emoji ?? "🎯"}
+          </span>
+        )}
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-1.5">
             <span className="truncate text-sm font-semibold text-black dark:text-[var(--foreground)] sm:text-base">
@@ -288,7 +293,6 @@ function SessionCard({
             </span>
           )}
         </span>
-        {picture && <Thumbnail src={picture} alt={name} size={44} />}
         {repeated && (
           <ChevronDownIcon
             className={`h-4 w-4 shrink-0 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}

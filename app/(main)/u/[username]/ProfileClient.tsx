@@ -3,7 +3,7 @@
 import { useMasteryPrimaryColor } from "@/src/lib/hooks/useMasteryAccent";
 import StreakCount, { streakTileStyle } from "@/src/components/streaks/StreakCount";
 import type { RadarDataPoint } from "@/src/components/RadarChart";
-import { RadarChart, XPChart } from "@/src/components/charts/LazyCharts";
+import { ActivityTreemap, RadarChart, XPChart } from "@/src/components/charts/LazyCharts";
 import getAccentColors, {
   hexToRgba as hexToRgbaUtil,
 } from "@/src/components/UserAccent";
@@ -20,8 +20,8 @@ import { Cog6ToothIcon, LockClosedIcon, PlusIcon, RocketLaunchIcon } from "@hero
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import Pagination from "@/src/components/Pagination";
+import { useInfiniteQuery, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import LoadMoreSentinel from "@/src/components/LoadMoreSentinel";
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { toggleFollow } from "@/lib/api/users";
 import { authedFetch } from "@/src/lib/api/authedFetch";
@@ -128,6 +128,7 @@ export default function ProfileClient({ params }: PageProps) {
     activity_uid: string;
     name: string;
     emoji?: string;
+    activity_type?: ActivityType;
     total_duration_seconds: number;
     total_duration_minutes: number;
   };
@@ -369,7 +370,7 @@ export default function ProfileClient({ params }: PageProps) {
     queryKey: ["profile-top-activities", profileUser?.id],
     queryFn: async () => {
       const res = await fetch(
-        `/api/users/${profileUser?.id}/top-activities?limit=5`,
+        `/api/users/${profileUser?.id}/top-activities?limit=8`,
         {
           cache: "no-store",
         },
@@ -384,6 +385,31 @@ export default function ProfileClient({ params }: PageProps) {
     staleTime: 5 * 60 * 1000,
     gcTime: 15 * 60 * 1000,
   });
+
+  // The treemap colors each tile by its activity's aspect. Older API builds
+  // don't include `activity_type` in the top-activities response, so for any
+  // activity missing it, read the type from the (public) activity endpoint.
+  const activityTypeQueries = useQueries({
+    queries: topActivities
+      .filter((a) => !a.activity_type && a.activity_uid)
+      .map((a) => ({
+        queryKey: ["activity-type", a.activity_uid],
+        queryFn: async () => {
+          const res = await fetch(
+            `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/activities/${a.activity_uid}/`,
+          );
+          if (!res.ok) return null;
+          const data = await res.json();
+          return { uid: a.activity_uid, type: (data.activity_type ?? null) as string | null };
+        },
+        staleTime: 24 * 60 * 60 * 1000,
+        gcTime: 24 * 60 * 60 * 1000,
+      })),
+  });
+  const fetchedActivityTypes = new Map<string, string>();
+  for (const q of activityTypeQueries) {
+    if (q.data?.type) fetchedActivityTypes.set(q.data.uid, q.data.type);
+  }
 
   const { data: userPosts = [], isLoading: postsLoading } = useQuery({
     queryKey: ["profile-posts", username],
@@ -431,29 +457,29 @@ export default function ProfileClient({ params }: PageProps) {
     gcTime: 10 * 60 * 1000,
   });
 
-  // The Sessions section pages through the whole history, newest first.
+  // The Sessions section loads the whole history, newest first, as you scroll.
   const SESSIONS_PAGE_SIZE = 8;
-  const [sessionsPage, setSessionsPage] = useState(1);
-  const { data: sessionsPageData, isLoading: sessionsPageLoading, isFetching: sessionsPageFetching } = useQuery({
-    queryKey: ["profile-session-page", username, sessionsPage],
-    queryFn: async () => {
+  const sessionsFeed = useInfiniteQuery({
+    queryKey: ["profile-session-feed", username],
+    queryFn: async ({ pageParam }) => {
       const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1`;
       const query = new URLSearchParams({
-        page: String(sessionsPage),
+        page: String(pageParam),
         page_size: String(SESSIONS_PAGE_SIZE),
       });
       const response = await authedFetch(
         `${apiUrl}/users/${username}/sessions/gallery/?${query}`,
         { cache: "no-store" },
       );
-      if (!response.ok) return { results: [] as Session[], count: 0 };
+      if (!response.ok) return { results: [] as Session[], next: null as string | null };
       const data = await response.json();
       return {
         results: (data.results ?? []) as Session[],
-        count: (data.count ?? 0) as number,
+        next: (data.next ?? null) as string | null,
       };
     },
-    placeholderData: keepPreviousData,
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) => (lastPage.next ? allPages.length + 1 : undefined),
     enabled: !!username && !authLoading,
     staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
@@ -1382,59 +1408,28 @@ export default function ProfileClient({ params }: PageProps) {
 
             {/* TOP ACTIVITIES & RECENT SESSIONS */}
             <div className="flex flex-col md:flex-row gap-4">
-              <div className="p-4 sm:p-6 my-2 bg-white border border-gray-200 dark:bg-dark-2 dark:border-[var(--border)] rounded-2xl w-full">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-lg font-semibold dark:text-[var(--foreground)]">
-                    Top Activities
-                  </h2>
-                  <span className="text-gray-500 dark:text-[var(--muted)] text-sm"></span>
-                </div>
-
+              {/* Top Activities: the frame itself is the treemap */}
+              <div className="my-2 min-h-72 w-full md:self-stretch">
                 {topActivitiesLoading ? (
-                  <p className="text-gray-500 dark:text-[var(--muted)] text-sm">
-                    Loading activities...
-                  </p>
+                  <div className="h-72 w-full animate-pulse rounded-2xl bg-gray-200 dark:bg-dark-3 md:h-full" />
                 ) : topActivities.length > 0 ? (
-                  topActivities.map((activity, index) => {
-                    const totalSeconds = activity.total_duration_seconds || 0;
-                    const hours = Math.floor(totalSeconds / 3600);
-                    const duration =
-                      hours < 1
-                        ? `${Math.round(totalSeconds / 60)}m`
-                        : `${hours}h`;
-                    return (
-                      <Link
-                        key={activity.activity_id ?? `activity-${index}`}
-                        href={
-                          activity.activity_uid
-                            ? `/a/${activity.activity_uid}`
-                            : "#"
-                        }
-                        className="block space-y-4 mb-6"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2 sm:space-x-4">
-                            <span className="text-gray-400 dark:text-[var(--muted)] font-semibold w-5">
-                              {index + 1}
-                            </span>
-                            <div className="flex items-center space-x-2 sm:space-x-4">
-                              <p className="text-2xl">{activity.emoji || "📊"}</p>
-                              <span className="font-medium text-sm sm:text-base truncate dark:text-[var(--foreground)]">
-                                {activity.name || "Unknown Activity"}
-                              </span>
-                            </div>
-                          </div>
-                          <span className="font-semibold text-sm sm:text-md dark:text-[var(--muted)]">
-                            {duration}
-                          </span>
-                        </div>
-                      </Link>
-                    );
-                  })
+                  <div className="h-72 w-full md:h-full">
+                    <ActivityTreemap
+                      activities={topActivities.map((activity, index) => ({
+                        key: String(activity.activity_id ?? `activity-${index}`),
+                        uid: activity.activity_uid,
+                        name: activity.name || "Unknown Activity",
+                        emoji: activity.emoji,
+                        type: (activity.activity_type ??
+                          fetchedActivityTypes.get(activity.activity_uid)) as ActivityType | undefined,
+                        seconds: activity.total_duration_seconds || 0,
+                      }))}
+                    />
+                  </div>
                 ) : (
-                  <p className="text-gray-500 dark:text-[var(--muted)] text-sm">
+                  <div className="flex h-72 w-full items-center justify-center rounded-2xl border border-gray-200 bg-white text-sm text-gray-500 dark:border-[var(--border)] dark:bg-dark-2 dark:text-[var(--muted)] md:h-full">
                     No activity data yet
-                  </p>
+                  </div>
                 )}
               </div>
 
@@ -1636,10 +1631,9 @@ export default function ProfileClient({ params }: PageProps) {
               )}
             </div>
 
-            {/* SESSIONS — the full history, paged; "This week" sits beside it */}
+            {/* SESSIONS — the full history, loaded as you scroll; "This week" sits beside it */}
             {(() => {
-              const pageSessions = sessionsPageData?.results ?? [];
-              const totalPages = Math.max(1, Math.ceil((sessionsPageData?.count ?? 0) / SESSIONS_PAGE_SIZE));
+              const feedSessions = sessionsFeed.data?.pages.flatMap((page) => page.results) ?? [];
               return (
                 <div className="w-full pb-12 my-4">
                   <h2 className="text-xl font-bold dark:text-[var(--foreground)] mb-3">
@@ -1647,32 +1641,33 @@ export default function ProfileClient({ params }: PageProps) {
                   </h2>
                   <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
                     <div className="min-w-0">
-                      {sessionsPageLoading ? (
+                      {sessionsFeed.isPending ? (
                         <SessionTimelineSkeleton />
-                      ) : pageSessions.length === 0 ? (
+                      ) : feedSessions.length === 0 ? (
                         <p className="py-6 text-center text-sm text-gray-500 dark:text-[var(--muted)]">
                           No sessions yet
                         </p>
                       ) : (
-                        <div className={sessionsPageFetching ? "opacity-60 transition-opacity" : "transition-opacity"}>
+                        <>
                           <SessionTimeline
-                            sessions={pageSessions}
+                            sessions={feedSessions}
                             onSelectSession={handleOpenSessionPopup}
                             accentColor={accent.primary}
                             maxCardsPerDay={999}
                             onPage
                           />
-                        </div>
+                          <LoadMoreSentinel
+                            loading={sessionsFeed.isFetchingNextPage}
+                            hasMore={!!sessionsFeed.hasNextPage}
+                            onLoadMore={() => void sessionsFeed.fetchNextPage()}
+                          />
+                          {sessionsFeed.isFetchingNextPage && (
+                            <div className="flex justify-center py-4">
+                              <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-transparent dark:border-[var(--border)] dark:border-t-transparent" />
+                            </div>
+                          )}
+                        </>
                       )}
-                      <div className="mt-6">
-                        <Pagination
-                          page={sessionsPage}
-                          totalPages={totalPages}
-                          onChange={setSessionsPage}
-                          color={accent.primary}
-                          disabled={sessionsPageFetching}
-                        />
-                      </div>
                     </div>
                     <aside className="order-first rounded-2xl border border-gray-200 bg-white p-4 dark:border-[var(--border)] dark:bg-dark-2 sm:p-6 lg:order-none">
                       <WeekSummary

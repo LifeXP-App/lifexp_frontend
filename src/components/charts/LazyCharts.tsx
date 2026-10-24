@@ -20,3 +20,8 @@ export const XPChart = dynamic(
   () => import("@/src/components/charts").then((mod) => mod.XPChart),
   { ssr: false, loading: ChartSkeleton },
 );
+
+export const ActivityTreemap = dynamic(
+  () => import("@/src/components/charts").then((mod) => mod.ActivityTreemap),
+  { ssr: false, loading: ChartSkeleton },
+);
