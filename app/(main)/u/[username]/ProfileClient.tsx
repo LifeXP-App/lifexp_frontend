@@ -1,8 +1,9 @@
 "use client";
 
+import { useMasteryPrimaryColor } from "@/src/lib/hooks/useMasteryAccent";
 import StreakCount, { streakTileStyle } from "@/src/components/streaks/StreakCount";
 import type { RadarDataPoint } from "@/src/components/RadarChart";
-import { RadarChart, XPChart } from "@/src/components/charts/LazyCharts";
+import { ActivityTreemap, RadarChart, XPChart } from "@/src/components/charts/LazyCharts";
 import getAccentColors, {
   hexToRgba as hexToRgbaUtil,
 } from "@/src/components/UserAccent";
@@ -19,7 +20,8 @@ import { Cog6ToothIcon, LockClosedIcon, PlusIcon, RocketLaunchIcon } from "@hero
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import LoadMoreSentinel from "@/src/components/LoadMoreSentinel";
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { toggleFollow } from "@/lib/api/users";
 import { authedFetch } from "@/src/lib/api/authedFetch";
@@ -47,7 +49,6 @@ import ProfileSessionPopup from "@/src/components/profile/ProfileSessionPopup";
 import SessionTimeline, {
   SessionTimelineSkeleton,
   groupSessionsByDay,
-  localDayKey,
 } from "@/src/components/profile/SessionTimeline";
 import WeekSummary from "@/src/components/profile/WeekSummary";
 
@@ -92,6 +93,7 @@ export default function ProfileClient({ params }: PageProps) {
   const { username } = use(params);
   const router = useRouter();
   const { me, supabaseUser, loading: authLoading } = useAuth();
+  const myPrimaryColor = useMasteryPrimaryColor();
   const { openMasteryPopup } = usePopup();
   const queryClient = useQueryClient();
 
@@ -126,6 +128,7 @@ export default function ProfileClient({ params }: PageProps) {
     activity_uid: string;
     name: string;
     emoji?: string;
+    activity_type?: ActivityType;
     total_duration_seconds: number;
     total_duration_minutes: number;
   };
@@ -367,7 +370,7 @@ export default function ProfileClient({ params }: PageProps) {
     queryKey: ["profile-top-activities", profileUser?.id],
     queryFn: async () => {
       const res = await fetch(
-        `/api/users/${profileUser?.id}/top-activities?limit=5`,
+        `/api/users/${profileUser?.id}/top-activities?limit=8`,
         {
           cache: "no-store",
         },
@@ -382,6 +385,31 @@ export default function ProfileClient({ params }: PageProps) {
     staleTime: 5 * 60 * 1000,
     gcTime: 15 * 60 * 1000,
   });
+
+  // The treemap colors each tile by its activity's aspect. Older API builds
+  // don't include `activity_type` in the top-activities response, so for any
+  // activity missing it, read the type from the (public) activity endpoint.
+  const activityTypeQueries = useQueries({
+    queries: topActivities
+      .filter((a) => !a.activity_type && a.activity_uid)
+      .map((a) => ({
+        queryKey: ["activity-type", a.activity_uid],
+        queryFn: async () => {
+          const res = await fetch(
+            `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/activities/${a.activity_uid}/`,
+          );
+          if (!res.ok) return null;
+          const data = await res.json();
+          return { uid: a.activity_uid, type: (data.activity_type ?? null) as string | null };
+        },
+        staleTime: 24 * 60 * 60 * 1000,
+        gcTime: 24 * 60 * 60 * 1000,
+      })),
+  });
+  const fetchedActivityTypes = new Map<string, string>();
+  for (const q of activityTypeQueries) {
+    if (q.data?.type) fetchedActivityTypes.set(q.data.uid, q.data.type);
+  }
 
   const { data: userPosts = [], isLoading: postsLoading } = useQuery({
     queryKey: ["profile-posts", username],
@@ -411,7 +439,7 @@ export default function ProfileClient({ params }: PageProps) {
     return start;
   });
 
-  const { data: weekSessions = [], isLoading: weekSessionsLoading } = useQuery({
+  const { data: weekSessions = [] } = useQuery({
     queryKey: ["profile-session-week", username, weekStart.toISOString()],
     queryFn: async () => {
       const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1`;
@@ -424,6 +452,34 @@ export default function ProfileClient({ params }: PageProps) {
       const data = await response.json();
       return (data.results ?? []) as Session[];
     },
+    enabled: !!username && !authLoading,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
+
+  // The Sessions section loads the whole history, newest first, as you scroll.
+  const SESSIONS_PAGE_SIZE = 8;
+  const sessionsFeed = useInfiniteQuery({
+    queryKey: ["profile-session-feed", username],
+    queryFn: async ({ pageParam }) => {
+      const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1`;
+      const query = new URLSearchParams({
+        page: String(pageParam),
+        page_size: String(SESSIONS_PAGE_SIZE),
+      });
+      const response = await authedFetch(
+        `${apiUrl}/users/${username}/sessions/gallery/?${query}`,
+        { cache: "no-store" },
+      );
+      if (!response.ok) return { results: [] as Session[], next: null as string | null };
+      const data = await response.json();
+      return {
+        results: (data.results ?? []) as Session[],
+        next: (data.next ?? null) as string | null,
+      };
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) => (lastPage.next ? allPages.length + 1 : undefined),
     enabled: !!username && !authLoading,
     staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
@@ -700,28 +756,39 @@ export default function ProfileClient({ params }: PageProps) {
             </div>
           </div>
 
-          {/* Achievements skeleton */}
-          <div className="max-w-6xl mx-auto px-2 p-2 pb-12 my-4 rounded-sm w-full animate-pulse">
-            <div className="h-5 w-36 rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-8" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
+          {/* Goals + Sessions skeleton (same surfaces as the real sections) */}
+          <div className="w-full pb-12 my-4 animate-pulse">
+            <div className="h-6 w-20 rounded bg-gray-200 dark:bg-dark-3 mb-3" />
+            <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-3">
+              {[1, 2].map((i) => (
                 <div
                   key={i}
-                  className="rounded-2xl overflow-hidden"
+                  className="flex h-32 overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-[var(--border)] dark:bg-dark-2"
                 >
-                  <div className="h-36 bg-gray-200 dark:bg-[var(--dark-2)]" />
-                  <div className="p-4 bg-white dark:bg-[#151618] border border-gray-200 dark:border-[var(--border)] border-t-0 rounded-b-2xl">
-                    <div className="h-4 w-3/4 rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-3" />
-                    <div className="h-3 w-full rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-2" />
-                    <div className="h-3 w-2/3 rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-4" />
-                    <div className="grid grid-cols-5 gap-1.5">
-                      {[1,2,3,4,5].map((j) => (
-                        <div key={j} className="h-8 rounded-lg bg-gray-200 dark:bg-[var(--dark-2)]" />
-                      ))}
-                    </div>
+                  <div className="w-24 sm:w-28 bg-gray-200 dark:bg-dark-3" />
+                  <div className="flex-1 space-y-3 p-4">
+                    <div className="h-4 w-3/4 rounded bg-gray-200 dark:bg-dark-3" />
+                    <div className="h-3 w-1/2 rounded bg-gray-200 dark:bg-dark-3" />
+                    <div className="h-3 w-2/3 rounded bg-gray-200 dark:bg-dark-3" />
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+
+          <div className="w-full pb-12 my-4 animate-pulse">
+            <div className="h-6 w-24 rounded bg-gray-200 dark:bg-dark-3 mb-3" />
+            <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+              <div className="space-y-4">
+                <div className="h-3 w-40 rounded bg-gray-200 dark:bg-dark-3" />
+                <div className="h-14 w-full rounded-xl bg-gray-200 dark:bg-dark-3" />
+                <div className="h-14 w-4/5 rounded-xl bg-gray-200 dark:bg-dark-3" />
+              </div>
+              <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-[var(--border)] dark:bg-dark-2 sm:p-6 space-y-4">
+                <div className="h-3 w-20 rounded bg-gray-200 dark:bg-dark-3" />
+                <div className="h-8 w-28 rounded bg-gray-200 dark:bg-dark-3" />
+                <div className="h-16 w-full rounded-xl bg-gray-200 dark:bg-dark-3" />
+              </div>
             </div>
           </div>
         </div>
@@ -924,7 +991,7 @@ export default function ProfileClient({ params }: PageProps) {
               </div>
               <div className="flex flex-col w-full">
                 <span className="flex items-center gap-2 mb-1">
-                  <p className="text-base font-bold dark:text-[var(--foreground)]">
+                  <p className="text-base font-semibold dark:text-[var(--foreground)]">
                     {profileUser.fullname}
                   </p>
                   <p className="text-base font-medium text-gray-500 dark:text-[var(--muted)]">
@@ -936,7 +1003,7 @@ export default function ProfileClient({ params }: PageProps) {
                 </span>
                 <span className="flex items-center cursor-pointer">
                   <p
-                    className="text-sm font-bold"
+                    className="text-sm font-semibold"
                     style={{ color: accent.text }}
                   >
                     {profileUser.masteryTitle}
@@ -1016,7 +1083,7 @@ export default function ProfileClient({ params }: PageProps) {
                 </p>
                 {/* Ongoing Goals */}
                 <div className="mt-2">
-                  <h3 className="font-bold text-sm mb-3 dark:text-[var(--foreground)]">
+                  <h3 className="font-semibold text-sm mb-3 dark:text-[var(--foreground)]">
                     Ongoing Goals
                   </h3>
                   <div className="flex gap-2 flex-wrap">
@@ -1092,7 +1159,7 @@ export default function ProfileClient({ params }: PageProps) {
                 <button
                   onClick={() => router.push("/u/edit")}
                   style={{ backgroundColor: accent.primary }}
-                  className="flex-1 min-w-0 sm:flex-none font-medium active:opacity-80 sm:w-auto p-2 rounded-lg cursor-pointer px-4 sm:px-12 text-white "
+                  className="flex-1 min-w-0 sm:flex-none font-semibold active:opacity-80 sm:w-auto py-2.5 rounded-xl cursor-pointer px-4 sm:px-12 text-white "
                 >
                   Edit Profile
                 </button>
@@ -1100,7 +1167,7 @@ export default function ProfileClient({ params }: PageProps) {
                 <button
                   onClick={handleUnfollow}
                   disabled={isFollowingLoading}
-                  className={`flex-1 min-w-0 sm:flex-none font-medium py-2 rounded-lg text-center sm:w-48 text-white bg-black dark:bg-[var(--dark-3)] ${
+                  className={`flex-1 min-w-0 sm:flex-none font-semibold py-2.5 rounded-xl text-center sm:w-48 text-white bg-gray-600 dark:bg-[var(--dark-3)] ${
                     isFollowingLoading ? "opacity-50 cursor-wait" : "cursor-pointer"
                   }`}
                 >
@@ -1110,7 +1177,7 @@ export default function ProfileClient({ params }: PageProps) {
                 <button
                   onClick={handleFollow}
                   disabled={isFollowingLoading}
-                  className={`flex-1 min-w-0 sm:flex-none font-medium py-2 rounded-lg text-center sm:w-48 text-white ${
+                  className={`flex-1 min-w-0 sm:flex-none font-semibold py-2.5 rounded-xl text-center sm:w-48 text-white ${
                     isFollowingLoading ? "opacity-50 cursor-wait" : "cursor-pointer"
                   }`}
                   style={{ backgroundColor: accent.primary }}
@@ -1123,8 +1190,8 @@ export default function ProfileClient({ params }: PageProps) {
                 onClick={() => setShowShare(true)}
                 className={
                   profileUser.masteryTitle === "Rookie"
-                    ? "flex-1 min-w-0 sm:flex-none cursor-pointer font-medium bg-black/70 hover:bg-black text-white text-center py-2 rounded-lg sm:w-48 dark:hover:bg-gray-100 dark:bg-white dark:text-black"
-                    : "flex-1 min-w-0 sm:flex-none cursor-pointer font-medium text-center py-2 rounded-lg sm:w-48"
+                    ? "flex-1 min-w-0 sm:flex-none cursor-pointer font-semibold bg-black/70 hover:bg-black text-white text-center py-2.5 rounded-xl sm:w-48 dark:hover:bg-gray-100 dark:bg-white dark:text-black"
+                    : "flex-1 min-w-0 sm:flex-none cursor-pointer font-semibold text-center py-2.5 rounded-xl sm:w-48"
                 }
                 style={
                   profileUser.masteryTitle === "Rookie"
@@ -1185,11 +1252,11 @@ export default function ProfileClient({ params }: PageProps) {
             <div className="my-4 flex flex-col sm:flex-row justify-between text-sm gap-4">
               {/* Streak count */}
               {(() => {
-                const streakTileClass = "bg-white dark:bg-dark-2 border rounded-xl border-gray-200 dark:border-[var(--border)] w-full flex flex-col rounded-md items-center justify-between p-4";
+                const streakTileClass = "bg-white dark:bg-dark-2 border rounded-2xl border-gray-200 dark:border-[var(--border)] w-full flex flex-col items-center justify-between p-4";
                 const streakTileBody = (<>
                           <p className="text-sm dark:text-[var(--muted)]">Streak Count</p>
 
-                          <p className="text-lg font-extrabold flex gap-1 items-center">
+                          <p className="text-lg font-semibold flex gap-1 items-center">
                             <StreakCount count={(profileUser.streak_count ?? 0)} active={!!profileUser.streak_active} />
                           </p>
                 </>);
@@ -1201,9 +1268,9 @@ export default function ProfileClient({ params }: PageProps) {
               })()}
 
               {/* life level */}
-              <div className="bg-white dark:bg-dark-2 border rounded-xl border-gray-200 dark:border-[var(--border)] w-full flex flex-col rounded-md items-center justify-between p-4">
+              <div className="bg-white dark:bg-dark-2 border rounded-2xl border-gray-200 dark:border-[var(--border)] w-full flex flex-col items-center justify-between p-4">
                 <span className="flex items-center justify-center gap-1">
-                  <p className="text-gray-600 dark:text-[var(--foreground)] text-base sm:text-lg font-bold">
+                  <p className="text-gray-600 dark:text-[var(--foreground)] text-base sm:text-lg font-semibold">
                     Life Level {profileUser.lifeLevel}
                   </p>
                 </span>
@@ -1223,7 +1290,7 @@ export default function ProfileClient({ params }: PageProps) {
                   background, gray border); any unlocked mastery gets the
                   aspect color as both border and a 50%-opacity fill. */}
               <div
-                className={`rounded-xl w-full flex flex-col rounded-md items-center justify-between p-4 ${
+                className={`rounded-2xl border w-full flex flex-col items-center justify-between p-4 ${
                   profileUser.masteryTitle === "Rookie"
                     ? "bg-gray-200 dark:bg-dark-2 border-gray-200 dark:border-[var(--border)]"
                     : ""
@@ -1240,7 +1307,7 @@ export default function ProfileClient({ params }: PageProps) {
                 <span className="flex items-center justify-center gap-1">
                   <p
                     style={{ color: accent.text }}
-                    className="text-lg font-bold"
+                    className="text-lg font-semibold"
                   >
                     {profileUser.totalXP.toLocaleString()} XP
                   </p>
@@ -1314,7 +1381,7 @@ export default function ProfileClient({ params }: PageProps) {
                         backgroundImage: `linear-gradient(135deg, ${accent.gradStart}, ${accent.gradEnd})`,
                       }}
                     >
-                      <span className="text-white text-sm font-bold">
+                      <span className="text-white text-sm font-semibold">
                         {profileUser.username[0].toUpperCase()}
                       </span>
                     </div>
@@ -1341,66 +1408,35 @@ export default function ProfileClient({ params }: PageProps) {
 
             {/* TOP ACTIVITIES & RECENT SESSIONS */}
             <div className="flex flex-col md:flex-row gap-4">
-              <div className="p-4 sm:p-6 my-2 bg-white border border-gray-200 dark:bg-dark-2 dark:border-[var(--border)] rounded-2xl w-full">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-lg font-bold dark:text-[var(--foreground)]">
-                    Top Activities
-                  </h2>
-                  <span className="text-gray-500 dark:text-[var(--muted)] text-sm"></span>
-                </div>
-
+              {/* Top Activities: the frame itself is the treemap */}
+              <div className="my-2 min-h-72 w-full md:self-stretch">
                 {topActivitiesLoading ? (
-                  <p className="text-gray-500 dark:text-[var(--muted)] text-sm">
-                    Loading activities...
-                  </p>
+                  <div className="h-72 w-full animate-pulse rounded-2xl bg-gray-200 dark:bg-dark-3 md:h-full" />
                 ) : topActivities.length > 0 ? (
-                  topActivities.map((activity, index) => {
-                    const totalSeconds = activity.total_duration_seconds || 0;
-                    const hours = Math.floor(totalSeconds / 3600);
-                    const duration =
-                      hours < 1
-                        ? `${Math.round(totalSeconds / 60)}m`
-                        : `${hours}h`;
-                    return (
-                      <Link
-                        key={activity.activity_id ?? `activity-${index}`}
-                        href={
-                          activity.activity_uid
-                            ? `/a/${activity.activity_uid}`
-                            : "#"
-                        }
-                        className="block space-y-4 mb-6"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2 sm:space-x-4">
-                            <span className="text-gray-400 dark:text-[var(--muted)] font-semibold w-5">
-                              {index + 1}
-                            </span>
-                            <div className="flex items-center space-x-2 sm:space-x-4">
-                              <p className="text-2xl">{activity.emoji || "📊"}</p>
-                              <span className="font-medium text-sm sm:text-base truncate dark:text-[var(--foreground)]">
-                                {activity.name || "Unknown Activity"}
-                              </span>
-                            </div>
-                          </div>
-                          <span className="font-semibold text-sm sm:text-md dark:text-[var(--muted)]">
-                            {duration}
-                          </span>
-                        </div>
-                      </Link>
-                    );
-                  })
+                  <div className="h-72 w-full md:h-full">
+                    <ActivityTreemap
+                      activities={topActivities.map((activity, index) => ({
+                        key: String(activity.activity_id ?? `activity-${index}`),
+                        uid: activity.activity_uid,
+                        name: activity.name || "Unknown Activity",
+                        emoji: activity.emoji,
+                        type: (activity.activity_type ??
+                          fetchedActivityTypes.get(activity.activity_uid)) as ActivityType | undefined,
+                        seconds: activity.total_duration_seconds || 0,
+                      }))}
+                    />
+                  </div>
                 ) : (
-                  <p className="text-gray-500 dark:text-[var(--muted)] text-sm">
+                  <div className="flex h-72 w-full items-center justify-center rounded-2xl border border-gray-200 bg-white text-sm text-gray-500 dark:border-[var(--border)] dark:bg-dark-2 dark:text-[var(--muted)] md:h-full">
                     No activity data yet
-                  </p>
+                  </div>
                 )}
               </div>
 
               {/* Recent Sessions */}
               <div className="p-4 sm:p-6 my-2 bg-white border border-gray-200 dark:bg-dark-2 dark:border-[var(--border)] rounded-2xl w-full">
                 <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-lg font-bold dark:text-[var(--foreground)]">
+                  <h2 className="text-lg font-semibold dark:text-[var(--foreground)]">
                     Recent Sessions
                   </h2>
                   <span className="text-gray-500 dark:text-[var(--muted)] text-sm"></span>
@@ -1462,7 +1498,7 @@ export default function ProfileClient({ params }: PageProps) {
 
             {/* GOALS */}
             <div className="w-full pb-12 my-4">
-              <h2 className="text-lg sm:text-xl font-semibold dark:text-[var(--foreground)] mb-6">
+              <h2 className="text-xl font-bold dark:text-[var(--foreground)] mb-3">
                 Goals
               </h2>
 
@@ -1470,15 +1506,15 @@ export default function ProfileClient({ params }: PageProps) {
                 <div className="flex flex-col gap-8 animate-pulse">
                   {/* Ongoing skeleton */}
                   <div>
-                    <div className="h-4 w-24 rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-4" />
+                    <div className="h-4 w-24 rounded bg-gray-200 dark:bg-dark-3 mb-3" />
                     <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-3">
                       {[1, 2].map((i) => (
-                        <div key={i} className="flex h-32 rounded-2xl border border-gray-200 dark:border-[var(--border)] overflow-hidden bg-white dark:bg-[#151618]">
-                          <div className="w-24 sm:w-28 bg-gray-200 dark:bg-[var(--dark-2)]" />
+                        <div key={i} className="flex h-32 rounded-2xl border border-gray-200 dark:border-[var(--border)] overflow-hidden bg-white dark:bg-dark-2">
+                          <div className="w-24 sm:w-28 bg-gray-200 dark:bg-dark-3" />
                           <div className="flex-1 p-4 space-y-3">
-                            <div className="h-4 w-3/4 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
-                            <div className="h-3 w-1/2 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
-                            <div className="h-3 w-2/3 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
+                            <div className="h-4 w-3/4 rounded bg-gray-200 dark:bg-dark-3" />
+                            <div className="h-3 w-1/2 rounded bg-gray-200 dark:bg-dark-3" />
+                            <div className="h-3 w-2/3 rounded bg-gray-200 dark:bg-dark-3" />
                           </div>
                         </div>
                       ))}
@@ -1486,14 +1522,14 @@ export default function ProfileClient({ params }: PageProps) {
                   </div>
                   {/* Completed skeleton */}
                   <div>
-                    <div className="h-4 w-28 rounded bg-gray-200 dark:bg-[var(--dark-2)] mb-4" />
+                    <div className="h-4 w-28 rounded bg-gray-200 dark:bg-dark-3 mb-3" />
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
                       {[1, 2, 3, 4].map((i) => (
-                        <div key={i} className="h-52 rounded-2xl border border-gray-200 dark:border-[var(--border)] overflow-hidden bg-white dark:bg-[#151618]">
-                          <div className="h-20 bg-gray-200 dark:bg-[var(--dark-2)]" />
+                        <div key={i} className="h-52 rounded-2xl border border-gray-200 dark:border-[var(--border)] overflow-hidden bg-white dark:bg-dark-2">
+                          <div className="h-20 bg-gray-200 dark:bg-dark-3" />
                           <div className="mx-auto -mt-8 h-16 w-16 rounded-full bg-gray-300 dark:bg-[var(--dark-3)]" />
-                          <div className="mx-auto mt-3 h-3 w-2/3 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
-                          <div className="mx-auto mt-2 h-3 w-1/2 rounded bg-gray-200 dark:bg-[var(--dark-2)]" />
+                          <div className="mx-auto mt-3 h-3 w-2/3 rounded bg-gray-200 dark:bg-dark-3" />
+                          <div className="mx-auto mt-2 h-3 w-1/2 rounded bg-gray-200 dark:bg-dark-3" />
                         </div>
                       ))}
                     </div>
@@ -1521,7 +1557,8 @@ export default function ProfileClient({ params }: PageProps) {
                           <button
                             type="button"
                             onClick={() => router.push("/goals")}
-                            className="mt-5 flex items-center gap-2 rounded-2xl bg-[var(--rookie-primary)]  text-white font-semibold py-3 px-6 hover:opacity-90 transition cursor-pointer"
+                            style={{ backgroundColor: myPrimaryColor }}
+                            className="mt-5 flex items-center gap-2 rounded-2xl text-white font-semibold py-3 px-6 hover:opacity-90 transition cursor-pointer"
                           >
                             <PlusIcon className="w-5 h-5" />
                             <span>Create Your First Goal</span>
@@ -1560,8 +1597,9 @@ export default function ProfileClient({ params }: PageProps) {
                     <div className="flex flex-col gap-10">
                       {ongoingPosts.length > 0 && (
                         <div>
-                          <p className="text-sm font-semibold text-gray-500 dark:text-[var(--muted)] uppercase tracking-wide mb-4">
-                            Ongoing
+                          <p className="text-base font-semibold text-black dark:text-[var(--foreground)] mb-3">
+                            Ongoing{" "}
+                            <span className="text-gray-500 dark:text-[var(--muted)]">{ongoingPosts.length}</span>
                           </p>
                           <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-3">
                             {ongoingPosts.map((post) => (
@@ -1574,8 +1612,9 @@ export default function ProfileClient({ params }: PageProps) {
                       )}
                       {otherPosts.length > 0 && (
                         <div>
-                          <p className="text-sm font-semibold text-gray-500 dark:text-[var(--muted)] uppercase tracking-wide mb-4">
-                            Completed
+                          <p className="text-base font-semibold text-black dark:text-[var(--foreground)] mb-3">
+                            Completed{" "}
+                            <span className="text-gray-500 dark:text-[var(--muted)]">{otherPosts.length}</span>
                           </p>
                           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
                             {otherPosts.map((post) => (
@@ -1592,57 +1631,49 @@ export default function ProfileClient({ params }: PageProps) {
               )}
             </div>
 
-            {/* SESSIONS — this week's timeline + summary panel; full history
-                and heatmap live on /u/<username>/sessions */}
+            {/* SESSIONS — the full history, loaded as you scroll; "This week" sits beside it */}
             {(() => {
-              // Nothing logged since Monday: the timeline falls back to the
-              // latest few sessions so it's never just an empty state.
-              const showingWeek = weekSessions.length > 0;
-              const timelineSessions = showingWeek ? weekSessions : recentSessions;
-              const lastActive = recentSessions[0]?.started_at;
+              const feedSessions = sessionsFeed.data?.pages.flatMap((page) => page.results) ?? [];
               return (
                 <div className="w-full pb-12 my-4">
-                  <div className="flex items-baseline justify-between gap-4 mb-4">
-                    <h2 className="text-lg sm:text-xl font-semibold dark:text-[var(--foreground)]">
-                      Sessions
-                    </h2>
-                    <Link
-                      href={`/u/${username}/sessions`}
-                      className="text-sm font-semibold hover:underline"
-                      style={{ color: accent.primary }}
-                    >
-                      See all →
-                    </Link>
-                  </div>
-                  <div className="grid gap-6 p-4 sm:p-6 bg-white border border-gray-200 dark:bg-dark-2 dark:border-[var(--border)] rounded-2xl lg:grid-cols-[minmax(0,1fr)_320px]">
+                  <h2 className="text-xl font-bold dark:text-[var(--foreground)] mb-3">
+                    Sessions
+                  </h2>
+                  <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
                     <div className="min-w-0">
-                      {!showingWeek && !weekSessionsLoading && timelineSessions.length > 0 && (
-                        <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-[var(--muted)]">
-                          Latest sessions
-                        </p>
-                      )}
-                      {weekSessionsLoading || (!showingWeek && sessionsLoading) ? (
+                      {sessionsFeed.isPending ? (
                         <SessionTimelineSkeleton />
-                      ) : timelineSessions.length === 0 ? (
+                      ) : feedSessions.length === 0 ? (
                         <p className="py-6 text-center text-sm text-gray-500 dark:text-[var(--muted)]">
                           No sessions yet
                         </p>
                       ) : (
-                        <SessionTimeline
-                          sessions={timelineSessions}
-                          onSelectSession={handleOpenSessionPopup}
-                          accentColor={accent.primary}
-                          maxDays={4}
-                        />
+                        <>
+                          <SessionTimeline
+                            sessions={feedSessions}
+                            onSelectSession={handleOpenSessionPopup}
+                            accentColor={accent.primary}
+                            maxCardsPerDay={999}
+                            onPage
+                          />
+                          <LoadMoreSentinel
+                            loading={sessionsFeed.isFetchingNextPage}
+                            hasMore={!!sessionsFeed.hasNextPage}
+                            onLoadMore={() => void sessionsFeed.fetchNextPage()}
+                          />
+                          {sessionsFeed.isFetchingNextPage && (
+                            <div className="flex justify-center py-4">
+                              <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-transparent dark:border-[var(--border)] dark:border-t-transparent" />
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
-                    <aside className="order-first border-b border-gray-200 pb-6 dark:border-[var(--border)] lg:order-none lg:border-b-0 lg:border-l lg:pb-0 lg:pl-6">
+                    <aside className="order-first rounded-2xl border border-gray-200 bg-white p-4 dark:border-[var(--border)] dark:bg-dark-2 sm:p-6 lg:order-none">
                       <WeekSummary
                         days={groupSessionsByDay(weekSessions)}
                         weekStart={weekStart}
                         color={accent.primary}
-                        dayHref={(day) => `/u/${username}/sessions?day=${day}`}
-                        lastActiveDay={lastActive ? localDayKey(new Date(lastActive)) : undefined}
                       />
                     </aside>
                   </div>

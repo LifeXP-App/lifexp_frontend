@@ -131,7 +131,7 @@ function SessionGalleryCard({
     <button
       type="button"
       onClick={onClick}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-[#151618] text-left cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98]"
+      className="group flex flex-col overflow-hidden rounded-2xl border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-dark-2 text-left cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98]"
     >
       <div
         className="relative h-32 w-full shrink-0 flex items-center justify-center overflow-hidden"
@@ -175,7 +175,7 @@ function SessionGallerySkeleton() {
       {[1, 2, 3, 4].map((i) => (
         <div
           key={i}
-          className="rounded-2xl overflow-hidden border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-[#151618]"
+          className="rounded-2xl overflow-hidden border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-dark-2"
         >
           <div className="h-32 bg-gray-200 dark:bg-[var(--dark-2)]" />
           <div className="p-3 space-y-2">
